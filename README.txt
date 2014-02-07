@@ -1,5 +1,7 @@
 README.txt
 
+*test svn commit using an added user (orutra)
+
 /*****************************************************************/
 Feb 7, 2014
 
