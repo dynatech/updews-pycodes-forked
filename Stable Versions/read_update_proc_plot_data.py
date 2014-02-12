@@ -424,6 +424,7 @@ def update_proc_file(loc_col,num_nodes):
     inputfname=loc_col+".csv"
     #check if raw file exists
     if os.path.exists(inputfilepath+inputfname)==0:
+        print "Input file path does not exist."
         return
 
     #check if processed file exists, and determines the number of lines in the file
