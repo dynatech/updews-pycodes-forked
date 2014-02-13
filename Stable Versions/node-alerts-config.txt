@@ -1,0 +1,6 @@
+[I/O]
+InputFilePath = D:\Dropbox\Senslope Data\
+OutputFilePath = D:\Dropbox\Senslope Data\Proc\csv\
+PrintFigures = False
+CSVOutputFilePath = D:\Dropbox\Senslope Data\Proc\csv\
+CSVOutputFile = 2014-01-15_pycode_Node-level_alerts.csv

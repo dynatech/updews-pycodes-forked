@@ -29,6 +29,7 @@ from matplotlib.backend_bases import NavigationToolbar2 as Nav
 
 from scipy.interpolate import UnivariateSpline
 import scipy.stats.stats as st
+import ConfigParser
 
 import sys
 import threading
@@ -109,8 +110,8 @@ def Write_Input_File_to_Arrays(all_nodes_data,fname,node_len):
     first_good_tilt_date_all_nodes=datetime.combine(date(2999,1,1),time(0,0,0))
 
     if os.path.exists(fname)==0:
-        return []
-        
+        print "Error reading input file to arrays: Input file " + fname + " does not exist"
+        return []        
     
     for cur_node_ID in range(num_nodes):
         
@@ -420,23 +421,23 @@ def update_proc_file(loc_col,num_nodes):
     print "\n"#Updating file ",loc_col+"_proc.csv...", 
     
     #     READING INPUT SENSOR DATA
-    inputfilepath=os.path.abspath(os.getcwd() + "/../..")+"/"
+##    inputfilepath=os.path.abspath(os.getcwd() + "/../..")+"/"
     inputfname=loc_col+".csv"
     #check if raw file exists
-    if os.path.exists(inputfilepath+inputfname)==0:
-        print "Input file path does not exist."
+    if os.path.exists(InputFilePath+inputfname)==0:
+        print "Input file path does not exist for " + InputFilePath + inputfname
         return
 
     #check if processed file exists, and determines the number of lines in the file
-    outputfilepath=os.path.abspath(os.getcwd() + "/..")+"/csv/"
+##    OutputFilePath=os.path.abspath(os.getcwd() + "/..")+"/csv/"
     outputfname=loc_col+"_proc.csv"
-    if os.path.exists(outputfilepath+outputfname):
-        fa1 = open(outputfilepath+outputfname,'rb') 
+    if os.path.exists(OutputFilePath+outputfname):
+        fa1 = open(OutputFilePath+outputfname,'rb') 
         fa = csv.reader(fa1,delimiter=',')
         nL=len(list(fa))
         fa1.close()
     else:
-        fa1 = open(outputfilepath+outputfname,'wb')
+        fa1 = open(OutputFilePath+outputfname,'wb')
         fa = csv.writer(fa1,delimiter=',')
         nL=0
         fa1.close()
@@ -444,7 +445,7 @@ def update_proc_file(loc_col,num_nodes):
     if nL==0:
         last_date_proc=datetime.combine(date(1999,1,1),time(0,0,0))
     else:
-        fa1 = open(outputfilepath+outputfname,'rb') 
+        fa1 = open(OutputFilePath+outputfname,'rb') 
         fa = csv.reader(fa1,delimiter=',')
         a=0
         for row in fa:
@@ -455,9 +456,9 @@ def update_proc_file(loc_col,num_nodes):
         last_date_proc=datetime.combine(date(Y,m,d),time(H,M,S))
         fa1.close()
     #reads latest raw data and appends to the processed data file
-    fa1 = open(outputfilepath+outputfname,'ab')    
+    fa1 = open(OutputFilePath+outputfname,'ab')    
     fa = csv.writer(fa1,delimiter=',')
-    fo1 = open(inputfilepath+inputfname, 'rb')
+    fo1 = open(InputFilePath+inputfname, 'rb')
     fo = csv.reader(fo1,delimiter=',')
     lines_appended=0
     for i in fo:
@@ -490,6 +491,7 @@ def update_proc_file(loc_col,num_nodes):
     #fa1.fsync()
     fa1.close()
     fo1.close()
+
     
 #tilt functions
 def fxz(x,y,z):  #tilt of column (from vertical) projected along the xz plane (parallel to downslope direction)
@@ -645,344 +647,354 @@ def GeneratePlots():
     num_nodes_loc_col=(14,29,19,29,28,31,30,14,10,29,24,21,23,39,25,18,22,21,26,39,40,24,19)
     col_seg_len_list=(0.5,1,1,1,0.5,0.5,0.5,1.2,1.2,1.0,1.0,1.,1.,1.,1.,1.,1.,1.,1,0.5,0.5,1,1)
 
-    
-
     thresholdtilt=0.05 #degrees
     offsettilt=3
 
     thresholdvel=0.005 #degrees/day
     offsetvel=3
         
-    check_another_sensor=1
-    while check_another_sensor==1:
-        print "all:      -1"
-        for hj in range(len(loc_col_name)):
-            print loc_col_name[hj],":     ",hj
-        which_sensor=-1#int(raw_input("Input which sensor to plot (number): "))
+    which_sensor=-1#int(raw_input("Input which sensor to plot (number): "))
 
+    cur_date=datetime.now()
+    
+    csvout=[]
+    for INPUT_which_sensor in range(len(loc_col_list)):
 
-        cur_date=datetime.now()
+        if which_sensor!=-1:
+            if which_sensor!=INPUT_which_sensor:
+                continue
         
-        csvout=[]
-        for INPUT_which_sensor in range(len(loc_col_list)):
-
-            if which_sensor!=-1:
-                if which_sensor!=INPUT_which_sensor:continue
+        #1    SELECTING COLUMN TO PLOT
             
-            #1    SELECTING COLUMN TO PLOT
-                
-            #************************************************************ defining input file name, number of nodes, name and segment lengths of columns
-            input_file_name,num_nodes,loc_col,seg_len=Input_Loc_Col(loc_col_list,num_nodes_loc_col,col_seg_len_list, INPUT_which_sensor)
-            inputfilepath=os.path.abspath(os.getcwd() + "/..")+"/csv/"
-            input_file_name=inputfilepath+input_file_name
+        #************************************************************ defining input file name, number of nodes, name and segment lengths of columns
+        input_file_name,num_nodes,loc_col,seg_len=Input_Loc_Col(loc_col_list,num_nodes_loc_col,col_seg_len_list, INPUT_which_sensor)
+##        InputFilePath=os.path.abspath(os.getcwd() + "/..")+"/csv/"
+        input_file_name=OutputFilePath+input_file_name
 
-            #************************************************************ updates database
-            update_proc_file(loc_col,num_nodes)
+        #************************************************************ updates database
+        update_proc_file(loc_col,num_nodes)
 
-            #************************************************************ creates array for whole data set
-            all_nodes_data1=Create_Arrays_for_Input(num_nodes)
+        #************************************************************ creates array for whole data set
+        all_nodes_data1=Create_Arrays_for_Input(num_nodes)
 
-            #************************************************************* reads text file into file objects and assigns data from file object into arrays
-            all_nodes_data=Write_Input_File_to_Arrays(all_nodes_data1,input_file_name,seg_len)
-            if all_nodes_data==[]:continue
+        #************************************************************* reads text file into file objects and assigns data from file object into arrays
+        all_nodes_data=Write_Input_File_to_Arrays(all_nodes_data1,input_file_name,seg_len)
+        if all_nodes_data==[]:
+            continue
 
-            #DEFINING DATE RANGE TO PLOT
+        #DEFINING DATE RANGE TO PLOT
 
-            latest_record_time=datetime.combine(date(1999,1,1),time(0,0,0))   #initializes latest_record_time
-            if which_sensor==-1:manual_end_date_input=2
-            else:manual_end_date_input=int(raw_input("Manually input end date? (1)Yes     (2)No: "))
-            if manual_end_date_input==1:
-                Y=int(raw_input("     Input end year: "))
-                m=int(raw_input("     Input end month: "))
-                d=int(raw_input("     Input end date: "))
-                H=int(raw_input("     Input end hour: "))
-                end_dt=datetime.combine(date(Y,m,d),time(H,0,0))
-                now_time=end_dt
+        latest_record_time=datetime.combine(date(1999,1,1),time(0,0,0))   #initializes latest_record_time
+        if which_sensor==-1:
+            manual_end_date_input=2
+        else:
+            manual_end_date_input=int(raw_input("Manually input end date? (1)Yes     (2)No: "))
+        if manual_end_date_input==1:
+            Y=int(raw_input("     Input end year: "))
+            m=int(raw_input("     Input end month: "))
+            d=int(raw_input("     Input end date: "))
+            H=int(raw_input("     Input end hour: "))
+            end_dt=datetime.combine(date(Y,m,d),time(H,0,0))
+            now_time=end_dt
+        else:
+            now_time=datetime.now()
+
+        print "DATA for ",loc_col_name[INPUT_which_sensor]," as of ", now_time.strftime("%Y-%m-%d %H:%M")    
+
+        INPUT_fit_interval=3#(float(raw_input("Input # days before end date: ")))
+        INPUT_days_to_plot=INPUT_fit_interval
+        start_dt=now_time-timedelta(days=INPUT_fit_interval)
+        INPUT_number_colpos=INPUT_fit_interval+1#int(raw_input("Input number of column positions to plot, including start and end dates: "))
+        dates_to_plot=compute_colpos_time(now_time,INPUT_fit_interval,INPUT_number_colpos)
+        #compute_plot_intervals(now_time,start_dt,INPUT_number_colpos)
+
+        #EXTRACTING DATA WITHIN DATE RANGE
+
+        allnodes_splinefit=range(num_nodes)    
+        
+        allnodes_colpos_splinefit_X=np.ndarray(shape=(num_nodes,INPUT_number_colpos))
+        allnodes_colpos_splinefit_XZ=np.ndarray(shape=(num_nodes,INPUT_number_colpos))
+        allnodes_colpos_splinefit_XY=np.ndarray(shape=(num_nodes,INPUT_number_colpos))
+
+        colstatus=np.ndarray(shape=(num_nodes,6),dtype=int)
+
+        for INPUT_which_node in range(num_nodes):
+            colstatus[INPUT_which_node,0]=INPUT_which_node+1
+            cur_node_data=all_nodes_data[INPUT_which_node]
+            cur_node_date=cur_node_data[0]
+            cur_node_tilt_xz=cur_node_data[1]
+            cur_node_tilt_xy=cur_node_data[2]
+
+            colstatus[INPUT_which_node,1]=1 #main dbase not updated
+
+            xzsplinefit=[[],[],[],[],[],[]]
+            xysplinefit=[[],[],[],[],[],[]]
+            curnode_splinefit=[xzsplinefit, xysplinefit]
+            allnodes_splinefit[INPUT_which_node]=curnode_splinefit
+
+            #if len(cur_node_date)==0:continue
+
+            if len(cur_node_date)==0:
+                colpos_xztilt=np.zeros(INPUT_number_colpos)
+                colpos_xytilt=np.zeros(INPUT_number_colpos)
             else:
-                now_time=datetime.now()
+                colpos_xztilt=np.asarray([cur_node_tilt_xz[-1] *(g/g) for g in range(1,INPUT_number_colpos+1)])
+                colpos_xytilt=np.asarray([cur_node_tilt_xy[-1] *(h/h) for h in range(1,INPUT_number_colpos+1)])
 
-            print "DATA for ",loc_col_name[INPUT_which_sensor]," as of ", now_time.strftime("%Y-%m-%d %H:%M")
-        
+                if cur_node_date[-1]>=now_time-timedelta(days=1.):
+                    #computing spline fit of xz tilt of current node within defined date range
+                    subtilt, subdays, subtilt_fine, subdtilt_fine, subdays_fine,spline = fitspline_tilt(cur_node_date,cur_node_tilt_xz,INPUT_days_to_plot,now_time)     
+                    xzsplinefit=[subtilt, subdays, subtilt_fine, subdtilt_fine, subdays_fine,spline]
 
-            INPUT_fit_interval=3#(float(raw_input("Input # days before end date: ")))
-            INPUT_days_to_plot=INPUT_fit_interval
-            start_dt=now_time-timedelta(days=INPUT_fit_interval)
-            INPUT_number_colpos=INPUT_fit_interval+1#int(raw_input("Input number of column positions to plot, including start and end dates: "))
-            dates_to_plot=compute_colpos_time(now_time,INPUT_fit_interval,INPUT_number_colpos)
-            #compute_plot_intervals(now_time,start_dt,INPUT_number_colpos)
-
-            #EXTRACTING DATA WITHIN DATE RANGE
-
-            allnodes_splinefit=range(num_nodes)    
-            
-            allnodes_colpos_splinefit_X=np.ndarray(shape=(num_nodes,INPUT_number_colpos))
-            allnodes_colpos_splinefit_XZ=np.ndarray(shape=(num_nodes,INPUT_number_colpos))
-            allnodes_colpos_splinefit_XY=np.ndarray(shape=(num_nodes,INPUT_number_colpos))
-
-            colstatus=np.ndarray(shape=(num_nodes,6),dtype=int)
-            for INPUT_which_node in range(num_nodes):
-                colstatus[INPUT_which_node,0]=INPUT_which_node+1
-
-                cur_node_data=all_nodes_data[INPUT_which_node]
-                cur_node_date=cur_node_data[0]
-                cur_node_tilt_xz=cur_node_data[1]
-                cur_node_tilt_xy=cur_node_data[2]
-
-                colstatus[INPUT_which_node,1]=1 #main dbase not updated
-
-                xzsplinefit=[[],[],[],[],[],[]]
-                xysplinefit=[[],[],[],[],[],[]]
-                curnode_splinefit=[xzsplinefit, xysplinefit]
-                allnodes_splinefit[INPUT_which_node]=curnode_splinefit
-
-                #if len(cur_node_date)==0:continue
-
-                if len(cur_node_date)==0:
-                    colpos_xztilt=np.zeros(INPUT_number_colpos)
-                    colpos_xytilt=np.zeros(INPUT_number_colpos)
-                else:
-                    colpos_xztilt=np.asarray([cur_node_tilt_xz[-1] *(g/g) for g in range(1,INPUT_number_colpos+1)])
-                    colpos_xytilt=np.asarray([cur_node_tilt_xy[-1] *(h/h) for h in range(1,INPUT_number_colpos+1)])
-
-                    if cur_node_date[-1]>=now_time-timedelta(days=1.):
-                        #computing spline fit of xz tilt of current node within defined date range
-                        subtilt, subdays, subtilt_fine, subdtilt_fine, subdays_fine,spline = fitspline_tilt(cur_node_date,cur_node_tilt_xz,INPUT_days_to_plot,now_time)     
-                        xzsplinefit=[subtilt, subdays, subtilt_fine, subdtilt_fine, subdays_fine,spline]
-
-                        if subdays<-1 or len(subdays)==0:
-                            #sub dbase not updated
+                    if subdays<-1 or len(subdays)==0:
+                        #sub dbase not updated
+                        py=0
+                    else:
+                        if np.sum([a for a in np.isnan(subtilt)])>0 or np.sum([b for b in np.isnan(subtilt_fine)])>0:
+                            # dbase updated, spline fit failed
                             py=0
                         else:
-                            if np.sum([a for a in np.isnan(subtilt)])>0 or np.sum([b for b in np.isnan(subtilt_fine)])>0:
-                                # dbase updated, spline fit failed
+                            colpos_xztilt=extract_tilt_for_colpos(spline, dates_to_plot, min(subdays), max(subdays))
+                            
+                            
+                            #computing spline fit of xy tilt of current node within defined date range
+                            subtilt, subdays, subtilt_fine, subdtilt_fine, subdays_fine,spline = fitspline_tilt(cur_node_date,cur_node_tilt_xy,INPUT_days_to_plot,now_time)     
+                            xysplinefit=[subtilt, subdays, subtilt_fine, subdtilt_fine, subdays_fine,spline]
+                        
+                            if subdays<-1 or len(subdays)==0:
+                                #sub dbase not updated
                                 py=0
                             else:
-                                colpos_xztilt=extract_tilt_for_colpos(spline, dates_to_plot, min(subdays), max(subdays))
-                                
-                                
-                                #computing spline fit of xy tilt of current node within defined date range
-                                subtilt, subdays, subtilt_fine, subdtilt_fine, subdays_fine,spline = fitspline_tilt(cur_node_date,cur_node_tilt_xy,INPUT_days_to_plot,now_time)     
-                                xysplinefit=[subtilt, subdays, subtilt_fine, subdtilt_fine, subdays_fine,spline]
-                            
-                                if subdays<-1 or len(subdays)==0:
-                                    #sub dbase not updated
+                                if np.sum([a for a in np.isnan(subtilt)])>0 or np.sum([b for b in np.isnan(subtilt_fine)])>0:
+                                    # dbase updated, spline fit failed
                                     py=0
                                 else:
-                                    if np.sum([a for a in np.isnan(subtilt)])>0 or np.sum([b for b in np.isnan(subtilt_fine)])>0:
-                                        # dbase updated, spline fit failed
-                                        py=0
-                                    else:
-                                        #dbase updated, spline fit successful
-                                        colpos_xytilt=extract_tilt_for_colpos(spline, dates_to_plot, min(subdays), max(subdays))
-                                        colstatus[INPUT_which_node,1]=0  
-                                        curnode_splinefit=[xzsplinefit, xysplinefit]
-                                        allnodes_splinefit[INPUT_which_node]=curnode_splinefit
-                
-               
-                X,XZ,XY=xzxy_to_cart2(seg_len, colpos_xztilt, colpos_xytilt)
-                for q in range(INPUT_number_colpos):
-                    allnodes_colpos_splinefit_X[INPUT_which_node,q]=round(X[q],2)
-                    allnodes_colpos_splinefit_XZ[INPUT_which_node,q]=round(XZ[q],4)
-                    allnodes_colpos_splinefit_XY[INPUT_which_node,q]=round(XY[q],4)
-                
-           
-            got=1
-
-            if got==1:
-
-                printfigures=0
-                Tvela1=0.005 #m/day
-                Tvela2=0.5 #m/day
-                Ttilt=0.05 #m
-                op_axis_k=0.1
-                adj_node_k=0.5
-
-                print loc_col_name[INPUT_which_sensor], now_time.strftime("%Y-%m-%d %H:%M")
-
-                #def evaluate_alert(allnodes_splinefit,num_nodes,Tvela1,Tvela2,Ttilt,op_axis_k, adj_node_k):
-                
-                for cur_node in range(num_nodes):
-                    nodealert=-1
-                    curnode_splinefit=allnodes_splinefit[cur_node]
-                    xzsplinefit=curnode_splinefit[0]
-                    xysplinefit=curnode_splinefit[1]
-                    xzdays=xzsplinefit[4]
-                    xztilt=xzsplinefit[2]
-                    if len(xztilt)==0:
-                        out=[cur_node+1,-1]
-                        
-                        print out
-                        csvout.append([now_time.strftime("%Y-%m-%d %H:%M"),loc_col_name[INPUT_which_sensor],
-                                   str(cur_node+1),
-                                   str(nodealert)])
-                        continue
-                    xzvel=xzsplinefit[3]
-
-                    xytilt=xysplinefit[2]
-                    xyvel=xysplinefit[3]
-
-                    if abs(xzvel[-1])>=abs(xyvel[-1]):
-                        if abs(xzvel[-1])>Tvela1:
-                            if abs(xztilt[-1]-xztilt[0])<=Ttilt:
-                                nodealert=0
-                            else:
-                                if abs(xzvel[-1])<=Tvela2:
-                                    if abs(xyvel[-1])>op_axis_k*abs(xzvel[-1]):
-                                        nodealert=1
-                                    else:
-                                        nodealert=0
-                                else:
-                                    if abs(xyvel[-1])>op_axis_k*abs(xzvel[-1]):
-                                        nodealert=2
-                                    else:
-                                        nodealert=0
-                        else:
-                            nodealert=0
-                    else:
-                        if abs(xyvel[-1])>Tvela1:
-                            if abs(xytilt[-1]-xytilt[0])<=Ttilt:
-                                nodealert=0
-                            else:
-                                if abs(xyvel[-1])<=Tvela2:
-                                    if abs(xzvel[-1])>op_axis_k*abs(xyvel[-1]):
-                                        nodealert=1
-                                    else:
-                                        nodealert=0
-                                else:
-                                    if abs(xzvel[-1])>op_axis_k*abs(xyvel[-1]):
-                                        nodealert=2
-                                    else:
-                                        nodealert=0
-                        else:
-                            nodealert=0
-                    out=[cur_node+1,nodealert,round(xztilt[-1]-xztilt[0],2),round(xzvel[-1],3),round(xytilt[-1]-xytilt[0],2),round(xyvel[-1],3)]
-                    print out
-                    csvout.append([now_time.strftime("%Y-%m-%d %H:%M"),loc_col_name[INPUT_which_sensor],
-                                   str(cur_node+1),
-                                   str(nodealert),
-                                   str(round(xztilt[-1]-xztilt[0],2)),
-                                   str(round(xzvel[-1],3)),
-                                   str(round(xytilt[-1]-xytilt[0],2)),
-                                   str(round(xyvel[-1],3))])
-                    if nodealert>=0:printfigures=printfigures+1
-                
-                
-                        
-                   
-            printfigures=1
-
-            if printfigures>0:
+                                    #dbase updated, spline fit successful
+                                    colpos_xytilt=extract_tilt_for_colpos(spline, dates_to_plot, min(subdays), max(subdays))
+                                    colstatus[INPUT_which_node,1]=0  
+                                    curnode_splinefit=[xzsplinefit, xysplinefit]
+                                    allnodes_splinefit[INPUT_which_node]=curnode_splinefit
             
-                #PLOTTING COLUMN POSITION
-                ac_X,ac_XZ, ac_XY=accumulate_translate(allnodes_colpos_splinefit_X,allnodes_colpos_splinefit_XZ,allnodes_colpos_splinefit_XY, num_nodes, INPUT_number_colpos,dates_to_plot, loc_col_name[INPUT_which_sensor])
-                        
+           
+            X,XZ,XY=xzxy_to_cart2(seg_len, colpos_xztilt, colpos_xytilt)
+            for q in range(INPUT_number_colpos):
+                allnodes_colpos_splinefit_X[INPUT_which_node,q]=round(X[q],2)
+                allnodes_colpos_splinefit_XZ[INPUT_which_node,q]=round(XZ[q],4)
+                allnodes_colpos_splinefit_XY[INPUT_which_node,q]=round(XY[q],4)
+            
+       
+        got=1
 
-                #PLOTTING SPLINE-FITTED TIME SERIES (TILT, VELOCITY) WITHIN DATE RANGE
-                for INPUT_which_axis in [0,1]:
-                    tiltvelfig=plt.figure(10+INPUT_which_axis)
-                    plt.clf()
-                    axtilt=tiltvelfig.add_subplot(121)
-                    axvel=tiltvelfig.add_subplot(122, sharex=axtilt)
-                    if INPUT_which_axis==0:tiltvelfig.suptitle(loc_col+" XZ as of "+str(now_time.strftime("%Y-%m-%d %H:%M")))
-                    else:tiltvelfig.suptitle(loc_col+" XY as of "+str(now_time.strftime("%Y-%m-%d %H:%M")))
+        if got==1:
+            printfigures=0
+            Tvela1=0.005 #m/day
+            Tvela2=0.5 #m/day
+            Ttilt=0.05 #m
+            op_axis_k=0.1
+            adj_node_k=0.5
 
-                    for INPUT_which_node in range(num_nodes):
-                        #extracting data from array
-                        curnode_splinefit=allnodes_splinefit[INPUT_which_node]
-                        
-                        curaxsplinefit=curnode_splinefit[INPUT_which_axis]
-                        subtilt=curaxsplinefit[0]
-                        subdays=curaxsplinefit[1]
-                        subtilt_fine=curaxsplinefit[2]
-                        subdtilt_fine=curaxsplinefit[3]
-                        subdays_fine=curaxsplinefit[4]
-                        spline =curaxsplinefit[5]
+            print loc_col_name[INPUT_which_sensor], now_time.strftime("%Y-%m-%d %H:%M")
 
-                        subdates=day_to_date(subdays, now_time)
-                        subdates_fine=day_to_date(subdays_fine, now_time)
-                                        
-                        axtilt.axhspan(offsettilt*thresholdtilt*(num_nodes-(INPUT_which_node))-thresholdtilt,offsettilt*thresholdtilt*(num_nodes-(INPUT_which_node))+thresholdtilt,color='0.9')
-                        axtilt.axhline(y=(offsettilt*thresholdtilt*(num_nodes-(INPUT_which_node))),color='0.6')
-                        axtilt.plot(subdates, [offsettilt*thresholdtilt*(num_nodes-(INPUT_which_node))+ (q-subtilt_fine[0]) for q in subtilt], '+-', color='0.4')
-                        axtilt.plot(subdates_fine, [offsettilt*thresholdtilt*(num_nodes-(INPUT_which_node))+ (q-subtilt_fine[0]) for q in subtilt_fine], '-',linewidth=1,label="n"+str(INPUT_which_node+1))
-                        
-
-                        axvel=tiltvelfig.add_subplot(122, sharex=axtilt)
-                        
-                        offsetvel=0
-                        #axvel.axhspan(offsetvel*thresholdvel*(num_nodes-(INPUT_which_node))-thresholdvel,offsetvel*thresholdvel*(num_nodes-(INPUT_which_node))+thresholdvel,color='0.9')
-                        #axvel.axhline(y=(offsetvel*thresholdvel*(num_nodes-(INPUT_which_node))),color='0.6')
-                        axvel.plot(subdates_fine, [offsetvel*thresholdvel*(num_nodes-(INPUT_which_node))+ q for q in subdtilt_fine], '-',linewidth=1,label="n"+str(INPUT_which_node+1))
-                        
-
-                
-                    days_vlines=[now_time+timedelta(days=-q) for q in range(0,int(INPUT_fit_interval)+1)]
-                    for dvl in range(len(days_vlines)):
-                        if dvl!=0:lw=(0.2)
-                        else:lw=(1)
-                        plt.sca(axtilt)
-                        axtilt.axvline(x=days_vlines[dvl], color='r',lw=lw)
-                        plt.sca(axvel)
-                        axvel.axvline(x=days_vlines[dvl], color='r',lw=lw)
-
-                    for cpvl in range(len(dates_to_plot)):
-                        plt.sca(axtilt)
-                        axtilt.axvline(x=dates_to_plot[cpvl], color='b',lw=0.5)
-                        
-                    #plt.figure(tiltvelfig.number)
-                    plt.sca(axtilt)
-                    cax=plt.gca()
-                    cax.yaxis.set_major_locator(MaxNLocator(4))
-                    cax.yaxis.set_minor_locator(AutoMinorLocator(4))
-                    cax.fmt_xdata = mdates.DateFormatter('%Y-%m-%d %H:%M')
-                    plt.xlim(now_time+timedelta(days=-INPUT_fit_interval),now_time+timedelta(days=0))    
-                    plt.ylabel("displacement (m)")
-                    plt.xlabel("date,time")
+            #def evaluate_alert(allnodes_splinefit,num_nodes,Tvela1,Tvela2,Ttilt,op_axis_k, adj_node_k):
+            
+            for cur_node in range(num_nodes):
+                nodealert=-1
+                curnode_splinefit=allnodes_splinefit[cur_node]
+                xzsplinefit=curnode_splinefit[0]
+                xysplinefit=curnode_splinefit[1]
+                xzdays=xzsplinefit[4]
+                xztilt=xzsplinefit[2]
+                if len(xztilt)==0:
+                    out=[cur_node+1,-1]
                     
+##                    print out
+                    csvout.append([now_time.strftime("%Y-%m-%d %H:%M"),loc_col_name[INPUT_which_sensor],
+                               str(cur_node+1),
+                               str(nodealert)])
+                    continue
+                xzvel=xzsplinefit[3]
 
-                    plt.figure(tiltvelfig.number)
-                    plt.sca(axvel)
-                    cax=plt.gca()
-                    axvel.axhline(y=0.005,color='y', ls=':',lw=3,label="A1: Slow")
-                    axvel.axhline(y=.50,color='r', ls=':',lw=3,label="A2: Mod")
-                    axvel.axhline(y=-0.005,color='y', ls=':',lw=3,)
-                    axvel.axhline(y=-.50,color='r', ls=':',lw=3,)
-                    
-                    cax.yaxis.set_major_locator(MaxNLocator(4))
-                    cax.yaxis.set_minor_locator(AutoMinorLocator(4))
-                    cax.fmt_xdata = mdates.DateFormatter('%Y-%m-%d %H:%M')
-                    plt.yscale('symlog', linthreshy=.01,linscaley=1)
-                    plt.ylim(-1,1)
-                    plt.xlabel("date,time")
-                    plt.ylabel("velocity (m/day)")
-                    #plt.legend()
-                    cax.legend(ncol=1,loc="upper left", bbox_to_anchor=(1,1),prop=legend_font_props)
+                xytilt=xysplinefit[2]
+                xyvel=xysplinefit[3]
 
-                    tiltvelfig.autofmt_xdate()
-
-                    if INPUT_which_axis==0:
-                        fig_name=os.path.abspath(os.getcwd() + "/..")+"/figures_for_bulletin/"+loc_col_name[INPUT_which_sensor]+"_xz.png"
-                        #fig_name=os.path.abspath(os.getcwd() + "/../../../..")+"/FiguresForUpload/"+loc_col_name[INPUT_which_sensor]+"_xz.png"
+                if abs(xzvel[-1])>=abs(xyvel[-1]):
+                    if abs(xzvel[-1])>Tvela1:
+                        if abs(xztilt[-1]-xztilt[0])<=Ttilt:
+                            nodealert=0
+                        else:
+                            if abs(xzvel[-1])<=Tvela2:
+                                if abs(xyvel[-1])>op_axis_k*abs(xzvel[-1]):
+                                    nodealert=1
+                                else:
+                                    nodealert=0
+                            else:
+                                if abs(xyvel[-1])>op_axis_k*abs(xzvel[-1]):
+                                    nodealert=2
+                                else:
+                                    nodealert=0
                     else:
-                        fig_name=os.path.abspath(os.getcwd() + "/..")+"/figures_for_bulletin/"+loc_col_name[INPUT_which_sensor]+"_xy.png"
-                        #fig_name=os.path.abspath(os.getcwd() + "/../../../..")+"/FiguresForUpload/"+loc_col_name[INPUT_which_sensor]+"_xy.png"
-                    #if os.path.abspath(os.getcwd() + "/..")=="/home/egl-sais/Documents/SYNC FILES/Dropbox/Senslope Data/Proc":
-                    #plt.savefig(fig_name, dpi=100, facecolor='w', edgecolor='w',orientation='landscape')
-                
-                
-            #plt.show()
-        csvout=np.asarray(csvout)
-        with open("../csv/2014-01-15_pycode_Node-level_alerts.csv", "wb") as f:
-            writer = csv.writer(f)
-            writer.writerows(csvout)
-        check_another_sensor=2#int(raw_input("Choose another sensor? (1) Yes     (2) No : "))
+                        nodealert=0
+                else:
+                    if abs(xyvel[-1])>Tvela1:
+                        if abs(xytilt[-1]-xytilt[0])<=Ttilt:
+                            nodealert=0
+                        else:
+                            if abs(xyvel[-1])<=Tvela2:
+                                if abs(xzvel[-1])>op_axis_k*abs(xyvel[-1]):
+                                    nodealert=1
+                                else:
+                                    nodealert=0
+                            else:
+                                if abs(xzvel[-1])>op_axis_k*abs(xyvel[-1]):
+                                    nodealert=2
+                                else:
+                                    nodealert=0
+                    else:
+                        nodealert=0
+                        
+                out=[cur_node+1,nodealert,round(xztilt[-1]-xztilt[0],2),round(xzvel[-1],3),round(xytilt[-1]-xytilt[0],2),round(xyvel[-1],3)]
 
+                if nodealert > 0:
+                    print out
+
+                csvout.append([now_time.strftime("%Y-%m-%d %H:%M"),loc_col_name[INPUT_which_sensor],
+                               str(cur_node+1),
+                               str(nodealert),
+                               str(round(xztilt[-1]-xztilt[0],2)),
+                               str(round(xzvel[-1],3)),
+                               str(round(xytilt[-1]-xytilt[0],2)),
+                               str(round(xyvel[-1],3))])
+                
+                if nodealert>=0:
+                    printfigures=printfigures+1
+                      
+                    
+               
+        if PrintFigures:
         
+            #PLOTTING COLUMN POSITION
+            ac_X,ac_XZ, ac_XY=accumulate_translate(allnodes_colpos_splinefit_X,allnodes_colpos_splinefit_XZ,allnodes_colpos_splinefit_XY, num_nodes, INPUT_number_colpos,dates_to_plot, loc_col_name[INPUT_which_sensor])
+                    
+
+            #PLOTTING SPLINE-FITTED TIME SERIES (TILT, VELOCITY) WITHIN DATE RANGE
+            for INPUT_which_axis in [0,1]:
+                tiltvelfig=plt.figure(10+INPUT_which_axis)
+                plt.clf()
+                axtilt=tiltvelfig.add_subplot(121)
+                axvel=tiltvelfig.add_subplot(122, sharex=axtilt)
+                
+                if INPUT_which_axis==0:
+                    tiltvelfig.suptitle(loc_col+" XZ as of "+str(now_time.strftime("%Y-%m-%d %H:%M")))
+                else:
+                    tiltvelfig.suptitle(loc_col+" XY as of "+str(now_time.strftime("%Y-%m-%d %H:%M")))
+
+                for INPUT_which_node in range(num_nodes):
+                    #extracting data from array
+                    curnode_splinefit=allnodes_splinefit[INPUT_which_node]
+                    
+                    curaxsplinefit=curnode_splinefit[INPUT_which_axis]
+                    subtilt=curaxsplinefit[0]
+                    subdays=curaxsplinefit[1]
+                    subtilt_fine=curaxsplinefit[2]
+                    subdtilt_fine=curaxsplinefit[3]
+                    subdays_fine=curaxsplinefit[4]
+                    spline =curaxsplinefit[5]
+
+                    subdates=day_to_date(subdays, now_time)
+                    subdates_fine=day_to_date(subdays_fine, now_time)
+                                    
+                    axtilt.axhspan(offsettilt*thresholdtilt*(num_nodes-(INPUT_which_node))-thresholdtilt,offsettilt*thresholdtilt*(num_nodes-(INPUT_which_node))+thresholdtilt,color='0.9')
+                    axtilt.axhline(y=(offsettilt*thresholdtilt*(num_nodes-(INPUT_which_node))),color='0.6')
+                    axtilt.plot(subdates, [offsettilt*thresholdtilt*(num_nodes-(INPUT_which_node))+ (q-subtilt_fine[0]) for q in subtilt], '+-', color='0.4')
+                    axtilt.plot(subdates_fine, [offsettilt*thresholdtilt*(num_nodes-(INPUT_which_node))+ (q-subtilt_fine[0]) for q in subtilt_fine], '-',linewidth=1,label="n"+str(INPUT_which_node+1))
+                    
+
+                    axvel=tiltvelfig.add_subplot(122, sharex=axtilt)
+                    
+                    offsetvel=0
+                    #axvel.axhspan(offsetvel*thresholdvel*(num_nodes-(INPUT_which_node))-thresholdvel,offsetvel*thresholdvel*(num_nodes-(INPUT_which_node))+thresholdvel,color='0.9')
+                    #axvel.axhline(y=(offsetvel*thresholdvel*(num_nodes-(INPUT_which_node))),color='0.6')
+                    axvel.plot(subdates_fine, [offsetvel*thresholdvel*(num_nodes-(INPUT_which_node))+ q for q in subdtilt_fine], '-',linewidth=1,label="n"+str(INPUT_which_node+1))
+                    
+
+            
+                days_vlines=[now_time+timedelta(days=-q) for q in range(0,int(INPUT_fit_interval)+1)]
+                for dvl in range(len(days_vlines)):
+                    if dvl!=0:lw=(0.2)
+                    else:lw=(1)
+                    plt.sca(axtilt)
+                    axtilt.axvline(x=days_vlines[dvl], color='r',lw=lw)
+                    plt.sca(axvel)
+                    axvel.axvline(x=days_vlines[dvl], color='r',lw=lw)
+
+                for cpvl in range(len(dates_to_plot)):
+                    plt.sca(axtilt)
+                    axtilt.axvline(x=dates_to_plot[cpvl], color='b',lw=0.5)
+                    
+                #plt.figure(tiltvelfig.number)
+                plt.sca(axtilt)
+                cax=plt.gca()
+                cax.yaxis.set_major_locator(MaxNLocator(4))
+                cax.yaxis.set_minor_locator(AutoMinorLocator(4))
+                cax.fmt_xdata = mdates.DateFormatter('%Y-%m-%d %H:%M')
+                plt.xlim(now_time+timedelta(days=-INPUT_fit_interval),now_time+timedelta(days=0))    
+                plt.ylabel("displacement (m)")
+                plt.xlabel("date,time")
+                
+
+                plt.figure(tiltvelfig.number)
+                plt.sca(axvel)
+                cax=plt.gca()
+                axvel.axhline(y=0.005,color='y', ls=':',lw=3,label="A1: Slow")
+                axvel.axhline(y=.50,color='r', ls=':',lw=3,label="A2: Mod")
+                axvel.axhline(y=-0.005,color='y', ls=':',lw=3,)
+                axvel.axhline(y=-.50,color='r', ls=':',lw=3,)
+                
+                cax.yaxis.set_major_locator(MaxNLocator(4))
+                cax.yaxis.set_minor_locator(AutoMinorLocator(4))
+                cax.fmt_xdata = mdates.DateFormatter('%Y-%m-%d %H:%M')
+                plt.yscale('symlog', linthreshy=.01,linscaley=1)
+                plt.ylim(-1,1)
+                plt.xlabel("date,time")
+                plt.ylabel("velocity (m/day)")
+                #plt.legend()
+                cax.legend(ncol=1,loc="upper left", bbox_to_anchor=(1,1),prop=legend_font_props)
+
+                tiltvelfig.autofmt_xdate()
+
+                if INPUT_which_axis==0:
+                    fig_name=os.path.abspath(os.getcwd() + "/..")+"/figures_for_bulletin/"+loc_col_name[INPUT_which_sensor]+"_xz.png"
+                    #fig_name=os.path.abspath(os.getcwd() + "/../../../..")+"/FiguresForUpload/"+loc_col_name[INPUT_which_sensor]+"_xz.png"
+                else:
+                    fig_name=os.path.abspath(os.getcwd() + "/..")+"/figures_for_bulletin/"+loc_col_name[INPUT_which_sensor]+"_xy.png"
+                    #fig_name=os.path.abspath(os.getcwd() + "/../../../..")+"/FiguresForUpload/"+loc_col_name[INPUT_which_sensor]+"_xy.png"
+                #if os.path.abspath(os.getcwd() + "/..")=="/home/egl-sais/Documents/SYNC FILES/Dropbox/Senslope Data/Proc":
+                #plt.savefig(fig_name, dpi=100, facecolor='w', edgecolor='w',orientation='landscape')
+            
+            
+        #plt.show()
+    csvout=np.asarray(csvout)
+    with open(CSVOutputFile, "wb") as f:
+        writer = csv.writer(f)
+        writer.writerows(csvout)
+        print "Alert file written"
+##        check_another_sensor=2#int(raw_input("Choose another sensor? (1) Yes     (2) No : "))
+
+# get configuration settings from configuration file
+cfg = ConfigParser.ConfigParser()
+cfg.read('node-alerts-config.txt')
+
+InputFilePath = cfg.get('I/O','InputFilePath')
+OutputFilePath = cfg.get('I/O','OutputFilePath')
+PrintFigures = cfg.getboolean('I/O','PrintFigures')
+
+CSVOutputFile = cfg.get('I/O','CSVOutputFilePath') + cfg.get('I/O','CSVOutputFile')
+
 
 #MAIN
 
 #AutoGeneratePlots()
-GeneratePlots()
+##GeneratePlots()
 
 
 
