@@ -7,7 +7,7 @@ def main():
     GeneratePlots()
     print tm.asctime()
     print "Sleeping..."
-    tm.sleep(600)
+    tm.sleep(1200)
 
 if __name__ == '__main__':
 ##    main()

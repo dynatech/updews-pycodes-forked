@@ -263,14 +263,16 @@ def accumulate_translate(X,XZ,XY,numnodes,numcolpos, dates_to_plot, loc_col):
             plt.subplots_adjust(top=0.85)
 
     plt.figure(20)
-    fig_name=os.path.abspath(os.getcwd() + "/..")+"/figures_for_bulletin/"+loc_col+"_colpos_abs.png"
+    fig_name=OutputFigurePath+loc_col+"_colpos_abs.png"
     #fig_name=loc_col+"_colpos_abs.png" #os.path.abspath(os.getcwd() + "/../../../..")+"/FiguresForUpload/"+loc_col+"_colpos_abs.png"
-    #plt.savefig(fig_name, dpi=100, facecolor='w', edgecolor='w',orientation='landscape')
+    if PrintFigures:
+        plt.savefig(fig_name, dpi=100, facecolor='w', edgecolor='w',orientation='landscape')
 
     plt.figure(21)
-    fig_name=os.path.abspath(os.getcwd() + "/..")+"/figures_for_bulletin/"+loc_col+"_colpos_rel.png"
+    fig_name=OutputFigurePath+loc_col+"_colpos_rel.png"
     #fig_name=loc_col+"_colpos_abs.png" #os.path.abspath(os.getcwd() + "/../../../..")+"/FiguresForUpload/"+loc_col+"_colpos_rel.png"
-    #plt.savefig(fig_name, dpi=100, facecolor='w', edgecolor='w',orientation='landscape')
+    if PrintFigures:
+        plt.savefig(fig_name, dpi=100, facecolor='w', edgecolor='w',orientation='landscape')
     
     #plt.show()    
     
@@ -873,7 +875,9 @@ def GeneratePlots():
         if PrintFigures:
         
             #PLOTTING COLUMN POSITION
-            ac_X,ac_XZ, ac_XY=accumulate_translate(allnodes_colpos_splinefit_X,allnodes_colpos_splinefit_XZ,allnodes_colpos_splinefit_XY, num_nodes, INPUT_number_colpos,dates_to_plot, loc_col_name[INPUT_which_sensor])
+            ac_X,ac_XZ, ac_XY=accumulate_translate(allnodes_colpos_splinefit_X,allnodes_colpos_splinefit_XZ,
+                                                   allnodes_colpos_splinefit_XY, num_nodes, INPUT_number_colpos,dates_to_plot,
+                                                   loc_col_name[INPUT_which_sensor])
                     
 
             #PLOTTING SPLINE-FITTED TIME SERIES (TILT, VELOCITY) WITHIN DATE RANGE
@@ -963,13 +967,11 @@ def GeneratePlots():
                 tiltvelfig.autofmt_xdate()
 
                 if INPUT_which_axis==0:
-                    fig_name=os.path.abspath(os.getcwd() + "/..")+"/figures_for_bulletin/"+loc_col_name[INPUT_which_sensor]+"_xz.png"
-                    #fig_name=os.path.abspath(os.getcwd() + "/../../../..")+"/FiguresForUpload/"+loc_col_name[INPUT_which_sensor]+"_xz.png"
+                    fig_name=OutputFigurePath+loc_col_name[INPUT_which_sensor]+"_xz.png"
                 else:
-                    fig_name=os.path.abspath(os.getcwd() + "/..")+"/figures_for_bulletin/"+loc_col_name[INPUT_which_sensor]+"_xy.png"
-                    #fig_name=os.path.abspath(os.getcwd() + "/../../../..")+"/FiguresForUpload/"+loc_col_name[INPUT_which_sensor]+"_xy.png"
-                #if os.path.abspath(os.getcwd() + "/..")=="/home/egl-sais/Documents/SYNC FILES/Dropbox/Senslope Data/Proc":
-                #plt.savefig(fig_name, dpi=100, facecolor='w', edgecolor='w',orientation='landscape')
+                    fig_name=OutputFigurePath+loc_col_name[INPUT_which_sensor]+"_xy.png"
+
+                plt.savefig(fig_name, dpi=100, facecolor='w', edgecolor='w',orientation='landscape')
             
             
         #plt.show()
@@ -977,7 +979,7 @@ def GeneratePlots():
     with open(CSVOutputFile, "wb") as f:
         writer = csv.writer(f)
         writer.writerows(csvout)
-        print "Alert file written"
+        print "\nAlert file written"
 ##        check_another_sensor=2#int(raw_input("Choose another sensor? (1) Yes     (2) No : "))
 
 # get configuration settings from configuration file
@@ -986,8 +988,8 @@ cfg.read('node-alerts-config.txt')
 
 InputFilePath = cfg.get('I/O','InputFilePath')
 OutputFilePath = cfg.get('I/O','OutputFilePath')
+OutputFigurePath = cfg.get('I/O','OutputFigurePath')
 PrintFigures = cfg.getboolean('I/O','PrintFigures')
-
 CSVOutputFile = cfg.get('I/O','CSVOutputFilePath') + cfg.get('I/O','CSVOutputFile')
 
 
