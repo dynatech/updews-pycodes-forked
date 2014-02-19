@@ -41,12 +41,6 @@ import threading
 
 #CONSTANTS
 
-#A. input data
-loc_col_list=("eeet","sinb_purged","sint_purged","sinu_purged","lipb_purged","lipt_purged","bolb_purged","pugb_purged","pugt_purged","mamb_purged","mamt_purged","oslt_purged","oslb_purged","labt_purged", "labb_purged", "gamt_purged","gamb_purged", "humt_purged","humb_purged", "plat_purged","plab_purged","blct_purged","blcb_purged")
-num_nodes_loc_col=(14,29,19,29,28,31,30,14,10,29,24,21,23,39,25,18,22,21,26,39,40,24,19)
-col_seg_len_list=(0.5,1,1,1,0.5,0.5,0.5,1.2,1.2,1.0,1.0,1.,1.,1.,1.,1.,1.,1.,1,0.5,0.5,1,1)
-invalid=("eeet","sinb_purged","sint_purged","sinu_purged","lipb_purged","lipt_purged","bolb_purged","pugb_purged","pugt_purged",[26],"mamt_purged","oslt_purged","oslb_purged","labt_purged", "labb_purged", "gamt_purged","gamb_purged", "humt_purged","humb_purged", "plat_purged","plab_purged","blct_purged","blcb_purged")
-
 #B. plot parameters
 #   legend parameters
 legend_font_props = font.FontProperties()
@@ -61,8 +55,6 @@ g_which='both'
 g_ax='both'
 g_ls='-'
 g_c='0.6'
-
-
 
 #math/trigo functions
 tan=math.tan
@@ -86,7 +78,12 @@ class Logger(object):
     def write(self, message):
         self.terminal.write(message)
         self.log.write(message)
-        
+
+class ColumnArray:
+    def __init__(self, name, number_of_segments, segment_length):
+        self.name = name
+        self.nos = number_of_segments
+        self.seglen = segment_length        
 
 #FUNCTIONS
 
@@ -423,7 +420,6 @@ def update_proc_file(loc_col,num_nodes):
     print "\n"#Updating file ",loc_col+"_proc.csv...", 
     
     #     READING INPUT SENSOR DATA
-##    inputfilepath=os.path.abspath(os.getcwd() + "/../..")+"/"
     inputfname=loc_col+".csv"
     #check if raw file exists
     if os.path.exists(InputFilePath+inputfname)==0:
@@ -431,7 +427,6 @@ def update_proc_file(loc_col,num_nodes):
         return
 
     #check if processed file exists, and determines the number of lines in the file
-##    OutputFilePath=os.path.abspath(os.getcwd() + "/..")+"/csv/"
     outputfname=loc_col+"_proc.csv"
     if os.path.exists(OutputFilePath+outputfname):
         fa1 = open(OutputFilePath+outputfname,'rb') 
@@ -642,12 +637,13 @@ def GeneratePlots():
     loc="center left"
     prop=legend_font_props
 
-    # sensor column database
-    loc_col_list=("eeet","sinb_purged","sint_purged","sinu_purged","lipb_purged","lipt_purged","bolb_purged","pugb_purged","pugt_purged","mamb_purged","mamt_purged","oslt_purged","oslb_purged","labt_purged", "labb_purged", "gamt_purged","gamb_purged", "humt_purged","humb_purged", "plat_purged","plab_purged","blct_purged","blcb_purged")
-    loc_col_name=("eeet","sinb","sint","sinu","lipb","lipt","bolb","pugb","pugt","mamb","mamt","oslt","oslb","labt", "labb", "gamt","gamb", "humt","humb", "plat","plab","blct","blcb")
+    print ColumnPropertiesFile
 
-    num_nodes_loc_col=(14,29,19,29,28,31,30,14,10,29,24,21,23,39,25,18,22,21,26,39,40,24,19)
-    col_seg_len_list=(0.5,1,1,1,0.5,0.5,0.5,1.2,1.2,1.0,1.0,1.,1.,1.,1.,1.,1.,1.,1,0.5,0.5,1,1)
+    fo = csv.reader(open(ColumnPropertiesFile, 'r'),delimiter=',')
+    column_list = []
+    for line in fo:
+        col = ColumnArray(line[0], int(line[1]), float(line[2]))
+        column_list.append(col)
 
     thresholdtilt=0.05 #degrees
     offsettilt=3
@@ -655,53 +651,39 @@ def GeneratePlots():
     thresholdvel=0.005 #degrees/day
     offsetvel=3
         
-    which_sensor=-1#int(raw_input("Input which sensor to plot (number): "))
-
     cur_date=datetime.now()
     
     csvout=[]
-    for INPUT_which_sensor in range(len(loc_col_list)):
+    for column in column_list:
 
-        if which_sensor!=-1:
-            if which_sensor!=INPUT_which_sensor:
-                continue
-        
         #1    SELECTING COLUMN TO PLOT
             
         #************************************************************ defining input file name, number of nodes, name and segment lengths of columns
-        input_file_name,num_nodes,loc_col,seg_len=Input_Loc_Col(loc_col_list,num_nodes_loc_col,col_seg_len_list, INPUT_which_sensor)
-##        InputFilePath=os.path.abspath(os.getcwd() + "/..")+"/csv/"
-        input_file_name=OutputFilePath+input_file_name
+        # input_file_name -> "column_name"_proc.csv
+        # num_nodes -> number of nodes per column
+        # loc_col -> name of column
+        # seg_len -> segment length of column
+        input_file_name = OutputFilePath + column.name + "_proc.csv"        
 
         #************************************************************ updates database
-        update_proc_file(loc_col,num_nodes)
+        update_proc_file(column.name,column.nos)
 
         #************************************************************ creates array for whole data set
-        all_nodes_data1=Create_Arrays_for_Input(num_nodes)
+        all_nodes_data1=Create_Arrays_for_Input(column.nos)
 
         #************************************************************* reads text file into file objects and assigns data from file object into arrays
-        all_nodes_data=Write_Input_File_to_Arrays(all_nodes_data1,input_file_name,seg_len)
+        all_nodes_data=Write_Input_File_to_Arrays(all_nodes_data1,input_file_name,column.seglen)
         if all_nodes_data==[]:
+            print "Error reading data for column " + column.name
             continue
 
         #DEFINING DATE RANGE TO PLOT
 
         latest_record_time=datetime.combine(date(1999,1,1),time(0,0,0))   #initializes latest_record_time
-        if which_sensor==-1:
-            manual_end_date_input=2
-        else:
-            manual_end_date_input=int(raw_input("Manually input end date? (1)Yes     (2)No: "))
-        if manual_end_date_input==1:
-            Y=int(raw_input("     Input end year: "))
-            m=int(raw_input("     Input end month: "))
-            d=int(raw_input("     Input end date: "))
-            H=int(raw_input("     Input end hour: "))
-            end_dt=datetime.combine(date(Y,m,d),time(H,0,0))
-            now_time=end_dt
-        else:
-            now_time=datetime.now()
 
-        print "DATA for ",loc_col_name[INPUT_which_sensor]," as of ", now_time.strftime("%Y-%m-%d %H:%M")    
+        now_time=datetime.now()
+
+        print "DATA for ",column.name," as of ", now_time.strftime("%Y-%m-%d %H:%M")    
 
         INPUT_fit_interval=3#(float(raw_input("Input # days before end date: ")))
         INPUT_days_to_plot=INPUT_fit_interval
@@ -712,15 +694,15 @@ def GeneratePlots():
 
         #EXTRACTING DATA WITHIN DATE RANGE
 
-        allnodes_splinefit=range(num_nodes)    
+        allnodes_splinefit=range(column.nos)    
         
-        allnodes_colpos_splinefit_X=np.ndarray(shape=(num_nodes,INPUT_number_colpos))
-        allnodes_colpos_splinefit_XZ=np.ndarray(shape=(num_nodes,INPUT_number_colpos))
-        allnodes_colpos_splinefit_XY=np.ndarray(shape=(num_nodes,INPUT_number_colpos))
+        allnodes_colpos_splinefit_X=np.ndarray(shape=(column.nos,INPUT_number_colpos))
+        allnodes_colpos_splinefit_XZ=np.ndarray(shape=(column.nos,INPUT_number_colpos))
+        allnodes_colpos_splinefit_XY=np.ndarray(shape=(column.nos,INPUT_number_colpos))
 
-        colstatus=np.ndarray(shape=(num_nodes,6),dtype=int)
+        colstatus=np.ndarray(shape=(column.nos,6),dtype=int)
 
-        for INPUT_which_node in range(num_nodes):
+        for INPUT_which_node in range(column.nos):
             colstatus[INPUT_which_node,0]=INPUT_which_node+1
             cur_node_data=all_nodes_data[INPUT_which_node]
             cur_node_date=cur_node_data[0]
@@ -778,7 +760,7 @@ def GeneratePlots():
                                     allnodes_splinefit[INPUT_which_node]=curnode_splinefit
             
            
-            X,XZ,XY=xzxy_to_cart2(seg_len, colpos_xztilt, colpos_xytilt)
+            X,XZ,XY=xzxy_to_cart2(column.seglen, colpos_xztilt, colpos_xytilt)
             for q in range(INPUT_number_colpos):
                 allnodes_colpos_splinefit_X[INPUT_which_node,q]=round(X[q],2)
                 allnodes_colpos_splinefit_XZ[INPUT_which_node,q]=round(XZ[q],4)
@@ -795,11 +777,11 @@ def GeneratePlots():
             op_axis_k=0.1
             adj_node_k=0.5
 
-            print loc_col_name[INPUT_which_sensor], now_time.strftime("%Y-%m-%d %H:%M")
+            print column.name, now_time.strftime("%Y-%m-%d %H:%M")
 
-            #def evaluate_alert(allnodes_splinefit,num_nodes,Tvela1,Tvela2,Ttilt,op_axis_k, adj_node_k):
+            #def evaluate_alert(allnodes_splinefit,column.nos,Tvela1,Tvela2,Ttilt,op_axis_k, adj_node_k):
             
-            for cur_node in range(num_nodes):
+            for cur_node in range(column.nos):
                 nodealert=-1
                 curnode_splinefit=allnodes_splinefit[cur_node]
                 xzsplinefit=curnode_splinefit[0]
@@ -810,7 +792,7 @@ def GeneratePlots():
                     out=[cur_node+1,-1]
                     
 ##                    print out
-                    csvout.append([now_time.strftime("%Y-%m-%d %H:%M"),loc_col_name[INPUT_which_sensor],
+                    csvout.append([now_time.strftime("%Y-%m-%d %H:%M"),column.name,
                                str(cur_node+1),
                                str(nodealert)])
                     continue
@@ -859,7 +841,7 @@ def GeneratePlots():
                 if nodealert > 0:
                     print out
 
-                csvout.append([now_time.strftime("%Y-%m-%d %H:%M"),loc_col_name[INPUT_which_sensor],
+                csvout.append([now_time.strftime("%Y-%m-%d %H:%M"),column.name,
                                str(cur_node+1),
                                str(nodealert),
                                str(round(xztilt[-1]-xztilt[0],2)),
@@ -876,8 +858,8 @@ def GeneratePlots():
         
             #PLOTTING COLUMN POSITION
             ac_X,ac_XZ, ac_XY=accumulate_translate(allnodes_colpos_splinefit_X,allnodes_colpos_splinefit_XZ,
-                                                   allnodes_colpos_splinefit_XY, num_nodes, INPUT_number_colpos,dates_to_plot,
-                                                   loc_col_name[INPUT_which_sensor])
+                                                   allnodes_colpos_splinefit_XY, column.nos, INPUT_number_colpos,dates_to_plot,
+                                                   column.name)
                     
 
             #PLOTTING SPLINE-FITTED TIME SERIES (TILT, VELOCITY) WITHIN DATE RANGE
@@ -888,11 +870,11 @@ def GeneratePlots():
                 axvel=tiltvelfig.add_subplot(122, sharex=axtilt)
                 
                 if INPUT_which_axis==0:
-                    tiltvelfig.suptitle(loc_col+" XZ as of "+str(now_time.strftime("%Y-%m-%d %H:%M")))
+                    tiltvelfig.suptitle(column.name+" XZ as of "+str(now_time.strftime("%Y-%m-%d %H:%M")))
                 else:
-                    tiltvelfig.suptitle(loc_col+" XY as of "+str(now_time.strftime("%Y-%m-%d %H:%M")))
+                    tiltvelfig.suptitle(column.name+" XY as of "+str(now_time.strftime("%Y-%m-%d %H:%M")))
 
-                for INPUT_which_node in range(num_nodes):
+                for INPUT_which_node in range(column.nos):
                     #extracting data from array
                     curnode_splinefit=allnodes_splinefit[INPUT_which_node]
                     
@@ -907,18 +889,18 @@ def GeneratePlots():
                     subdates=day_to_date(subdays, now_time)
                     subdates_fine=day_to_date(subdays_fine, now_time)
                                     
-                    axtilt.axhspan(offsettilt*thresholdtilt*(num_nodes-(INPUT_which_node))-thresholdtilt,offsettilt*thresholdtilt*(num_nodes-(INPUT_which_node))+thresholdtilt,color='0.9')
-                    axtilt.axhline(y=(offsettilt*thresholdtilt*(num_nodes-(INPUT_which_node))),color='0.6')
-                    axtilt.plot(subdates, [offsettilt*thresholdtilt*(num_nodes-(INPUT_which_node))+ (q-subtilt_fine[0]) for q in subtilt], '+-', color='0.4')
-                    axtilt.plot(subdates_fine, [offsettilt*thresholdtilt*(num_nodes-(INPUT_which_node))+ (q-subtilt_fine[0]) for q in subtilt_fine], '-',linewidth=1,label="n"+str(INPUT_which_node+1))
+                    axtilt.axhspan(offsettilt*thresholdtilt*(column.nos-(INPUT_which_node))-thresholdtilt,offsettilt*thresholdtilt*(column.nos-(INPUT_which_node))+thresholdtilt,color='0.9')
+                    axtilt.axhline(y=(offsettilt*thresholdtilt*(column.nos-(INPUT_which_node))),color='0.6')
+                    axtilt.plot(subdates, [offsettilt*thresholdtilt*(column.nos-(INPUT_which_node))+ (q-subtilt_fine[0]) for q in subtilt], '+-', color='0.4')
+                    axtilt.plot(subdates_fine, [offsettilt*thresholdtilt*(column.nos-(INPUT_which_node))+ (q-subtilt_fine[0]) for q in subtilt_fine], '-',linewidth=1,label="n"+str(INPUT_which_node+1))
                     
 
                     axvel=tiltvelfig.add_subplot(122, sharex=axtilt)
                     
                     offsetvel=0
-                    #axvel.axhspan(offsetvel*thresholdvel*(num_nodes-(INPUT_which_node))-thresholdvel,offsetvel*thresholdvel*(num_nodes-(INPUT_which_node))+thresholdvel,color='0.9')
-                    #axvel.axhline(y=(offsetvel*thresholdvel*(num_nodes-(INPUT_which_node))),color='0.6')
-                    axvel.plot(subdates_fine, [offsetvel*thresholdvel*(num_nodes-(INPUT_which_node))+ q for q in subdtilt_fine], '-',linewidth=1,label="n"+str(INPUT_which_node+1))
+                    #axvel.axhspan(offsetvel*thresholdvel*(column.nos-(INPUT_which_node))-thresholdvel,offsetvel*thresholdvel*(column.nos-(INPUT_which_node))+thresholdvel,color='0.9')
+                    #axvel.axhline(y=(offsetvel*thresholdvel*(column.nos-(INPUT_which_node))),color='0.6')
+                    axvel.plot(subdates_fine, [offsetvel*thresholdvel*(column.nos-(INPUT_which_node))+ q for q in subdtilt_fine], '-',linewidth=1,label="n"+str(INPUT_which_node+1))
                     
 
             
@@ -967,9 +949,9 @@ def GeneratePlots():
                 tiltvelfig.autofmt_xdate()
 
                 if INPUT_which_axis==0:
-                    fig_name=OutputFigurePath+loc_col_name[INPUT_which_sensor]+"_xz.png"
+                    fig_name=OutputFigurePath+column.name+"_xz.png"
                 else:
-                    fig_name=OutputFigurePath+loc_col_name[INPUT_which_sensor]+"_xy.png"
+                    fig_name=OutputFigurePath+column.name+"_xy.png"
 
                 plt.savefig(fig_name, dpi=100, facecolor='w', edgecolor='w',orientation='landscape')
             
@@ -991,6 +973,7 @@ OutputFilePath = cfg.get('I/O','OutputFilePath')
 OutputFigurePath = cfg.get('I/O','OutputFigurePath')
 PrintFigures = cfg.getboolean('I/O','PrintFigures')
 CSVOutputFile = cfg.get('I/O','CSVOutputFilePath') + cfg.get('I/O','CSVOutputFile')
+ColumnPropertiesFile = cfg.get('I/O','ColumnPropertiesFile')
 
 
 #MAIN
