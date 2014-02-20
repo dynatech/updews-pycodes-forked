@@ -49,6 +49,7 @@ def update_proc_file(loc_col,num_nodes):
     print "Updating file",loc_col+"_proc.csv..."
     
     inputfname=loc_col+".csv"
+    print inputfname
 
     ##checks if raw file exists##
     if os.path.exists(InputFilePath+inputfname)==0:
@@ -119,6 +120,8 @@ def update_proc_file(loc_col,num_nodes):
             rho=str(frho(int(x),int(y),int(z)))
             moi=i[6]
 
+            if moi=='':
+                moi=str(-1)
             if int(moi)>=1000 and int(moi)<=10000:
                 moifilter=str(1)
 
