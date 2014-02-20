@@ -31,7 +31,6 @@ from scipy.interpolate import UnivariateSpline
 ##############
 # INPUT DATA #
 ##############
-
 loc_col_list=("eeet","sinb_purged","sint_purged","sinu_purged","lipb_purged","lipt_purged","bolb_purged","pugb_purged","pugt_purged","mamb_purged","mamt_purged","oslt_purged","oslb_purged","labt_purged", "labb_purged", "gamt_purged","gamb_purged", "humt_purged","humb_purged", "plat_purged","plab_purged","blct_purged","blcb_purged")
 num_nodes_loc_col=(14,29,19,29,28,31,30,14,10,29,24,21,23,39,25,18,22,21,26,39,40,24,19)
 col_seg_len_list=(0.5,1,1,1,0.5,0.5,0.5,1.2,1.2,1.0,1.0,1.,1.,1.,1.,1.,1.,1.,1,0.5,0.5,1,1)
@@ -58,7 +57,6 @@ prop=legend_font_props
 ###################
 # GRID PARAMETERS #
 ###################
-
 g_which='both'
 g_ax='both'
 g_ls='-'
@@ -68,7 +66,6 @@ g_c='0.6'
 ########################
 # MATH/TRIGO FUNCTIONS #
 ########################
-
 tan=math.tan
 sin=math.sin
 asin=math.asin
