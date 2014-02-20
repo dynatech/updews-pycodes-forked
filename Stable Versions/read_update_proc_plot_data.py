@@ -516,11 +516,11 @@ def frho(x,y,z): #tilt of column (from vertical)
     else:rho=-round(deg(atan(sqrt(y*y+z*z)/(x))),1)
     return rho
 
-#filter function
+# function
 def filter_good_data(a1,a2,a3):
     threshold_dot_prod=0.05
     print_output_text=0
-    filter=1
+    isGoodData=1
     temp2=(a1,a2,a3)
     temp1=array('i')
     for ax in temp2:
@@ -530,7 +530,7 @@ def filter_good_data(a1,a2,a3):
             if ax<-1023:
                 ax=ax+4096
                 if ax>1223:
-                    filter=0
+                    isGoodData=0
                     break
                 elif ax>1023:
                     ax=1023
@@ -540,17 +540,17 @@ def filter_good_data(a1,a2,a3):
                 temp1.append(ax)
                 continue
             else:
-                filter=0
+                isGoodData=0
                 break
         else:
         #new individual axis filter as of July 9 2013
             if abs(ax)>1023 and abs(ax)<2970:
-                filter=0
+                isGoodData=0
                 break
             else:
                 temp1.append(ax)
-    if filter==0:
-        return filter
+    if isGoodData==0:
+        return isGoodData
     #arrange accel data into increasing values  (due to precision issues)
     temp_sort=np.sort(temp1)
     xa=temp_sort[0]
@@ -615,7 +615,7 @@ def filter_good_data(a1,a2,a3):
     za_j=z0[1]  
     za_ax=sp.array([za_i,za_j,za_k])
     #checking the dot products of xa_ax, ya_ax, za_ax    
-    if abs(sp.dot(xa_ax,ya_ax))>threshold_dot_prod or abs(sp.dot(ya_ax,za_ax))>threshold_dot_prod or abs(sp.dot(za_ax,xa_ax))>threshold_dot_prod: filter=0
+    if abs(sp.dot(xa_ax,ya_ax))>threshold_dot_prod or abs(sp.dot(ya_ax,za_ax))>threshold_dot_prod or abs(sp.dot(za_ax,xa_ax))>threshold_dot_prod: isGoodData=0
     if print_output_text==1:
         np.set_printoptions(precision=2,suppress=True)
         print "xa:  ",xa_ax, round(sqrt(sum(i**2 for i in xa_ax)),4)
@@ -623,7 +623,7 @@ def filter_good_data(a1,a2,a3):
         print "za_t:",za_ax_t, round(sqrt(sum(i**2 for i in za_ax_t)),4), round(sp.dot(xa_ax,za_ax_t),4), round(sp.dot(ya_ax,za_ax_t),4)
         print "za:  ",za_ax, round(sqrt(sum(i**2 for i in za_ax)),4), round(sp.dot(xa_ax,za_ax),4), round(sp.dot(ya_ax,za_ax),4), round(sp.dot(za_ax_t,za_ax),4)
         print abs(sp.dot(xa_ax,ya_ax)), abs(sp.dot(ya_ax,za_ax)), abs(sp.dot(za_ax,xa_ax)), filter        
-    return filter
+    return isGoodData
 
 
 ########################################################################
