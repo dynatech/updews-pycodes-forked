@@ -518,7 +518,7 @@ def frho(x,y,z): #tilt of column (from vertical)
 
 # function
 def filter_good_data(a1,a2,a3):
-    threshold_dot_prod=0.05
+##    DotProductThreshold=0.5
     print_output_text=0
     isGoodData=1
     temp2=(a1,a2,a3)
@@ -615,7 +615,9 @@ def filter_good_data(a1,a2,a3):
     za_j=z0[1]  
     za_ax=sp.array([za_i,za_j,za_k])
     #checking the dot products of xa_ax, ya_ax, za_ax    
-    if abs(sp.dot(xa_ax,ya_ax))>threshold_dot_prod or abs(sp.dot(ya_ax,za_ax))>threshold_dot_prod or abs(sp.dot(za_ax,xa_ax))>threshold_dot_prod: isGoodData=0
+    if abs(sp.dot(xa_ax,ya_ax))>DotProductThreshold or abs(sp.dot(ya_ax,za_ax))>DotProductThreshold or abs(sp.dot(za_ax,xa_ax))>DotProductThreshold:
+        isGoodData=0
+        print 'dot product fail'
     if print_output_text==1:
         np.set_printoptions(precision=2,suppress=True)
         print "xa:  ",xa_ax, round(sqrt(sum(i**2 for i in xa_ax)),4)
@@ -974,6 +976,7 @@ OutputFigurePath = cfg.get('I/O','OutputFigurePath')
 PrintFigures = cfg.getboolean('I/O','PrintFigures')
 CSVOutputFile = cfg.get('I/O','CSVOutputFilePath') + cfg.get('I/O','CSVOutputFile')
 ColumnPropertiesFile = cfg.get('I/O','ColumnPropertiesFile')
+DotProductThreshold = float(cfg.get('Misc','DotProductThreshold'))
 
 
 #MAIN

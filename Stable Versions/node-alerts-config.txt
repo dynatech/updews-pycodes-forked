@@ -11,3 +11,4 @@ OutputFigurePath = D:\FiguresForUpload\
 
 [Misc]
 Debug = False
+DotProductThreshold = 0.09
