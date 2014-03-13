@@ -26,6 +26,6 @@ if __name__ == '__main__':
                 print '>> Exiting gracefully.'
             except:
                 print tm.asctime()
-                print "Unexpected error:", sys.exc_info()[0]
-                tm.sleep(5)
+                print "Unexpected error:", sys.exc_info()[0], sys.exc_info()[1]
+                tm.sleep(5)               
 
