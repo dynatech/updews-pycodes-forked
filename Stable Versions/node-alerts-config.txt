@@ -3,7 +3,7 @@ InputFilePath = D:\Dropbox\Senslope Data\
 
 OutputFilePath = D:\Dropbox\Senslope Data\Proc\csv\
 CSVOutputFilePath = D:\Dropbox\Senslope Data\Proc\csv\
-CSVOutputFile = 2014-01-15_pycode_Node-level_alerts.csv
+CSVOutputFile = Node-level_alerts.csv
 ColumnPropertiesFile = column_properties.csv
 
 PrintFigures = True
