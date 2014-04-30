@@ -31,6 +31,26 @@ def xzxy_to_cart(node_len, xz, xy):
     return H,a,b
 
 
+def df_from_csv(csvfilepath,colname,col,usecol):
+    df=pd.read_csv(csvfilepath+colname+"_proc.csv",names=col,usecols=usecol,parse_dates=[col[0]],index_col=col[0])
+
+    #computing equivalent linear displacements
+    x,xz,xy=xzxy_to_cart(seg_len,df['xz'].values,df['xy'].values)
+
+    #appending linear displacements series to data frame
+    df['xlin']=pd.Series(data=x,index=df.index)
+    df['xzlin']=pd.Series(data=xz,index=df.index)
+    df['xylin']=pd.Series(data=xy,index=df.index)
+    df.drop(['xz','xy'],inplace=True,axis=1)
+    gc.collect()
+    
+    #creating dataframes
+    xzdf, xydf, xdf = create_dataframes(df, num_nodes, seg_len)
+
+    return xzdf, xydf, xdf
+    
+
+
 def create_dataframes(df, num_nodes, seg_len):
     #creating series list
     xzlist=[]
@@ -89,78 +109,22 @@ def resamp_fill_df(resampind, xzdf,xydf,xdf):
     return fr_xzdf, fr_xydf, fr_xdf
 
 
-
-
-def plot_unfilled_individual_node_disp(num_nodes, xzdf, xydf, xdf, voff):
-    
+def plot_node_disp(colname,num_nodes, xz, xy, x, voff, title):
     fig,ax=plt.subplots(nrows=3,ncols=1, sharex=True,sharey=True, figsize=fig_size )
-    plt.suptitle(colname+"\nunfilled individual node disp")
+    plt.suptitle(colname+"\n"+title)
     cm = plt.get_cmap('gist_rainbow')
     ax[0].set_color_cycle([cm(1.*(num_nodes-i-1)/(num_nodes)) for i in range((num_nodes))])
     ax[1].set_color_cycle([cm(1.*(num_nodes-i-1)/(num_nodes)) for i in range((num_nodes))])
     ax[2].set_color_cycle([cm(1.*(num_nodes-i-1)/(num_nodes)) for i in range((num_nodes))])
     for curnodeID in range(num_nodes):
         plt.sca(ax[0])
-        xplot=voff*(curnodeID)+(xdf[num_nodes-curnodeID]-xdf[num_nodes-curnodeID][0])
+        xplot=voff*(curnodeID)+(x[num_nodes-curnodeID]-x[num_nodes-curnodeID][0])
         xplot.plot()
         plt.sca(ax[1])
-        xzplot=voff*(curnodeID)+(xzdf[num_nodes-curnodeID]-xzdf[num_nodes-curnodeID][0])
+        xzplot=voff*(curnodeID)+(xz[num_nodes-curnodeID]-xz[num_nodes-curnodeID][0])
         xzplot.plot()
         plt.sca(ax[2])
-        xyplot=voff*(curnodeID)+(xydf[num_nodes-curnodeID]-xydf[num_nodes-curnodeID][0])
-        xyplot.plot()
-    ax[0].set_xlabel([], visible=False)
-    ax[1].set_xlabel([], visible=False)
-    ax[0].set_ylabel("X, m", fontsize='small')
-    ax[1].set_ylabel("XZ, m", fontsize='small')
-    ax[2].set_ylabel("XY, m", fontsize='small')
-    plt.tight_layout()
-    plt.subplots_adjust(left=None, bottom=None, right=None, top=0.9,wspace=None, hspace=None)
-    return fig, ax
-
-
-def plot_individual_node_disp(num_nodes, fr_xzdf, fr_xydf, fr_xdf, voff):
-    fig,ax=plt.subplots(nrows=3,ncols=1, sharex=True,sharey=True,figsize=fig_size)
-    plt.suptitle(colname+"\nindividual node disp")
-    cm = plt.get_cmap('gist_rainbow')
-    ax[0].set_color_cycle([cm(1.*(num_nodes-i-1)/(num_nodes)) for i in range((num_nodes))])
-    ax[1].set_color_cycle([cm(1.*(num_nodes-i-1)/(num_nodes)) for i in range((num_nodes))])
-    ax[2].set_color_cycle([cm(1.*(num_nodes-i-1)/(num_nodes)) for i in range((num_nodes))])
-    for curnodeID in range(num_nodes):
-        plt.sca(ax[0])
-        xplot=voff*(curnodeID)+(fr_xdf[num_nodes-curnodeID]-fr_xdf[num_nodes-curnodeID][0])
-        xplot.plot()
-        plt.sca(ax[1])
-        xzplot=voff*(curnodeID)+(fr_xzdf[num_nodes-curnodeID]-fr_xzdf[num_nodes-curnodeID][0])
-        xzplot.plot()
-        plt.sca(ax[2])
-        xyplot=voff*(curnodeID)+(fr_xydf[num_nodes-curnodeID]-fr_xydf[num_nodes-curnodeID][0])
-        xyplot.plot()
-    ax[0].set_xlabel([], visible=False)
-    ax[1].set_xlabel([], visible=False)
-    ax[0].set_ylabel("X, m", fontsize='small')
-    ax[1].set_ylabel("XZ, m", fontsize='small')
-    ax[2].set_ylabel("XY, m", fontsize='small')
-    plt.tight_layout()
-    plt.subplots_adjust(left=None, bottom=None, right=None, top=0.9,wspace=None, hspace=None)
-    return fig, ax
-
-def plot_cumulative_node_disp(num_nodes, cs_xzdf, cs_xydf, cs_xdf, voff):
-    fig,ax=plt.subplots(nrows=3,ncols=1, sharex=True,sharey=True, figsize=fig_size)
-    plt.suptitle(colname+"\ncumulative node disp")
-    cm = plt.get_cmap('gist_rainbow')
-    ax[0].set_color_cycle([cm(1.*(num_nodes-i-1)/(num_nodes)) for i in range((num_nodes))])
-    ax[1].set_color_cycle([cm(1.*(num_nodes-i-1)/(num_nodes)) for i in range((num_nodes))])
-    ax[2].set_color_cycle([cm(1.*(num_nodes-i-1)/(num_nodes)) for i in range((num_nodes))])
-    for curnodeID in range(num_nodes):
-        plt.sca(ax[0])
-        xplot=voff*(curnodeID)+(cs_xdf[num_nodes-curnodeID]-cs_xdf[num_nodes-curnodeID][0])
-        xplot.plot()
-        plt.sca(ax[1])
-        xzplot=voff*(curnodeID)+(cs_xzdf[num_nodes-curnodeID]-cs_xzdf[num_nodes-curnodeID][0])
-        xzplot.plot()
-        plt.sca(ax[2])
-        xyplot=voff*(curnodeID)+(cs_xydf[num_nodes-curnodeID]-cs_xydf[num_nodes-curnodeID][0])
+        xyplot=voff*(curnodeID)+(xy[num_nodes-curnodeID]-xy[num_nodes-curnodeID][0])
         xyplot.plot()
     ax[0].set_xlabel([], visible=False)
     ax[1].set_xlabel([], visible=False)
@@ -174,55 +138,24 @@ def plot_cumulative_node_disp(num_nodes, cs_xzdf, cs_xydf, cs_xdf, voff):
 
 
 
-
-def plot_col_pos_abs(cs_xzdf, cs_xydf, cs_xdf, colposperiod):
+def plot_col_pos(cs_xzdf, cs_xydf, cs_xdf, colposperiod, colpostype):
     dat=pd.date_range(start=cs_xzdf.index[0],end=cs_xzdf.index[-1], freq=colposperiod)
     
     fig,ax=plt.subplots(nrows=1,ncols=2, sharex=True, sharey=True,figsize=fig_size)
-    plt.suptitle(colname+"\nabs col pos")
+    plt.suptitle(colname+"\n"+colpostype+" col pos")
     cm = plt.get_cmap('gist_rainbow')
     ax[0].set_color_cycle([cm(1.*(len(dat)-i-1)/len(dat)) for i in range(len(dat))])
     ax[1].set_color_cycle([cm(1.*(len(dat)-i-1)/len(dat)) for i in range(len(dat))])
 
-    for d in range(len(dat)):    
+    for d in range(len(dat)):
         curxz=cs_xzdf[(cs_xzdf.index==dat[d])]
         curxy=cs_xydf[(cs_xydf.index==dat[d])]
         curx=cs_xdf[(cs_xdf.index==dat[d])]
-        
-        plt.sca(ax[0])
-        plt.axis('equal')
-        plt.plot([[0]]+curxz.values.T.tolist(),[[0]]+curx.values.T.tolist(), '.-',label=dat[d])
-        
-        plt.sca(ax[1])
-        plt.axis('equal')
-        plt.plot([[0]]+curxy.values.T.tolist(),[[0]]+curx.values.T.tolist(), '.-',label=datetime.strftime(dat[d],'%Y-%m-%d'))
-    ax[0].set_xlabel("XZ disp, m \n (+) downslope", fontsize='small',horizontalalignment='center')
-    ax[0].set_ylabel("X disp, m \n (+) towards surface", fontsize='small', rotation='vertical',horizontalalignment='center')
-    ax[1].set_xlabel("XY disp, m \n (+) to the right, facing downslope", fontsize='small', horizontalalignment='center')
-    plt.legend(loc='lower right', fontsize='small')
-    
-    plt.tight_layout()
-    plt.subplots_adjust(left=None, bottom=None, right=None, top=0.9,wspace=None, hspace=None)
-    return fig,ax
 
-def plot_col_pos_rel(cs_xzdf, cs_xydf, cs_xdf, colposperiod):
-    dat=pd.date_range(start=cs_xzdf.index[0],end=cs_xzdf.index[-1], freq=colposperiod)
-   
-    fig,ax=plt.subplots(nrows=1,ncols=2, sharex=True, sharey=True,figsize=fig_size)
-    plt.suptitle(colname+"\nrel col pos")
-    cm = plt.get_cmap('gist_rainbow')
-    ax[0].set_color_cycle([cm(1.*(len(dat)-i-1)/len(dat)) for i in range(len(dat))])
-    ax[1].set_color_cycle([cm(1.*(len(dat)-i-1)/len(dat)) for i in range(len(dat))])
-         
-    for d in range(len(dat)):    
-        curxz=cs_xzdf[(cs_xzdf.index==dat[d])]
-        curxz=curxz.sub(cs_xzdf.iloc[0,:],axis=1)    
+        if colpostype=='rel':
+            curxz=curxz.sub(cs_xzdf.iloc[0,:],axis=1)    
+            curxy=curxy.sub(cs_xydf.iloc[0,:],axis=1)    
 
-        curxy=cs_xydf[(cs_xydf.index==dat[d])]
-        curxy=curxy.sub(cs_xydf.iloc[0,:],axis=1)    
-
-        curx=cs_xdf[(cs_xdf.index==dat[d])]
-        
         plt.sca(ax[0])
         plt.axis('equal')
         plt.plot([[0]]+curxz.values.T.tolist(),[[0.0]]+curx.values.T.tolist(), '.-')
@@ -230,13 +163,18 @@ def plot_col_pos_rel(cs_xzdf, cs_xydf, cs_xdf, colposperiod):
         plt.sca(ax[1])
         plt.axis('equal')
         plt.plot([[0.0]]+curxy.values.T.tolist(),[[0.0]]+curx.values.T.tolist(), '.-',label=datetime.strftime(dat[d],'%Y-%m-%d'))
+        
+
     ax[0].set_xlabel("XZ disp, m \n (+) downslope", fontsize='small',horizontalalignment='center')
     ax[0].set_ylabel("X disp, m \n (+) towards surface", fontsize='small', rotation='vertical',horizontalalignment='center')
     ax[1].set_xlabel("XY disp, m \n (+) to the right, facing downslope", fontsize='small', horizontalalignment='center')
     plt.legend(loc='lower right', fontsize='small')
+    
     plt.tight_layout()
     plt.subplots_adjust(left=None, bottom=None, right=None, top=0.9,wspace=None, hspace=None)
     return fig,ax
+
+
 
 
 
@@ -250,6 +188,7 @@ loc_col_list=("eeet","sinb","sint","sinu","lipb","lipt","bolb","pugb","pugt","ma
 num_nodes_loc_col=(14,29,19,29,28,31,30,14,10,29,24,21,23,39,25,18,22,21,26,39,40,24,19)
 col_seg_len_list=(0.5,1,1,1,0.5,0.5,0.5,1.2,1.2,1.0,1.0,1.,1.,1.,1.,1.,1.,1.,1,0.5,0.5,1,1)
 col = ['Time','Node_ID', 'x', 'y', 'z', 'good_tilt', 'xz', 'xy', 'phi', 'rho', 'moi', 'good_moi']
+usecol = ['Time','Node_ID','good_tilt', 'xz', 'xy']
 fig_size=(9.5,6.5)
 
 
@@ -265,8 +204,11 @@ plotfigs=1
 #set this to 1 to save figures, 0 to just display the output
 savefigs=0
 
-#set this to desired sampling interval: D=daily, 3H=3-hourly, M=monthly, etc...
+#set this to desired node date sampling interval: D=daily, 3H=3-hourly, M=monthly, Q=quarterly, etc...
 resampind='D'
+
+#set this to desired interval between column positions: D=daily, 3H=3-hourly, M=monthly, Q=quarterly, etc...
+colposperiod='Q'
     
     
 
@@ -281,23 +223,9 @@ for INPUT_which_sensor in range(1,len(loc_col_list)):
     print "\n",colname, num_nodes, seg_len
     start=datetime.now()
     
-
     #reading from csv file and writing to dataframe
-    df=pd.read_csv(csvfilepath+colname+"_proc.csv",names=col,usecols=['Time','Node_ID','good_tilt', 'xz', 'xy'],parse_dates=['Time'],index_col='Time')
-
-    #computing equivalent linear displacements
-    x,xz,xy=xzxy_to_cart(seg_len,df['xz'].values,df['xy'].values)
-
-    #appending linear displacements series to data frame
-    df['xlin']=pd.Series(data=x,index=df.index)
-    df['xzlin']=pd.Series(data=xz,index=df.index)
-    df['xylin']=pd.Series(data=xy,index=df.index)
-    df.drop(['xz','xy'],inplace=True,axis=1)
-    gc.collect()
-    
-    #creating dataframes
-    xzdf, xydf, xdf = create_dataframes(df, num_nodes, seg_len)
-    
+    xzdf, xydf, xdf = df_from_csv(csvfilepath,colname,col,usecol)
+        
     #resampling and filling XZ, XY and X dataframes
     fr_xzdf, fr_xydf, fr_xdf = resamp_fill_df(resampind, xzdf,xydf,xdf)
     
@@ -306,34 +234,40 @@ for INPUT_which_sensor in range(1,len(loc_col_list)):
     cs_xydf=fr_xydf.cumsum(axis=1)
     cs_xdf=fr_xdf.cumsum(axis=1)
 
-    
     if plotfigs==1:
 
-        
-        #individual node displacements
+        #plotting individual node displacements
+
         #unfilled
         voff=0.1 #in meters
-        fig_id, ax_id=plot_unfilled_individual_node_disp(num_nodes, xzdf, xydf, xdf, voff)
+        fig_id, ax_id=plot_node_disp(colname,num_nodes, xzdf, xydf, xdf, voff, "unfilled individual node disp")
         if savefigs==1:plt.savefig(figsavefilepath+colname+"nd_u.png", dpi=300,orientation='portrait', format="png")
+
         #filled and resampled
         voff=0.1 #in meters
-        fig_id, ax_id=plot_individual_node_disp(num_nodes, fr_xzdf, fr_xydf, fr_xdf, voff)
+        fig_id, ax_id=plot_node_disp(colname, num_nodes, fr_xzdf, fr_xydf, fr_xdf, voff, "individual node disp")
         if savefigs==1:plt.savefig(figsavefilepath+colname+"nd_f.png", dpi=300,orientation='portrait', format="png")
 
         #plotting cumulative node displacements
         voff=0.1 #in meters
-        fig_cd, ax_cd=plot_cumulative_node_disp(num_nodes, cs_xzdf, cs_xydf, cs_xdf, voff)
+        fig_cd, ax_cd=plot_node_disp(colname, num_nodes, cs_xzdf, cs_xydf, cs_xdf, voff, "cumulative node disp")
         if savefigs==1:plt.savefig(figsavefilepath+colname+"nd_fc.png", dpi=300,orientation='portrait', format="png")
 
 
+
+
         #plotting column positions time series
-        colposperiod='Q' #quarterly
+        
         #absolute position
-        fig_cp, ax_cp=plot_col_pos_abs(cs_xzdf, cs_xydf, cs_xdf, colposperiod)
+        fig_cp, ax_cp=plot_col_pos(cs_xzdf, cs_xydf, cs_xdf, colposperiod, "abs")
         if savefigs==1:plt.savefig(figsavefilepath+colname+"col_a.png", dpi=300,orientation='portrait', format="png")
+
         #relative position
-        fig_cp, ax_cp=plot_col_pos_rel(cs_xzdf, cs_xydf, cs_xdf, colposperiod)
+        fig_cp, ax_cp=plot_col_pos(cs_xzdf, cs_xydf, cs_xdf, colposperiod, "rel")
         if savefigs==1:plt.savefig(figsavefilepath+colname+"col_r.png", dpi=300,orientation='portrait', format="png")
+
+
+
 
         print "finished plots: ",(datetime.now()-start)
 
