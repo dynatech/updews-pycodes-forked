@@ -9,11 +9,6 @@ from datetime import datetime, date, time, timedelta
 import gc
 
 
-loc_col_list=("eeet","sinb","sint","sinu","lipb","lipt","bolb","pugb","pugt","mamb","mamt","oslt","oslb","labt", "labb", "gamt","gamb", "humt","humb", "plat","plab","blct","blcb")
-num_nodes_loc_col=(14,29,19,29,28,31,30,14,10,29,24,21,23,39,25,18,22,21,26,39,40,24,19)
-col_seg_len_list=(0.5,1,1,1,0.5,0.5,0.5,1.2,1.2,1.0,1.0,1.,1.,1.,1.,1.,1.,1.,1,0.5,0.5,1,1)
-csvfilepath="/home/egl-sais/Dropbox/Senslope Data/Proc/csv/"
-col = ['Time','Node_ID', 'x', 'y', 'z', 'good_tilt', 'xz', 'xy', 'phi', 'rho', 'moi', 'good_moi']
 
 def Input_Loc_Col(loc_col_list,num_nodes_loc_col,col_seg_len_list,IWS):
     colname=loc_col_list[IWS]
@@ -43,7 +38,7 @@ def create_dataframes(df, num_nodes, seg_len):
     xlist=[]
     for curnodeID in range(num_nodes):
         #extracting data from current node, with good tilt filter
-        df_curnode=df[(df.Node_ID==curnodeID+1) & (df.good_tilt==1)]# & (df.good_moi==1)]
+        df_curnode=df[(df.Node_ID==curnodeID+1) & (df.good_tilt==1)]
         dates=df_curnode.index
 
         #handling "no data"
@@ -54,31 +49,25 @@ def create_dataframes(df, num_nodes, seg_len):
             xlist.append(pd.Series(data=[seg_len],index=[df.index[0]]))
             continue
 
-        #converting angular to linear units
-        x,xz,xy=xzxy_to_cart(seg_len,df_curnode['xz'].values,df_curnode['xy'].values)
-
-        #creating series
-        xz=pd.Series(data=xz, index=dates)
-        xy=pd.Series(data=xy, index=dates)
-        x=pd.Series(data=x, index=dates)
+        #extracting component displacements as series
+        xz=pd.Series(data=df_curnode['xzlin'], index=df_curnode.index, name=curnodeID+1)
+        xy=pd.Series(data=df_curnode['xylin'], index=df_curnode.index, name=curnodeID+1)
+        x=pd.Series(data=df_curnode['xlin'], index=df_curnode.index, name=curnodeID+1)
         
-        #resampling series to 30-minute intervals
-        #xz=xz.asfreq('30Min')
-        #xy=xy.asfreq('30Min')
-        #x=x.asfreq('30Min')
         #resampling series to 30-minute intervals
         xz=xz.resample('30Min',how='mean',base=0)
         xy=xy.resample('30Min',how='mean',base=0)
         x=x.resample('30Min',how='mean',base=0)
-
+        
         #appending resampled series to list
         xzlist.append(xz)
         xylist.append(xy)
         xlist.append(x)
+
     #creating unfilled XZ, XY and X dataframes
-    xzdf=pd.concat([xzlist[a] for a in range(num_nodes)] ,axis=1,join='outer')
-    xydf=pd.concat([xylist[a] for a in range(num_nodes)] ,axis=1,join='outer')
-    xdf=pd.concat([xlist[a] for a in range(num_nodes)] ,axis=1,join='outer')  
+    xzdf=pd.concat([xzlist[num_nodes-a-1] for a in range(num_nodes)] ,axis=1,join='outer', names=[num_nodes-b for b in range(num_nodes)])
+    xydf=pd.concat([xylist[num_nodes-a-1] for a in range(num_nodes)] ,axis=1,join='outer', names=[num_nodes-b for b in range(num_nodes)])
+    xdf=pd.concat([xlist[num_nodes-a-1] for a in range(num_nodes)] ,axis=1,join='outer', names=[num_nodes-b for b in range(num_nodes)])  
     return xzdf, xydf, xdf
 
 def resamp_fill_df(resampind, xzdf,xydf,xdf):
@@ -86,7 +75,7 @@ def resamp_fill_df(resampind, xzdf,xydf,xdf):
     xzdf=xzdf.resample('30Min',how='mean',base=0)
     xydf=xydf.resample('30Min',how='mean',base=0)
     xdf=xdf.resample('30Min',how='mean',base=0)
-    #resampling XZ, XY and X dataframes
+    #resampling XZ, XY and X dataframes to desired interval
     r_xzdf=xzdf.resample(resampind,how='mean',base=0)
     r_xydf=xydf.resample(resampind,how='mean',base=0)
     r_xdf=xdf.resample(resampind,how='mean',base=0)
@@ -98,15 +87,6 @@ def resamp_fill_df(resampind, xzdf,xydf,xdf):
     fr_xydf=fr_xydf.fillna(method='bfill')
     fr_xdf=fr_xdf.fillna(method='bfill')
     return fr_xzdf, fr_xydf, fr_xdf
-
-
-def compute_cumulative_node_disp(fr_xzdf,fr_xydf,fr_xdf):
-    rcols=fr_xzdf.columns.tolist()[::-1]
-    fr_xzdf=fr_xzdf[rcols]
-    fr_xydf=fr_xydf[rcols]
-    fr_xdf=fr_xdf[rcols]
-    return fr_xzdf.cumsum(axis=1), fr_xydf.cumsum(axis=1),fr_xdf.cumsum(axis=1)
-
 
 
 
@@ -121,13 +101,13 @@ def plot_unfilled_individual_node_disp(num_nodes, xzdf, xydf, xdf, voff):
     ax[2].set_color_cycle([cm(1.*(num_nodes-i-1)/(num_nodes)) for i in range((num_nodes))])
     for curnodeID in range(num_nodes):
         plt.sca(ax[0])
-        xplot=voff*(curnodeID)+(xdf[num_nodes-curnodeID-1]-xdf[num_nodes-curnodeID-1][0])
+        xplot=voff*(curnodeID)+(xdf[num_nodes-curnodeID]-xdf[num_nodes-curnodeID][0])
         xplot.plot()
         plt.sca(ax[1])
-        xzplot=voff*(curnodeID)+(xzdf[num_nodes-curnodeID-1]-xzdf[num_nodes-curnodeID-1][0])
+        xzplot=voff*(curnodeID)+(xzdf[num_nodes-curnodeID]-xzdf[num_nodes-curnodeID][0])
         xzplot.plot()
         plt.sca(ax[2])
-        xyplot=voff*(curnodeID)+(xydf[num_nodes-curnodeID-1]-xydf[num_nodes-curnodeID-1][0])
+        xyplot=voff*(curnodeID)+(xydf[num_nodes-curnodeID]-xydf[num_nodes-curnodeID][0])
         xyplot.plot()
     ax[0].set_xlabel([], visible=False)
     ax[1].set_xlabel([], visible=False)
@@ -148,13 +128,13 @@ def plot_individual_node_disp(num_nodes, fr_xzdf, fr_xydf, fr_xdf, voff):
     ax[2].set_color_cycle([cm(1.*(num_nodes-i-1)/(num_nodes)) for i in range((num_nodes))])
     for curnodeID in range(num_nodes):
         plt.sca(ax[0])
-        xplot=voff*(curnodeID)+(fr_xdf[num_nodes-curnodeID-1]-fr_xdf[num_nodes-curnodeID-1][0])
+        xplot=voff*(curnodeID)+(fr_xdf[num_nodes-curnodeID]-fr_xdf[num_nodes-curnodeID][0])
         xplot.plot()
         plt.sca(ax[1])
-        xzplot=voff*(curnodeID)+(fr_xzdf[num_nodes-curnodeID-1]-fr_xzdf[num_nodes-curnodeID-1][0])
+        xzplot=voff*(curnodeID)+(fr_xzdf[num_nodes-curnodeID]-fr_xzdf[num_nodes-curnodeID][0])
         xzplot.plot()
         plt.sca(ax[2])
-        xyplot=voff*(curnodeID)+(fr_xydf[num_nodes-curnodeID-1]-fr_xydf[num_nodes-curnodeID-1][0])
+        xyplot=voff*(curnodeID)+(fr_xydf[num_nodes-curnodeID]-fr_xydf[num_nodes-curnodeID][0])
         xyplot.plot()
     ax[0].set_xlabel([], visible=False)
     ax[1].set_xlabel([], visible=False)
@@ -174,13 +154,13 @@ def plot_cumulative_node_disp(num_nodes, cs_xzdf, cs_xydf, cs_xdf, voff):
     ax[2].set_color_cycle([cm(1.*(num_nodes-i-1)/(num_nodes)) for i in range((num_nodes))])
     for curnodeID in range(num_nodes):
         plt.sca(ax[0])
-        xplot=voff*(curnodeID)+(cs_xdf[num_nodes-curnodeID-1]-cs_xdf[num_nodes-curnodeID-1][0])
+        xplot=voff*(curnodeID)+(cs_xdf[num_nodes-curnodeID]-cs_xdf[num_nodes-curnodeID][0])
         xplot.plot()
         plt.sca(ax[1])
-        xzplot=voff*(curnodeID)+(cs_xzdf[num_nodes-curnodeID-1]-cs_xzdf[num_nodes-curnodeID-1][0])
+        xzplot=voff*(curnodeID)+(cs_xzdf[num_nodes-curnodeID]-cs_xzdf[num_nodes-curnodeID][0])
         xzplot.plot()
         plt.sca(ax[2])
-        xyplot=voff*(curnodeID)+(cs_xydf[num_nodes-curnodeID-1]-cs_xydf[num_nodes-curnodeID-1][0])
+        xyplot=voff*(curnodeID)+(cs_xydf[num_nodes-curnodeID]-cs_xydf[num_nodes-curnodeID][0])
         xyplot.plot()
     ax[0].set_xlabel([], visible=False)
     ax[1].set_xlabel([], visible=False)
@@ -204,7 +184,6 @@ def plot_col_pos_abs(cs_xzdf, cs_xydf, cs_xdf, colposperiod):
     ax[0].set_color_cycle([cm(1.*(len(dat)-i-1)/len(dat)) for i in range(len(dat))])
     ax[1].set_color_cycle([cm(1.*(len(dat)-i-1)/len(dat)) for i in range(len(dat))])
 
-
     for d in range(len(dat)):    
         curxz=cs_xzdf[(cs_xzdf.index==dat[d])]
         curxy=cs_xydf[(cs_xydf.index==dat[d])]
@@ -213,7 +192,6 @@ def plot_col_pos_abs(cs_xzdf, cs_xydf, cs_xdf, colposperiod):
         plt.sca(ax[0])
         plt.axis('equal')
         plt.plot([[0]]+curxz.values.T.tolist(),[[0]]+curx.values.T.tolist(), '.-',label=dat[d])
-        #plt.legend()
         
         plt.sca(ax[1])
         plt.axis('equal')
@@ -229,19 +207,15 @@ def plot_col_pos_abs(cs_xzdf, cs_xydf, cs_xdf, colposperiod):
 
 def plot_col_pos_rel(cs_xzdf, cs_xydf, cs_xdf, colposperiod):
     dat=pd.date_range(start=cs_xzdf.index[0],end=cs_xzdf.index[-1], freq=colposperiod)
-    cs_xzdf.index[0]
    
-
     fig,ax=plt.subplots(nrows=1,ncols=2, sharex=True, sharey=True,figsize=fig_size)
     plt.suptitle(colname+"\nrel col pos")
     cm = plt.get_cmap('gist_rainbow')
     ax[0].set_color_cycle([cm(1.*(len(dat)-i-1)/len(dat)) for i in range(len(dat))])
     ax[1].set_color_cycle([cm(1.*(len(dat)-i-1)/len(dat)) for i in range(len(dat))])
-
-            
+         
     for d in range(len(dat)):    
         curxz=cs_xzdf[(cs_xzdf.index==dat[d])]
-        
         curxz=curxz.sub(cs_xzdf.iloc[0,:],axis=1)    
 
         curxy=cs_xydf[(cs_xydf.index==dat[d])]
@@ -271,112 +245,104 @@ def plot_col_pos_rel(cs_xzdf, cs_xydf, cs_xdf, colposperiod):
 
 
 
+#CONSTANTS and SETTINGS
+loc_col_list=("eeet","sinb","sint","sinu","lipb","lipt","bolb","pugb","pugt","mamb","mamt","oslt","oslb","labt", "labb", "gamt","gamb", "humt","humb", "plat","plab","blct","blcb")
+num_nodes_loc_col=(14,29,19,29,28,31,30,14,10,29,24,21,23,39,25,18,22,21,26,39,40,24,19)
+col_seg_len_list=(0.5,1,1,1,0.5,0.5,0.5,1.2,1.2,1.0,1.0,1.,1.,1.,1.,1.,1.,1.,1,0.5,0.5,1,1)
+col = ['Time','Node_ID', 'x', 'y', 'z', 'good_tilt', 'xz', 'xy', 'phi', 'rho', 'moi', 'good_moi']
+fig_size=(9.5,6.5)
+
+
+#set file path for input *.proc files
+csvfilepath="/home/egl-sais/Dropbox/Senslope Data/Proc/csv/"
+
+#set file path for saving figures
+figsavefilepath="/home/egl-sais/Desktop/sensorfigs/"
+
+#set this to 1 to plot figures
+plotfigs=1
+
+#set this to 1 to save figures, 0 to just display the output
+savefigs=0
+
+#set this to desired sampling interval: D=daily, 3H=3-hourly, M=monthly, etc...
+resampind='D'
+    
+    
 
 
 
-
-
-
+#MAIN
 
 
 for INPUT_which_sensor in range(1,len(loc_col_list)):
-    if INPUT_which_sensor!=1:continue
-#    print loc_col_list[hj],":     ",hj
-#INPUT_which_sensor=int(raw_input("Input which sensor to plot (number): "))
     colname,num_nodes,seg_len=Input_Loc_Col(loc_col_list,num_nodes_loc_col,col_seg_len_list, INPUT_which_sensor)
 
     print "\n",colname, num_nodes, seg_len
-    fig_size=(9.5,6.5)
-    figsavefilepath="/home/egl-sais/Desktop/sensorfigs/"
-
     start=datetime.now()
     
 
     #reading from csv file and writing to dataframe
-    df=pd.read_csv(csvfilepath+colname+"_proc.csv",names=col,parse_dates=['Time'],index_col=0)
-    gc.collect()
+    df=pd.read_csv(csvfilepath+colname+"_proc.csv",names=col,usecols=['Time','Node_ID','good_tilt', 'xz', 'xy'],parse_dates=['Time'],index_col='Time')
 
+    #computing equivalent linear displacements
+    x,xz,xy=xzxy_to_cart(seg_len,df['xz'].values,df['xy'].values)
+
+    #appending linear displacements series to data frame
+    df['xlin']=pd.Series(data=x,index=df.index)
+    df['xzlin']=pd.Series(data=xz,index=df.index)
+    df['xylin']=pd.Series(data=xy,index=df.index)
+    df.drop(['xz','xy'],inplace=True,axis=1)
+    gc.collect()
+    
     #creating dataframes
     xzdf, xydf, xdf = create_dataframes(df, num_nodes, seg_len)
-
+    
     #resampling and filling XZ, XY and X dataframes
-    resampind='30Min'
     fr_xzdf, fr_xydf, fr_xdf = resamp_fill_df(resampind, xzdf,xydf,xdf)
+    
+    #computing cumulative node displacements
+    cs_xzdf=fr_xzdf.cumsum(axis=1)
+    cs_xydf=fr_xydf.cumsum(axis=1)
+    cs_xdf=fr_xdf.cumsum(axis=1)
 
     
-
-
-
-
-
-    def movingLR(fr_xzdf, fr_xydf, fr_xdf, window_period):
-        
-        ts_xz=fr_xzdf.reset_index()
-        ts_xy=fr_xydf.reset_index()
-        ts_x=fr_xdf.reset_index()
+    if plotfigs==1:
 
         
-        tdelta=ts_xz['Time']-ts_xz['Time'][0]
-        tdelta=tdelta.astype('timedelta64[s]')/(60*60*24.)  #in days
-
-        
-    
-   
-        for col in range(0,len(ts_xz.columns)-1):
-            print col
-            model=pd.ols(y=ts_xz[col], x=tdelta,window_type='rolling', window=window_period, intercept=True)
-            ts_xz[col]=np.round(model.beta.x,3)
-
-            model=pd.ols(y=ts_xy[col], x=tdelta,window_type='rolling', window=window_period, intercept=True)
-            ts_xy[col]=np.round(model.beta.x,3)
-
-            model=pd.ols(y=ts_x[col], x=tdelta,window_type='rolling', window=window_period, intercept=True)
-            ts_x[col]=np.round(model.beta.x,3)
-
-        print ts_xz.tail
-        print ts_xy.tail
-        print ts_x.tail
-
-    movingLR(fr_xzdf, fr_xydf, fr_xdf, 6)   
-
-    
-
-    
-    plot=0
-    if plot==1:
-
-        #computing cumulative node displacements
-        cs_xzdf, cs_xydf, cs_xdf = compute_cumulative_node_disp(fr_xzdf,fr_xydf,fr_xdf)
-
-        #plotting individual node displacements
+        #individual node displacements
+        #unfilled
         voff=0.1 #in meters
         fig_id, ax_id=plot_unfilled_individual_node_disp(num_nodes, xzdf, xydf, xdf, voff)
-        plt.savefig(figsavefilepath+colname+"nd_u.png", dpi=300,orientation='portrait', format="png")
-
+        if savefigs==1:plt.savefig(figsavefilepath+colname+"nd_u.png", dpi=300,orientation='portrait', format="png")
+        #filled and resampled
         voff=0.1 #in meters
         fig_id, ax_id=plot_individual_node_disp(num_nodes, fr_xzdf, fr_xydf, fr_xdf, voff)
-        plt.savefig(figsavefilepath+colname+"nd_f.png", dpi=300,orientation='portrait', format="png")
+        if savefigs==1:plt.savefig(figsavefilepath+colname+"nd_f.png", dpi=300,orientation='portrait', format="png")
 
         #plotting cumulative node displacements
         voff=0.1 #in meters
         fig_cd, ax_cd=plot_cumulative_node_disp(num_nodes, cs_xzdf, cs_xydf, cs_xdf, voff)
-        plt.savefig(figsavefilepath+colname+"nd_fc.png", dpi=300,orientation='portrait', format="png")
+        if savefigs==1:plt.savefig(figsavefilepath+colname+"nd_fc.png", dpi=300,orientation='portrait', format="png")
 
 
         #plotting column positions time series
         colposperiod='Q' #quarterly
+        #absolute position
         fig_cp, ax_cp=plot_col_pos_abs(cs_xzdf, cs_xydf, cs_xdf, colposperiod)
-        plt.savefig(figsavefilepath+colname+"col_a.png", dpi=300,orientation='portrait', format="png")
-
+        if savefigs==1:plt.savefig(figsavefilepath+colname+"col_a.png", dpi=300,orientation='portrait', format="png")
+        #relative position
         fig_cp, ax_cp=plot_col_pos_rel(cs_xzdf, cs_xydf, cs_xdf, colposperiod)
-        plt.savefig(figsavefilepath+colname+"col_r.png", dpi=300,orientation='portrait', format="png")
-        print (datetime.now()-start)
-        #plt.show()
+        if savefigs==1:plt.savefig(figsavefilepath+colname+"col_r.png", dpi=300,orientation='portrait', format="png")
+
+        print "finished plots: ",(datetime.now()-start)
+
+        if savefigs==0:plt.show()
 
     plt.close('all')
 
 
-add
+
 
 
 
