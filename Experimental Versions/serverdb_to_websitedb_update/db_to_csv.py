@@ -38,31 +38,36 @@ def extractDBToFile2():
 #def extractDBToFile(table):
     cfg = ConfigParser.ConfigParser()
     cfg.read('senslope-server-config.txt')
+    '''
     TSend = cfg.get('Misc', 'TimeStampEnd')
     cfg.set('Misc', 'TimeStampStart', TSend)
     with open('senslope-server-config.txt', 'wb') as configfile:
         cfg.write(configfile)
     TSstart = cfg.get('Misc', 'TimeStampStart')
+    '''
+    # The new time start is the last TimeStampEnd
+    TSstart = cfg.get('Misc', 'TimeStampEnd')
     
     table = 'labb'
     tbase = dt.strptime('"2010-10-1 00:00:00"', '"%Y-%m-%d %H:%M:%S"')
-    print '>> Extracting ' + table + ' purged data from database ..\n',
+    print '>> Extracting ' + table + ' purged data from database ..\n'  
 
     print 'TS Start = ' + TSstart + '\n'
-    print 'TS End = ' + TSend + '\n'
+    #print 'TS End = ' + TSend + '\n'
 
     tsStartParsed = re.sub('[.!,;:]', '', TSstart)
     tsStartParsed = re.sub(' ', '_', tsStartParsed)
     fileName = 'D:\\csvForUpload\\' + table + '_' + tsStartParsed + '.csv'
-    toCSV = 'into outfile \'' + fileName + '\' fields terminated by \',\' enclosed by \'"\' lines terminated by \'\\n\' '
 
     print 'filename parsed = ' + fileName + '\n'
+    time.sleep(5)
 
     db, cur = SenslopeDBConnect()
     query = 'select * from ' + table + ' where xvalue > 0 and zvalue > -500 and id > 0 and id < 41 and timestamp > "' + TSstart + '" order by timestamp asc limit 1000 '
     query_tstamp = 'select max(timestamp) from (SELECT timestamp FROM ' + table + ' where xvalue > 0 and zvalue > -500 and id > 0 and id < 41 and timestamp > "' + TSstart + '" limit 1000)test'
 
     print 'Query = ' + query + '\n'
+    time.sleep(5)
     
     #get max timestamp
     try:
@@ -72,63 +77,67 @@ def extractDBToFile2():
         
     data = cur.fetchall()
 
-    print 'After Query... 1'
-    
-    for row in data:
-        cfg = ConfigParser.ConfigParser()
-        cfg.read('senslope-server-config.txt')
-        cfg.set('Misc', 'TimeStampEnd', row[0])
-        with open('senslope-server-config.txt', 'wb') as configfile:
-            cfg.write(configfile)
-        print '>> Updated TimeStampEnd'
-
-    #store query to csv
-    try:
-        cur.execute(query)
-    except:
-        print '>> Error exporting database to csv'
-
-    data = cur.fetchall()
-
-    print 'After Query... 2'
-    
-    #fileNum = file('D:\\csvForUpload\\' + table + '.csv', 'w')
-    # The fileName should be parsed so that the special characters like: (;':/\) are not included
-    fileNum = file(fileName, 'w')
+    print 'After Timestamp Query... 1'
 
     for row in data:
-        x = float(row[1])
+        TSend = row[0]
 
-        # allow x values up to 1100 to be updated
-        if x < 0 and x+4096 < 1126.0:
-            x = 1.0
+        if TSend != None:
+            cfg = ConfigParser.ConfigParser()
+            cfg.read('senslope-server-config.txt')
+            cfg.set('Misc', 'TimeStampEnd', TSend)
+            with open('senslope-server-config.txt', 'wb') as configfile:
+                cfg.write(configfile)
+			
+	    #query the new data
+            try:
+                cur.execute(query)
+            except:
+                print '>> Error exporting database to csv'
+
+            data = cur.fetchall()
+            print 'After Query... 2'
+            time.sleep(5)
+
+            fileNum = file(fileName, 'w')
+
+            for row in data:
+                x = float(row[1])
+
+                # allow x values up to 1100 to be updated
+                if x < 0 and x+4096 < 1126.0:
+                    x = 1.0
         
-        y = float(row[2])/1024.0
-        z = float(row[3])/1024.0
+                y = float(row[2])/1024.0
+                z = float(row[3])/1024.0
 
-        v = pow((pow(x,2) + pow(y,2) + pow(z,2)), 1/2)
+                v = pow((pow(x,2) + pow(y,2) + pow(z,2)), 1/2)
 
-        if v > 0.90 and v < 1.05:
-            tcur = row[0]
-            trec = tcur - tbase
-            trec = float(trec.days) + float(trec.seconds)/24.0/3600.0
-            trec = round(trec,6)
-            fileNum.write(row[0].strftime('"%Y-%m-%d %H:%M:%S"')+',')
-            fileNum.write(repr(trec)+',')
+                if v > 0.90 and v < 1.05:
+                    tcur = row[0]
+                    trec = tcur - tbase
+                    trec = float(trec.days) + float(trec.seconds)/24.0/3600.0
+                    trec = round(trec,6)
+                    fileNum.write(row[0].strftime('"%Y-%m-%d %H:%M:%S"')+',')
+                    fileNum.write(repr(trec)+',')
 
-            fileNum.write(repr(int(row[1]))+',')
-
-            if x == 1.0:
-                fileNum.write("1023,")
-            else:
-                fileNum.write(repr(int(row[2]))+',')
+                    fileNum.write(repr(int(row[1]))+',')
+                    
+                    if x == 1.0:
+                        fileNum.write("1023,")
+                    else:
+                        fileNum.write(repr(int(row[2]))+',')
                 
-            for i in range(3,len(row)):
-                fileNum.write(repr(int(row[i]))+',')
+                    for i in range(3,len(row)):
+                        fileNum.write(repr(int(row[i]))+',')
                 
-            fileNum.write('\n')
-    fileNum.close()
-    
+                    fileNum.write('\n')
+            fileNum.close()
+			
+        else:
+            print '>> Current TimeStampEnd is latest data or it is currently set to None'
+            time.sleep(5)
+
     db.close()
     print 'done'
 
@@ -153,6 +162,8 @@ def extract_db2():
         #        extractDBToFile(tbl[0])
 
         extractDBToFile2()
+
+        time.sleep(15)
        
 
     ##    test = raw_input('>> End of Code: Press any key to exit')
