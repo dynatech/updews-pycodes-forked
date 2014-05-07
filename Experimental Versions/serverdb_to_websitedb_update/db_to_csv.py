@@ -53,21 +53,18 @@ def extractDBToFile2():
     print '>> Extracting ' + table + ' purged data from database ..\n'  
 
     print 'TS Start = ' + TSstart + '\n'
-    #print 'TS End = ' + TSend + '\n'
 
     tsStartParsed = re.sub('[.!,;:]', '', TSstart)
     tsStartParsed = re.sub(' ', '_', tsStartParsed)
     fileName = 'D:\\csvForUpload\\' + table + '_' + tsStartParsed + '.csv'
 
     print 'filename parsed = ' + fileName + '\n'
-    time.sleep(5)
 
     db, cur = SenslopeDBConnect()
     query = 'select * from ' + table + ' where xvalue > 0 and zvalue > -500 and id > 0 and id < 41 and timestamp > "' + TSstart + '" order by timestamp asc limit 1000 '
     query_tstamp = 'select max(timestamp) from (SELECT timestamp FROM ' + table + ' where xvalue > 0 and zvalue > -500 and id > 0 and id < 41 and timestamp > "' + TSstart + '" limit 1000)test'
 
     print 'Query = ' + query + '\n'
-    time.sleep(5)
     
     #get max timestamp
     try:
@@ -97,7 +94,6 @@ def extractDBToFile2():
 
             data = cur.fetchall()
             print 'After Query... 2'
-            time.sleep(5)
 
             fileNum = file(fileName, 'w')
 
@@ -161,27 +157,9 @@ def extract_db2():
         #    if tbl[0] not in ["pugw","labw","sint","darq","abcd","axel","axl2","eee3","nigs","eeet","nlt1","ocim","outs","pott","sms1","smst","soms","strs","tbiz","temp","tesb","tim1","txt1","txt2","volt","watt","wha2","what"]:
         #        extractDBToFile(tbl[0])
 
-        extractDBToFile2()
-
-        time.sleep(15)
-       
+        extractDBToFile2()      
 
     ##    test = raw_input('>> End of Code: Press any key to exit')
     except IndexError:
         print '>> Error in writing extracting database data to files..'
     
-
-    '''
-    db, cur = SenslopeDBConnect()
-    print '>> Connected to database'
-
-    query = 'select TABLE_NAME from information_schema.tables where TABLE_SCHEMA = "' + Namedb + '"'
-    try:
-        cur.execute(query)
-    except:
-        print '>> Error parsing database'
-        
-    data = cur.fetchall()
-
-    extractDBToFile2()
-    '''
