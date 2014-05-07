@@ -31,7 +31,7 @@ alertreportinterval = 30
 
 [Misc]
 timestampstart = None
-timestampend = 2014-05-06 00:00:00
+timestampend = 2014-05-05 16:30:00
 sleepperiod = 2
 adjustcolumntimeof = BLCB,LABT,PLAT,PLAB,BOLB,LIPT,MAMB
 
