@@ -34,21 +34,19 @@ Userdb = cfg.get('LocalDB', 'Username')
 Passdb = cfg.get('LocalDB', 'Password')
 SleepPeriod = cfg.getint('Misc','SleepPeriod')
 
-def extractDBToFile2():
-#def extractDBToFile(table):
+#def extractDBToFile2():
+def extractDBToFile2(table):
     cfg = ConfigParser.ConfigParser()
     cfg.read('senslope-server-config.txt')
-    '''
-    TSend = cfg.get('Misc', 'TimeStampEnd')
-    cfg.set('Misc', 'TimeStampStart', TSend)
-    with open('senslope-server-config.txt', 'wb') as configfile:
-        cfg.write(configfile)
-    TSstart = cfg.get('Misc', 'TimeStampStart')
-    '''
+
+    ts_site = 'ts_' + table
+    print '>> ts_site = ' + ts_site
+	
     # The new time start is the last TimeStampEnd
-    TSstart = cfg.get('Misc', 'TimeStampEnd')
+    #TSstart = cfg.get('Misc', 'TimeStampEnd')
+    TSstart = cfg.get('Misc', ts_site)
     
-    table = 'labb'
+    #table = 'labb'
     tbase = dt.strptime('"2010-10-1 00:00:00"', '"%Y-%m-%d %H:%M:%S"')
     print '>> Extracting ' + table + ' purged data from database ..\n'  
 
@@ -82,7 +80,8 @@ def extractDBToFile2():
         if TSend != None:
             cfg = ConfigParser.ConfigParser()
             cfg.read('senslope-server-config.txt')
-            cfg.set('Misc', 'TimeStampEnd', TSend)
+            #cfg.set('Misc', 'TimeStampEnd', TSend)
+	    cfg.set('Misc', ts_site, TSend)
             with open('senslope-server-config.txt', 'wb') as configfile:
                 cfg.write(configfile)
 			
@@ -132,7 +131,7 @@ def extractDBToFile2():
 			
         else:
             print '>> Current TimeStampEnd is latest data or it is currently set to None'
-            time.sleep(5)
+            #time.sleep(5)
 
     db.close()
     print 'done'
@@ -157,7 +156,13 @@ def extract_db2():
         #    if tbl[0] not in ["pugw","labw","sint","darq","abcd","axel","axl2","eee3","nigs","eeet","nlt1","ocim","outs","pott","sms1","smst","soms","strs","tbiz","temp","tesb","tim1","txt1","txt2","volt","watt","wha2","what"]:
         #        extractDBToFile(tbl[0])
 
-        extractDBToFile2()      
+        '''
+        for tbl in data:
+            if tbl[0] not in ["pugw","labw","sint","darq","abcd","axel","axl2","eee3","nigs","eeet","nlt1","ocim","outs","pott","sms1","smst","soms","strs","tbiz","temp","tesb","tim1","txt1","txt2","volt","watt","wha2","what"]:
+                extractDBToFile2(tbl[0])
+        '''
+
+        extractDBToFile2("oslb")      
 
     ##    test = raw_input('>> End of Code: Press any key to exit')
     except IndexError:
