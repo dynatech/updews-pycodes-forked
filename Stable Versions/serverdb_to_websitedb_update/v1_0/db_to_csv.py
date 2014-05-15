@@ -61,8 +61,8 @@ def extractDBToFile2():
     print 'filename parsed = ' + fileName + '\n'
 
     db, cur = SenslopeDBConnect()
-    query = 'select * from ' + table + ' where xvalue > 0 and zvalue > -500 and id > 0 and id < 41 and timestamp > "' + TSstart + '" order by timestamp asc limit 1000 '
-    query_tstamp = 'select max(timestamp) from (SELECT timestamp FROM ' + table + ' where xvalue > 0 and zvalue > -500 and id > 0 and id < 41 and timestamp > "' + TSstart + '" limit 1000)test'
+    query = 'select * from ' + table + ' where xvalue > 0 and zvalue > -500 and id > 0 and id < 41 and timestamp >= "' + TSstart + '" order by timestamp asc limit 1000 '
+    query_tstamp = 'select max(timestamp) from (SELECT timestamp FROM ' + table + ' where xvalue > 0 and zvalue > -500 and id > 0 and id < 41 and timestamp >= "' + TSstart + '" limit 1000)test'
 
     print 'Query = ' + query + '\n'
     
