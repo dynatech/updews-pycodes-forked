@@ -131,8 +131,9 @@ def extractDBToFile2(table):
 			
         else:
             print '>> Current TimeStampEnd is latest data or it is currently set to None'
-            #time.sleep(5)
 
+        time.sleep(3)
+    
     db.close()
     print 'done'
 
@@ -156,13 +157,13 @@ def extract_db2():
         #    if tbl[0] not in ["pugw","labw","sint","darq","abcd","axel","axl2","eee3","nigs","eeet","nlt1","ocim","outs","pott","sms1","smst","soms","strs","tbiz","temp","tesb","tim1","txt1","txt2","volt","watt","wha2","what"]:
         #        extractDBToFile(tbl[0])
 
-        '''
+        
         for tbl in data:
-            if tbl[0] not in ["pugw","labw","sint","darq","abcd","axel","axl2","eee3","nigs","eeet","nlt1","ocim","outs","pott","sms1","smst","soms","strs","tbiz","temp","tesb","tim1","txt1","txt2","volt","watt","wha2","what"]:
+            if tbl[0] not in ["site_column","site_column_props","pugw","labw","oslt","sint","darq","mico","mlkt","abcd","axel","axl2","eee3","nigs","eeet","nlt1","ocim","outs","pott","sms1","smst","soms","strs","tbiz","temp","tesb","tim1","txt1","txt2","volt","watt","wha2","what"]:
                 extractDBToFile2(tbl[0])
-        '''
+        
 
-        extractDBToFile2("humb")      
+        #extractDBToFile2("sinu")      
 
     ##    test = raw_input('>> End of Code: Press any key to exit')
     except IndexError:
