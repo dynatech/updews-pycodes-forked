@@ -159,7 +159,7 @@ def extract_db2():
 
         
         for tbl in data:
-            if tbl[0] not in ["server_comm_pc","contact_community","contact_electric_provider","contact_lgu","contact_ngo","site_column","site_column_props","site_geology","site_piezo","pugw","labw","oslt","sint","darq","mico","mlkt","abcd","axel","axl2","eee3","nigs","eeet","nlt1","ocim","outs","pott","sms1","smst","soms","strs","tbiz","temp","tesb","tim1","txt1","txt2","volt","watt","wha2","what"]:
+            if tbl[0] not in ["site_comm","alert","health_site","health_node","site_node","server_comm_pc","contact_community","contact_electric_provider","contact_lgu","contact_ngo","site_column","site_column_props","site_geology","site_piezo","pugw","labw","sint","darq","mico","mlkt","abcd","axel","axl2","eee3","nigs","eeet","nlt1","ocim","outs","pott","sms1","smst","soms","strs","tbiz","temp","tesb","tim1","txt1","txt2","volt","watt","wha2","what"]:
                 extractDBToFile2(tbl[0])
         
 
