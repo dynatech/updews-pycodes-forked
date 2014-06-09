@@ -481,13 +481,8 @@ def update_proc_file(loc_col,num_nodes):
             phi=str(fphi(int(y),int(z)))
             rho=str(frho(int(x),int(y),int(z)))
             moi=i[6]
-            try:
-                if int(moi)>=1000 and int(moi)<=10000:
-                    moifilter=str(1)
-                else:moifilter=str(0)
-            except:
-                print "Error in soil moisture data", moi
-                moifilter = str(1)
+            if int(moi)>=2000 and int(moi)<=4000:moifilter=str(1)
+            else:moifilter=str(0)
             row=(dt,nodeID,x,y,z,tilt_data_filter,xz,xy,phi,rho,moi,moifilter)
             fa.writerow(row)
             lines_appended=lines_appended+1
