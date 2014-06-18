@@ -54,13 +54,13 @@ def extractDBToFile2(table):
 
     tsStartParsed = re.sub('[.!,;:]', '', TSstart)
     tsStartParsed = re.sub(' ', '_', tsStartParsed)
-    fileName = 'D:\\csvForUpload\\' + table + '_' + tsStartParsed + '.csv'
+    fileName = 'D:\\dewslandslide\\' + table + '_' + tsStartParsed + '.csv'
 
     print 'filename parsed = ' + fileName + '\n'
 
     db, cur = SenslopeDBConnect()
-    query = 'select * from ' + table + ' where xvalue > 0 and zvalue > -500 and id > 0 and id < 41 and timestamp >= "' + TSstart + '" order by timestamp asc limit 1000 '
-    query_tstamp = 'select max(timestamp) from (SELECT timestamp FROM ' + table + ' where xvalue > 0 and zvalue > -500 and id > 0 and id < 41 and timestamp >= "' + TSstart + '" limit 1000)test'
+    query = 'select * from ' + table + ' where xvalue > 0 and zvalue > -500 and id > 0 and id < 41 and timestamp >= "' + TSstart + '" order by timestamp asc limit 10000'
+    query_tstamp = 'select max(timestamp) from (SELECT timestamp FROM ' + table + ' where xvalue > 0 and zvalue > -500 and id > 0 and id < 41 and timestamp >= "' + TSstart + '" limit 10000) test'
 
     print 'Query = ' + query + '\n'
     
@@ -81,7 +81,7 @@ def extractDBToFile2(table):
             cfg = ConfigParser.ConfigParser()
             cfg.read('senslope-server-config.txt')
             #cfg.set('Misc', 'TimeStampEnd', TSend)
-	    cfg.set('Misc', ts_site, TSend)
+            cfg.set('Misc', ts_site, TSend)
             with open('senslope-server-config.txt', 'wb') as configfile:
                 cfg.write(configfile)
 			

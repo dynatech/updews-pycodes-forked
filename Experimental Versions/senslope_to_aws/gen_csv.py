@@ -60,7 +60,7 @@ def main():
     extract_db2()
 
     print "Sleep.."
-    time.sleep(1800)
+    time.sleep(600)
 
     #test = raw_input('>> End of Code: Press any key to exit')
 
