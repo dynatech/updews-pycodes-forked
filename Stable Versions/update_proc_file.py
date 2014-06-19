@@ -122,7 +122,7 @@ def update_proc_file(loc_col,num_nodes):
 
             if moi=='':
                 moi=str(-1)
-            if int(moi)>=1000 and int(moi)<=10000:
+            if int(moi)>=2300 and int(moi)<=4000:
                 moifilter=str(1)
 
             else:moifilter=str(0)
