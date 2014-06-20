@@ -34,8 +34,8 @@ Userdb = cfg.get('LocalDB', 'Username')
 Passdb = cfg.get('LocalDB', 'Password')
 SleepPeriod = cfg.getint('Misc','SleepPeriod')
 
-#def extractDBToFile2():
-def extractDBToFile2(table):
+#def extractDBToSQL():
+def extractDBToSQL(table):
     cfg = ConfigParser.ConfigParser()
     cfg.read('senslope-server-config.txt')
 
@@ -54,15 +54,18 @@ def extractDBToFile2(table):
 
     tsStartParsed = re.sub('[.!,;:]', '', TSstart)
     tsStartParsed = re.sub(' ', '_', tsStartParsed)
-    fileName = 'D:\\dewslandslide\\' + table + '_' + tsStartParsed + '.csv'
+    fileName = 'D:\\dewslandslide\\' + table + '_' + tsStartParsed + '.sql'
 
     print 'filename parsed = ' + fileName + '\n'
 
+    #mysqldump -t -u root -pirc311 senslopedb labb --where="timestamp > '2014-06-19 17:44'" > D:\labb.sql
+    winCmd = 'mysqldump -t -u root -pirc311 senslopedb ' + table + ' --where="timestamp > \'' + TSstart + '\'" > ' + fileName;
+
     db, cur = SenslopeDBConnect()
-    query = 'select * from ' + table + ' where xvalue > 0 and zvalue > -500 and id > 0 and id < 41 and timestamp >= "' + TSstart + '" order by timestamp asc limit 10000'
+    #query = 'select * from ' + table + ' where xvalue > 0 and zvalue > -500 and id > 0 and id < 41 and timestamp >= "' + TSstart + '" order by timestamp asc limit 10000'
     query_tstamp = 'select max(timestamp) from (SELECT timestamp FROM ' + table + ' where xvalue > 0 and zvalue > -500 and id > 0 and id < 41 and timestamp > "' + TSstart + '" limit 10000) test'
 
-    print 'Query = ' + query + '\n'
+    print 'Query = ' + query_tstamp + '\n'
     
     #get max timestamp
     try:
@@ -84,7 +87,10 @@ def extractDBToFile2(table):
             cfg.set('Misc', ts_site, TSend)
             with open('senslope-server-config.txt', 'wb') as configfile:
                 cfg.write(configfile)
-			
+
+            os.system(winCmd)
+
+	    '''
 	    #query the new data
             try:
                 cur.execute(query)
@@ -128,7 +134,7 @@ def extractDBToFile2(table):
                 
                     fileNum.write('\n')
             fileNum.close()
-			
+	    '''
         else:
             print '>> Current TimeStampEnd is latest data or it is currently set to None'
 
@@ -153,23 +159,11 @@ def extract_db2():
         
         data = cur.fetchall()
 
-        #for tbl in data:
-        #    if tbl[0] not in ["pugw","labw","sint","darq","abcd","axel","axl2","eee3","nigs","eeet","nlt1","ocim","outs","pott","sms1","smst","soms","strs","tbiz","temp","tesb","tim1","txt1","txt2","volt","watt","wha2","what"]:
-        #        extractDBToFile(tbl[0])
+        #valid_tables = ['blcb','blct','bolb','gamt','gamb','humt','humb','labb','labt','lipb','lipt','mamb','mamt','oslb','oslt','plab','plat','pugb','pugt','sinb','sinu']
+        #for tbl in valid_tables:        
+        #    extractDBToSQL(tbl)
 
-
-        valid_tables = ['blcb','blct','bolb','gamt','gamb','humt','humb','labb','labt','lipb','lipt','mamb','mamt','oslb','oslt','plab','plat','pugb','pugt','sinb','sinu']
-        for tbl in valid_tables:        
-            extractDBToFile2(tbl)
-        
-        #for tbl in data:
-        #    if tbl[0] not in ["site_comm","alert","health_site","health_node","site_node","server_comm_pc","contact_community","contact_electric_provider","contact_lgu","contact_ngo","site_column","site_column_props","site_geology","site_piezo","pugw","labw","sint","darq","mico","mlkt","abcd","axel","axl2","eee3","nigs","eeet","nlt1","ocim","outs","pott","sms1","smst","soms","strs","tbiz","temp","tesb","tim1","txt1","txt2","volt","watt","wha2","what"]:
-        #        extractDBToFile2(tbl[0])
-        
-
-        #extractDBToFile2("sinu")      
-
-    ##    test = raw_input('>> End of Code: Press any key to exit')
+        extractDBToSQL(sinb)     
     except IndexError:
         print '>> Error in writing extracting database data to files..'
     
