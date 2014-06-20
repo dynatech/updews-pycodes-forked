@@ -88,7 +88,20 @@ def across_axis_alert(xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_vel
     
     return ac_ax
 
-
+def adj_node_alert(ac_ax, adj_node_k,num_nodes_to_check):
+    adj_node=[]
+    for i in range(1,len(ac_ax)+1):
+        if ac_ax['node_alert'][i-1].values>0:
+            adj_node_ind=[]
+            for s in range(1,num_nodes_to_check+1):
+                if i-s>0: adj_node_ind.append(i-s)
+                if i+s<=len(ac_ax):adj_node_ind.append(i+s)
+            for j in adj_node_ind:
+                if ac_ax['max_vel'][j-1].values>=ac_ax['max_vel'][i-1].values:
+                    adj_node.append(ac_ax['node_alert'][i-1].values)
+                    break
+        else:
+            adj_node.append(0)
 
 
 
