@@ -64,12 +64,20 @@ def Input_Loc_Col(loc_col_list,num_nodes_loc_col,col_seg_len_list,IWS):
     seg_len=col_seg_len_list[IWS]
     return colname,num_nodes,seg_len
 
+def x_from_xzxy(node_len, xz, xy):
+    #xz and xy here are already linear units
+    cond=(xz==0)*(xy==0)
+    diagbase=np.sqrt(np.power(xz,2)+np.power(xy,2))
+    return np.round(np.where(cond,
+                               node_len*np.ones(len(xz)),
+                               np.sqrt(node_len**2-np.power(diagbase,2))),2)
 
 def df_from_csv(csvfilepath,colname,col,usecol):
     df=pd.read_csv(csvfilepath+colname+"_proc.csv",names=col,usecols=usecol,parse_dates=[col[0]],index_col=col[0])
 
-    x,xz,xy = seg_len,df['xz'].values,df['xy'].values
-
+    xz,xy = df['xz'].values,df['xy'].values
+    x = x_from_xzxy(seg_len, xz, xy)
+        
     #appending linear displacements series to data frame
     df['xlin']=pd.Series(data=x,index=df.index)
     df['xzlin']=pd.Series(data=xz,index=df.index)
@@ -291,7 +299,7 @@ dates_to_plot=compute_colpos_time(end,INPUT_fit_interval,INPUT_number_colpos)
 csvout=[]
 
 for INPUT_which_sensor in range(1,len(loc_col_list)):
-    if INPUT_which_sensor!=1:continue
+    #if INPUT_which_sensor!=1:continue
     colname,num_nodes,seg_len=Input_Loc_Col(loc_col_list,num_nodes_loc_col,col_seg_len_list, INPUT_which_sensor)
     all_nodes_data=range(num_nodes)
     all_vel_data=range(num_nodes)
@@ -315,29 +323,32 @@ for INPUT_which_sensor in range(1,len(loc_col_list)):
     cs_xdf=fr_xdf.cumsum(axis=1)
 
     #plots absolute column position
-    fig_cp, ax_cp=plot_col_pos(cs_xzdf, cs_xydf, cs_xdf, colposperiod, "abs")
+    #fig_cp, ax_cp=plot_col_pos(cs_xzdf, cs_xydf, cs_xdf, colposperiod, "abs")
 
     #plots relative column position
-    fig_cp, ax_cp=plot_col_pos(cs_xzdf, cs_xydf, cs_xdf, colposperiod, "rel")
+    #fig_cp, ax_cp=plot_col_pos(cs_xzdf, cs_xydf, cs_xdf, colposperiod, "rel")
 
+    #rolling mean in 3 hour-window and 3 minimum data points
+    rm_xzdf=pd.rolling_mean(fr_xzdf,window=windowlength)
+    rm_xydf=pd.rolling_mean(fr_xydf,window=windowlength)
+
+    #linear regression in 3 hour-window and 3 minimum data points
+    td_rm_xzdf=rm_xzdf.index.values-rm_xzdf.index.values[0]
+    td_rm_xydf=rm_xydf.index.values-rm_xydf.index.values[0]
+    tdelta=pd.Series(td_rm_xzdf/np.timedelta64(1,'D'),index=rm_xzdf.index)
+    tdelta=pd.Series(td_rm_xydf/np.timedelta64(1,'D'),index=rm_xydf.index)
+
+    vel_xzdf=pd.DataFrame(data=None, index=rm_xzdf.index)
+    vel_xydf=pd.DataFrame(data=None, index=rm_xydf.index)
+        
     for cur_node_ID in range(num_nodes):
         
-        #rolling mean in 3 hour-window and 3 minimum data points
-        rm_xzdf=pd.rolling_mean(fr_xzdf,window=windowlength)
-        rm_xydf=pd.rolling_mean(fr_xydf,window=windowlength)
-
-        #linear regression in 3 hour-window and 3 minimum data points
-        td_rm_xzdf=rm_xzdf.index.values-rm_xzdf.index.values[0]
-        td_rm_xydf=rm_xydf.index.values-rm_xydf.index.values[0]
-        tdelta=pd.Series(td_rm_xzdf/np.timedelta64(1,'D'),index=rm_xzdf.index)
-        tdelta=pd.Series(td_rm_xydf/np.timedelta64(1,'D'),index=rm_xydf.index)
-
-        lr_xzdf=ols(y=rm_xzdf[cur_node_ID+1],x=tdelta,window=windowlength,intercept=True)
-        lr_xydf=ols(y=rm_xydf[cur_node_ID+1],x=tdelta,window=windowlength,intercept=True)
-        vel_xzdf=(lr_xzdf.beta.index,lr_xzdf.beta.x.values)
-        vel_xydf=(lr_xydf.beta.index,lr_xydf.beta.x.values)
+        lr_xzdf=ols(y=rm_xzdf[num_nodes-cur_node_ID],x=tdelta,window=windowlength,intercept=True)
+        lr_xydf=ols(y=rm_xydf[num_nodes-cur_node_ID],x=tdelta,window=windowlength,intercept=True)
+        vel_xzdf[str(num_nodes-cur_node_ID)]=np.concatenate((np.nan*np.ones(12),lr_xzdf.beta.x.values))
+        vel_xydf[str(num_nodes-cur_node_ID)]=np.concatenate((np.nan*np.ones(12),lr_xydf.beta.x.values))
         all_vel_data[cur_node_ID]=(vel_xzdf,vel_xydf)
-
+    
         #instantaneous velocity
         temp_lr_xzdf = lr_xzdf.beta.x
         temp_lr_xydf = lr_xydf.beta.x
@@ -348,68 +359,72 @@ for INPUT_which_sensor in range(1,len(loc_col_list)):
 
         cur_node_data=(cur_node_ID+1,tilt_xz,inst_vel_xz,tilt_xy,inst_vel_xy)
         all_nodes_data[cur_node_ID]=cur_node_data
-        
-    for cur_node in range(num_nodes):
-        nodealert=-1
-        cur_node_data=all_nodes_data[cur_node]
-        xztilt=cur_node_data[1]
-        
-        if xztilt==0:
-            out=[cur_node+1,-1]
-            print out
-            csvout.append([end.strftime("%Y-%m-%d %H:%M"),loc_col_list[INPUT_which_sensor],
-                            str(cur_node+1),
-                            str(nodealert)])
-            continue
 
-        xzvel=cur_node_data[2]
-        xytilt=cur_node_data[3]
-        xyvel=cur_node_data[4]
-
-        if abs(xzvel)>=abs(xyvel):
-            if abs(xzvel)>Tvela1:
-                if abs(xztilt)<=Ttilt:
-                    nodealert=0
-                else:
-                    if abs(xzvel)<=Tvela2:
-                        if abs(xyvel)>op_axis_k*abs(xzvel):
-                            nodealert=1
-                        else:
-                            nodealert=0
-                    else:
-                        if abs(xyvel)>op_axis_k*abs(xzvel):
-                            nodealert=2
-                        else:
-                            nodealert=0
-            else:
-                nodealert=0
-        else:
-            if abs(xyvel)>Tvela1:
-                if abs(xytilt)<=Ttilt:
-                    nodealert=0
-                else:
-                    if abs(xyvel)<=Tvela2:
-                        if abs(xzvel)>op_axis_k*abs(xyvel):
-                            nodealert=1
-                        else:
-                            nodealert=0
-                    else:
-                        if abs(xzvel)>op_axis_k*abs(xyvel):
-                            nodealert=2
-                        else:
-                            nodealert=0
-            else:
-                nodealert=0
-                        
-        out=[cur_node+1,nodealert,round(xztilt,2),round(xzvel,3),round(xytilt,2),round(xyvel,3)]
-        print out
-        csvout.append([end.strftime("%Y-%m-%d %H:%M"),loc_col_list[INPUT_which_sensor],
-                        str(cur_node+1),
-                        str(nodealert),
-                        str(round(xztilt,2)),
-                        str(round(xzvel,3)),
-                        str(round(xytilt,2)),
-                        str(round(xyvel,3))])
+    #Displays node alert of columns
+    ac_ax=al.across_axis_alert(rm_xzdf, rm_xydf, vel_xzdf, vel_xydf, num_nodes, 0.05, 0.005, 0.5, 0.1)
+    print ac_ax
+    
+#    for cur_node in range(num_nodes):
+#        nodealert=-1
+#        cur_node_data=all_nodes_data[cur_node]
+#        xztilt=cur_node_data[1]
+#        
+#        if xztilt==0:
+#            out=[cur_node+1,-1]
+#            print out
+#            csvout.append([end.strftime("%Y-%m-%d %H:%M"),loc_col_list[INPUT_which_sensor],
+#                            str(cur_node+1),
+#                            str(nodealert)])
+#            continue
+#
+#        xzvel=cur_node_data[2]
+#        xytilt=cur_node_data[3]
+#        xyvel=cur_node_data[4]
+#
+#        if abs(xzvel)>=abs(xyvel):
+#            if abs(xzvel)>Tvela1:
+#                if abs(xztilt)<=Ttilt:
+#                    nodealert=0
+#                else:
+#                    if abs(xzvel)<=Tvela2:
+#                        if abs(xyvel)>op_axis_k*abs(xzvel):
+#                            nodealert=1
+#                        else:
+#                            nodealert=0
+#                    else:
+#                        if abs(xyvel)>op_axis_k*abs(xzvel):
+#                            nodealert=2
+#                        else:
+#                            nodealert=0
+#            else:
+#                nodealert=0
+#        else:
+#            if abs(xyvel)>Tvela1:
+#                if abs(xytilt)<=Ttilt:
+#                    nodealert=0
+#                else:
+#                    if abs(xyvel)<=Tvela2:
+#                        if abs(xzvel)>op_axis_k*abs(xyvel):
+#                            nodealert=1
+#                        else:
+#                            nodealert=0
+#                    else:
+#                        if abs(xzvel)>op_axis_k*abs(xyvel):
+#                            nodealert=2
+#                        else:
+#                            nodealert=0
+#            else:
+#                nodealert=0
+#                        
+#        out=[cur_node+1,nodealert,round(xztilt,2),round(xzvel,3),round(xytilt,2),round(xyvel,3)]
+#        print out
+#        csvout.append([end.strftime("%Y-%m-%d %H:%M"),loc_col_list[INPUT_which_sensor],
+#                        str(cur_node+1),
+#                        str(nodealert),
+#                        str(round(xztilt,2)),
+#                        str(round(xzvel,3)),
+#                        str(round(xytilt,2)),
+#                        str(round(xyvel,3))])
                     
     ##plots time series (tilt, velocity) within date range##
     for INPUT_which_axis in [0,1]:
@@ -498,5 +513,5 @@ for INPUT_which_sensor in range(1,len(loc_col_list)):
         else:
             fig_name=OutputFigurePath+loc_col_list[INPUT_which_sensor]+"_xy.png"
 
-    plt.show()
+    plt.close()
     #plt.savefig(fig_name, dpi=100, facecolor='w', edgecolor='w',orientation='landscape')
