@@ -61,6 +61,8 @@ def extractDBToSQL(table):
     #mysqldump -t -u root -pirc311 senslopedb labb --where="timestamp > '2014-06-19 17:44'" > D:\labb.sql
     winCmd = 'mysqldump -t -u root -pirc311 senslopedb ' + table + ' --where="timestamp > \'' + TSstart + '\'" > ' + fileName;
 
+    print 'winCmd = ' + winCmd + '\n'
+
     db, cur = SenslopeDBConnect()
     #query = 'select * from ' + table + ' where xvalue > 0 and zvalue > -500 and id > 0 and id < 41 and timestamp >= "' + TSstart + '" order by timestamp asc limit 10000'
     query_tstamp = 'select max(timestamp) from (SELECT timestamp FROM ' + table + ' where xvalue > 0 and zvalue > -500 and id > 0 and id < 41 and timestamp > "' + TSstart + '" limit 10000) test'
@@ -89,57 +91,12 @@ def extractDBToSQL(table):
                 cfg.write(configfile)
 
             os.system(winCmd)
-
-	    '''
-	    #query the new data
-            try:
-                cur.execute(query)
-            except:
-                print '>> Error exporting database to csv'
-
-            data = cur.fetchall()
-            print 'After Query... 2'
-
-            fileNum = file(fileName, 'w')
-
-            for row in data:
-                x = float(row[1])
-
-                # allow x values up to 1100 to be updated
-                if x < 0 and x+4096 < 1126.0:
-                    x = 1.0
-        
-                y = float(row[2])/1024.0
-                z = float(row[3])/1024.0
-
-                v = pow((pow(x,2) + pow(y,2) + pow(z,2)), 1/2)
-
-                if v > 0.90 and v < 1.05:
-                    tcur = row[0]
-                    trec = tcur - tbase
-                    trec = float(trec.days) + float(trec.seconds)/24.0/3600.0
-                    trec = round(trec,6)
-                    fileNum.write(row[0].strftime('"%Y-%m-%d %H:%M:%S"')+',')
-                    fileNum.write(repr(trec)+',')
-
-                    fileNum.write(repr(int(row[1]))+',')
-                    
-                    if x == 1.0:
-                        fileNum.write("1023,")
-                    else:
-                        fileNum.write(repr(int(row[2]))+',')
-                
-                    for i in range(3,len(row)):
-                        fileNum.write(repr(int(row[i]))+',')
-                
-                    fileNum.write('\n')
-            fileNum.close()
-	    '''
         else:
             print '>> Current TimeStampEnd is latest data or it is currently set to None'
 
         time.sleep(3)
-    
+
+    time.sleep(10)
     db.close()
     print 'done'
 
@@ -159,11 +116,11 @@ def extract_db2():
         
         data = cur.fetchall()
 
-        #valid_tables = ['blcb','blct','bolb','gamt','gamb','humt','humb','labb','labt','lipb','lipt','mamb','mamt','oslb','oslt','plab','plat','pugb','pugt','sinb','sinu']
-        #for tbl in valid_tables:        
-        #    extractDBToSQL(tbl)
+        valid_tables = ['blcb','blct','bolb','gamt','gamb','humt','humb','labb','labt','lipb','lipt','mamb','mamt','oslb','oslt','plab','plat','pugb','pugt','sinb','sinu']
+        for tbl in valid_tables:        
+            extractDBToSQL(tbl)
 
-        extractDBToSQL(sinb)     
+        #extractDBToSQL('sinb')     
     except IndexError:
         print '>> Error in writing extracting database data to files..'
-    
+
