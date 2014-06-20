@@ -1,0 +1,1208 @@
+INSERT INTO site_column
+VALUES ('','','','','',
+		'',
+		'');
+
+INSERT INTO site_column
+VALUES ('2','pugt','2010-11-14','2010-12-07','Sitio Longlong, Brgy. Puguis, La Trinidad, Benguet','UTM 51Q: 240622; UTM 51Q: 1819892; Alt: 1455','third bench from the top');
+
+INSERT INTO site_column
+VALUES ('3','sinb','2012-04-13','2012-04-27','Sitio Sinipsip, Brgy, Amgaleyguey, Buguias, Benguet',
+		'UTM 51Q: 263463; UTM 51Q: 1850232; Alt (+32m): 2341',
+		'below the gabions, past the houses in the plantations/field; Approx. 50 meters going down the slope from the main road (Halsema Highway)');
+
+INSERT INTO site_column
+VALUES ('4','sint','null','2012-05-11','Sitio Sinipsip, Brgy, Amgaleyguey, Buguias, Benguet',
+		'UTM 51Q: 263444; UTM 51Q: 1850275; Alt: 2334',
+		'middle of the plantation 30m away from the SINB heading towards the cliff');
+
+INSERT INTO site_column
+VALUES ('5','sinu','2012-06-20','2012-06-23','Sitio Sinipsip, Brgy, Amgaleyguey, Buguias, Benguet',
+		'UTM 51Q: 263443; UTM 51Q: 1850276; Alt: 2334',
+		'beside SINT; left side when facing SINT');
+
+INSERT INTO site_column
+VALUES ('6','lipt','2012-06-21','2012-05-29','Brgy. Lipanto, St. Bernard, Southern Leyte',
+		'UTM 51P: 732988 UTM 51P: 1131349 Alt: 48',
+		'Approx. 30 meters going up the slope from the main road');
+
+INSERT INTO site_column
+VALUES ('7','lipb','2012-06-24','2012-05-29','Brgy. Lipanto, St. Bernard, Southern Leyte',
+		'UTM 51P: 732956 UTM: 1131353 Alt: 50',
+		'Approx. 40 meters going up the slope from the main road');
+		
+INSERT INTO site_column
+VALUES ('8','bolb','2012-05-30','2012-05-29','Brgy. Bolodbolod, St. Bernard, Southern Leyte',
+		'UTM 51P: 733045 UTM 51P: 1139576 Alt: 29',
+		'200m walk from the Highway');
+		
+INSERT INTO site_column
+VALUES ('9','mamb','2012-09-23','2012-09-23','Sitio Mamuyod, Brgy. Ambassador, Tublay, Benguet',
+		'UTM 51Q: 253575 UTM 51Q: 1824389 Alt: 1613',
+		'Jimmy Sacla's backyard');
+		
+INSERT INTO site_column
+VALUES ('10','mamt','2012-09-23','2012-10-17','Sitio Mamuyod, Brgy. Ambassador, Tublay, Benguet',
+		'UTM 51Q: 253296 UMT 51Q: 1824362 Alt: 1550',
+		'Mang Castor's frontyard');
+
+INSERT INTO site_column
+VALUES ('11','oslt','2012-11-28','2013-05-23','Brgy. Oslao, San Francisco, Surigao del Norte',
+		'Elevation: 56 meters Lat: 9.75726 deg N Long: 125.40093 deg E',
+		'120 meters going up the slope from the main road; behind Mang Udong Seraspe's house');
+		
+INSERT INTO site_column
+VALUES ('12','oslb','2012-11-30','2013-05-23','Brgy. Oslao, San Francisco, Surigao del Norte',
+		'Elevation: 67 meters Lat: 9.75719 deg N Long: 125.40137 deg E',
+		'135 meters going up the slope from the main road; behind Mang Udong Seraspe's house');		
+		
+INSERT INTO site_column
+VALUES ('13','labt','2012-11-01','2013-03-06','Sitio Labey, Brgy. Ambuklao, Bokod, Benguet',
+		'null',
+		'near the entrance of the Sitio Labey relocation site; 20 meters before the first house');		
+
+INSERT INTO site_column
+VALUES ('14','labb','2012-11-13','2013-03-06','Sitio Labey, Brgy. Ambuklao, Bokod, Benguet',
+		'UTM 51Q: 255026; UTM 51Q: 1822352; Alt: 1333',
+		'30 meters going up from LABT');				
+		
+INSERT INTO site_column
+VALUES ('15','gamt','2012-12-20','2013-05-04','Brgy. Gamut, Tago, Surigao del Sur',
+		'Elevation: 116 m Lat: 9.00961 N Long: 126.16849 E',
+		'200m in front of Gamut elementary school');		
+		
+INSERT INTO site_column
+VALUES ('16','gamb','2012-12-21','2013-05-04','Brgy. Gamut, Tago, Surigao del Sur',
+		'Elevation: 106 m Lat: 9.01010 N Long: 126.16756 E',
+		'300m in front of Gamut elementary school; when facing GAMT, GAMB is 100 meters away on the left direction');			
+		
+INSERT INTO site_column
+VALUES ('17','humt','2013-04-06','2013-04-09','Brgy. Humayhumay, Guihulngan City',
+		'"UTM 51P: 
+527532N
+1125437E
+EL 225m"',
+		'100 meters downslope of the old Humayhumay Elementary school');			
+		
+INSERT INTO site_column
+VALUES ('18','humb','2013-04-08','2013-04-11','Brgy. Humayhumay, Guihulngan City',
+		'"UTM 51P: 
+527421N
+1125758E
+EL 317m"',
+		'150 meters upslope the old Humayhumay Elementary school; near the cornfields');		
+		
+INSERT INTO site_column
+VALUES ('19','plat','2013-03-21','2013-03-23','Sitio Mambog, Brgy. Planas, Guihulngan City',
+		'UTM 51P: 526857 UTM51P: 1123095 Alt (m) msl: 149',
+		'located at Upper Mambog; 50 meters downslope from Mang Itaw' backyard');			
+		
+INSERT INTO site_column
+VALUES ('20','plab','2013-03-20','2013-03-23','Sitio Mambog, Brgy. Planas, Guihulngan City',
+		'UTM 51P: 526934 UTM 51P: 1123128 Alt +51m:160',
+		'located at Upper Mambog; 70 meters downslope from Mang Itaw' backyard; 40 meters when facing PLAB on the right direction');					
+		
+INSERT INTO site_column
+VALUES ('21','blcb','2013-04-04','2013-04-06','Brgy. Boloc, Tubungan, Iloilo',
+		'UTM 51P: 424740 UTM 51P: 1197063 Alt: 414',
+		'150 meters upslope from the main road by the small spring; on the ricefields owned by Ruperto Capitle');			
+		
+INSERT INTO site_column
+VALUES ('22','blct','2013-04-05','2013-04-06','Brgy. Boloc, Tubungan, Iloilo',
+		'UTM 51P: 424661 UTM 51P: 1196894 Alt (m) msl: 396',
+		'20 meters downlope of the main road leading to Brgy. Boloc; land owned by Gorgonio Capisanan');			
+		
+***********************
+
+CREATE TABLE site_column_props
+(
+s_id int not null,
+seg_length float not null,
+num_nodes int not null,
+col_length float not null,
+pos_first_node int not null,
+first_node_num int not null,
+FOREIGN KEY(s_id) REFERENCES site_column(s_id)
+)
+
+SELECT site_column.s_id, site_column.s_id, site_column_props.num_nodes
+FROM site_column
+INNER JOIN site_column_props
+ON site_column.s_id=site_column_props.s_id;
+
+DELETE FROM site_column_props
+WHERE s_id=1;
+
+INSERT INTO site_column_props
+VALUES 
+(
+);
+
+INSERT INTO site_column_props
+VALUES 
+('1',
+'1.2',
+'14',
+'16.8',
+'-0.5',
+'1'
+);	
+		
+INSERT INTO site_column_props
+VALUES 
+('2',
+'1.2',
+'10',
+'12',
+'-0.5',
+'1'
+);	
+		
+INSERT INTO site_column_props
+VALUES 
+('3',
+'1',
+'29',
+'29',
+'1',
+'2'
+);		
+		
+INSERT INTO site_column_props
+VALUES 
+('4',
+'1',
+'28',
+'28',
+'1',
+'2'
+);			
+		
+INSERT INTO site_column_props
+VALUES 
+('5',
+'1',
+'29',
+'29',
+'1',
+'2'
+);			
+		
+INSERT INTO site_column_props
+VALUES 
+('6',
+'0.5',
+'29',
+'14.5',
+'1',
+'10'
+);	
+
+INSERT INTO site_column_props
+VALUES 
+('7',
+'0.5',
+'30',
+'15',
+'1',
+'5'
+);	
+
+INSERT INTO site_column_props
+VALUES 
+('8',
+'0.5',
+'30',
+'15',
+'1',
+'1'
+);	
+
+INSERT INTO site_column_props
+VALUES 
+('9',
+'1',
+'29',
+'29',
+'0.5',
+'1'
+);	
+
+INSERT INTO site_column_props
+VALUES 
+('10',
+'1',
+'24',
+'24',
+'-2',
+'1'
+);	
+
+INSERT INTO site_column_props
+VALUES 
+('11',
+'1',
+'21',
+'21',
+'1',
+'16'
+);	
+
+INSERT INTO site_column_props
+VALUES 
+('12',
+'1',
+'23',
+'23',
+'1',
+'4'
+);	
+
+INSERT INTO site_column_props
+VALUES 
+('13',
+'1',
+'39',
+'39',
+'1',
+'1'
+);	
+
+INSERT INTO site_column_props
+VALUES 
+('14',
+'1',
+'25',
+'25',
+'1',
+'2'
+);	
+
+INSERT INTO site_column_props
+VALUES 
+('15',
+'1',
+'17',
+'17',
+'1',
+'6'
+);	
+
+INSERT INTO site_column_props
+VALUES 
+('16',
+'1',
+'17',
+'17',
+'1',
+'6'
+);	
+
+INSERT INTO site_column_props
+VALUES 
+('17',
+'1',
+'22',
+'22',
+'1',
+'5'
+);	
+
+INSERT INTO site_column_props
+VALUES 
+('18',
+'1',
+'26',
+'26',
+'1',
+'1'
+);	
+
+INSERT INTO site_column_props
+VALUES 
+('19',
+'0.5',
+'39',
+'19.5',
+'1',
+'2'
+);	
+
+INSERT INTO site_column_props
+VALUES 
+('20',
+'0.5',
+'40',
+'20',
+'1',
+'1'
+);	
+
+INSERT INTO site_column_props
+VALUES 
+('21',
+'1',
+'19',
+'19',
+'1',
+'8'
+);	
+
+INSERT INTO site_column_props
+VALUES 
+('22',
+'1',
+'24',
+'24',
+'1',
+'3'
+);			
+
+***********************
+
+create table contact_electric_provider
+(
+entry_id int not null,
+s_id int not null,
+provider varchar(255),
+contact_person varchar(255),
+contact_num varchar(255),
+email varchar(255),
+comments varchar(255),
+primary key(entry_id),
+foreign key(s_id) references site_column(s_id)
+)
+
+create table contact_community
+(
+entry_id int not null,
+s_id int not null,
+contact_person varchar(255),
+contact_num varchar(255),
+comments varchar(255),
+primary key(entry_id),
+foreign key(s_id) references site_column(s_id)
+)
+
+create table contact_lgu
+(
+entry_id int not null,
+s_id int not null,
+group_name varchar(255),
+contact_person varchar(255),
+contact_num varchar(255),
+comments varchar(255),
+primary key(entry_id),
+foreign key(s_id) references site_column(s_id)
+)
+
+create table contact_ngo
+(
+entry_id int not null,
+s_id int not null,
+group_name varchar(255),
+contact_person varchar(255),
+contact_num varchar(255),
+comments varchar(255),
+primary key(entry_id),
+foreign key(s_id) references site_column(s_id)
+)
+
+create table server_comm_pc
+(
+gsm_number int not null,
+network_provider varchar(32),
+date_activation date,
+payment_plan varchar(32),
+primary key(gsm_number)
+)
+
+***********************
+
+Piezo
+
+PUGB
+
+INSERT INTO site_piezo
+VALUES 
+('1',
+'UTM 51Q: 240599; UTM 51Q: 1819890; Alt (+33m):1460',
+'right side when facing PUGB',
+'18'
+);	
+
+PUGT
+
+INSERT INTO site_piezo
+VALUES 
+('2',
+'UTM 51Q: 240614; UTM 51Q: 1819896; Alt (+33m): 1455',
+'right side when facing PUGT',
+'12'
+);	
+
+SINB
+
+INSERT INTO site_piezo
+VALUES 
+('3',
+'UTM 51Q: 263465; UTM 51Q: 1850230; Alt (+32m): 2341',
+'left side when facing SINB',
+'19'
+);	
+
+MAMB
+
+INSERT INTO site_piezo
+VALUES 
+('9',
+'UTM 51Q: 253579 UTM 51Q: 1824387 Alt: 1613',
+'left side when facing MAMB',
+'21'
+);	
+
+OSLT
+
+INSERT INTO site_piezo
+VALUES 
+('11',
+'Elevation: 56 meters Lat: 9.75726 deg N Long: 125.40093 deg E',
+'left side when facing OSLT',
+'18.5'
+);	
+
+HUMT
+
+INSERT INTO site_piezo
+VALUES 
+('17',
+'UTM 51P: 527532N 1125437E EL 225m',
+'right side when facing HUMT',
+'20.2'
+);	
+
+HUMB
+
+INSERT INTO site_piezo
+VALUES 
+('18',
+'UTM 51P: 527421N 1125758E EL 317m',
+'left side when facing HUMB',
+'null'
+);	
+
+***********************
+
+INSERT INTO site_geology
+VALUES 
+('1',
+'18',
+'null',
+'not reached'
+);
+
+INSERT INTO site_geology
+VALUES 
+('2',
+'12',
+'null',
+'not reached'
+);
+
+INSERT INTO site_geology
+VALUES 
+('3',
+'20',
+'17',
+'16-SI'
+);
+
+INSERT INTO site_geology
+VALUES 
+('4',
+'27',
+'null',
+'null'
+);
+
+INSERT INTO site_geology
+VALUES 
+('5',
+'27',
+'null',
+'null'
+);
+
+INSERT INTO site_geology
+VALUES 
+('6',
+'12',
+'null',
+'null'
+);
+
+INSERT INTO site_geology
+VALUES 
+('7',
+'13.5',
+'null',
+'null'
+);
+
+INSERT INTO site_geology
+VALUES 
+('8',
+'7',
+'null',
+'null'
+);
+
+INSERT INTO site_geology
+VALUES 
+('9',
+'34.5',
+'15',
+'Bedrock might be deeper than 34.5 m. Water table depth is approximately 15 m when its rainy.'
+);
+
+INSERT INTO site_geology
+VALUES 
+('10',
+'20',
+'null',
+'null'
+);
+
+INSERT INTO site_geology
+VALUES 
+('11',
+'1.5',
+'15',
+'null'
+);
+
+INSERT INTO site_geology
+VALUES 
+('12',
+'3',
+'12',
+'null'
+);
+
+INSERT INTO site_geology
+VALUES 
+('13',
+'null',
+'null',
+'null'
+);
+
+INSERT INTO site_geology
+VALUES 
+('14',
+'null',
+'null',
+'null'
+);
+
+INSERT INTO site_geology
+VALUES 
+('15',
+'21',
+'15',
+'null'
+);
+
+INSERT INTO site_geology
+VALUES 
+('16',
+'7.5',
+'12',
+'null'
+);
+
+INSERT INTO site_geology
+VALUES 
+('17',
+'null',
+'16',
+'null'
+);
+
+INSERT INTO site_geology
+VALUES 
+('18',
+'null',
+'20',
+'null'
+);
+
+INSERT INTO site_geology
+VALUES 
+('19',
+'null',
+'null',
+'null'
+);
+
+INSERT INTO site_geology
+VALUES 
+('20',
+'null',
+'null',
+'null'
+);
+
+INSERT INTO site_geology
+VALUES 
+('21',
+'15',
+'13',
+'null'
+);
+
+INSERT INTO site_geology
+VALUES 
+('22',
+'13.5',
+'16',
+'null'
+);
+
+***********************
+
+INSERT INTO contact_electric_provider
+VALUES 
+('1',
+'1',
+'BENECO',
+'Engr. Ramel Rifani',
+'639395684211',
+'null',
+'null'
+);
+
+INSERT INTO contact_electric_provider
+VALUES 
+('6',
+'6',
+'SOLECO',
+'Engr. Arce, GM',
+'639283285177',
+'null',
+'null'
+);
+
+INSERT INTO contact_electric_provider
+VALUES 
+('11',
+'11',
+'Solar Energy',
+'null',
+'null',
+'null',
+'null'
+);
+
+***********************
+
+INSERT INTO contact_community
+VALUES 
+('1',
+'1',
+'Romeo Ambales',
+'639103562218',
+'null'
+);
+
+INSERT INTO contact_community
+VALUES 
+('3',
+'3',
+'Rosalia Balegan',
+'639283979064',
+'null'
+);
+
+INSERT INTO contact_community
+VALUES 
+('6',
+'6',
+'Brgy. Capt. Alinda L. Pamugas',
+'639192504046',
+'null'
+);
+
+INSERT INTO contact_community
+VALUES 
+('7',
+'6',
+'Kagawad Felix',
+'09068617363',
+'null'
+);
+
+INSERT INTO contact_community
+VALUES 
+('8',
+'7',
+'Brgy. Capt. Alinda L. Pamugas',
+'639192504046',
+'null'
+);
+
+INSERT INTO contact_community
+VALUES 
+('9',
+'7',
+'Kagawad Felix',
+'09068617363',
+'null'
+);
+
+INSERT INTO contact_community
+VALUES 
+('10',
+'8',
+'Brgy. Capt. Armando "Dave" Bulabog',
+'639182432713',
+'null'
+);
+
+INSERT INTO contact_community
+VALUES 
+('11',
+'8',
+'Chief brgy. tanod',
+'09295802673',
+'null'
+);
+
+INSERT INTO contact_community
+VALUES 
+('12',
+'9',
+'Jimmy Sacla',
+'639183342290',
+'null'
+);
+
+INSERT INTO contact_community
+VALUES 
+('13',
+'10',
+'Castor B. Sabiano',
+'639464081562',
+'null'
+);
+
+INSERT INTO contact_community
+VALUES 
+('14',
+'11',
+'Udong Seraspe',
+'639066242944',
+'null'
+);
+
+INSERT INTO contact_community
+VALUES 
+('15',
+'11',
+'Jerry Escabal (Brgy. Kap)',
+'639069261339',
+'null'
+);
+
+INSERT INTO contact_community
+VALUES 
+('16',
+'11',
+'Brgy. Sec',
+'639061398932',
+'null'
+);
+
+INSERT INTO contact_community
+VALUES 
+('17',
+'12',
+'Udong Seraspe',
+'639066242944',
+'null'
+);
+
+INSERT INTO contact_community
+VALUES 
+('18',
+'12',
+'Jerry Escabal (Brgy. Kap)',
+'639069261339',
+'null'
+);
+
+INSERT INTO contact_community
+VALUES 
+('19',
+'12',
+'Brgy. Sec',
+'639061398932',
+'null'
+);
+
+INSERT INTO contact_community
+VALUES 
+('20',
+'13',
+'Mary Ann Bugtong',
+'09197183245',
+'null'
+);
+
+INSERT INTO contact_community
+VALUES 
+('21',
+'14',
+'Mary Ann Bugtong',
+'09197183245',
+'null'
+);
+
+INSERT INTO contact_community
+VALUES 
+('22',
+'15',
+'Jessie Nunez',
+'63184549903 and 09092798319',
+'null'
+);
+
+INSERT INTO contact_community
+VALUES 
+('23',
+'15',
+'Kap Adorable (Brgy. Cpt)',
+'639089802485',
+'null'
+);
+
+INSERT INTO contact_community
+VALUES 
+('24',
+'16',
+'Jessie Nunez',
+'63184549903 and 09092798319',
+'null'
+);
+
+INSERT INTO contact_community
+VALUES 
+('25',
+'16',
+'Kap Adorable (Brgy. Cpt)',
+'639089802485',
+'null'
+);
+
+INSERT INTO contact_community
+VALUES 
+('26',
+'17',
+'Arman Alipan (Kagawad)',
+'639066767317 and 639234290891',
+'null'
+);
+
+INSERT INTO contact_community
+VALUES 
+('27',
+'18',
+'Arman Alipan (Kagawad)',
+'639066767317 and 639234290891',
+'null'
+);
+
+INSERT INTO contact_community
+VALUES 
+('28',
+'19',
+'Itaw',
+'639477830887',
+'null'
+);
+
+INSERT INTO contact_community
+VALUES 
+('29',
+'19',
+'Edmar Broce (Kagawad)',
+'639059244958',
+'null'
+);
+
+INSERT INTO contact_community
+VALUES 
+('30',
+'20',
+'Itaw',
+'639477830887',
+'null'
+);
+
+INSERT INTO contact_community
+VALUES 
+('31',
+'20',
+'Edmar Broce (Kagawad)',
+'639059244958',
+'null'
+);
+
+INSERT INTO contact_community
+VALUES 
+('32',
+'21',
+'Babylyn Gregorio "Bingbing"',
+'639193434879',
+'null'
+);
+
+INSERT INTO contact_community
+VALUES 
+('33',
+'22',
+'Babylyn Gregorio "Bingbing"',
+'639193434879',
+'null'
+);
+
+***********************
+
+INSERT INTO contact_lgu
+VALUES 
+('1',
+'6',
+'St. Bernard MDRRMC',
+'Mitzi R. Ocba-Adobas',
+'639163228573',
+'null'
+);
+
+INSERT INTO contact_lgu
+VALUES 
+('2',
+'7',
+'St. Bernard MDRRMC',
+'Mitzi R. Ocba-Adobas',
+'639163228573',
+'null'
+);
+
+INSERT INTO contact_lgu
+VALUES 
+('3',
+'8',
+'St. Bernard MDRRMC',
+'Mitzi R. Ocba-Adobas',
+'639163228573',
+'null'
+);
+
+INSERT INTO contact_lgu
+VALUES 
+('4',
+'11',
+'null',
+'Simplicia Bacol',
+'639177036985',
+'Mayor of San Francisco'
+);
+
+INSERT INTO contact_lgu
+VALUES 
+('5',
+'11',
+'null',
+'Sir Nonoy',
+'639998815609',
+'MGB of Region 13'
+);
+
+INSERT INTO contact_lgu
+VALUES 
+('6',
+'12',
+'null',
+'Simplicia Bacol',
+'639177036985',
+'Mayor of San Francisco'
+);
+
+INSERT INTO contact_lgu
+VALUES 
+('7',
+'12',
+'null',
+'Sir Nonoy',
+'639998815609',
+'MGB of Region 13'
+);
+
+INSERT INTO contact_lgu
+VALUES 
+('8',
+'15',
+'null',
+'Jerry Guazon',
+'639075447664',
+'null'
+);
+
+INSERT INTO contact_lgu
+VALUES 
+('9',
+'16',
+'null',
+'Eduardo Milloren',
+'09391365265/ 09173253370/ 09073074377',
+'null'
+);
+
+***********************
+
+INSERT INTO contact_ngo
+VALUES 
+('1',
+'17',
+'CPRS',
+'Leopoldo Correjado III',
+'null',
+'null'
+);
+
+INSERT INTO contact_ngo
+VALUES 
+('2',
+'18',
+'CPRS',
+'Leopoldo Correjado III',
+'null',
+'null'
+);
+
+INSERT INTO contact_ngo
+VALUES 
+('3',
+'19',
+'CPRS',
+'Em Prajes',
+'639077550663/ 639279170328',
+'null'
+);
+
+INSERT INTO contact_ngo
+VALUES 
+('4',
+'20',
+'CPRS',
+'Em Prajes',
+'639077550663/ 639279170328',
+'null'
+);
+
+INSERT INTO contact_ngo
+VALUES 
+('5',
+'21',
+'PCDR',
+'Maam Armie',
+'639202355131',
+'null'
+);
+
+INSERT INTO contact_ngo
+VALUES 
+('6',
+'22',
+'PCDR',
+'Maam Armie',
+'639202355131',
+'null'
+);
+
+***********************
+
+create table site_comm
+(
+gsm_number int not null,
+network_provider varchar(32),
+date_activation date,
+payment_plan varchar(32),
+primary key(gsm_number)
+)
+
+create table site_node
+(
+n_id int not null auto_increment,
+s_id int not null,
+node_num int not null,
+primary key(n_id),
+foreign key(s_id) references site_column(s_id)
+)
+
+create table health_node
+(
+nh_id int not null auto_increment,
+n_id int not null,
+tstamp timestamp,
+total_up_time float,
+status varchar(255),
+primary key(nh_id),
+foreign key(n_id) references site_node(n_id)
+)
+
+create table health_site
+(
+sh_id int not null auto_increment,
+s_id int not null,
+tstamp timestamp,
+total_up_time float,
+status varchar(255),
+primary key(sh_id),
+foreign key(s_id) references site_column(s_id)
+)
+
+create table alert
+(
+a_id int not null auto_increment,
+s_id int not null,
+tstamp timestamp,
+status varchar(255),
+primary key(a_id),
+foreign key(s_id) references site_column(s_id)
+)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
