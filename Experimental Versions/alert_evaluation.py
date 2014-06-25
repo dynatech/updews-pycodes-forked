@@ -6,7 +6,7 @@
 import numpy as np
 import pandas as pd
 
-def node_alert(xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_velA1, T_velA2, k_ac_ax):
+def node_alert(colname, xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_velA1, T_velA2, k_ac_ax):
 
     #DESCRIPTION
     #Evaluates node-level alerts from node tilt and velocity data
@@ -21,21 +21,26 @@ def node_alert(xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_velA1, T_v
     #alert:                             Pandas DataFrame object, with length equal to number of nodes, and columns for displacements along axes,
     #                                   displacement alerts, minimum and maximum velocities, velocity alerts and final node alerts
 
-    print xz_tilt
-    print xy_tilt
-    print xz_vel
-    print xy_vel
+    #print xz_tilt
+    #print xy_tilt
+    #print xz_vel
+    #print xy_vel
 
     #initializing DataFrame object, alert
-    alert=pd.DataFrame(data=None, index=range(1,num_nodes+1))
+    index=[]
+    for x in range(1, num_nodes+1):
+        index.append(colname)        
+    alert=pd.DataFrame(data=None, index=index)    
+
+    alert['node_ID']=[num_nodes-a for a in range(num_nodes)]
 
     #evaluating net displacements within real-time window
     alert['xz_disp']=np.round(xz_tilt.values[-1]-xz_tilt.values[13], 3)
     alert['xy_disp']=np.round(xy_tilt.values[-1]-xy_tilt.values[13], 3)
 
     #checking if displacement threshold is exceeded in either axis
-    cond = np.abs(alert['xz_disp'].values)>T_disp, np.abs(alert['xy_disp'].values)>T_disp
-    alert['disp_alert']=np.where(np.any(cond),
+    cond = np.asarray((np.abs(alert['xz_disp'].values)>T_disp, np.abs(alert['xy_disp'].values)>T_disp))
+    alert['disp_alert']=np.where(np.any(cond, axis=0),
 
                                  #disp alert=1
                                  np.ones(len(alert)),
@@ -101,6 +106,7 @@ def column_alert(alert, num_nodes_to_check):
        
     
     col_alert=[]
+    col_node=[]
     #looping through each node
     for i in range(1,len(alert)+1):
     
@@ -118,9 +124,9 @@ def column_alert(alert, num_nodes_to_check):
             for j in adj_node_ind:
                 
                 #comparing current adjacent node velocity with current node velocity
-                if abs(alert[ a'max_vel'].values[j-1])>=abs(alert['max_vel'].values[i-1])*1/(2.**abs(s)):
+                if abs(alert['max_vel'].values[j-1])>=abs(alert['max_vel'].values[i-1])*1/(2.**abs(s)):
                     #current adjacent node alert assumes value of current node alert
-                    adj_node_alert.append(alert['node_alert'][i-1].values)
+                    adj_node_alert.append(alert['node_alert'].values[i-1])
                 else:
                     #current adjacent node alert is 0
                     adj_node_alert.append(0)
