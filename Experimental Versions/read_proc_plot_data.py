@@ -259,9 +259,10 @@ cfg.read('IO-config.txt')
 #set file path for input *.proc files
 csvfilepath=cfg.get('I/O','OutputFilePath')
 
-#set file path for saving figures
+#set file path for saving figures and CSVs
 OutputFigurePath = cfg.get('I/O','OutputFigurePath')
 figsavefilepath="C:\Users\\acer\Desktop\%s" %''
+CSVOutputFile = cfg.get('I/O','CSVOutputFilePath') + cfg.get('I/O','CSVOutputFile')
 
 #set this to 1 to plot figures
 plotfigs=1
@@ -288,8 +289,8 @@ S=0
 end=datetime.combine(date(Y,m,d),time(H,M,S))
 end=datetime.now()
 end=time_exact_interval(end)
-start=end-timedelta(days=3)
-
+start=end-timedelta(days=4)
+start_alert=end-timedelta(days=3)
 
 windowlength=7
 INPUT_fit_interval=3
@@ -298,7 +299,7 @@ dates_to_plot=compute_colpos_time(end,INPUT_fit_interval,INPUT_number_colpos)
 csvout=[]
 
 for INPUT_which_sensor in range(1,len(loc_col_list)):
-    if INPUT_which_sensor!=3:continue
+    #if INPUT_which_sensor!=9:continue
     colname,num_nodes,seg_len=Input_Loc_Col(loc_col_list,num_nodes_loc_col,col_seg_len_list, INPUT_which_sensor)
     all_nodes_data=range(num_nodes)
     all_vel_data=range(num_nodes)
@@ -311,7 +312,7 @@ for INPUT_which_sensor in range(1,len(loc_col_list)):
     #resampling and filling XZ, XY and X dataframes
     fr_xzdf, fr_xydf, fr_xdf = resamp_fill_df(resampind, xzdf,xydf,xdf)
 
-    #slicing dataframe to
+    #slicing dataframe for rolling mean analysis
     fr_xzdf = fr_xzdf[start:end]
     fr_xydf = fr_xydf[start:end]
     fr_xdf = fr_xdf[start:end]
@@ -331,13 +332,13 @@ for INPUT_which_sensor in range(1,len(loc_col_list)):
     #rolling mean in 3 hour-window and 3 minimum data points
     rm_xzdf=pd.rolling_mean(fr_xzdf,window=windowlength)
     rm_xydf=pd.rolling_mean(fr_xydf,window=windowlength)
-
     #linear regression in 3 hour-window and 3 minimum data points
     td_rm_xzdf=rm_xzdf.index.values-rm_xzdf.index.values[0]
     td_rm_xydf=rm_xydf.index.values-rm_xydf.index.values[0]
     tdelta=pd.Series(td_rm_xzdf/np.timedelta64(1,'D'),index=rm_xzdf.index)
     tdelta=pd.Series(td_rm_xydf/np.timedelta64(1,'D'),index=rm_xydf.index)
 
+    #setting up dataframe for velocity values
     d_vel_xzdf=pd.DataFrame(data=None, index=rm_xzdf.index)
     d_vel_xydf=pd.DataFrame(data=None, index=rm_xydf.index)
         
@@ -362,73 +363,24 @@ for INPUT_which_sensor in range(1,len(loc_col_list)):
         cur_node_data=(cur_node_ID+1,tilt_xz,inst_vel_xz,tilt_xy,inst_vel_xy)
         all_nodes_data[cur_node_ID]=cur_node_data
 
+    #slicing to 3-day window
+    rm_xzdf=rm_xzdf[start_alert:end]
+    rm_xydf=rm_xydf[start_alert:end]
+    d_vel_xzdf=d_vel_xzdf[start_alert:end]
+    d_vel_xydf=d_vel_xydf[start_alert:end]
+    if len(rm_xzdf)<1: continue
+
     #Displays node alert of columns
     ac_ax=al.node_alert(colname, rm_xzdf, rm_xydf, d_vel_xzdf, d_vel_xydf, num_nodes, 0.05, 0.005, 0.5, 0.1)
     col_al=al.column_alert(ac_ax,5)
-    print col_al
+
+    csvout.append(col_al)
+with open(CSVOutputFile, 'a') as f:
+    csvout.to_csv(f, header=False)
+    print "\nAlert file written"
+
     
-#    for cur_node in range(num_nodes):
-#        nodealert=-1
-#        cur_node_data=all_nodes_data[cur_node]
-#        xztilt=cur_node_data[1]
-#        
-#        if xztilt==0:
-#            out=[cur_node+1,-1]
-#            print out
-#            csvout.append([end.strftime("%Y-%m-%d %H:%M"),loc_col_list[INPUT_which_sensor],
-#                            str(cur_node+1),
-#                            str(nodealert)])
-#            continue
-#
-#        xzvel=cur_node_data[2]
-#        xytilt=cur_node_data[3]
-#        xyvel=cur_node_data[4]
-#
-#        if abs(xzvel)>=abs(xyvel):
-#            if abs(xzvel)>Tvela1:
-#                if abs(xztilt)<=Ttilt:
-#                    nodealert=0
-#                else:
-#                    if abs(xzvel)<=Tvela2:
-#                        if abs(xyvel)>op_axis_k*abs(xzvel):
-#                            nodealert=1
-#                        else:
-#                            nodealert=0
-#                    else:
-#                        if abs(xyvel)>op_axis_k*abs(xzvel):
-#                            nodealert=2
-#                        else:
-#                            nodealert=0
-#            else:
-#                nodealert=0
-#        else:
-#            if abs(xyvel)>Tvela1:
-#                if abs(xytilt)<=Ttilt:
-#                    nodealert=0
-#                else:
-#                    if abs(xyvel)<=Tvela2:
-#                        if abs(xzvel)>op_axis_k*abs(xyvel):
-#                            nodealert=1
-#                        else:
-#                            nodealert=0
-#                    else:
-#                        if abs(xzvel)>op_axis_k*abs(xyvel):
-#                            nodealert=2
-#                        else:
-#                            nodealert=0
-#            else:
-#                nodealert=0
-#                        
-#        out=[cur_node+1,nodealert,round(xztilt,2),round(xzvel,3),round(xytilt,2),round(xyvel,3)]
-#        print out
-#        csvout.append([end.strftime("%Y-%m-%d %H:%M"),loc_col_list[INPUT_which_sensor],
-#                        str(cur_node+1),
-#                        str(nodealert),
-#                        str(round(xztilt,2)),
-#                        str(round(xzvel,3)),
-#                        str(round(xytilt,2)),
-#                        str(round(xyvel,3))])
-                    
+           
     ##plots time series (tilt, velocity) within date range##
     for INPUT_which_axis in [0,1]:
             
