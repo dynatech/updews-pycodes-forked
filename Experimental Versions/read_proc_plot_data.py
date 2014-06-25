@@ -104,9 +104,9 @@ def create_dataframes(df, num_nodes, seg_len):
         #handling "no data"
         if len(dates)<1:
             print 'Filling node:',curnodeID+1
-            xzlist.append(pd.Series(data=[0],index=[df.index[0]], name=curnodeID+1))
-            xylist.append(pd.Series(data=[0],index=[df.index[0]], name=curnodeID+1))
-            xlist.append(pd.Series(data=[seg_len],index=[df.index[0]], name=curnodeID+1))
+            xzlist.append(pd.Series(data=[0],index=[df.index[-1]], name=curnodeID+1))
+            xylist.append(pd.Series(data=[0],index=[df.index[-1]], name=curnodeID+1))
+            xlist.append(pd.Series(data=[seg_len],index=[df.index[-1]], name=curnodeID+1))
             continue
 
         #extracting component displacements as series
@@ -127,8 +127,7 @@ def create_dataframes(df, num_nodes, seg_len):
     #creating unfilled XZ, XY and X dataframes
     xzdf=pd.concat([xzlist[num_nodes-a-1] for a in range(num_nodes)] ,axis=1,join='outer', names=[num_nodes-b for b in range(num_nodes)])
     xydf=pd.concat([xylist[num_nodes-a-1] for a in range(num_nodes)] ,axis=1,join='outer', names=[num_nodes-b for b in range(num_nodes)])
-    xdf=pd.concat([xlist[num_nodes-a-1] for a in range(num_nodes)] ,axis=1,join='outer', names=[num_nodes-b for b in range(num_nodes)])
-    
+    xdf=pd.concat([xlist[num_nodes-a-1] for a in range(num_nodes)] ,axis=1,join='outer', names=[num_nodes-b for b in range(num_nodes)])    
     return xzdf, xydf, xdf
 
 def resamp_fill_df(resampind, xzdf,xydf,xdf):
@@ -299,7 +298,7 @@ dates_to_plot=compute_colpos_time(end,INPUT_fit_interval,INPUT_number_colpos)
 csvout=[]
 
 for INPUT_which_sensor in range(1,len(loc_col_list)):
-    #if INPUT_which_sensor!=1:continue
+    if INPUT_which_sensor!=3:continue
     colname,num_nodes,seg_len=Input_Loc_Col(loc_col_list,num_nodes_loc_col,col_seg_len_list, INPUT_which_sensor)
     all_nodes_data=range(num_nodes)
     all_vel_data=range(num_nodes)
@@ -312,10 +311,11 @@ for INPUT_which_sensor in range(1,len(loc_col_list)):
     #resampling and filling XZ, XY and X dataframes
     fr_xzdf, fr_xydf, fr_xdf = resamp_fill_df(resampind, xzdf,xydf,xdf)
 
-    #slicing dataframe to 
+    #slicing dataframe to
     fr_xzdf = fr_xzdf[start:end]
     fr_xydf = fr_xydf[start:end]
     fr_xdf = fr_xdf[start:end]
+    if len(fr_xzdf)<1: continue
     
     #computing cumulative node displacements
     cs_xzdf=fr_xzdf.cumsum(axis=1)
@@ -323,10 +323,10 @@ for INPUT_which_sensor in range(1,len(loc_col_list)):
     cs_xdf=fr_xdf.cumsum(axis=1)
 
     #plots absolute column position
-    #fig_cp, ax_cp=plot_col_pos(cs_xzdf, cs_xydf, cs_xdf, colposperiod, "abs")
+#    fig_cp, ax_cp=plot_col_pos(cs_xzdf, cs_xydf, cs_xdf, colposperiod, "abs")
 
     #plots relative column position
-    #fig_cp, ax_cp=plot_col_pos(cs_xzdf, cs_xydf, cs_xdf, colposperiod, "rel")
+#    fig_cp, ax_cp=plot_col_pos(cs_xzdf, cs_xydf, cs_xdf, colposperiod, "rel")
 
     #rolling mean in 3 hour-window and 3 minimum data points
     rm_xzdf=pd.rolling_mean(fr_xzdf,window=windowlength)
@@ -338,15 +338,17 @@ for INPUT_which_sensor in range(1,len(loc_col_list)):
     tdelta=pd.Series(td_rm_xzdf/np.timedelta64(1,'D'),index=rm_xzdf.index)
     tdelta=pd.Series(td_rm_xydf/np.timedelta64(1,'D'),index=rm_xydf.index)
 
-    vel_xzdf=pd.DataFrame(data=None, index=rm_xzdf.index)
-    vel_xydf=pd.DataFrame(data=None, index=rm_xydf.index)
+    d_vel_xzdf=pd.DataFrame(data=None, index=rm_xzdf.index)
+    d_vel_xydf=pd.DataFrame(data=None, index=rm_xydf.index)
         
     for cur_node_ID in range(num_nodes):
         
         lr_xzdf=ols(y=rm_xzdf[num_nodes-cur_node_ID],x=tdelta,window=windowlength,intercept=True)
         lr_xydf=ols(y=rm_xydf[num_nodes-cur_node_ID],x=tdelta,window=windowlength,intercept=True)
-        vel_xzdf[str(num_nodes-cur_node_ID)]=np.concatenate((np.nan*np.ones(12),lr_xzdf.beta.x.values))
-        vel_xydf[str(num_nodes-cur_node_ID)]=np.concatenate((np.nan*np.ones(12),lr_xydf.beta.x.values))
+        d_vel_xzdf[str(num_nodes-cur_node_ID)]=np.concatenate((np.nan*np.ones(12),lr_xzdf.beta.x.values))
+        d_vel_xydf[str(num_nodes-cur_node_ID)]=np.concatenate((np.nan*np.ones(12),lr_xydf.beta.x.values))
+        vel_xzdf=(lr_xzdf.beta.index,lr_xzdf.beta.x.values)
+        vel_xydf=(lr_xydf.beta.index,lr_xydf.beta.x.values)
         all_vel_data[cur_node_ID]=(vel_xzdf,vel_xydf)
     
         #instantaneous velocity
@@ -361,8 +363,9 @@ for INPUT_which_sensor in range(1,len(loc_col_list)):
         all_nodes_data[cur_node_ID]=cur_node_data
 
     #Displays node alert of columns
-    ac_ax=al.across_axis_alert(rm_xzdf, rm_xydf, vel_xzdf, vel_xydf, num_nodes, 0.05, 0.005, 0.5, 0.1)
-    print ac_ax
+    ac_ax=al.node_alert(colname, rm_xzdf, rm_xydf, d_vel_xzdf, d_vel_xydf, num_nodes, 0.05, 0.005, 0.5, 0.1)
+    col_al=al.column_alert(ac_ax,5)
+    print col_al
     
 #    for cur_node in range(num_nodes):
 #        nodealert=-1
@@ -514,4 +517,4 @@ for INPUT_which_sensor in range(1,len(loc_col_list)):
             fig_name=OutputFigurePath+loc_col_list[INPUT_which_sensor]+"_xy.png"
 
     plt.close()
-    #plt.savefig(fig_name, dpi=100, facecolor='w', edgecolor='w',orientation='landscape')
+    plt.savefig(fig_name, dpi=100, facecolor='w', edgecolor='w',orientation='landscape')
