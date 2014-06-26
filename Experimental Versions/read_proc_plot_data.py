@@ -374,13 +374,9 @@ for INPUT_which_sensor in range(1,len(loc_col_list)):
     ac_ax=al.node_alert(colname, rm_xzdf, rm_xydf, d_vel_xzdf, d_vel_xydf, num_nodes, 0.05, 0.005, 0.5, 0.1)
     col_al=al.column_alert(ac_ax,5)
 
+    #creating one dataframe for all column alerts
     csvout.append(col_al)
-with open(CSVOutputFile, 'a') as f:
-    csvout.to_csv(f, header=False)
-    print "\nAlert file written"
 
-    
-           
     ##plots time series (tilt, velocity) within date range##
     for INPUT_which_axis in [0,1]:
             
@@ -468,5 +464,13 @@ with open(CSVOutputFile, 'a') as f:
         else:
             fig_name=OutputFigurePath+loc_col_list[INPUT_which_sensor]+"_xy.png"
 
-    plt.close()
-    plt.savefig(fig_name, dpi=100, facecolor='w', edgecolor='w',orientation='landscape')
+#writing column alerts into csv file
+csvout=pd.concat(csvout[1:])
+csvout=np.asarray(csvout)
+with open(CSVOutputFile, "wb") as f:
+    writer = csv.writer(f)
+    writer.writerows(csvout)
+    print "\nAlert file written"
+
+    #plt.close()
+    #plt.savefig(fig_name, dpi=100, facecolor='w', edgecolor='w',orientation='landscape')
