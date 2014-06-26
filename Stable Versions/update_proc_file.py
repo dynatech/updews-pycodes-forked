@@ -141,19 +141,24 @@ def update_proc_file(loc_col,num_nodes):
 ##                     TILT FUNCTIONS                     ##
 ############################################################
 
-def accel_to_lin_xz_xy(node_len,x,y,z):
+def accel_to_lin_xz_xy(seg_len,xa,ya,za):
 
-    if y==0 and x==0:xz=90
-    else:xz=round(deg(atan(z/(sqrt(y*y+x*x)))),1)
-
-    if x==0 and z==0:xy=90
-    else:xy=round(deg(atan(y/(sqrt(z*z+x*x)))),1)
-
-    H=node_len/np.sqrt(1+(np.tan(np.arctan(z/(np.sqrt(x**2+y**2))))**2+(np.tan(np.arctan(y/(np.sqrt(x**2+z**2))))**2)))
-    a=H*np.tan(np.arctan(z/(np.sqrt(x**2+y**2))))
-    b=H*np.tan(np.arctan(y/(np.sqrt(x**2+z**2))))
+    #DESCRIPTION
+    #converts accelerometer data (xa,ya,za) to corresponding tilt expressed as horizontal linear displacements values, (xz, xy)
     
-    return a,b
+    #INPUTS
+    #seg_len; float; length of individual column segment
+    #xa,ya,za; integers; accelerometer data (ideally, -1024 to 1024)
+    
+    #OUTPUTS
+    #xz, xy; floats; horizontal linear displacements along the planes defined by xa-za and xa-ya, respectively; units similar to seg_len
+    
+
+    x=seg_len/np.sqrt(1+(np.tan(np.arctan(za/(np.sqrt(xa**2+ya**2))))**2+(np.tan(np.arctan(ya/(np.sqrt(xa**2+za**2))))**2)))
+    xz=x*np.tan(np.arctan(za/(np.sqrt(xa**2+ya**2))))
+    xy=x*np.tan(np.arctan(ya/(np.sqrt(xa**2+za**2))))
+    
+    return xz,yz
 
 
 ############################################################
@@ -161,58 +166,68 @@ def accel_to_lin_xz_xy(node_len,x,y,z):
 ############################################################
 
 def filter_good_data(a1,a2,a3):
-    threshold_dot_prod=0.05
+
+    ##DESCRIPTION
+    ##checks 1) individual acclerometer value, and 2) the physical, mutual orthogonality of the accelerometer axes based on their respective values (a1,a2,a3). 
+    
+    ##INPUTS
+    ##a1,a2,a3; integers; accelerometer data (ideally, -1023 to 1023)
+    
+    ##OUTPUTS
+    ##filter; integer; (1) if axes are mutually orthogonal, (0) if otherwise, or at least one accelerometer value has exceeded its allowable range 
+  
+    
+    ##defining maximum dot product value if two axes are perpendicular to each other
+    threshold_dot_prod=0.05    #ATTN SENSLOPE: Please validate this value. also it might be good to move this to the config file
+    
+    ##internal printing options
     print_output_text=0
+    
+    ##setting initial value of filter
     filter=1
-    temp2=(a1,a2,a3)
+    
+    ##ATTN SENSLOPE: This is the current filter for individual axis value. Add, edit, remove as needed. 
+    ##START OF CHECKING OF INDIVIDUAL AXIS VALUE 
+    temp2=(a1,a2,a3)emove 
     temp1=array('i')
-
     for ax in temp2:
-        new=0
+       
+        if ax<-1023:
+            ax=ax+4096
 
-        if new==0:
-            ##old individual axis filter##
-            if ax<-1023:
-                ax=ax+4096
-
-                if ax>1223:
-                    filter=0
-                    break
-
-                elif ax>1023:
-                    ax=1023
-                    temp1.append(ax)
-
-                else:temp1.append(ax)
-
-            elif ax<1024:
-                temp1.append(ax)
-                continue
-
-            else:
+            if ax>1223:
                 filter=0
                 break
+
+            elif ax>1023:
+                ax=1023
+                temp1.append(ax)
+
+            else:temp1.append(ax)
+
+        elif ax<1024:
+            temp1.append(ax)
+            continue
 
         else:
-            ##new individual axis filter##
-            if abs(ax)>1023 and abs(ax)<2970:
-                filter=0
-                break
-
-            else:
-                temp1.append(ax)
+            filter=0
+            break
+    ##END OF CHECKING OF INDIVIDUAL AXIS VALUE
 
     if filter==0:
         return filter
-
+        
+    
+    
+    ##START OF MUTUAL ORTHOGONALITY CHECK 
     ##arranges accel data into increasing values (due to precision issues)##
     temp_sort=np.sort(temp1)
     xa=temp_sort[0]
     ya=temp_sort[1]
     za=temp_sort[2]
 
-    ##defines accel axis inclinations from horizontal plane (i^j^) and corresponding cones in unit sphere##
-    ##given space defined by mutually perpendicular unit axes i^, j^, and k^##
+    ##Assume unit sphere defined by mutually perpendicular axes i,j,k
+    ##Define accelerometer axis inclinations from horizontal plane (i-j) and corresponding cones in unit sphere##
     alpha=(asin(xa/1023.0))     ##inclination from horizontal plane##
     xa_conew=1*cos(alpha)       ##cone width, measured along i^j^ space##
     xa_coneh=sin(alpha)         ##cone height, measured along k^##
@@ -288,6 +303,9 @@ def filter_good_data(a1,a2,a3):
         print "za_t:",za_ax_t, round(sqrt(sum(i**2 for i in za_ax_t)),4), round(sp.dot(xa_ax,za_ax_t),4), round(sp.dot(ya_ax,za_ax_t),4)
         print "za:  ",za_ax, round(sqrt(sum(i**2 for i in za_ax)),4), round(sp.dot(xa_ax,za_ax),4), round(sp.dot(ya_ax,za_ax),4), round(sp.dot(za_ax_t,za_ax),4)
         print abs(sp.dot(xa_ax,ya_ax)), abs(sp.dot(ya_ax,za_ax)), abs(sp.dot(za_ax,xa_ax)), filter        
+    
+    ##END OF MUTUAL ORTHOGONALITY CHECK 
+    
     return filter
 
 
