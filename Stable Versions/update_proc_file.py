@@ -48,7 +48,7 @@ def Input_Loc_Col(loc_col_list,num_nodes_loc_col,col_seg_len_list,IWS):
 
 def update_proc_file(loc_col,num_nodes):
     
-    inputfname=loc_col+"_purged.csv"
+    inputfname=loc_col+".csv"
     print "Reading",inputfname+"..."
     print "Updating",loc_col+"_proc.csv..."
 
@@ -98,7 +98,7 @@ def update_proc_file(loc_col,num_nodes):
     lines_appended=0
 
     for i in fo:
-        if i[2]=="id":continue
+        if i[1]=="id":continue
         
         strdate=parse(i[0])
         date_check=i[0]
@@ -112,13 +112,14 @@ def update_proc_file(loc_col,num_nodes):
 
         else:
             dt=parse(i[0])
-            nodeID=i[2]
-            x=i[3]
-            y=i[4]
-            z=i[5]
+            nodeID=i[1]
+            print nodeID
+            x=i[2]
+            y=i[3]
+            z=i[4]
             tilt_data_filter=str(filter_good_data(int(x),int(y),int(z)))
             xz,xy=accel_to_lin_xz_xy(seg_len,int(x),int(y),int(z))
-            moi=i[6]
+            moi=i[5]
 
             if moi=='':
                 moi=str(-1)
@@ -158,7 +159,7 @@ def accel_to_lin_xz_xy(seg_len,xa,ya,za):
     xz=x*np.tan(np.arctan(za/(np.sqrt(xa**2+ya**2))))
     xy=x*np.tan(np.arctan(ya/(np.sqrt(xa**2+za**2))))
     
-    return xz,yz
+    return xz,xy
 
 
 ############################################################
@@ -188,7 +189,7 @@ def filter_good_data(a1,a2,a3):
     
     ##ATTN SENSLOPE: This is the current filter for individual axis value. Add, edit, remove as needed. 
     ##START OF CHECKING OF INDIVIDUAL AXIS VALUE 
-    temp2=(a1,a2,a3)emove 
+    temp2=(a1,a2,a3) 
     temp1=array('i')
     for ax in temp2:
        
