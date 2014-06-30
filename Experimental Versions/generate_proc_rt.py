@@ -1,5 +1,6 @@
 from datetime import datetime, date, time, timedelta
 import pandas as pd
+import numpy as np
 
 def get_rt_window(rt_window_length,roll_window_size):
     
@@ -35,24 +36,45 @@ def get_rt_window(rt_window_length,roll_window_size):
     return end, start, offsetstart
 
 
-def df_from_csv(purgedfilepath,colname,col,usecol):
-    print csvfilepath+colname+"_proc.csv"
-    df=pd.read_csv(csvfilepath+colname+"_proc.csv",names=col,usecols=usecol,parse_dates=[col[0]],index_col=col[0])
+def nodes_to_columns(df, num_nodes):
+    #creating series list
+    xzlist=[]
+    xylist=[]
+    #xlist=[]
+    for curnodeID in range(num_nodes):
+        #extracting data from current node, with good tilt filter
+        df_curnode=df[(df.Node_ID==curnodeID+1)]
+        dates=df_curnode.index
 
-    xz,xy = df['xz'].values,df['xy'].values
-    x = x_from_xzxy(seg_len, xz, xy)
+        #handling "no data"
+        if len(dates)<1:
+            print curnodeID 
+            xzlist.append(pd.Series(data=[0],index=[df.index[0]]))
+            xylist.append(pd.Series(data=[0],index=[df.index[0]]))
+            #xlist.append(pd.Series(data=[seg_len],index=[df.index[0]]))
+            continue
+
+        #extracting component displacements as series
+        xz=pd.Series(data=df_curnode['xzlin'], index=df_curnode.index, name=curnodeID+1)
+        xy=pd.Series(data=df_curnode['xylin'], index=df_curnode.index, name=curnodeID+1)
+        x=pd.Series(data=df_curnode['xlin'], index=df_curnode.index, name=curnodeID+1)
         
-    #appending linear displacements series to data frame
-    df['xlin']=pd.Series(data=x,index=df.index)
-    df['xzlin']=pd.Series(data=xz,index=df.index)
-    df['xylin']=pd.Series(data=xy,index=df.index)
-    df.drop(['xz','xy'],inplace=True,axis=1)
-    gc.collect()
-    
-    #creating dataframes
-    xzdf, xydf, xdf = create_dataframes(df, num_nodes, seg_len)
+        #resampling series to 30-minute intervals
+        xz=xz.resample('30Min',how='mean',base=0)
+        xy=xy.resample('30Min',how='mean',base=0)
+        x=x.resample('30Min',how='mean',base=0)
+        
+        #appending resampled series to list
+        xzlist.append(xz)
+        xylist.append(xy)
+        xlist.append(x)
 
+    #creating unfilled XZ, XY and X dataframes
+    xzdf=pd.concat([xzlist[num_nodes-a-1] for a in range(num_nodes)] ,axis=1,join='outer', names=[num_nodes-b for b in range(num_nodes)])
+    xydf=pd.concat([xylist[num_nodes-a-1] for a in range(num_nodes)] ,axis=1,join='outer', names=[num_nodes-b for b in range(num_nodes)])
+    xdf=pd.concat([xlist[num_nodes-a-1] for a in range(num_nodes)] ,axis=1,join='outer', names=[num_nodes-b for b in range(num_nodes)])  
     return xzdf, xydf, xdf
+
 
 
 
@@ -64,10 +86,10 @@ def df_from_csv(purgedfilepath,colname,col,usecol):
 ##set/get values from config file
 rt_window_length=3.
 roll_window_size=7
-columnproperties_path='/home/dynaslope-l5a/SVN/Dynaslope/updews-pycodes/Stable Versions/'
+columnproperties_path='/home/jun/SVN/updews-pycodes/Stable Versions/'
 columnproperties_file='column_properties.csv'
 columnproperties_headers=['colname','num_nodes','seg_len']
-purged_path='/home/dynaslope-l5a/Dropbox/Senslope Data/Purged/New/'
+purged_path='/home/jun/Dropbox/Senslope Data/Purged/New/'
 purged_file='_.csv'
 
 
@@ -85,13 +107,30 @@ end, start, offsetstart=get_rt_window(rt_window_length,roll_window_size)
 sensors=pd.read_csv(columnproperties_path+columnproperties_file,names=columnproperties_headers,index_col=None)
 
 for s in range(len(sensors)):
+    #getting current column properties
     colname,num_nodes,seg_len=sensors['colname'][s],sensors['num_nodes'][s],sensors['seg_len'][s]
-    #print colname, num_nodes, seg_len
-
+    
     print "\nDATA for ",colname," as of ", end.strftime("%Y-%m-%d %H:%M")
 
-    purged=pd.read_csv(purged_path+colname+purged_file,header=0,parse_dates=[1],index_col=0)
-    print purged[(purged['ts']>=start)]
+    #importing purged csv file of current column to dataframe
+    purged=pd.read_csv(purged_path+colname+purged_file,header=0,parse_dates=[1],index_col=[2])
+    #removing unnecessary column
+    purged=purged.ix[:, 1:]
+    #print purged
+    
+
+    #extracting last data per node
+    last_data=pd.DataFrame(data=None)
+    for n in range(1,1+num_nodes):
+        last_data=last_data.append(purged[(purged.index.values==n)].tail(1), ignore_index=False)
+    print last_data
+
+    
+    #getting dataframe rows within real-time window
+    purged=purged[(purged['ts']>=offsetstart)]
+
+    
+    print purged
 
     break
     
