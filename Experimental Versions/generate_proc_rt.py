@@ -2,6 +2,8 @@ from datetime import datetime, date, time, timedelta
 import pandas as pd
 import numpy as np
 
+import generic_functions as gf
+
 def get_rt_window(rt_window_length,roll_window_size):
     
     ##DESCRIPTION:
@@ -86,11 +88,15 @@ def nodes_to_columns(df, num_nodes):
 ##set/get values from config file
 rt_window_length=3.
 roll_window_size=7
-columnproperties_path='/home/jun/SVN/updews-pycodes/Stable Versions/'
+num_roll_window_ops=2
+columnproperties_path='/home/dynaslope-l5a/SVN/Dynaslope/updews-pycodes/Stable Versions/'
 columnproperties_file='column_properties.csv'
 columnproperties_headers=['colname','num_nodes','seg_len']
-purged_path='/home/jun/Dropbox/Senslope Data/Purged/New/'
+purged_path='/home/dynaslope-l5a/Dropbox/Senslope Data/Purged/New/'
 purged_file='_.csv'
+monitoring_path='/home/dynaslope-l5a/Dropbox/Senslope Data/Purged/Monitoring/'
+monitoring_file='.csv'
+monitoring_file_headers=['ts','nID','xa', 'ya', 'za', 'm']
 
 
 
@@ -102,22 +108,23 @@ purged_file='_.csv'
 
 
 #MAIN
-end, start, offsetstart=get_rt_window(rt_window_length,roll_window_size)
-
+end, start, offsetstart=gf.get_rt_window(rt_window_length,roll_window_size,num_roll_window_ops)
+print end, start, offsetstart
 sensors=pd.read_csv(columnproperties_path+columnproperties_file,names=columnproperties_headers,index_col=None)
 
+
 for s in range(len(sensors)):
+    
     #getting current column properties
     colname,num_nodes,seg_len=sensors['colname'][s],sensors['num_nodes'][s],sensors['seg_len'][s]
     
     print "\nDATA for ",colname," as of ", end.strftime("%Y-%m-%d %H:%M")
 
-    #importing purged csv file of current column to dataframe
-    purged=pd.read_csv(purged_path+colname+purged_file,header=0,parse_dates=[1],index_col=[2])
-    #removing unnecessary column
-    purged=purged.ix[:, 1:]
-    #print purged
+    #importing monitoring csv file of current column to dataframe
+    monitoring=pd.read_csv(monitoring_path+colname+monitoring_file,names=monitoring_file_headers,parse_dates=[0],index_col=[0])
     
+    print monitoring
+    break
 
     #extracting last data per node
     last_data=pd.DataFrame(data=None)
