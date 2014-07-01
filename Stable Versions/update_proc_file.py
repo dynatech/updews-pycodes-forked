@@ -113,22 +113,29 @@ def update_proc_file(loc_col,num_nodes):
         else:
             dt=parse(i[0])
             nodeID=i[1]
-            print nodeID
             x=i[2]
             y=i[3]
             z=i[4]
-            tilt_data_filter=str(filter_good_data(int(x),int(y),int(z)))
-            xz,xy=accel_to_lin_xz_xy(seg_len,int(x),int(y),int(z))
             moi=i[5]
-
             if moi=='':
                 moi=str(-1)
-            if int(moi)>=2300 and int(moi)<=4000:
-                moifilter=str(1)
 
-            else:moifilter=str(0)
-            row=(dt,nodeID,x,y,z,tilt_data_filter,xz,xy,moi,moifilter)
-            print row
+            xz,xy=accel_to_lin_xz_xy(seg_len,int(x),int(y),int(z))
+                        
+            #uncomment next line below if you want to check individual sensor values and orthogonality of axes
+            #tilt_data_filter=str(filter_good_data(int(x),int(y),int(z)))
+            
+            #uncomment next three lines below if you want to check if moisture data is valid
+            #if int(moi)>=2300 and int(moi)<=4000:
+            #    moifilter=str(1)
+            #else:moifilter=str(0)
+
+            #old proc format
+            #row=(dt,nodeID,x,y,z,tilt_data_filter,xz,xy,moi,moifilter)
+
+            #new proc format
+            row=(dt,nodeID,xz,xy,moi)
+            
             fa.writerow(row)
             lines_appended=lines_appended+1
 
@@ -154,7 +161,6 @@ def accel_to_lin_xz_xy(seg_len,xa,ya,za):
     #OUTPUTS
     #xz, xy; floats; horizontal linear displacements along the planes defined by xa-za and xa-ya, respectively; units similar to seg_len
     
-
     x=seg_len/np.sqrt(1+(np.tan(np.arctan(za/(np.sqrt(xa**2+ya**2))))**2+(np.tan(np.arctan(ya/(np.sqrt(xa**2+za**2))))**2)))
     xz=x*np.tan(np.arctan(za/(np.sqrt(xa**2+ya**2))))
     xy=x*np.tan(np.arctan(ya/(np.sqrt(xa**2+za**2))))
@@ -325,7 +331,6 @@ PrintFigures = cfg.getboolean('I/O','PrintFigures')
 CSVOutputFile = cfg.get('I/O','CSVOutputFilePath') + cfg.get('I/O','CSVOutputFile')
 
 for INPUT_which_sensor in range(len(loc_col_list)):
-    #if INPUT_which_sensor!=1:continue
     input_file_name,num_nodes,loc_col,seg_len=Input_Loc_Col(loc_col_list,num_nodes_loc_col,col_seg_len_list, INPUT_which_sensor)
     input_file_name=OutputFilePath+input_file_name
 
