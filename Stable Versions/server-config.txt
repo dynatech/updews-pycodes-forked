@@ -1,0 +1,37 @@
+[File I/O]
+MachineFilePath = D:Dropbox\Senslope Data\
+PurgedFilePath = Purged\New\
+PurgedMonitoringFilePath = Purged\Monitoring\
+LastGoodDataFilePath = Purged\LastGoodData\
+ProcFilePath = Proc\Monitoring\
+AlertFilePath = Alert
+AlertFileName = Node-level_alerts.csv
+ColumnPropertiesFile = column_properties.csv
+
+[DB I/O]
+Hostdb = 127.0.0.1
+Userdb = root
+Passdb = irc311
+Namedb = senslopedb
+Printtostdout = False
+
+[Value Limits]
+LimitValues = True
+xlim = 500
+ylim = 500
+zlim = 500
+xmax = 1200
+cutoff = 0.05
+moninterval = 3
+
+[Filter Args]
+window = 101
+order = 3
+off_lim = 80
+
+[Datetime range]
+RangeDefault = 3
+
+[Misc]
+Debug = False
+DotProductThreshold = 0.09
