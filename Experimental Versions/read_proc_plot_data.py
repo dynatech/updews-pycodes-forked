@@ -19,9 +19,9 @@ import alert_evaluation as al
 #THRESHOLD VALUES#
 ##################
 thresholdtilt=0.05 #degrees
-offsettilt=3
+offsettilt=0
 thresholdvel=0.005 #degrees/day
-offsetvel=3
+offsetvel=0
 
 Tvela1=0.005 #m/day
 Tvela2=0.5 #m/day
@@ -72,9 +72,8 @@ def x_from_xzxy(node_len, xz, xy):
                                node_len*np.ones(len(xz)),
                                np.sqrt(node_len**2-np.power(diagbase,2))),2)
 
-def df_from_csv(csvfilepath,colname,col,usecol):
-    df=pd.read_csv(csvfilepath+colname+"_proc.csv",names=col,usecols=usecol,parse_dates=[col[0]],index_col=col[0])
-
+def df_from_csv(csvfilepath,colname,col):
+    df=pd.read_csv(csvfilepath+colname+"_proc.csv",names=col,parse_dates=[col[0]],index_col=col[0])
     xz,xy = df['xz'].values,df['xy'].values
     x = x_from_xzxy(seg_len, xz, xy)
         
@@ -97,8 +96,8 @@ def create_dataframes(df, num_nodes, seg_len):
     xylist=[]
     xlist=[]
     for curnodeID in range(num_nodes):
-        #extracting data from current node, with good tilt filter
-        df_curnode=df[(df.Node_ID==curnodeID+1) & (df.good_tilt==1)]
+        #extracting data from current node
+        df_curnode=df[(df.Node_ID==curnodeID+1)]
         dates=df_curnode.index
 
         #handling "no data"
@@ -248,8 +247,7 @@ def day_to_date(days, end_date):
 loc_col_list=("eeet","sinb","sint","sinu","lipb","lipt","bolb","pugb","pugt","mamb","mamt","oslb","labt", "labb", "gamt","gamb", "humt","humb", "plat","plab","blct","blcb")
 num_nodes_loc_col=(14,29,19,29,28,31,30,14,10,29,24,23,39,25,18,22,21,26,39,40,24,19)
 col_seg_len_list=(0.5,1,1,1,0.5,0.5,0.5,1.2,1.2,1.0,1.0,1.,1.,1.,1.,1.,1.,1,0.5,0.5,1,1)
-col = ['Time','Node_ID', 'x', 'y', 'z', 'good_tilt', 'xz', 'xy', 'moi', 'good_moi']
-usecol = ['Time','Node_ID','good_tilt', 'x', 'y', 'z','xz', 'xy']
+col = ['Time','Node_ID', 'xz', 'xy', 'moi']
 fig_size=(9.5,6.5)
 
 
@@ -299,7 +297,7 @@ dates_to_plot=compute_colpos_time(end,INPUT_fit_interval,INPUT_number_colpos)
 csvout=[]
 
 for INPUT_which_sensor in range(1,len(loc_col_list)):
-    #if INPUT_which_sensor!=9:continue
+    if INPUT_which_sensor!=5:continue
     colname,num_nodes,seg_len=Input_Loc_Col(loc_col_list,num_nodes_loc_col,col_seg_len_list, INPUT_which_sensor)
     all_nodes_data=range(num_nodes)
     all_vel_data=range(num_nodes)
@@ -307,7 +305,7 @@ for INPUT_which_sensor in range(1,len(loc_col_list)):
     print "\nDATA for ",colname," as of ", datetime.now().strftime("%Y-%m-%d %H:%M")    
     
     #reading from csv file and writing to dataframe
-    xzdf, xydf, xdf = df_from_csv(csvfilepath,colname,col,usecol)
+    xzdf, xydf, xdf = df_from_csv(csvfilepath,colname,col)
     
     #resampling and filling XZ, XY and X dataframes
     fr_xzdf, fr_xydf, fr_xdf = resamp_fill_df(resampind, xzdf,xydf,xdf)
@@ -373,9 +371,11 @@ for INPUT_which_sensor in range(1,len(loc_col_list)):
     #Displays node alert of columns
     ac_ax=al.node_alert(colname, rm_xzdf, rm_xydf, d_vel_xzdf, d_vel_xydf, num_nodes, 0.05, 0.005, 0.5, 0.1)
     col_al=al.column_alert(ac_ax,5)
+    #print col_al
 
     #creating one dataframe for all column alerts
     csvout.append(col_al)
+    #print csvout
 
     ##plots time series (tilt, velocity) within date range##
     for INPUT_which_axis in [0,1]:
@@ -472,5 +472,5 @@ with open(CSVOutputFile, "wb") as f:
     writer.writerows(csvout)
     print "\nAlert file written"
 
-    #plt.close()
+    plt.close()
     #plt.savefig(fig_name, dpi=100, facecolor='w', edgecolor='w',orientation='landscape')
