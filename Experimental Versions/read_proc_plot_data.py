@@ -344,22 +344,28 @@ for INPUT_which_sensor in range(1,len(loc_col_list)):
         
         lr_xzdf=ols(y=rm_xzdf[num_nodes-cur_node_ID],x=tdelta,window=windowlength,intercept=True)
         lr_xydf=ols(y=rm_xydf[num_nodes-cur_node_ID],x=tdelta,window=windowlength,intercept=True)
+<<<<<<< .mine
+        vel_xzdf[str(num_nodes-cur_node_ID)]=np.concatenate((np.nan*np.ones((windowlength-1)*2),lr_xzdf.beta.x.values))
+        vel_xydf[str(num_nodes-cur_node_ID)]=np.concatenate((np.nan*np.ones((windowlength-1)*2),lr_xydf.beta.x.values))
+        #all_vel_data[cur_node_ID]=(vel_xzdf,vel_xydf)
+=======
         d_vel_xzdf[str(num_nodes-cur_node_ID)]=np.concatenate((np.nan*np.ones(12),lr_xzdf.beta.x.values))
         d_vel_xydf[str(num_nodes-cur_node_ID)]=np.concatenate((np.nan*np.ones(12),lr_xydf.beta.x.values))
         vel_xzdf=(lr_xzdf.beta.index,lr_xzdf.beta.x.values)
         vel_xydf=(lr_xydf.beta.index,lr_xydf.beta.x.values)
         all_vel_data[cur_node_ID]=(vel_xzdf,vel_xydf)
+>>>>>>> .r69
     
         #instantaneous velocity
-        temp_lr_xzdf = lr_xzdf.beta.x
-        temp_lr_xydf = lr_xydf.beta.x
-        tilt_xz = round((temp_lr_xzdf.tail(1).values[0]-temp_lr_xzdf.head(1).values[0]),4)
-        tilt_xy = round((temp_lr_xydf.tail(1).values[0]-temp_lr_xydf.head(1).values[0]),4)
-        inst_vel_xz = round(temp_lr_xzdf[-1],4)
-        inst_vel_xy = round(temp_lr_xydf[-1],4)
+        #temp_lr_xzdf = lr_xzdf.beta.x
+        #temp_lr_xydf = lr_xydf.beta.x
+        #tilt_xz = round((temp_lr_xzdf.tail(1).values[0]-temp_lr_xzdf.head(1).values[0]),4)
+        #tilt_xy = round((temp_lr_xydf.tail(1).values[0]-temp_lr_xydf.head(1).values[0]),4)
+        #inst_vel_xz = round(temp_lr_xzdf[-1],4)
+        #inst_vel_xy = round(temp_lr_xydf[-1],4)
 
-        cur_node_data=(cur_node_ID+1,tilt_xz,inst_vel_xz,tilt_xy,inst_vel_xy)
-        all_nodes_data[cur_node_ID]=cur_node_data
+        #cur_node_data=(cur_node_ID+1,tilt_xz,inst_vel_xz,tilt_xy,inst_vel_xy)
+        #all_nodes_data[cur_node_ID]=cur_node_data
 
     #slicing to 3-day window
     rm_xzdf=rm_xzdf[start_alert:end]
@@ -378,92 +384,96 @@ for INPUT_which_sensor in range(1,len(loc_col_list)):
     #print csvout
 
     ##plots time series (tilt, velocity) within date range##
-    for INPUT_which_axis in [0,1]:
-            
-        tiltvelfig=plt.figure(10+INPUT_which_axis)
-        plt.clf()
-        axtilt=tiltvelfig.add_subplot(121)
-        axvel=tiltvelfig.add_subplot(122, sharex=axtilt)
+    if 1==0:
+        for INPUT_which_axis in [0,1]:
                 
-        if INPUT_which_axis==0:
-            tiltvelfig.suptitle(loc_col_list[INPUT_which_sensor]+" XZ as of "+str(end.strftime("%Y-%m-%d %H:%M")))
-
-        else:
-            tiltvelfig.suptitle(loc_col_list[INPUT_which_sensor]+" XY as of "+str(end.strftime("%Y-%m-%d %H:%M")))
-
-        for INPUT_which_node in range(num_nodes):
-
-            if INPUT_which_axis==0:
-                cur_tilt_data=fr_xzdf[INPUT_which_node+1].values
-
-            if INPUT_which_axis==1:
-                cur_tilt_data=fr_xydf[INPUT_which_node+1].values
-            
-            vel_data=all_vel_data[INPUT_which_node]                    
-            cur_vel_data=vel_data[INPUT_which_axis]
-            cur_vel_date=cur_vel_data[0]
-            cur_vel_values=cur_vel_data[1]
-            cur_vel_values=np.asarray(cur_vel_values)
-                                    
-            axtilt.axhspan(offsettilt*thresholdtilt*(num_nodes-(INPUT_which_node))-thresholdtilt,offsettilt*thresholdtilt*(num_nodes-(INPUT_which_node))+thresholdtilt,color='0.9')
-            axtilt.axhline(y=(offsettilt*thresholdtilt*(num_nodes-(INPUT_which_node))),color='0.6')
-            axtilt.plot(fr_xzdf[INPUT_which_node+1].index,[offsetvel*thresholdvel*(num_nodes-(INPUT_which_node))+ q for q in cur_tilt_data], '-',linewidth=1,label="n"+str(INPUT_which_node+1))
-
+            tiltvelfig=plt.figure(10+INPUT_which_axis)
+            plt.clf()
+            axtilt=tiltvelfig.add_subplot(121)
             axvel=tiltvelfig.add_subplot(122, sharex=axtilt)
                     
-            offsetvel=0
-            axvel.axhspan(offsetvel*thresholdvel*(num_nodes-(INPUT_which_node))-thresholdvel,offsetvel*thresholdvel*(num_nodes-(INPUT_which_node))+thresholdvel,color='0.9')
-            axvel.axhline(y=(offsetvel*thresholdvel*(num_nodes-(INPUT_which_node))),color='0.6')
-            axvel.plot(cur_vel_date,[offsetvel*thresholdvel*(num_nodes-(INPUT_which_node))+ q for q in cur_vel_values],'-',linewidth=1,label="n"+str(INPUT_which_node+1))
-            
-            
-        days_vlines=[end+timedelta(days=-q) for q in range(0,int(INPUT_fit_interval)+1)]
-        for dvl in range(len(days_vlines)):
-            if dvl!=0:lw=(0.2)
+            if INPUT_which_axis==0:
+                tiltvelfig.suptitle(loc_col_list[INPUT_which_sensor]+" XZ as of "+str(end.strftime("%Y-%m-%d %H:%M")))
 
-            else:lw=(1)
-            plt.sca(axtilt)
-            axtilt.axvline(x=days_vlines[dvl], color='r',lw=lw)
-            plt.sca(axvel)
-            axvel.axvline(x=days_vlines[dvl], color='r',lw=lw)
+            else:
+                tiltvelfig.suptitle(loc_col_list[INPUT_which_sensor]+" XY as of "+str(end.strftime("%Y-%m-%d %H:%M")))
 
-        for cpvl in range(len(dates_to_plot)):
+            for INPUT_which_node in range(num_nodes):
+
+                if INPUT_which_axis==0:
+                    cur_tilt_data=fr_xzdf[INPUT_which_node+1].values
+
+                if INPUT_which_axis==1:
+                    cur_tilt_data=fr_xydf[INPUT_which_node+1].values
+                
+                vel_data=all_vel_data[INPUT_which_node]                    
+                cur_vel_data=vel_data[INPUT_which_axis]
+                cur_vel_date=cur_vel_data[0]
+                cur_vel_values=cur_vel_data[1]
+                cur_vel_values=np.asarray(cur_vel_values)
+                                        
+                axtilt.axhspan(offsettilt*thresholdtilt*(num_nodes-(INPUT_which_node))-thresholdtilt,offsettilt*thresholdtilt*(num_nodes-(INPUT_which_node))+thresholdtilt,color='0.9')
+                axtilt.axhline(y=(offsettilt*thresholdtilt*(num_nodes-(INPUT_which_node))),color='0.6')
+                axtilt.plot(fr_xzdf[INPUT_which_node+1].index,[offsetvel*thresholdvel*(num_nodes-(INPUT_which_node))+ q for q in cur_tilt_data], '-',linewidth=1,label="n"+str(INPUT_which_node+1))
+
+                axvel=tiltvelfig.add_subplot(122, sharex=axtilt)
+                        
+                offsetvel=0
+                axvel.axhspan(offsetvel*thresholdvel*(num_nodes-(INPUT_which_node))-thresholdvel,offsetvel*thresholdvel*(num_nodes-(INPUT_which_node))+thresholdvel,color='0.9')
+                axvel.axhline(y=(offsetvel*thresholdvel*(num_nodes-(INPUT_which_node))),color='0.6')
+                axvel.plot(cur_vel_date,[offsetvel*thresholdvel*(num_nodes-(INPUT_which_node))+ q for q in cur_vel_values],'-',linewidth=1,label="n"+str(INPUT_which_node+1))
+                
+                
+            days_vlines=[end+timedelta(days=-q) for q in range(0,int(INPUT_fit_interval)+1)]
+            for dvl in range(len(days_vlines)):
+                if dvl!=0:lw=(0.2)
+
+                else:lw=(1)
+                plt.sca(axtilt)
+                axtilt.axvline(x=days_vlines[dvl], color='r',lw=lw)
+                plt.sca(axvel)
+                axvel.axvline(x=days_vlines[dvl], color='r',lw=lw)
+
+            for cpvl in range(len(dates_to_plot)):
+                plt.sca(axtilt)
+                axtilt.axvline(x=dates_to_plot[cpvl], color='b',lw=0.5)
+                        
             plt.sca(axtilt)
-            axtilt.axvline(x=dates_to_plot[cpvl], color='b',lw=0.5)
+            cax=plt.gca()
+            cax.yaxis.set_major_locator(MaxNLocator(4))
+            cax.yaxis.set_minor_locator(AutoMinorLocator(4))
+            cax.fmt_xdata = mdates.DateFormatter('%Y-%m-%d %H:%M')
+            plt.xlim(end+timedelta(days=-INPUT_fit_interval),end+timedelta(days=0))    
+            plt.ylabel("displacement (m)")
+            plt.xlabel("date,time")
                     
-        plt.sca(axtilt)
-        cax=plt.gca()
-        cax.yaxis.set_major_locator(MaxNLocator(4))
-        cax.yaxis.set_minor_locator(AutoMinorLocator(4))
-        cax.fmt_xdata = mdates.DateFormatter('%Y-%m-%d %H:%M')
-        plt.xlim(end+timedelta(days=-INPUT_fit_interval),end+timedelta(days=0))    
-        plt.ylabel("displacement (m)")
-        plt.xlabel("date,time")
-                
-        plt.sca(axvel)
-        cax=plt.gca()
-        axvel.axhline(y=0.005,color='y', ls=':',lw=3,label="A1: Slow")
-        axvel.axhline(y=.50,color='r', ls=':',lw=3,label="A2: Mod")
-        axvel.axhline(y=-0.005,color='y', ls=':',lw=3,)
-        axvel.axhline(y=-.50,color='r', ls=':',lw=3,)
-                
-        cax.yaxis.set_major_locator(MaxNLocator(4))
-        cax.yaxis.set_minor_locator(AutoMinorLocator(4))
-        cax.fmt_xdata = mdates.DateFormatter('%Y-%m-%d %H:%M')
-        plt.yscale('symlog', linthreshy=.01,linscaley=1)
-        plt.ylim(-1,1)
-        plt.xlabel("date,time")
-        plt.ylabel("velocity (m/day)")
-        plt.legend()
-        cax.legend(ncol=1,loc="upper left", bbox_to_anchor=(1,1),prop=legend_font_props)
+            plt.sca(axvel)
+            cax=plt.gca()
+            axvel.axhline(y=0.005,color='y', ls=':',lw=3,label="A1: Slow")
+            axvel.axhline(y=.50,color='r', ls=':',lw=3,label="A2: Mod")
+            axvel.axhline(y=-0.005,color='y', ls=':',lw=3,)
+            axvel.axhline(y=-.50,color='r', ls=':',lw=3,)
+                    
+            cax.yaxis.set_major_locator(MaxNLocator(4))
+            cax.yaxis.set_minor_locator(AutoMinorLocator(4))
+            cax.fmt_xdata = mdates.DateFormatter('%Y-%m-%d %H:%M')
+            plt.yscale('symlog', linthreshy=.01,linscaley=1)
+            plt.ylim(-1,1)
+            plt.xlabel("date,time")
+            plt.ylabel("velocity (m/day)")
+            plt.legend()
+            cax.legend(ncol=1,loc="upper left", bbox_to_anchor=(1,1),prop=legend_font_props)
 
-        tiltvelfig.autofmt_xdate()
+            tiltvelfig.autofmt_xdate()
 
-        if INPUT_which_axis==0:
-            fig_name=OutputFigurePath+loc_col_list[INPUT_which_sensor]+"_xz.png"
-        else:
-            fig_name=OutputFigurePath+loc_col_list[INPUT_which_sensor]+"_xy.png"
+            if INPUT_which_axis==0:
+                fig_name=OutputFigurePath+loc_col_list[INPUT_which_sensor]+"_xz.png"
+            else:
+                fig_name=OutputFigurePath+loc_col_list[INPUT_which_sensor]+"_xy.png"
 
+<<<<<<< .mine
+    #plt.close()
+=======
 #writing column alerts into csv file
 csvout=pd.concat(csvout[1:])
 csvout=np.asarray(csvout)
@@ -473,4 +483,5 @@ with open(CSVOutputFile, "wb") as f:
     print "\nAlert file written"
 
     plt.close()
+>>>>>>> .r69
     #plt.savefig(fig_name, dpi=100, facecolor='w', edgecolor='w',orientation='landscape')
