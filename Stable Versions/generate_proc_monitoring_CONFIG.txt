@@ -1,0 +1,44 @@
+[I/O]
+
+
+#LOCAL FILE PATHS
+
+#PC
+MachineFilePath = /home/dynaslope-l5a/
+#SVN
+SVNFilePath=SVN/Dynaslope/
+columnproperties_path=updews-pycodes/Stable Versions/
+#Dropbox
+DropboxFilePath=Dropbox/Senslope Data/
+purged_path=Purged/New/
+monitoring_path=Purged/Monitoring/
+LastGoodData_path=Purged/LastGoodData/
+proc_monitoring_path=Proc2/Monitoring/
+
+#FILE NAMES
+columnproperties_file=column_properties.csv
+purged_file=.csv
+monitoring_file=.csv
+LastGoodData_file=.csv
+proc_monitoring_file='.csv
+
+#FILE HEADERS
+columnproperties_headers=['colname','num_nodes','seg_len']
+purged_file_headers=['ts','id','x', 'y', 'z', 'm']
+monitoring_file_headers=['ts','id','x', 'y', 'z', 'm']
+LastGoodData_file_headers=['ts','id','x', 'y', 'z', 'm']
+proc_monitoring_file_headers=['ts','id','x', 'y', 'z', 'm']
+
+
+
+
+#PROC GENERATION
+#time interval between data points, in hours
+delta_t=0.5
+#length of real-time monitoring window, in days
+rt_window_length=3.
+#length of rolling/moving window operations in hours
+roll_window_length=3.
+#number of rolling/moving window operations in the whole monitoring analysis
+num_roll_window_ops=2
+
