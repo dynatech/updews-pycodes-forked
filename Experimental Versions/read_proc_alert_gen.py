@@ -68,7 +68,7 @@ proc_monitoring_file_headers=['ts','id','xz', 'yz', 'm']
 
 
 
-genproc.generate_proc()
+#genproc.generate_proc()
 
 
 
