@@ -175,13 +175,16 @@ def GenPurgedFiles():
 
     for site in sites:
 
-        siteid = site[0]
+        siteid = site.name
         print siteid
 
         data = GetRawColumnData(siteid)
         df = ConvertToDf(data)
         df = PurgeNonAlignedEntries(df)
-        df = FixOneBitChange(df)
+
+        if siteid=='sinb':
+            df = FixOneBitChange(df)
+
         df.to_csv(PurgedFP + siteid + ".csv", index=False, header=False)
 
         dflgd = GenerateLastGoodData(df)
@@ -203,7 +206,9 @@ def GenerateMonitoringPurgedFiles():
         data = GetRawColumnData(siteid, ft.strftime("%Y-%m-%d %H:%M:%S"))
         df = ConvertToDf(data)
         df = PurgeNonAlignedEntries(df)
-        df = FixOneBitChange(df)
+
+        if siteid=='sinb':
+            df = FixOneBitChange(df)
 
         dflgd = pd.read_csv(LastGoodDataFP + siteid + ".csv", names=['ts','id','x','y','z','m'])
 
