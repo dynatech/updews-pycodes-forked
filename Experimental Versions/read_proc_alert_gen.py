@@ -15,7 +15,7 @@ import generate_proc_monitoring as genproc
 
 def zero_plot(df,ax,off):
     df0=df-df.loc[(df.index==df.index[0])].values.squeeze()
-    df0.plot(ax=ax,marker='.',legend=False)
+    df0.plot(ax=ax,legend=False)
     
 
 
@@ -60,7 +60,7 @@ columnproperties_headers=['colname','num_nodes','seg_len']
 purged_file_headers=['ts','id','x', 'y', 'z', 'm']
 monitoring_file_headers=['ts','id','x', 'y', 'z', 'm']
 LastGoodData_file_headers=['ts','id','x', 'y', 'z', 'm']
-proc_monitoring_file_headers=['ts','id','xz', 'yz', 'm']
+proc_monitoring_file_headers=['ts','id','xz', 'xy', 'm']
 
 
 
@@ -68,178 +68,184 @@ proc_monitoring_file_headers=['ts','id','xz', 'yz', 'm']
 
 
 
-#genproc.generate_proc()
+
 
 
 
 #MAIN
 
+#0. Uncomment if you want to update proc_monitoring CSVs
+genproc.generate_proc()
+
 #1. setting date boundaries for real-time monitoring window
 roll_window_numpts=int(1+roll_window_length/data_dt)
 end, start, offsetstart=gf.get_rt_window(rt_window_length,roll_window_numpts,num_roll_window_ops)
+#creating empty series with datetime index equivalent to monitoring window
+monwin_time=pd.date_range(start=offsetstart, end=end, freq='30Min',name=['blank'], closed=None)
+monwin=pd.DataFrame(data=np.nan*np.ones(len(monwin_time)), index=monwin_time)
 
 #2. getting all column properties
 sensors=pd.read_csv(columnproperties_path+columnproperties_file,names=columnproperties_headers,index_col=None)
 
-print "Generating PROC monitoring data for:"
+print "Generating plots and alerts for:"
 for s in range(len(sensors)):
-    
-    
+
     #3. getting current column properties
     colname,num_nodes,seg_len=sensors['colname'][s],sensors['num_nodes'][s],sensors['seg_len'][s]
-    
-##    print "\nDATA for ",colname," as of ", end.strftime("%Y-%m-%d %H:%M")
 
+    #4. importing proc_monitoring csv file of current column to dataframe
     try:
-        #4. importing proc_monitoring csv file of current column to dataframe
-        monitoring=pd.read_csv(proc_monitoring_path+colname+proc_monitoring_file,names=proc_monitoring_file_headers,parse_dates=[0],index_col=[0])
-
-        print colname
-        print monitoring.tail(20)
-
+        proc_monitoring=pd.read_csv(proc_monitoring_path+colname+proc_monitoring_file,names=proc_monitoring_file_headers,parse_dates=[0],index_col=[0])
+        print "\n", colname
     except:
-        print "     ",colname, "...FAILED"
-    
-    break
-    
+        print "     ",colname, "ERROR..missing/empty proc monitoring csv"
 
-    
-   
+    #5. creating dataframe ts vs id
 
-    #creating dataframe ts vs id
-
-        #initializing lists
+    #5a. initializing lists
     xz_series_list=[]
     xy_series_list=[]
     m_series_list=[]
 
-        #creating empty series with datetime index equivalent to monitoring window
-    monwin_time=pd.date_range(start=offsetstart, end=end, freq='30Min',name=['blank'], closed=None)
-    monwin=pd.DataFrame(data=np.nan*np.ones(len(monwin_time)), index=monwin_time)
-
-        #appending empty series to list
+    #5b.appending monitoring window dataframe to lists
     xz_series_list.append(monwin)
     xy_series_list.append(monwin)
     m_series_list.append(monwin)
-    
+   
     for n in range(1,1+num_nodes):
-        #appending per node series to list
-        xz_series_list.append(monitoring.loc[monitoring.id==n,['xz']])
-        xy_series_list.append(monitoring.loc[monitoring.id==n,['xy']])
-        m_series_list.append(monitoring.loc[monitoring.id==n,['m']])
-
+        #5c.creating node series        
+        curxz=proc_monitoring.loc[proc_monitoring.id==n,['xz']]
+        curxy=proc_monitoring.loc[proc_monitoring.id==n,['xy']]
+        curm=proc_monitoring.loc[proc_monitoring.id==n,['m']]  
+        #5d.resampling node series to 30-min exact intervals
+        try:
+            curxz=curxz.resample('30Min',how='mean',base=0)
+            curxy=curxy.resample('30Min',how='mean',base=0)
+            curm=curm.resample('30Min',how='mean',base=0)
+        except:
+            print colname, n, "ERROR missing node data"
+            #zeroing tilt data if node data is missing
+            curxz=pd.DataFrame(data=np.zeros(len(monwin)), index=monwin.index)
+            curxy=pd.DataFrame(data=np.zeros(len(monwin)), index=monwin.index)
+            curm=pd.DataFrame(data=2500*np.zeros(len(monwin)), index=monwin.index)      
+        #5e. appending node series to list
+        xz_series_list.append(curxz)
+        xy_series_list.append(curxy)
+        m_series_list.append(curm)
     
-    #concatenating series list into dataframe
+    #5f. concatenating series list into dataframe
     xzdf=pd.concat(xz_series_list, axis=1, join='outer', names=None)
-    xzdf.columns=[a for a in np.arange(0,1+num_nodes)]
     xydf=pd.concat(xy_series_list, axis=1, join='outer', names=None)
-    xydf.columns=[a for a in np.arange(0,1+num_nodes)]
     mdf=pd.concat(m_series_list, axis=1, join='outer', names=None)
+
+    #5g. renaming columns
+    xydf.columns=[a for a in np.arange(0,1+num_nodes)]
+    xzdf.columns=[a for a in np.arange(0,1+num_nodes)]
     mdf.columns=[a for a in np.arange(0,1+num_nodes)]
 
-    
-
-    #removing empty series 'monwin'
+    #5h. dropping monwin from df
     xzdf=xzdf.drop(0,1)
     xydf=xydf.drop(0,1)
-    mdf=mdf.drop(0,1)
+    mdf=mdf.drop(0,1)    
 
-    #reordering columns
+    #5i. reordering columns
     revcols=xzdf.columns.tolist()[::-1]
     xzdf=xzdf[revcols]
+    xydf=xydf[revcols]
+    mdf=mdf[revcols]
 
-   
 
-   
-   
-    
-    #resampling dataframes to 30-minute intervals
-    r_xzdf=xzdf.resample('30Min',how='mean',base=0)
-    r_xydf=xydf.resample('30Min',how='mean',base=0)
-    r_mdf=mdf.resample('30Min',how='mean',base=0)
-    
-
-    #filling XZ,XY  dataframes
-    fr_xzdf=r_xzdf.fillna(method='pad')
-    fr_xydf=r_xydf.fillna(method='pad')
-    
+    #6.filling XZ,XY  dataframes
+    fr_xzdf=xzdf.fillna(method='pad')
+    fr_xydf=xydf.fillna(method='pad')   
     fr_xzdf=fr_xzdf.fillna(method='bfill')
     fr_xydf=fr_xydf.fillna(method='bfill')
     
+    #7.dropping rows outside monitoring window
+    fr_xzdf=fr_xzdf[(fr_xzdf.index>=monwin.index[0])&(fr_xzdf.index<=monwin.index[-1])]
+    fr_xydf=fr_xydf[(fr_xydf.index>=monwin.index[0])&(fr_xydf.index<=monwin.index[-1])]
+    mdf=mdf[(mdf.index>=monwin.index[0])&(mdf.index<=monwin.index[-1])]    
 
 
-    #smoothing dataframes with moving average
-    rm_xzdf=pd.rolling_mean(fr_xzdf,window=roll_window_size)
-    rm_xydf=pd.rolling_mean(fr_xydf,window=roll_window_size)
+    #8.smoothing dataframes with moving average
+    rm_xzdf=pd.rolling_mean(fr_xzdf,window=roll_window_numpts)[roll_window_numpts-1:]
+    rm_xydf=pd.rolling_mean(fr_xydf,window=roll_window_numpts)[roll_window_numpts-1:]
 
-    #computing instantaneous velocity from moving linear regression
-    #setting up time units in days
+##    #checking for finite values
+##    for n in range(1,1+num_nodes):
+##        print " ",n, len(np.where(np.isfinite(fr_xzdf[n].values))[0]), len(np.where(np.isfinite(rm_xzdf[n].values))[0])
+  
+
+    #9.computing instantaneous velocity from moving linear regression
+    #9a. setting up time units in days
     td=rm_xzdf.index.values-rm_xzdf.index.values[0]
     td=pd.Series(td/np.timedelta64(1,'D'),index=rm_xzdf.index)
-    #setting up dataframe for velocity values
-    vel_xzdf=pd.DataFrame(data=None, index=rm_xzdf.index[2*roll_window_size-2:])
-    vel_xydf=pd.DataFrame(data=None, index=rm_xydf.index[2*roll_window_size-2:])
+    #9b. setting up dataframe for velocity values
+    vel_xzdf=pd.DataFrame(data=None, index=rm_xzdf.index[roll_window_numpts-1:])
+    vel_xydf=pd.DataFrame(data=None, index=rm_xydf.index[roll_window_numpts-1:])
 
-    #print len(rm_xzdf)
-
-    try:
-        for cur_node_ID in range(1,1+num_nodes):
-            lr_xzdf=ols(y=rm_xzdf[num_nodes-cur_node_ID+1],x=td,window=roll_window_size,intercept=True, min_periods=7)
-            lr_xydf=ols(y=rm_xydf[num_nodes-cur_node_ID+1],x=td,window=roll_window_size,intercept=True, min_periods=7)
-            
+    for cur_node_ID in range(1,1+num_nodes):
+        try:
+            lr_xzdf=ols(y=rm_xzdf[num_nodes-cur_node_ID+1],x=td,window=roll_window_numpts,intercept=True)
+            lr_xydf=ols(y=rm_xydf[num_nodes-cur_node_ID+1],x=td,window=roll_window_numpts,intercept=True)
+        
             vel_xzdf[str(num_nodes-cur_node_ID+1)]=np.round(lr_xzdf.beta.x.values,4)
             vel_xydf[str(num_nodes-cur_node_ID+1)]=np.round(lr_xydf.beta.x.values,4)
-    except:
-        print len(vel_xzdf)
-
+        except:
+            print colname, n, " ERROR in computing velocity" 
+            vel_xzdf[str(num_nodes-cur_node_ID+1)]=np.zeros(len(vel_xzdf.index))
+            vel_xydf[str(num_nodes-cur_node_ID+1)]=np.zeros(len(vel_xydf.index))
+        
+    #10. resizing dataframes for plotting
     rm_xzdf=rm_xzdf[(rm_xzdf.index>=start)]
     vel_xzdf=vel_xzdf[(vel_xzdf.index>=start)]
     rm_xydf=rm_xydf[(rm_xydf.index>=start)]
     vel_xydf=vel_xydf[(vel_xydf.index>=start)]
-
+    print len(rm_xzdf), len(rm_xydf),len(vel_xzdf), len(vel_xydf)
+    
+     
+    #11. Plotting
     try:
-        fig,ax=plt.subplots(nrows=2,ncols=2,sharex=True,sharey=False)
-        plt.sca(ax[0,0])
+        fig=plt.figure(1)
+        ax_xzd=fig.add_subplot(221)
+        ax_xyd=fig.add_subplot(222,sharex=ax_xzd,sharey=ax_xzd)
+        ax_xzv=fig.add_subplot(223,sharex=ax_xzd)
+        ax_xyv=fig.add_subplot(224,sharex=ax_xzd,sharey=ax_xzv)
+
 
         tilt_offset=0.02
         vel_offset=0.05
-        
-        zero_plot(rm_xzdf,ax[0,0],tilt_offset)
-        plt.ylabel('disp, m')
-        plt.ylim(-0.1,0.1)
-        plt.title(colname+' XZ')
 
-        plt.sca(ax[0,1])
-        zero_plot(rm_xydf,ax[0,1],tilt_offset)
-        plt.ylabel('disp, m')
-        plt.ylim(-0.1,0.1)
-        plt.title(colname+' XY')
-        
-        plt.sca(ax[1,0])
-        zero_plot(vel_xzdf,ax[1,0],vel_offset)
-        plt.ylabel('vel, m/day')
-        plt.ylim(-0.01,0.01)
+        curax=ax_xzd
+        zero_plot(rm_xzdf,curax,tilt_offset)
+        curax.set_ylabel('disp, m')
+        curax.set_title(colname+' XZ')
 
-        plt.sca(ax[1,1])
-        zero_plot(vel_xydf,ax[1,1],vel_offset)
-        plt.ylabel('vel, m/day')
-        plt.ylim(-0.01,0.01)
+        curax=ax_xyd
+        zero_plot(rm_xydf,curax,tilt_offset)
+        curax.set_ylabel('disp, m')
+        curax.set_title(colname+' XY')
+        curax.set_ylim(-0.1,0.1)
+        
+        curax=ax_xzv
+        zero_plot(vel_xzdf,curax,vel_offset)
+        curax.set_ylabel('vel, m')
+        
+        curax=ax_xyv
+        zero_plot(vel_xydf,curax,vel_offset)
+        curax.set_ylabel('vel, m')
+        curax.set_ylim(-0.01,0.01)
+        
+        fig.tight_layout()
+        plt.show()
+        
     except:
-        print len(vel_xzdf), len(vel_xydf)
-    fig.tight_layout()
+        
+        print colname, "ERROR in plotting displacements and velocities"
     
-##    for cur_node_ID in range(1,1+num_nodes):
-##        fig,ax=plt.subplots(nrows=2,ncols=1,sharex=True)
-##        
-##        try:
-##            print vel_xzdf[:,cur_node_ID]
-##            zero_plot(vel_xzdf[:,cur_node_ID],ax[1],str(cur_node_ID),'vel',[-0.06,0.06])
-##            zero_plot(rm_xzdf[:,cur_node_ID],ax[0],str(cur_node_ID),'tilt',[-0.2,0.2])
-##        except:
-##            print rm_xzdf[cur_node_ID]#zero_plot(rm_xzdf[cur_node_ID],ax[0],str(cur_node_ID),'tilt',[-0.2,0.2])
-##            
-##        plt.show()
-    plt.show()
+    
+
+    
     
     
 
