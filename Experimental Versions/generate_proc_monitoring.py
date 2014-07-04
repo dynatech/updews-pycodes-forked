@@ -11,16 +11,6 @@ import generic_functions as gf
 
 
 
-def zero_plot(df,ax,off):
-    df0=df-df.loc[(df.index==df.index[0])].values.squeeze()
-    df0.plot(ax=ax,marker='.',legend=False)
-    
-
-
-
-
-
-
     
 
 ##set/get values from config file
@@ -58,13 +48,7 @@ columnproperties_headers=['colname','num_nodes','seg_len']
 purged_file_headers=['ts','id','x', 'y', 'z', 'm']
 monitoring_file_headers=['ts','id','x', 'y', 'z', 'm']
 LastGoodData_file_headers=['ts','id','x', 'y', 'z', 'm']
-proc_monitoring_file_headers=['ts','id','x', 'y', 'z', 'm']
-
-
-
-
-
-
+proc_monitoring_file_headers=['ts','id','xz', 'xy', 'm']
 
 
 
@@ -80,6 +64,8 @@ def generate_proc():
 
 ##    print "Generating PROC monitoring data for:"
     for s in range(len(sensors)):
+
+        
         
         
         #3. getting current column properties
@@ -96,12 +82,17 @@ def generate_proc():
             
             #6. importing LastGoodData csv file of current column to dataframe
             LastGoodData=pd.read_csv(LastGoodData_path+colname+LastGoodData_file,names=LastGoodData_file_headers,parse_dates=[0],index_col=[1])
+            if len(LastGoodData)<num_nodes: print colname, " Missing nodes in LastGoodData"
 
             #7. extracting last data outside monitoring window
             LastGoodData=LastGoodData[(LastGoodData.ts<offsetstart)]
 
+##            print "\n",colname
+##            print LastGoodData
+
             #8. appending LastGoodData to monitoring
             monitoring=monitoring.append(LastGoodData)
+##            print monitoring.tail(num_nodes+1)
             
             #9. replacing date of data outside monitoring window with first date of monitoring window
             monitoring.loc[monitoring.ts < offsetstart, ['ts']] = offsetstart
@@ -130,4 +121,4 @@ def generate_proc():
         except:
 ##            print "     ",colname, "...FAILED"
             continue 
-        
+       
