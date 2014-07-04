@@ -8,6 +8,8 @@ import generic_functions as gf
 
 import generate_proc_monitoring as genproc
 
+import alert_evaluation as alert
+
 
 
 
@@ -63,6 +65,14 @@ LastGoodData_file_headers=['ts','id','x', 'y', 'z', 'm']
 proc_monitoring_file_headers=['ts','id','xz', 'xy', 'm']
 
 
+#ALERT CONSTANTS
+T_disp=0.05  #m
+T_velA1=0.005 #m/day
+T_velA2=0.5  #m/day
+k_ac_ax=0.1
+num_nodes_to_check=5
+
+
 
 
 
@@ -75,7 +85,7 @@ proc_monitoring_file_headers=['ts','id','xz', 'xy', 'm']
 #MAIN
 
 #0. Uncomment if you want to update proc_monitoring CSVs
-genproc.generate_proc()
+#genproc.generate_proc()
 
 #1. setting date boundaries for real-time monitoring window
 roll_window_numpts=int(1+roll_window_length/data_dt)
@@ -89,6 +99,7 @@ sensors=pd.read_csv(columnproperties_path+columnproperties_file,names=columnprop
 
 print "Generating plots and alerts for:"
 for s in range(len(sensors)):
+    if s<10:continue
 
     #3. getting current column properties
     colname,num_nodes,seg_len=sensors['colname'][s],sensors['num_nodes'][s],sensors['seg_len'][s]
@@ -196,15 +207,22 @@ for s in range(len(sensors)):
             vel_xzdf[str(num_nodes-cur_node_ID+1)]=np.zeros(len(vel_xzdf.index))
             vel_xydf[str(num_nodes-cur_node_ID+1)]=np.zeros(len(vel_xydf.index))
         
-    #10. resizing dataframes for plotting
+    #10. resizing dataframes for plotting and alert generation
     rm_xzdf=rm_xzdf[(rm_xzdf.index>=start)]
     vel_xzdf=vel_xzdf[(vel_xzdf.index>=start)]
     rm_xydf=rm_xydf[(rm_xydf.index>=start)]
     vel_xydf=vel_xydf[(vel_xydf.index>=start)]
     print len(rm_xzdf), len(rm_xydf),len(vel_xzdf), len(vel_xydf)
     
-     
-    #11. Plotting
+
+    #11.Alert generation
+    alert_out=alert.node_alert(colname,rm_xzdf,rm_xydf,vel_xzdf,vel_xydf,num_nodes, T_disp, T_velA1, T_velA2, k_ac_ax)
+    alert_out=alert.column_alert(alert_out, num_nodes_to_check)
+    print colname
+    print alert_out
+
+    
+    #12. Plotting
     try:
         fig=plt.figure(1)
         ax_xzd=fig.add_subplot(221)
