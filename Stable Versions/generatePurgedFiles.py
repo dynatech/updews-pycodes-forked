@@ -1,4 +1,4 @@
-import os,time,serial,re
+import os,time,re
 import MySQLdb
 import datetime
 import ConfigParser
@@ -192,10 +192,11 @@ def GenPurgedFiles():
 def GenerateMonitoringPurgedFiles():
     print 'Generating purged files:'
 
+	# get a list of columnArray classes
     sites = GetSensorList()
 
     for site in sites:
-        siteid = site[0]
+        siteid = site.name
         print siteid
 
         ft = dt.now()- tda(days=moninterval)

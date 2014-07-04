@@ -10,9 +10,10 @@ ColumnPropertiesFile = column_properties.csv
 
 [DB I/O]
 Hostdb = 127.0.0.1
-Userdb = root
-Passdb = irc311
+Userdb = testuser
+Passdb = test
 Namedb = senslopedb
+NamedbPurged = senslopedb_purged
 Printtostdout = False
 
 [Value Limits]
