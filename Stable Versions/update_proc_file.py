@@ -17,42 +17,23 @@ from datetime import date, timedelta
 from datetime import datetime as dt
 import time
 
-tan=math.tan
-sin=math.sin
-asin=math.asin
-cos=math.cos
-pow=math.pow
-sqrt=math.sqrt
-atan=math.atan
-deg=math.degrees
-rad=math.radians
 
-loc_col_list=("eeet","sinb","sint","sinu","lipb","lipt","bolb","pugb","pugt","mamb","mamt","oslt","oslb","labt", "labb", "gamt","gamb", "humt","humb", "plat","plab","blct","blcb")
-num_nodes_loc_col=(14,29,19,29,28,31,30,14,10,29,24,21,23,39,25,18,22,21,26,39,40,24,19)
-col_seg_len_list=(0.5,1,1,1,0.5,0.5,0.5,1.2,1.2,1.0,1.0,1.,1.,1.,1.,1.,1.,1.,1,0.5,0.5,1,1)
-
-
-############################################################
-##                  INPUT FILE READER                     ##
-############################################################
-
-def Input_Loc_Col(loc_col_list,num_nodes_loc_col,col_seg_len_list,IWS):
-    loc_col=loc_col_list[IWS]
-    num_nodes=num_nodes_loc_col[IWS]
-    fname=loc_col+"_purged.csv"
-    seg_len=col_seg_len_list[IWS]
-    return fname, num_nodes,loc_col,seg_len
+class ColumnArray:
+    def __init__(self, name, number_of_segments, segment_length):
+        self.name = name
+        self.nos = number_of_segments
+        self.seglen = segment_length  
 
 
 ############################################################
 ##                   UPDATE FUNCTION                      ##
 ############################################################
 
-def update_proc_file(loc_col,num_nodes):
+def update_proc_file(col):
     
-    inputfname=loc_col+".csv"
+    inputfname=col.name+".csv"
     print "Reading",inputfname+"..."
-    print "Updating",loc_col+"_proc.csv..."
+    print "Updating",col.name+"_proc.csv..."
 
     ##checks if raw file exists##
     if os.path.exists(PurgedFilePath+inputfname)==0:
@@ -61,7 +42,7 @@ def update_proc_file(loc_col,num_nodes):
         return
 
     ##checks if processed file exists, determines the number of lines in the file##
-    outputfname=loc_col+"_proc.csv"
+    outputfname=col.name+"_proc.csv"
     if os.path.exists(ProcFilePath+outputfname):
         fa1 = open(ProcFilePath+outputfname,'rb') 
         fa = csv.reader(fa1,delimiter=',')
@@ -100,9 +81,14 @@ def update_proc_file(loc_col,num_nodes):
     lines_appended=0
 
     for i in fo:
-        if i[1]=="id":continue
-        
-        strdate=parse(i[0])
+        try:
+            if i[1]=="id":continue
+        except:
+            print 'IndexError detected..'
+        try:
+            strdate=parse(i[0])
+        except:
+            print 'Date parse error'
         date_check=i[0]
         Y=int(date_check[0:4])
 
@@ -122,7 +108,7 @@ def update_proc_file(loc_col,num_nodes):
             if moi=='':
                 moi=str(-1)
 
-            xz,xy=accel_to_lin_xz_xy(seg_len,int(x),int(y),int(z))
+            xz,xy=accel_to_lin_xz_xy(col.seglen,int(x),int(y),int(z))
                         
             #uncomment next line below if you want to check individual sensor values and orthogonality of axes
             #tilt_data_filter=str(filter_good_data(int(x),int(y),int(z)))
@@ -329,14 +315,22 @@ cfg.read('server-config.txt')
 MachineFilePath = cfg.get('File I/O','MachineFilePath')
 PurgedFilePath = MachineFilePath + cfg.get('File I/O','PurgedFilePath')
 ProcFilePath = MachineFilePath + cfg.get('File I/O','ProcFilePath')
+ColumnPropertiesFile = cfg.get('File I/O','ColumnPropertiesFile')
 
 try:
-    while True:
-        for INPUT_which_sensor in range(len(loc_col_list)):
-            input_file_name,num_nodes,loc_col,seg_len=Input_Loc_Col(loc_col_list,num_nodes_loc_col,col_seg_len_list, INPUT_which_sensor)
-            input_file_name=ProcFilePath+input_file_name
 
-            update_proc_file(loc_col,num_nodes)
+    fo = csv.reader(open(ColumnPropertiesFile, 'r'),delimiter=',')
+    column_list = []
+    for line in fo:
+        col = ColumnArray(line[0], int(line[1]), float(line[2]))
+        column_list.append(col)
+
+    while True:
+        for column in column_list:
+            #input_file_name,num_nodes,col.name,seg_len=Input_col.name(col.name_list,num_nodes_col.name,col_seg_len_list, INPUT_which_sensor)
+            #input_file_name=ProcFilePath+input_file_name
+
+            update_proc_file(column)
 
         tm = dt.today()
         cur_sec = tm.minute*60 + tm.second
