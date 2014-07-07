@@ -2,9 +2,53 @@
 #module for evaluating column alerts
 
 
-
+from datetime import datetime, date, time, timedelta
 import numpy as np
 import pandas as pd
+import ConfigParser
+import generic_functions as gf
+
+cfg = ConfigParser.ConfigParser()
+cfg.read('IO-config.txt')
+
+#time interval between data points, in hours
+data_dt=0.5
+
+#length of real-time monitoring window, in days
+rt_window_length=3.
+
+#length of rolling/moving window operations in hours
+roll_window_length=3.
+
+#number of rolling window operations in the whole monitoring analysis
+num_roll_window_ops=2
+
+
+#local file paths
+columnproperties_path=cfg.get('I/O','ColumnProperties')
+purged_path=cfg.get('I/O','InputFilePath')
+monitoring_path=cfg.get('I/O','MonitoringPath')
+LastGoodData_path=cfg.get('I/O','LastGoodData')
+proc_monitoring_path=cfg.get('I/O','OutputFilePathMonitoring2')
+
+#file names
+columnproperties_file='column_properties.csv'
+purged_file='.csv'
+monitoring_file='.csv'
+LastGoodData_file='.csv'
+proc_monitoring_file='.csv'
+
+#file headers
+columnproperties_headers=['colname','num_nodes','seg_len']
+purged_file_headers=['ts','id','x', 'y', 'z', 'm']
+monitoring_file_headers=['ts','id','x', 'y', 'z', 'm']
+LastGoodData_file_headers=['ts','id','x', 'y', 'z', 'm']
+proc_monitoring_file_headers=['ts','id','xz', 'xy', 'm']
+colarrange=['colname', 'node_ID', 'ND', 'xz_disp', 'xy_disp', 'disp_alert', 'min_vel', 'max_vel', 'vel_alert', 'node_alert']
+
+roll_window_numpts=int(1+roll_window_length/data_dt)
+end, start, offsetstart=gf.get_rt_window(rt_window_length,roll_window_numpts,num_roll_window_ops)
+valid_data = end - timedelta(days=1)
 
 def node_alert(colname, xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_velA1, T_velA2, k_ac_ax):
 
@@ -21,15 +65,35 @@ def node_alert(colname, xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_v
     #alert:                             Pandas DataFrame object, with length equal to number of nodes, and columns for displacements along axes,
     #                                   displacement alerts, minimum and maximum velocities, velocity alerts and final node alerts
 
-    
+    #print xz_tilt
+    #print xy_tilt
+    #print xz_vel
+    #print xy_vel
 
     #initializing DataFrame object, alert
+      
+    alert=pd.DataFrame(data=None)
+
+    #adding column name and its node ids
     index=[]
     for x in range(1, num_nodes+1):
-        index.append(colname)        
-    alert=pd.DataFrame(data=None, index=index)    
-
+        index.append(colname)  
+    alert['colname']=index
     alert['node_ID']=[num_nodes-a for a in range(num_nodes)]
+
+    #checking for nodes with no data
+    alert=alert.set_index('node_ID')
+    LastGoodData=pd.read_csv(LastGoodData_path+colname+LastGoodData_file,names=LastGoodData_file_headers,parse_dates=[0],index_col=[1])
+    LastGoodData=LastGoodData[:num_nodes]
+    cond = np.asarray((LastGoodData.ts<valid_data))
+    cond = cond[::-1]
+    alert['ND']=np.where(cond,
+                         
+                         #No data within valid date 
+                         np.nan,
+                         
+                         #Data present within valid date
+                         np.ones(len(alert)))
 
     #evaluating net displacements within real-time window
     alert['xz_disp']=np.round(xz_tilt.values[-1]-xz_tilt.values[13], 3)
@@ -83,8 +147,19 @@ def node_alert(colname, xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_v
                                  alert['disp_alert'].values,                                
 
                                  # node alert = velocity alert if displacement alert = 1 
-                                 alert['disp_alert'].values*alert['vel_alert'].values)         
-                                 
+                                 alert['disp_alert'].values*alert['vel_alert'].values)
+
+    #propagates nd to other columns
+    for x in list(colarrange[3:9]):
+        prod=alert['ND']*alert[x]
+        alert[x]=prod
+
+    #rearrange columns
+    alert=alert.reset_index()
+    cols=alert.columns.tolist()
+    cols=colarrange
+    alert = alert[cols]
+    
     return alert
 
 def column_alert(alert, num_nodes_to_check):
@@ -141,20 +216,5 @@ def column_alert(alert, num_nodes_to_check):
     return alert
             
 
-def adj_node_alert(ac_ax, adj_node_k,num_nodes_to_check):
-    adj_node=[]
-    for i in range(1,len(ac_ax)+1):
-        if ac_ax['node_alert'][i-1].values>0:
-            adj_node_ind=[]
-            for s in range(1,num_nodes_to_check+1):
-                if i-s>0: adj_node_ind.append(i-s)
-                if i+s<=len(ac_ax):adj_node_ind.append(i+s)
-            for j in adj_node_ind:
-                if ac_ax['max_vel'][j-1].values>=ac_ax['max_vel'][i-1].values:
-                    adj_node.append(ac_ax['node_alert'][i-1].values)
-                    break
-        else:
-            adj_node.append(0)
-    
 
 
