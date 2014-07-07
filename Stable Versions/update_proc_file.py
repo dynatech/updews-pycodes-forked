@@ -150,8 +150,8 @@ def accel_to_lin_xz_xy(seg_len,xa,ya,za):
     #xz, xy; floats; horizontal linear displacements along the planes defined by xa-za and xa-ya, respectively; units similar to seg_len
     
     x=seg_len/np.sqrt(1+(np.tan(np.arctan(za/(np.sqrt(xa**2+ya**2))))**2+(np.tan(np.arctan(ya/(np.sqrt(xa**2+za**2))))**2)))
-    xz=x*np.tan(np.arctan(za/(np.sqrt(xa**2+ya**2))))
-    xy=x*np.tan(np.arctan(ya/(np.sqrt(xa**2+za**2))))
+    xz=x*(za/(np.sqrt(xa**2+ya**2)))
+    xy=x*(ya/(np.sqrt(xa**2+za**2)))
     
     return xz,xy
 
