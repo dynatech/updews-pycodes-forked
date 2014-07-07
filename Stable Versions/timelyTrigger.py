@@ -36,7 +36,7 @@ def main():
 if __name__ == '__main__':
     try:
         main()
-    except:
+    except KeyboardInterrupt:
         print 'Exception detected. Press anything to quit.'
         raw_input()
 

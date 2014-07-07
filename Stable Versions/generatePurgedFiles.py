@@ -45,6 +45,17 @@ def PurgeNonAlignedEntries(df):
     # find vector lengths with range of 1-cutoff<vl<1+cutoff
     return df.loc[(dfa_dp>1.0-cutoff) & (dfa_dp < 1.0+cutoff)]
 
+def LimitSOMSdata(df):
+
+    # select out of range data and replace will NULL value
+    upLim = 4000
+    lowLim = 2000
+    df.m[df.m < lowLim]= np.nan
+    df.m[df.m > upLim] = np.nan
+
+    return df
+    
+
 def savitzky_golay(y, window_size, order, deriv=0, rate=1):
     r"""Smooth (and optionally differentiate) data with a Savitzky-Golay filter.
     The Savitzky-Golay filter removes high frequency noise from data.
@@ -160,14 +171,12 @@ def GenerateLastGoodData(df):
     for nid in np.sort(df.id.unique()):
         lat = df[df.id == nid].iloc[-1]
         dflgd = dflgd.append(lat)
-
-##    print '\n'
+        
     # reformat dataframe (because sh**)
     dflgd = dflgd[['ts','id','x','y','z','m']]
-    dflgd[['id','x','y','z','m']] = dflgd[['id','x','y','z','m']].astype(int)
-##    print dflgd
-    return dflgd
 
+    return dflgd
+	
 def GenPurgedFiles():
     print 'Generating purged files:'
 
@@ -176,7 +185,7 @@ def GenPurgedFiles():
     for site in sites:
 
         siteid = site.name
-        print siteid
+        print siteid, 
 
         data = GetRawColumnData(siteid)
         df = ConvertToDf(data)
@@ -185,10 +194,15 @@ def GenPurgedFiles():
         if siteid=='sinb':
             df = FixOneBitChange(df)
 
+        
+        if siteid!='pugt' or siteid!='pugb':
+            df = LimitSOMSdata(df)
+            
         df.to_csv(PurgedFP + siteid + ".csv", index=False, header=False)
 
+
         dflgd = GenerateLastGoodData(df)
-        dflgd.to_csv(LastGoodDataFP + siteid + ".csv", index=False, header=False)
+        dflgd.to_csv(LastGoodDataFP + siteid + ".csv", index=False, header=False, float_format='%.0f')
 
         print 'done'
 
@@ -200,7 +214,7 @@ def GenerateMonitoringPurgedFiles():
 
     for site in sites:
         siteid = site.name
-        print siteid
+        print siteid, 
 
         ft = dt.now()- tda(days=moninterval)
         data = GetRawColumnData(siteid, ft.strftime("%Y-%m-%d %H:%M:%S"))
