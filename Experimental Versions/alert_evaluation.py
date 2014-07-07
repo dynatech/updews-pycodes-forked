@@ -149,10 +149,6 @@ def node_alert(colname, xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_v
                                  # node alert = velocity alert if displacement alert = 1 
                                  alert['disp_alert'].values*alert['vel_alert'].values)
 
-    #propagates nd to other columns
-    for x in list(colarrange[3:9]):
-        prod=alert['ND']*alert[x]
-        alert[x]=prod
 
     #rearrange columns
     alert=alert.reset_index()
@@ -212,6 +208,11 @@ def column_alert(alert, num_nodes_to_check):
             col_alert.append(alert['node_alert'].values[i-1])
         
     alert['col_alert']=np.asarray(col_alert)
+
+    #propagates nd to column alert
+    alert['col_alert']=alert['ND']*alert['col_alert']
+    alert['ND']=alert['ND'].fillna(value='nd')
+    alert['col_alert']=alert['col_alert'].fillna(value='nd')
     
     return alert
             
