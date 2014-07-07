@@ -13,7 +13,9 @@ import ConfigParser
 
 from dateutil.parser import parse
 from array import *
-from datetime import datetime, date, time, timedelta
+from datetime import date, timedelta
+from datetime import datetime as dt
+import time
 
 tan=math.tan
 sin=math.sin
@@ -53,31 +55,31 @@ def update_proc_file(loc_col,num_nodes):
     print "Updating",loc_col+"_proc.csv..."
 
     ##checks if raw file exists##
-    if os.path.exists(InputFilePath+inputfname)==0:
-        print "Input file path does not exist for " + InputFilePath + inputfname
+    if os.path.exists(PurgedFilePath+inputfname)==0:
+        print "Input file path does not exist for " + PurgedFilePath + inputfname
         print "Update failed!\n"
         return
 
     ##checks if processed file exists, determines the number of lines in the file##
     outputfname=loc_col+"_proc.csv"
-    if os.path.exists(OutputFilePath+outputfname):
-        fa1 = open(OutputFilePath+outputfname,'rb') 
+    if os.path.exists(ProcFilePath+outputfname):
+        fa1 = open(ProcFilePath+outputfname,'rb') 
         fa = csv.reader(fa1,delimiter=',')
         nL=len(list(fa))
         fa1.close()
 
     else:
-        fa1 = open(OutputFilePath+outputfname,'wb')
+        fa1 = open(ProcFilePath+outputfname,'wb')
         fa = csv.writer(fa1,delimiter=',')
         nL=0
         fa1.close()
 
     ##checks, records the last date recorded in the processed files##
     if nL==0:
-        last_date_proc=datetime.combine(date(1999,1,1),time(0,0,0))
+        last_date_proc=dt.combine(date(1999,1,1),time(0,0,0))
 
     else:
-        fa1 = open(OutputFilePath+outputfname,'rb') 
+        fa1 = open(ProcFilePath+outputfname,'rb') 
         fa = csv.reader(fa1,delimiter=',')
         a=0
 
@@ -91,9 +93,9 @@ def update_proc_file(loc_col,num_nodes):
 
 
     ##reads latest raw data and appends to the processed data file##
-    fa1 = open(OutputFilePath+outputfname,'ab')    
+    fa1 = open(ProcFilePath+outputfname,'ab')    
     fa = csv.writer(fa1,delimiter=',')
-    fo1 = open(InputFilePath+inputfname, 'rb')
+    fo1 = open(PurgedFilePath+inputfname, 'rb')
     fo = csv.reader(fo1,delimiter=',')
     lines_appended=0
 
@@ -322,16 +324,32 @@ def filter_good_data(a1,a2,a3):
 
 ##gets configuration from file##
 cfg = ConfigParser.ConfigParser()
-cfg.read('IO-config.txt')
+cfg.read('server-config.txt')
 
-InputFilePath = cfg.get('I/O','InputFilePath')
-OutputFilePath = cfg.get('I/O','OutputFilePath')
-OutputFigurePath = cfg.get('I/O','OutputFigurePath')
-PrintFigures = cfg.getboolean('I/O','PrintFigures')
-CSVOutputFile = cfg.get('I/O','CSVOutputFilePath') + cfg.get('I/O','CSVOutputFile')
+MachineFilePath = cfg.get('File I/O','MachineFilePath')
+PurgedFilePath = MachineFilePath + cfg.get('File I/O','PurgedFilePath')
+ProcFilePath = MachineFilePath + cfg.get('File I/O','ProcFilePath')
 
-for INPUT_which_sensor in range(len(loc_col_list)):
-    input_file_name,num_nodes,loc_col,seg_len=Input_Loc_Col(loc_col_list,num_nodes_loc_col,col_seg_len_list, INPUT_which_sensor)
-    input_file_name=OutputFilePath+input_file_name
+try:
+    while True:
+        for INPUT_which_sensor in range(len(loc_col_list)):
+            input_file_name,num_nodes,loc_col,seg_len=Input_Loc_Col(loc_col_list,num_nodes_loc_col,col_seg_len_list, INPUT_which_sensor)
+            input_file_name=ProcFilePath+input_file_name
 
-    update_proc_file(loc_col,num_nodes)
+            update_proc_file(loc_col,num_nodes)
+
+        tm = dt.today()
+        cur_sec = tm.minute*60 + tm.second
+        interval = 30        
+        sleep_tm = 0
+        for i in range(0, 60*60+1, interval*60):
+            if i > cur_sec:
+                print i
+                sleep_tm = i
+                break
+        print 'Sleep..',
+        print sleep_tm - cur_sec
+        time.sleep(sleep_tm - cur_sec)
+except KeyboardInterrupt:
+    print 'Keyboard interrrupt'
+    raw_input("Enter anything to quit")
