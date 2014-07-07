@@ -163,7 +163,7 @@ def FixOneBitChange(df):
 
     return dft
 
-def GenerateLastGoodData(df):
+def GenerateLastGoodData(site, df):
 
     # create new DataFrame for last good data
     dflgd = pd.DataFrame()
@@ -172,6 +172,18 @@ def GenerateLastGoodData(df):
         lat = df[df.id == nid].iloc[-1]
         dflgd = dflgd.append(lat)
         
+    # add missing nodes in lgd 
+    for nid in range(1, site.nos + 1):
+        if nid not in df.id.unique():
+            new = dflgd.iloc[0].copy()
+            new.x = 1023
+            new.y = 0
+            new.z = 0
+            new.id = nid
+            new.m = np.nan
+
+            dflgd = dflgd.append(new)
+
     # reformat dataframe (because sh**)
     dflgd = dflgd[['ts','id','x','y','z','m']]
 
@@ -195,13 +207,12 @@ def GenPurgedFiles():
             df = FixOneBitChange(df)
 
         
-        if siteid!='pugt' or siteid!='pugb':
+        if siteid!='pugt' and siteid!='pugb':
             df = LimitSOMSdata(df)
             
         df.to_csv(PurgedFP + siteid + ".csv", index=False, header=False)
 
-
-        dflgd = GenerateLastGoodData(df)
+        dflgd = GenerateLastGoodData(site,df)
         dflgd.to_csv(LastGoodDataFP + siteid + ".csv", index=False, header=False, float_format='%.0f')
 
         print 'done'
