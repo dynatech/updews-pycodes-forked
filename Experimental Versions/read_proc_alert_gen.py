@@ -14,11 +14,21 @@ def set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_w
 
     roll_window_numpts=int(1+roll_window_length/data_dt)
     end, start, offsetstart=gf.get_rt_window(rt_window_length,roll_window_numpts,num_roll_window_ops)
-    monwin_time=pd.date_range(start=offsetstart, end=end, freq='30Min',name=['blank'], closed=None)
+    monwin_time=pd.date_range(start=offsetstart, end=end, freq='30Min',name=['ts'], closed=None)
     monwin=pd.DataFrame(data=np.nan*np.ones(len(monwin_time)), index=monwin_time)
 
     return roll_window_numpts, end, start, offsetstart, monwin
     
+
+def set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_window_ops):
+
+    roll_window_numpts=int(1+roll_window_length/data_dt)
+    end, start, offsetstart=gf.get_rt_window(rt_window_length,roll_window_numpts,num_roll_window_ops)
+    monwin_time=pd.date_range(start=offsetstart, end=end, freq='30Min',name='ts', closed=None)
+    monwin=pd.DataFrame(data=np.nan*np.ones(len(monwin_time)), index=monwin_time)
+
+    return roll_window_numpts, end, start, offsetstart, monwin
+
 def create_series_list(input_df,monwin,colname,num_nodes):
     #a. initializing lists
     xz_series_list=[]
@@ -203,6 +213,7 @@ def plot_column_positions(colname,cs_x,cs_xz,cs_xy):
 
         fig.tight_layout()
         plt.legend(fontsize='x-small')
+        plt.show()
     
     except:        
         print colname, "ERROR in plotting column position"
@@ -272,6 +283,11 @@ roll_window_length = cfg.getfloat('I/O','roll_window_length')
 #number of rolling window operations in the whole monitoring analysis
 num_roll_window_ops = cfg.getfloat('I/O','num_roll_window_ops')
 
+#string expression indicating interval between two adjacent column position dates ex: '1D'= 1 day
+col_pos_interval= cfg.get('I/O','col_pos_interval') 
+#number of column position dates to plot
+col_pos_num= cfg.getfloat('I/O','num_col_pos')             
+
 #INPUT/OUTPUT FILES
 
 #local file paths
@@ -300,7 +316,9 @@ T_disp = cfg.getfloat('I/O','T_disp')  #m
 T_velA1 = cfg.getfloat('I/O','T_velA1') #m/day
 T_velA2 = cfg.getfloat('I/O','T_velA2')  #m/day
 k_ac_ax = cfg.getfloat('I/O','k_ac_ax')
-num_nodes_to_check = cfg.getfloat('I/O','num_nodes_to_check')
+num_nodes_to_check = cfg.getint('I/O','num_nodes_to_check')
+
+
 
 
 
@@ -358,6 +376,7 @@ for s in range(len(sensors)):
     #10. Alert generation
     alert_out=alert_generation(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velA1, T_velA2, k_ac_ax,
                                num_nodes_to_check,end,proc_monitoring_path,proc_monitoring_file)
+    #print alert_out
 
     #11. Plotting column positions
     plot_column_positions(colname,cs_x,cs_xz,cs_xy)
