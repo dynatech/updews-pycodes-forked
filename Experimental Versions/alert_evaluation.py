@@ -34,6 +34,12 @@ monitoring_path = cfg.get('I/O','MonitoringPath')
 LastGoodData_path = cfg.get('I/O','LastGoodData')
 proc_monitoring_path = cfg.get('I/O','OutputFilePathMonitoring2')
 
+columnproperties_path='/home/dynaslope-l5a/SVN/Dynaslope/updews-pycodes/Stable Versions/'
+purged_path='/home/dynaslope-l5a/Dropbox/Senslope Data/Purged/New/'
+monitoring_path='/home/dynaslope-l5a/Dropbox/Senslope Data/Purged/Monitoring/'
+LastGoodData_path='/home/dynaslope-l5a/Dropbox/Senslope Data/Purged/LastGoodData/'
+proc_monitoring_path='/home/dynaslope-l5a/Dropbox/Senslope Data/Proc2/Monitoring/'
+
 #file names
 columnproperties_file = cfg.get('I/O','ColumnProperties')
 purged_file = cfg.get('I/O','CSVFormat')
@@ -77,10 +83,10 @@ def node_alert(colname, xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_v
     #initializing DataFrame object, alert
     alert=pd.DataFrame(data=None)
 
-    #adding column name and its node ids
+    #adding node IDs
     alert['node_ID']=[n for n in range(1,1+num_nodes)]
     alert=alert.set_index('node_ID')
-    alert['colname']=colname
+    
 
     #checking for nodes with no data
     LastGoodData=pd.read_csv(LastGoodData_path+colname+LastGoodData_file,names=LastGoodData_file_headers,parse_dates=[0],index_col=[1])
