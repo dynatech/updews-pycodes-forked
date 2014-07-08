@@ -46,7 +46,7 @@ purged_file_headers=ts,id,x,y,z,m
 monitoring_file_headers=ts,id,x,y,z,m
 LastGoodData_file_headers=ts,id,x,y,z,m
 proc_monitoring_file_headers=ts,id,xz,xy,m
-alerteval_colarrange=colname,node_ID,ND,xz_disp,xy_disp,disp_alert,min_vel,max_vel,vel_alert,node_alert
+alerteval_colarrange=node_ID,ND,xz_disp,xy_disp,disp_alert,min_vel,max_vel,vel_alert,node_alert
 
 ############################
 ###        OTHERS        ###
