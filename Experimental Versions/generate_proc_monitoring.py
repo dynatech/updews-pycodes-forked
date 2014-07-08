@@ -3,11 +3,13 @@ import pandas as pd
 from pandas.stats.api import ols
 import numpy as np
 import matplotlib.pyplot as plt
+import ConfigParser
 
 import generic_functions as gf
 
 
-
+cfg = ConfigParser.ConfigParser()
+cfg.read('IO-config.txt')
 
 
 
@@ -16,40 +18,39 @@ import generic_functions as gf
 ##set/get values from config file
 
 #time interval between data points, in hours
-data_dt=0.5
+data_dt = cfg.getfloat('I/O','data_dt')
 
 #length of real-time monitoring window, in days
-rt_window_length=3.
+rt_window_length = cfg.getfloat('I/O','rt_window_length')
 
 #length of rolling/moving window operations in hours
-roll_window_length=3.
+roll_window_length = cfg.getfloat('I/O','roll_window_length')
 
 #number of rolling window operations in the whole monitoring analysis
-num_roll_window_ops=2
+num_roll_window_ops = cfg.getfloat('I/O','num_roll_window_ops')
 
 #INPUT/OUTPUT FILES
 
 #local file paths
-columnproperties_path='/home/dynaslope-l5a/SVN/Dynaslope/updews-pycodes/Stable Versions/'
-purged_path='/home/dynaslope-l5a/Dropbox/Senslope Data/Purged/New/'
-monitoring_path='/home/dynaslope-l5a/Dropbox/Senslope Data/Purged/Monitoring/'
-LastGoodData_path='/home/dynaslope-l5a/Dropbox/Senslope Data/Purged/LastGoodData/'
-proc_monitoring_path='/home/dynaslope-l5a/Dropbox/Senslope Data/Proc2/Monitoring/'
+columnproperties_path=cfg.get('I/O','ColumnProperties')
+purged_path=cfg.get('I/O','InputFilePath')
+monitoring_path=cfg.get('I/O','MonitoringPath')
+LastGoodData_path=cfg.get('I/O','LastGoodData')
+proc_monitoring_path=cfg.get('I/O','OutputFilePathMonitoring2')
 
 #file names
-columnproperties_file='column_properties.csv'
-purged_file='.csv'
-monitoring_file='.csv'
-LastGoodData_file='.csv'
-proc_monitoring_file='.csv'
+columnproperties_file = cfg.get('I/O','ColumnProperties')
+purged_file = cfg.get('I/O','CSVFormat')
+monitoring_file = cfg.get('I/O','CSVFormat')
+LastGoodData_file = cfg.get('I/O','CSVFormat')
+proc_monitoring_file = cfg.get('I/O','CSVFormat')
 
 #file headers
-columnproperties_headers=['colname','num_nodes','seg_len']
-purged_file_headers=['ts','id','x', 'y', 'z', 'm']
-monitoring_file_headers=['ts','id','x', 'y', 'z', 'm']
-LastGoodData_file_headers=['ts','id','x', 'y', 'z', 'm']
-proc_monitoring_file_headers=['ts','id','xz', 'xy', 'm']
-
+columnproperties_headers = cfg.get('I/O','columnproperties_headers').split(',')
+purged_file_headers = cfg.get('I/O','purged_file_headers').split(',')
+monitoring_file_headers = cfg.get('I/O','monitoring_file_headers').split(',')
+LastGoodData_file_headers = cfg.get('I/O','LastGoodData_file_headers').split(',')
+proc_monitoring_file_headers = cfg.get('I/O','proc_monitoring_file_headers').split(',')
 
 
 def generate_proc():
@@ -86,13 +87,12 @@ def generate_proc():
 
             #7. extracting last data outside monitoring window
             LastGoodData=LastGoodData[(LastGoodData.ts<offsetstart)]
-
 ##            print "\n",colname
 ##            print LastGoodData
 
             #8. appending LastGoodData to monitoring
             monitoring=monitoring.append(LastGoodData)
-##            print monitoring.tail(num_nodes+1)
+##          print monitoring.tail(num_nodes+1)
             
             #9. replacing date of data outside monitoring window with first date of monitoring window
             monitoring.loc[monitoring.ts < offsetstart, ['ts']] = offsetstart

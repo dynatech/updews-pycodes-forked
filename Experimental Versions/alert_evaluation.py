@@ -11,44 +11,51 @@ import generic_functions as gf
 cfg = ConfigParser.ConfigParser()
 cfg.read('IO-config.txt')
 
+##set/get values from config file
+
 #time interval between data points, in hours
-data_dt=0.5
+data_dt = cfg.getfloat('I/O','data_dt')
 
 #length of real-time monitoring window, in days
-rt_window_length=3.
+rt_window_length = cfg.getfloat('I/O','rt_window_length')
 
 #length of rolling/moving window operations in hours
-roll_window_length=3.
+roll_window_length = cfg.getfloat('I/O','roll_window_length')
 
 #number of rolling window operations in the whole monitoring analysis
-num_roll_window_ops=2
+num_roll_window_ops = cfg.getfloat('I/O','num_roll_window_ops')
 
+#INPUT/OUTPUT FILES
 
 #local file paths
-columnproperties_path=cfg.get('I/O','ColumnProperties')
-purged_path=cfg.get('I/O','InputFilePath')
-monitoring_path=cfg.get('I/O','MonitoringPath')
-LastGoodData_path=cfg.get('I/O','LastGoodData')
-proc_monitoring_path=cfg.get('I/O','OutputFilePathMonitoring2')
+columnproperties_path = cfg.get('I/O','ColumnPropertiesPath')
+purged_path = cfg.get('I/O','InputFilePath')
+monitoring_path = cfg.get('I/O','MonitoringPath')
+LastGoodData_path = cfg.get('I/O','LastGoodData')
+proc_monitoring_path = cfg.get('I/O','OutputFilePathMonitoring2')
 
 #file names
-columnproperties_file='column_properties.csv'
-purged_file='.csv'
-monitoring_file='.csv'
-LastGoodData_file='.csv'
-proc_monitoring_file='.csv'
+columnproperties_file = cfg.get('I/O','ColumnProperties')
+purged_file = cfg.get('I/O','CSVFormat')
+monitoring_file = cfg.get('I/O','CSVFormat')
+LastGoodData_file = cfg.get('I/O','CSVFormat')
+proc_monitoring_file = cfg.get('I/O','CSVFormat')
 
 #file headers
-columnproperties_headers=['colname','num_nodes','seg_len']
-purged_file_headers=['ts','id','x', 'y', 'z', 'm']
-monitoring_file_headers=['ts','id','x', 'y', 'z', 'm']
-LastGoodData_file_headers=['ts','id','x', 'y', 'z', 'm']
-proc_monitoring_file_headers=['ts','id','xz', 'xy', 'm']
-colarrange=['colname', 'node_ID', 'ND', 'xz_disp', 'xy_disp', 'disp_alert', 'min_vel', 'max_vel', 'vel_alert', 'node_alert']
+columnproperties_headers = cfg.get('I/O','columnproperties_headers').split(',')
+purged_file_headers = cfg.get('I/O','purged_file_headers').split(',')
+monitoring_file_headers = cfg.get('I/O','monitoring_file_headers').split(',')
+LastGoodData_file_headers = cfg.get('I/O','LastGoodData_file_headers').split(',')
+proc_monitoring_file_headers = cfg.get('I/O','proc_monitoring_file_headers').split(',')
+colarrange = cfg.get('I/O','alerteval_colarrange').split(',')
+
+
 
 roll_window_numpts=int(1+roll_window_length/data_dt)
 end, start, offsetstart=gf.get_rt_window(rt_window_length,roll_window_numpts,num_roll_window_ops)
 valid_data = end - timedelta(days=1)
+
+
 
 def node_alert(colname, xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_velA1, T_velA2, k_ac_ax):
 
