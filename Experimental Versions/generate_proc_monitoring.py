@@ -32,7 +32,7 @@ num_roll_window_ops = cfg.getfloat('I/O','num_roll_window_ops')
 #INPUT/OUTPUT FILES
 
 #local file paths
-columnproperties_path=cfg.get('I/O','ColumnProperties')
+columnproperties_path=cfg.get('I/O','ColumnPropertiesPath')
 purged_path=cfg.get('I/O','InputFilePath')
 monitoring_path=cfg.get('I/O','MonitoringPath')
 LastGoodData_path=cfg.get('I/O','LastGoodData')
