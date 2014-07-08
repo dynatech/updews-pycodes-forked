@@ -72,24 +72,17 @@ def node_alert(colname, xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_v
     #alert:                             Pandas DataFrame object, with length equal to number of nodes, and columns for displacements along axes,
     #                                   displacement alerts, minimum and maximum velocities, velocity alerts and final node alerts
 
-    #print xz_tilt
-    #print xy_tilt
-    #print xz_vel
-    #print xy_vel
+    
 
     #initializing DataFrame object, alert
-      
     alert=pd.DataFrame(data=None)
 
     #adding column name and its node ids
-    index=[]
-    for x in range(1, num_nodes+1):
-        index.append(colname)  
-    alert['colname']=index
-    alert['node_ID']=[num_nodes-a for a in range(num_nodes)]
+    alert['node_ID']=[n for n in range(1,1+num_nodes)]
+    alert=alert.set_index('node_ID')
+    alert['colname']=colname
 
     #checking for nodes with no data
-    alert=alert.set_index('node_ID')
     LastGoodData=pd.read_csv(LastGoodData_path+colname+LastGoodData_file,names=LastGoodData_file_headers,parse_dates=[0],index_col=[1])
     LastGoodData=LastGoodData[:num_nodes]
     cond = np.asarray((LastGoodData.ts<valid_data))
@@ -103,8 +96,8 @@ def node_alert(colname, xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_v
                          np.ones(len(alert)))
 
     #evaluating net displacements within real-time window
-    alert['xz_disp']=np.round(xz_tilt.values[-1]-xz_tilt.values[13], 3)
-    alert['xy_disp']=np.round(xy_tilt.values[-1]-xy_tilt.values[13], 3)
+    alert['xz_disp']=np.round(xz_tilt.values[-1]-xz_tilt.values[0], 3)
+    alert['xy_disp']=np.round(xy_tilt.values[-1]-xy_tilt.values[0], 3)
 
     #checking if displacement threshold is exceeded in either axis
     cond = np.asarray((np.abs(alert['xz_disp'].values)>T_disp, np.abs(alert['xy_disp'].values)>T_disp))
@@ -159,7 +152,6 @@ def node_alert(colname, xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_v
 
     #rearrange columns
     alert=alert.reset_index()
-    cols=alert.columns.tolist()
     cols=colarrange
     alert = alert[cols]
     
