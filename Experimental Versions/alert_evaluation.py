@@ -212,6 +212,7 @@ def column_alert(alert, num_nodes_to_check):
 
     alert['col_alert']=np.asarray(col_alert)
 
+    #converting numbers into strings
     alert['node_alert']=alert['node_alert'].map({0:'a0',1:'a1',2:'a2'})
     alert['col_alert']=alert['col_alert'].map({-1:'nd',0:'a0',1:'a1',2:'a2'})
     
