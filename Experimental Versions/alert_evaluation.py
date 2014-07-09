@@ -190,19 +190,30 @@ def column_alert(alert, num_nodes_to_check):
             #looping through adjacent nodes to validate current node alert
             adj_node_alert=[]
             for j in adj_node_ind:
+
+                #checking if adjacent node alert has alert, else 
+                if alert['node_alert'].values[j-1]!=0:
+                    #proceeding if data is available within set valid date
+                    if alert['ND'].values[j-1]!=0:
+                        #comparing current adjacent node velocity with current node velocity
+                        if abs(alert['max_vel'].values[j-1])>=abs(alert['max_vel'].values[i-1])*1/(2.**abs(s)):
+                            #current adjacent node alert assumes value of current node alert
+                            adj_node_alert.append(alert['node_alert'].values[i-1])
+                        else:
+                            #current adjacent node alert is 0
+                            adj_node_alert.append(0)
+
+                    #appending validated current node alert to column alert                
+                    col_node.append(i-1)
+                    col_alert.append(max(adj_node_alert))
                 
-                #comparing current adjacent node velocity with current node velocity
-                if abs(alert['max_vel'].values[j-1])>=abs(alert['max_vel'].values[i-1])*1/(2.**abs(s)):
-                    #current adjacent node alert assumes value of current node alert
-                    adj_node_alert.append(alert['node_alert'].values[i-1])
+                    continue
+                
                 else:
-                    #current adjacent node alert is 0
-                    adj_node_alert.append(0)
-                    
-            #appending validated current node alert to column alert
-            col_node.append(i-1)
-            col_alert.append(max(adj_node_alert))
-            
+                    col_node.append(i-1)
+                    col_alert.append(0)
+                    break
+
         else:
             col_node.append(i-1)
             if alert['ND'].values[i-1]==0:
@@ -212,7 +223,6 @@ def column_alert(alert, num_nodes_to_check):
 
     alert['col_alert']=np.asarray(col_alert)
 
-    #converting numbers into strings
     alert['node_alert']=alert['node_alert'].map({0:'a0',1:'a1',2:'a2'})
     alert['col_alert']=alert['col_alert'].map({-1:'nd',0:'a0',1:'a1',2:'a2'})
     
