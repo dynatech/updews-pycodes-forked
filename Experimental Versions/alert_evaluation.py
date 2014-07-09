@@ -34,12 +34,6 @@ monitoring_path = cfg.get('I/O','MonitoringPath')
 LastGoodData_path = cfg.get('I/O','LastGoodData')
 proc_monitoring_path = cfg.get('I/O','OutputFilePathMonitoring2')
 
-columnproperties_path='/home/dynaslope-l5a/SVN/Dynaslope/updews-pycodes/Stable Versions/'
-purged_path='/home/dynaslope-l5a/Dropbox/Senslope Data/Purged/New/'
-monitoring_path='/home/dynaslope-l5a/Dropbox/Senslope Data/Purged/Monitoring/'
-LastGoodData_path='/home/dynaslope-l5a/Dropbox/Senslope Data/Purged/LastGoodData/'
-proc_monitoring_path='/home/dynaslope-l5a/Dropbox/Senslope Data/Proc2/Monitoring/'
-
 #file names
 columnproperties_file = cfg.get('I/O','ColumnProperties')
 purged_file = cfg.get('I/O','CSVFormat')
@@ -96,7 +90,7 @@ def node_alert(colname, xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_v
     alert['ND']=np.where(cond,
                          
                          #No data within valid date 
-                         np.nan,
+                         np.zeros(len(alert)),
                          
                          #Data present within valid date
                          np.ones(len(alert)))
@@ -109,12 +103,12 @@ def node_alert(colname, xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_v
     cond = np.asarray((np.abs(alert['xz_disp'].values)>T_disp, np.abs(alert['xy_disp'].values)>T_disp))
     alert['disp_alert']=np.where(np.any(cond, axis=0),
 
-                                 #disp alert=1
-                                 np.ones(len(alert)),
+                                 #disp alert=a1
+                                 'a1',
 
-                                 #disp alert=0
-                                 np.zeros(len(alert)))
-
+                                 #disp alert=a0
+                                 'a0')
+ 
     #getting minimum axis velocity value
     alert['min_vel']=np.round(np.where(np.abs(xz_vel.values[-1])<np.abs(xy_vel.values[-1]),
                                        np.abs(xz_vel.values[-1]),
@@ -128,39 +122,40 @@ def node_alert(colname, xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_v
     #checking if proportional velocity is present across node
     alert['vel_alert']=np.where(alert['min_vel'].values/alert['max_vel'].values<k_ac_ax,   
 
-                                #vel alert=0
-                                np.zeros(len(alert)),    
+                                #vel alert=a0
+                                'a0',    
 
                                 #checking if max node velocity exceeds threshold velocity for alert 1
                                 np.where(alert['max_vel'].values<=T_velA1,                  
 
-                                         #vel alert=0
-                                         np.zeros(len(alert)),
+                                         #vel alert=a0
+                                         'a0',
 
                                          #checking if max node velocity exceeds threshold velocity for alert 2
                                          np.where(alert['max_vel'].values<=T_velA2,         
 
-                                                  #vel alert=1
-                                                  np.ones(len(alert)),
+                                                  #vel alert=a1
+                                                  'a1',
 
-                                                  #vel alert=2
-                                                  2*np.ones(len(alert)))))
-
+                                                  #vel alert=a2
+                                                  'a2')))
     
-    alert['node_alert']=np.where(alert['vel_alert'].values==0,
+    alert['node_alert']=np.where(alert['vel_alert'].values=='a0',
 
-                                 # node alert = displacement alert (0 or 1) if velocity alert is 0 
+                                 # node alert = displacement alert (a0 or a1) if velocity alert is a0 
                                  alert['disp_alert'].values,                                
 
                                  # node alert = velocity alert if displacement alert = 1 
-                                 alert['disp_alert'].values*alert['vel_alert'].values)
+                                 np.where(alert['disp_alert'].values=='a1',
+                                          alert['vel_alert'].values,
+                                          alert['disp_alert'].values))
 
 
     #rearrange columns
     alert=alert.reset_index()
     cols=colarrange
     alert = alert[cols]
-    
+
     return alert
 
 def column_alert(alert, num_nodes_to_check):
@@ -177,20 +172,20 @@ def column_alert(alert, num_nodes_to_check):
     #alert:                             Pandas DataFrame object; same as input dataframe "alert" with additional column for column-level alert
 
        
-    
+
     col_alert=[]
     col_node=[]
     #looping through each node
     for i in range(1,len(alert)+1):
     
         #checking if current node alert is 1 or 2
-        if alert['node_alert'].values[i-1]>0:
+        if alert['node_alert'].values[i-1]!='a0':
             
             #defining indices of adjacent nodes
             adj_node_ind=[]
             for s in range(1,num_nodes_to_check+1):
                 if i-s>0: adj_node_ind.append(i-s)
-                if i+s<=len(alert):adj_node_ind.append(i+s)
+                if i+s<=len(alert): adj_node_ind.append(i+s)
             
             #looping through adjacent nodes to validate current node alert
             adj_node_alert=[]
@@ -210,14 +205,12 @@ def column_alert(alert, num_nodes_to_check):
             
         else:
             col_node.append(i-1)
-            col_alert.append(alert['node_alert'].values[i-1])
-        
-    alert['col_alert']=np.asarray(col_alert)
+            if alert['ND'].values[i-1]==0:
+                col_alert.append('nd')
+            else:
+                col_alert.append(alert['node_alert'].values[i-1])
 
-    #propagates nd to column alert
-    alert['col_alert']=alert['ND']*alert['col_alert']
-    alert['ND']=alert['ND'].fillna(value='nd')
-    alert['col_alert']=alert['col_alert'].fillna(value='nd')
+    alert['col_alert']=np.asarray(col_alert)
     
     return alert
             
