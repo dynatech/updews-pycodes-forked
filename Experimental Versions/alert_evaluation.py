@@ -103,11 +103,11 @@ def node_alert(colname, xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_v
     cond = np.asarray((np.abs(alert['xz_disp'].values)>T_disp, np.abs(alert['xy_disp'].values)>T_disp))
     alert['disp_alert']=np.where(np.any(cond, axis=0),
 
-                                 #disp alert=a1
-                                 'a1',
+                                 #disp alert=1
+                                 np.ones(len(alert)),
 
                                  #disp alert=a0
-                                 'a0')
+                                 np.zeros(len(alert)))
  
     #getting minimum axis velocity value
     alert['min_vel']=np.round(np.where(np.abs(xz_vel.values[-1])<np.abs(xy_vel.values[-1]),
@@ -122,31 +122,31 @@ def node_alert(colname, xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_v
     #checking if proportional velocity is present across node
     alert['vel_alert']=np.where(alert['min_vel'].values/alert['max_vel'].values<k_ac_ax,   
 
-                                #vel alert=a0
-                                'a0',    
+                                #vel alert=0
+                                np.zeros(len(alert)),    
 
                                 #checking if max node velocity exceeds threshold velocity for alert 1
                                 np.where(alert['max_vel'].values<=T_velA1,                  
 
-                                         #vel alert=a0
-                                         'a0',
+                                         #vel alert=0
+                                         np.zeros(len(alert)),
 
                                          #checking if max node velocity exceeds threshold velocity for alert 2
                                          np.where(alert['max_vel'].values<=T_velA2,         
 
-                                                  #vel alert=a1
-                                                  'a1',
+                                                  #vel alert=1
+                                                  np.ones(len(alert)),
 
-                                                  #vel alert=a2
-                                                  'a2')))
+                                                  #vel alert=2
+                                                  np.zeros(len(alert)))))
     
-    alert['node_alert']=np.where(alert['vel_alert'].values=='a0',
+    alert['node_alert']=np.where(alert['vel_alert'].values==0,
 
-                                 # node alert = displacement alert (a0 or a1) if velocity alert is a0 
+                                 # node alert = displacement alert (0 or 1) if velocity alert is a0 
                                  alert['disp_alert'].values,                                
 
                                  # node alert = velocity alert if displacement alert = 1 
-                                 np.where(alert['disp_alert'].values=='a1',
+                                 np.where(alert['disp_alert'].values==1,
                                           alert['vel_alert'].values,
                                           alert['disp_alert'].values))
 
@@ -179,7 +179,7 @@ def column_alert(alert, num_nodes_to_check):
     for i in range(1,len(alert)+1):
     
         #checking if current node alert is 1 or 2
-        if alert['node_alert'].values[i-1]!='a0':
+        if alert['node_alert'].values[i-1]!=0:
             
             #defining indices of adjacent nodes
             adj_node_ind=[]
@@ -206,11 +206,14 @@ def column_alert(alert, num_nodes_to_check):
         else:
             col_node.append(i-1)
             if alert['ND'].values[i-1]==0:
-                col_alert.append('nd')
+                col_alert.append(-1)
             else:
                 col_alert.append(alert['node_alert'].values[i-1])
 
     alert['col_alert']=np.asarray(col_alert)
+
+    alert['node_alert']=alert['node_alert'].map({0:'a0',1:'a1',2:'a2'})
+    alert['col_alert']=alert['col_alert'].map({-1:'nd',0:'a0',1:'a1',2:'a2'})
     
     return alert
             
