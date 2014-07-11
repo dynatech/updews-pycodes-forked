@@ -3,6 +3,8 @@ import ConfigParser
 from datetime import datetime as dtm
 from datetime import timedelta as tda
 import re
+import pandas.io.sql as psql
+import pandas as pd
 
 # Scripts for connecting to local database
 # Needs config file: server-config.txt
@@ -17,9 +19,9 @@ class columnArray:
 def SenslopeDBConnect(nameDB):
     while True:
         try:
-			db = MySQLdb.connect(host = Hostdb, user = Userdb, passwd = Passdb, db=nameDB)
-			cur = db.cursor()
-			return db, cur
+            db = MySQLdb.connect(host = Hostdb, user = Userdb, passwd = Passdb, db=nameDB)
+            cur = db.cursor()
+            return db, cur
         except MySQLdb.OperationalError:
             print '.',
 
@@ -52,7 +54,22 @@ def GetDBResultset(query):
     else:
         return ""
 
-def GetRawColumnData(siteid = "", fromTime = ""):
+def GetDBDataFrame(query):
+    a = ''
+    try:
+        db, cur = SenslopeDBConnect(Namedb)
+
+        df = psql.read_sql(query, db)
+        df.columns = ['ts','id','x','y','z','m']
+        # change ts column to datetime
+        df.ts = pd.to_datetime(df.ts)
+
+        db.close()
+        return df
+    except KeyboardInterrupt:
+        PrintOut("Exception detected in accessing database")
+
+def GetRawColumnData(siteid = "", fromTime = "", maxnode = 40):
 
     if not siteid:
         raise ValueError('no site id entered')
@@ -60,48 +77,46 @@ def GetRawColumnData(siteid = "", fromTime = ""):
     if printtostdout:
         PrintOut('Querying database ...')
 
-    query = "select * from " + \
-            Namedb + "." + \
-            siteid + " where"
+    cond = "(xvalue < %s or abs(yvalue) > %s or abs(zvalue) > %s)" % (xlim,ylim,zlim)
+    query = "select timestamp, id, \
+            if(%s, null, xvalue) xvalue, \
+            if(%s, null, yvalue) yvalue, \
+            if(%s, null, zvalue) zvalue, \
+            if(mvalue < %s or mvalue > %s, null, mvalue) mvalue \
+            from senslopedb.%s" % (cond,cond,cond,mlowlim,muplim,siteid)
+    
+    query = "select * from (%s) query1 where (xvalue is not null or mvalue is not null)" % query
 
     if fromTime:
-        query = query + " timestamp > '" + fromTime + "' and "
+        query = query + " and timestamp > '%s'" % fromTime
 
-    query = query + \
-            " (xvalue > " + xlim + \
-            " or xvalue + 4096 < " + xmax + \
-            ") and yvalue > -" + ylim + \
-            " and yvalue < " + ylim + \
-            " and zvalue > -" + zlim + \
-            " and zvalue < " + zlim + \
-            " and id > 0 and id < 41" + \
-            ";"
-##    return query
-    return GetDBResultset(query)
+    query = query + " and id >= 1 and id <= %s ;" % (str(maxnode))
+
+    return GetDBDataFrame(query)
 
 def GetSensorList():
-	#try:
-	db, cur = SenslopeDBConnect(Namedb)
-	cur.execute("use "+ Namedb)
-	
-	query = 'SELECT name, num_nodes, seg_length FROM site_column_props inner join site_column on site_column_props.s_id=site_column.s_id'
-	#try:
-	cur.execute(query)
-	#except:
-	#print '>> Error parsing database'
-	
-	data = cur.fetchall()
-	
-	# make a sensor list of columnArray class functions
-	sensors = []
-	for entry in data:
-		s = columnArray(entry[0],int(entry[1]),float(entry[2]))
-		sensors.append(s)
-	
-	return sensors
-	#except:
-	#	print '>> Error getting list from database'
-	#	return ''
+    try:
+        db, cur = SenslopeDBConnect(Namedb)
+        cur.execute("use "+ Namedb)
+        
+        query = 'SELECT name, num_nodes, seg_length FROM site_column_props inner join site_column on site_column_props.s_id=site_column.s_id'
+        #try:
+        cur.execute(query)
+        #except:
+        #print '>> Error parsing database'
+        
+        data = cur.fetchall()
+        
+        # make a sensor list of columnArray class functions
+        sensors = []
+        for entry in data:
+            s = columnArray(entry[0],int(entry[1]),float(entry[2]))
+            sensors.append(s)
+        
+        return sensors
+    except:
+        print '>> Error getting list from database'
+        return ''
 
     
 # import values from config file
@@ -122,6 +137,8 @@ xlim = cfg.get(valueSect,'xlim')
 ylim = cfg.get(valueSect,'ylim')
 zlim = cfg.get(valueSect,'zlim')
 xmax = cfg.get(valueSect,'xmax')
+mlowlim = cfg.get(valueSect,'mlowlim')
+muplim = cfg.get(valueSect,'muplim')
 islimval = cfg.getboolean(valueSect,'LimitValues')
 
 

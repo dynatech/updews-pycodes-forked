@@ -43,7 +43,7 @@ def PurgeNonAlignedEntries(df):
     # raise all values to 2
     dfa_dp = pow(dfa_2.x + dfa_2.y + dfa_2.z, 0.5)
     # find vector lengths with range of 1-cutoff<vl<1+cutoff
-    return df.loc[(dfa_dp>1.0-cutoff) & (dfa_dp < 1.0+cutoff)]
+    return df.loc[((dfa_dp>1.0-cutoff) & (dfa_dp < 1.0+cutoff)) | (dfa.x.isnull())]
 
 def LimitSOMSdata(df):
 
@@ -139,7 +139,9 @@ def AdjustOffsetInAxis(ax):
     if len(ax) < window:
         print 'short series'
         return ax
-
+	# remove null values
+    ax = ax[~ax.isnull()]
+	
     f = savitzky_golay(ax, window, order)
     # adjust high offset
     ax[ax-f>off_lim] = ax[ax-f>off_lim] - 128
@@ -165,27 +167,35 @@ def FixOneBitChange(df):
 
 def GenerateLastGoodData(site, df):
 
-    # create new DataFrame for last good data
-    dflgd = pd.DataFrame()
-    # cycle through all unique node ids.
+    # create list of latest data indexes
+    ixs = []
+    # cycle through all unique node ids and get the latest data per node
     for nid in np.sort(df.id.unique()):
-        lat = df[df.id == nid].iloc[-1]
-        dflgd = dflgd.append(lat)
+
+
+        ixs.append(df[df.id == nid]['ts'].idxmax())
         
-    # add missing nodes in lgd 
-    for nid in range(1, site.nos + 1):
-        if nid not in df.id.unique():
-            new = dflgd.iloc[0].copy()
-            new.x = 1023
-            new.y = 0
-            new.z = 0
-            new.id = nid
-            new.m = np.nan
 
-            dflgd = dflgd.append(new)
+    # create a copy of the data with lgd indexes
+    dflgd1 = df.ix[ixs]
+    
+    # replace null values with values corresponding to a
+    # perfect vertical node
+    dflgd = dflgd1.replace({'x':{np.nan:1023},'y':{np.nan:0},'z':{np.nan:0},'m':{np.nan:0}})
+    
+    # below are routines to handle nodes that have no data whatsoever
+    # create a list of missing nodes    
+    missing = [i for i in range(1,site.nos+1) if i not in dflgd.id.unique()]
 
-    # reformat dataframe (because sh**)
-    dflgd = dflgd[['ts','id','x','y','z','m']]
+    # create a dataframe with default values
+    x = np.array([[dflgd.ts.min(),1,1023,0,0,0]])   
+    x = np.repeat(x,len(missing),axis=0)
+    dfd = pd.DataFrame(x, columns=['ts','id','x','y','z','m'])
+    # change their ids to the missing ids
+    dfd.id = pd.Series(missing)
+    # append to the lgd datframe
+    dflgd = dflgd.append(dfd).sort(['id'])
+    dflgd[['x','y','z','m']] = dflgd[['x','y','z','m']].astype(int)
 
     return dflgd
 	
@@ -199,18 +209,16 @@ def GenPurgedFiles():
         siteid = site.name
         print siteid, 
 
-        data = GetRawColumnData(siteid)
-        df = ConvertToDf(data)
+        st = time.clock()
+        df = GetRawColumnData(siteid,'',site.nos)
+        #df = ConvertToDf(data)
+        print time.clock() - st
         df = PurgeNonAlignedEntries(df)
 
         if siteid=='sinb':
             df = FixOneBitChange(df)
 
-        
-        if siteid!='pugt' and siteid!='pugb':
-            df = LimitSOMSdata(df)
-            
-        df.to_csv(PurgedFP + siteid + ".csv", index=False, header=False)
+        df.to_csv(PurgedFP + siteid + ".csv", index=False, header=False, float_format='%.0f')
 
         dflgd = GenerateLastGoodData(site,df)
         dflgd.to_csv(LastGoodDataFP + siteid + ".csv", index=False, header=False, float_format='%.0f')
@@ -228,9 +236,9 @@ def GenerateMonitoringPurgedFiles():
         print siteid, 
 
         ft = dt.now()- tda(days=moninterval)
-        data = GetRawColumnData(siteid, ft.strftime("%Y-%m-%d %H:%M:%S"))
-        df = ConvertToDf(data)
-        df = PurgeNonAlignedEntries(df)
+        data = GetRawColumnData(siteid, ft.strftime("%Y-%m-%d %H:%M:%S"), site.nos)
+
+        df = PurgeNonAlignedEntries(data)
 
         if siteid=='sinb':
             df = FixOneBitChange(df)
@@ -238,18 +246,18 @@ def GenerateMonitoringPurgedFiles():
         dflgd = pd.read_csv(LastGoodDataFP + siteid + ".csv", names=['ts','id','x','y','z','m'])
 
         # get the missing node data from last good data file
-        df = df.append(dflgd.loc[~dflgd.id.isin(df.id.unique())])
+        df = df.append(dflgd.loc[~dflgd.id.isin(df.id.unique())])        
+        df.to_csv(MonPurgedFP + siteid + ".csv", index=False, header=False, float_format='%.0f')
         
-        df.to_csv(MonPurgedFP + siteid + ".csv", index=False, header=False)
         print 'done'
 
 
-##def main():
-##
-##    GeneratePurgedFiles()'
-##    
-##if __name__ == '__main__':
-##    main()
+def main():
+
+    GenPurgedFiles()
+    
+if __name__ == '__main__':
+    main()
   
 
 
