@@ -9,28 +9,30 @@ configFile = "server-config.txt"
 cfg = ConfigParser.ConfigParser()
 cfg.read(configFile)
 
+def ReturnNextReportTime(minute):
+    # calculate sleep interval
+    tm = dt.today()
+    cur_sec = tm.minute*60 + tm.second
+            
+    sleep_tm = 0
+    for i in range(0, 60*60+1, minute*60):
+        if i > cur_sec:
+            sleep_tm = i
+            break
+    print 'Sleep..',
+    print sleep_tm - cur_sec
+    return(sleep_tm - cur_sec)
+
 
 def main():
 
     while True:
         print time.asctime()
         # place routines below
-        GenerateMonitoringPurgedFiles()
-        GenPurgedFiles()        
+##        GenerateMonitoringPurgedFiles()
+##        GenPurgedFiles()        
         
-        # calculate sleep interval
-        tm = dt.today()
-        cur_sec = tm.minute*60 + tm.second
-        interval = 30        
-        sleep_tm = 0
-        for i in range(0, 60*60+1, interval*60):
-            if i > cur_sec:
-                print i
-                sleep_tm = i
-                break
-        print 'Sleep..',
-        print sleep_tm - cur_sec
-        time.sleep(sleep_tm - cur_sec)
+        time.sleep(ReturnNextReportTime(30))
 
     
 if __name__ == '__main__':

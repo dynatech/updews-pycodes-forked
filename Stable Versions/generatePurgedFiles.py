@@ -7,6 +7,7 @@ from datetime import timedelta as tda
 import pandas as pd
 import numpy as np
 from querySenslopeDb import *
+from timelyTrigger import *
 
 configFile = "server-config.txt"
 cfg = ConfigParser.ConfigParser()
@@ -253,8 +254,11 @@ def GenerateMonitoringPurgedFiles():
 
 
 def main():
+    while True:
+        GenerateMonitoringPurgedFiles()
+        GenPurgedFiles()
 
-    GenPurgedFiles()
+        time.sleep(ReturnNextReportTime(30))
     
 if __name__ == '__main__':
     main()
