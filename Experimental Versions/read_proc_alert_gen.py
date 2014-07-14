@@ -1,3 +1,4 @@
+import os
 from datetime import datetime, date, time, timedelta
 import pandas as pd
 from pandas.stats.api import ols
@@ -218,16 +219,33 @@ def alert_generation(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velA1, T_v
     #adding 'ts' 
     alert_out['ts']=end
 
+    #creating timeseries data of alert per column
+    x=np.asarray(alert_out['col_alert'])
+    alert_timeseries=pd.DataFrame(data=x, index=[n for n in range(1,num_nodes+1)], columns=[str(end)]).T
+    alert_timeseries=pd.DataFrame(data=alert_timeseries)
+    #checks if file exist, append latest alert; else, write new file
+    if os.path.exists(proc_monitoring_path+"/timeseries_alert/"+colname+proc_monitoring_file):
+        alert_written=pd.read_csv(proc_monitoring_path+"/timeseries_alert/"+colname+proc_monitoring_file,index_col=[0])
+        if alert_timeseries.index.values<str(end):
+            alert_timeseries.to_csv(proc_monitoring_path+"/timeseries_alert/"+colname+proc_monitoring_file,
+                                    sep=',', header=False,mode='a')
+    else:
+        alert_timeseries.to_csv(proc_monitoring_path+"/timeseries_alert/"+colname+proc_monitoring_file,
+                                sep=',', header=False,mode='a')        
+    
     #setting ts and node_ID as indices
     alert_out=alert_out.set_index(['ts','node_ID'])
-
-    #checking if alert is already written, else write to csv
-    alert_written=pd.read_csv(proc_monitoring_path+"/alerts/"+colname+proc_monitoring_file,
-                          names=['ts','id','nd','xzd','xyd','d','xzv','xyv','v','na','cola'],index_col=[1])
-    if alert_written.ts.values[-1]<str(end):
+    #checks if file exist, append latest alert; else, write new file
+    if os.path.exists(proc_monitoring_path+"/alerts/"+colname+proc_monitoring_file):
+        alert_written=pd.read_csv(proc_monitoring_path+"/alerts/"+colname+proc_monitoring_file,
+                                  names=temp_name_alert,index_col=[1])
+        if alert_written.ts.values[-1]<str(end):
+            alert_out.to_csv(proc_monitoring_path+"/alerts/"+colname+proc_monitoring_file,
+                             sep=',', header=False,mode='a')
+    else:
         alert_out.to_csv(proc_monitoring_path+"/alerts/"+colname+proc_monitoring_file,
                          sep=',', header=False,mode='a')
-
+    
     return alert_out
     
 def plot_column_positions(colname,x,xz,xy):
@@ -362,6 +380,7 @@ purged_file_headers = cfg.get('I/O','purged_file_headers').split(',')
 monitoring_file_headers = cfg.get('I/O','monitoring_file_headers').split(',')
 LastGoodData_file_headers = cfg.get('I/O','LastGoodData_file_headers').split(',')
 proc_monitoring_file_headers = cfg.get('I/O','proc_monitoring_file_headers').split(',')
+temp_name_alert = cfg.get('I/O','temp_name_alert').split(',')
 
 #ALERT CONSTANTS
 T_disp = cfg.getfloat('I/O','T_disp')  #m
@@ -389,7 +408,7 @@ sensors=pd.read_csv(columnproperties_path+columnproperties_file,names=columnprop
 
 print "Generating plots and alerts for:"
 for s in range(len(sensors)):
-    if s!=7: continue
+    #if s!=7: continue
     #3. getting current column properties
     colname,num_nodes,seg_len=sensors['colname'][s],sensors['num_nodes'][s],sensors['seg_len'][s]
 
