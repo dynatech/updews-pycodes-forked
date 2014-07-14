@@ -28,11 +28,26 @@ def SenslopeDBConnect(nameDB):
 def PrintOut(line):
     if printtostdout:
         print line
-		
-def CreateTable(table_name, nameDB):
+
+def GetLatestTimestamp(nameDb, table):
     db = MySQLdb.connect(host = Hostdb, user = Userdb, passwd = Passdb)
     cur = db.cursor()
-    cur.execute("CREATE DATABASE IF NOT EXISTS %s" %nameDB)
+    #cur.execute("CREATE DATABASE IF NOT EXISTS %s" %nameDB)
+    try:
+        cur.execute("select max(timestamp) from %s.%s" %(nameDb,table))
+    except:
+        print "Error in getting maximum timstamp"
+
+    a = cur.fetchall()
+    if a:
+        return a[0][0]
+    else:
+        return ''
+		
+def CreateAccelTable(table_name, nameDB):
+    db = MySQLdb.connect(host = Hostdb, user = Userdb, passwd = Passdb)
+    cur = db.cursor()
+    #cur.execute("CREATE DATABASE IF NOT EXISTS %s" %nameDB)
     cur.execute("USE %s"%nameDB)
     cur.execute("CREATE TABLE IF NOT EXISTS %s(timestamp datetime, id int, xvalue int, yvalue int, zvalue int, mvalue int, PRIMARY KEY (timestamp, id))" %table_name)
     db.close()
