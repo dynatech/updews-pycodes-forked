@@ -80,13 +80,14 @@ def node_alert(colname, xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_v
     #adding node IDs
     alert['node_ID']=[n for n in range(1,1+num_nodes)]
     alert=alert.set_index('node_ID')
-    
 
     #checking for nodes with no data
     LastGoodData=pd.read_csv(LastGoodData_path+colname+LastGoodData_file,names=LastGoodData_file_headers,parse_dates=[0],index_col=[1])
     LastGoodData=LastGoodData[:num_nodes]
     cond = np.asarray((LastGoodData.ts<valid_data))
-    cond = cond[::-1]
+    if len(LastGoodData)<num_nodes:
+        x=np.ones(num_nodes-len(LastGoodData),dtype=bool)
+        cond=np.append(cond,x)
     alert['ND']=np.where(cond,
                          
                          #No data within valid date 
@@ -94,11 +95,11 @@ def node_alert(colname, xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_v
                          
                          #Data present within valid date
                          np.ones(len(alert)))
-
+    
     #evaluating net displacements within real-time window
     alert['xz_disp']=np.round(xz_tilt.values[-1]-xz_tilt.values[0], 3)
     alert['xy_disp']=np.round(xy_tilt.values[-1]-xy_tilt.values[0], 3)
-
+    
     #checking if displacement threshold is exceeded in either axis
     cond = np.asarray((np.abs(alert['xz_disp'].values)>T_disp, np.abs(alert['xy_disp'].values)>T_disp))
     alert['disp_alert']=np.where(np.any(cond, axis=0),
