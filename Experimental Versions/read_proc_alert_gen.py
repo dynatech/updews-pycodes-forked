@@ -221,9 +221,12 @@ def alert_generation(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velA1, T_v
     #setting ts and node_ID as indices
     alert_out=alert_out.set_index(['ts','node_ID'])
 
-    #writing to csv
-    alert_out.to_csv(proc_monitoring_path+"/alerts/"+colname+proc_monitoring_file,
-                  sep=',', header=False,mode='a')
+    #checking if alert is already written, else write to csv
+    alert_written=pd.read_csv(proc_monitoring_path+"/alerts/"+colname+proc_monitoring_file,
+                          names=['ts','id','nd','xzd','xyd','d','xzv','xyv','v','na','cola'],index_col=[1])
+    if alert_written.ts.values[-1]<str(end):
+        alert_out.to_csv(proc_monitoring_path+"/alerts/"+colname+proc_monitoring_file,
+                         sep=',', header=False,mode='a')
 
     return alert_out
     
@@ -344,7 +347,7 @@ columnproperties_path = cfg.get('I/O','ColumnPropertiesPath')
 purged_path = cfg.get('I/O','InputFilePath')
 monitoring_path = cfg.get('I/O','MonitoringPath')
 LastGoodData_path = cfg.get('I/O','LastGoodData')
-proc_monitoring_path = cfg.get('I/O','OutputFilePathMonitoring')
+proc_monitoring_path = cfg.get('I/O','OutputFilePathMonitoring2')
 
 #file names
 columnproperties_file = cfg.get('I/O','ColumnProperties')
@@ -386,7 +389,7 @@ sensors=pd.read_csv(columnproperties_path+columnproperties_file,names=columnprop
 
 print "Generating plots and alerts for:"
 for s in range(len(sensors)):
-
+    if s!=7: continue
     #3. getting current column properties
     colname,num_nodes,seg_len=sensors['colname'][s],sensors['num_nodes'][s],sensors['seg_len'][s]
 
@@ -423,7 +426,7 @@ for s in range(len(sensors)):
     #10. Alert generation
     alert_out=alert_generation(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velA1, T_velA2, k_ac_ax,
                                num_nodes_to_check,end,proc_monitoring_path,proc_monitoring_file)
-    
+    #print alert_out
 
     #11. Plotting column positions
     #plot_column_positions(colname,cs_x,cs_xz_0,cs_xy_0)
