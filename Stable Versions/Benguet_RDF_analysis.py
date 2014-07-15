@@ -50,7 +50,8 @@ def fA(df,df2,site):
 
 def compute_plot_RDF(T,D,A):
     R= A[0]* (T**A[1]) * (D**A[2])
-    plt.plot(R,T,'.-', label=str(D)+"-day")
+    return R
+   
         
     
 
@@ -58,20 +59,27 @@ reg_rdf=pd.read_csv('Benguet_RDF_regional.csv',header=0, index_col=0)
 rain_dat=pd.read_csv('Benguet_rainfall_data.csv',header=0, index_col=0, dtype={'B0':np.float64})
 plt.close('all')
 for site in rain_dat.index[-5:-1]:
-    plt.figure()
-    plt.title(site)
-    plt.ylabel('Return period, T, (years)')
-    plt.xlabel('Total rainfall, R, (mm)')
+    
                
     MAP=fMAP(reg_rdf,rain_dat,site)
-    print site,MAP,
+    print site,
     A=fA(reg_rdf,rain_dat,site)
-    print A
-    T=np.asarray([0.5,1,2,5,10,20,50,100,200,500]) #return period in years
-    for D in [1,2,3]:  #rainfall duration in days
-        compute_plot_RDF(T,D,A)
-    plt.loglog()
+    print A[0],A[1],A[2],MAP
+    D=np.linspace(1/24.,3,24*3+2) #rainfall duration in days
+
+
+    plt.figure()
+    plt.title(site)
+    plt.xlabel('Rainfall duration, D, (hours)')
+    plt.ylabel('Rainfall mean intensity, I, (mm/hour)')
+    for T in [0.5,1,2,5,10]:  #return period in years
+        R=compute_plot_RDF(T,D,A)
+        plt.plot(D*24.,R/(D*24.),'-', label=str(T)+"-year")
+
+    
+        
+    plt.semilogy()
     plt.legend(fontsize='x-small')
     plt.grid(b=None, which='both', axis='both')
-plt.show()
+    plt.show()
     
