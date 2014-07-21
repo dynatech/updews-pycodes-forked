@@ -8,14 +8,10 @@
 InputFilePath = C:\Users\acer\Dropbox\Senslope Data\Purged\New\
 MonitoringPath = C:\Users\acer\Dropbox\Senslope Data\Purged\Monitoring\
 OutputFilePathMonitoring = C:\Users\acer\Dropbox\Senslope Data\Proc2\Monitoring\
-OutputFilePathMonitoring2 = C:\Users\acer\Dropbox\Trials 2\ProcMon\
-OutputFilePath = C:\Users\acer\Dropbox\Python Stuff\csv\whole_data\\
-CSVOutputFilePath = C:\Users\acer\Dropbox\Python Stuff\csv\whole_data\\ 
-
+OutputFilePathMonitoring2 = C:\Users\acer\Dropbox\Trials 2\ProcMon\			; file path for Piere's local directory when testing codes, instead of editing/overwriting Senslope Data files
 
 CSVOutputFile = Node-level_alerts.csv
-PrintFigures = False
-OutputFigurePath = C:\Users\acer\Dropbox\Python Stuff\FiguresForUpload\\
+PrintFigures = False									; not being used in present code
 LastGoodData = C:\Users\acer\Dropbox\Senslope Data\Purged\LastGoodData\
 ColumnPropertiesPath = C:\Users\acer\Desktop\updews-pycodes\Stable Versions\
  
@@ -31,11 +27,11 @@ CSVFormat=.csv
 #############################
 ###    ALERT CONSTANTS    ###
 #############################
-T_disp=0.05 			;IN METERS
-T_velA1=0.005			;IN METERS/DAY
-T_velA2=0.5 			;IN METERS/DAY
-k_ac_ax=0.1			;PERCENT
-num_nodes_to_check=5		;NUMBER OF NODES TO CHECK BEFORE CALLING COLUMN ALERT LEVEL 1 OR 2
+T_disp=0.05 			;Treshold displacement value for alert 1 (in meters)
+T_velA1=0.005			;Treshold velocity value for alert level 1 (in meters/day)
+T_velA2=0.5 			;Treshold velocity value for alert level 2 (in meters/day)
+k_ac_ax=0.1			;minimum value velocity of axis across maximum velocity to consider movement as valid (in percent)
+num_nodes_to_check=5		;number of nodes to check before calling column alert level 1 or 2
 
  
 ############################
@@ -47,7 +43,7 @@ purged_file_headers=ts,id,x,y,z,m
 monitoring_file_headers=ts,id,x,y,z,m
 LastGoodData_file_headers=ts,id,x,y,z,m
 proc_monitoring_file_headers=ts,id,xz,xy,m
-alerteval_colarrange=node_ID,ND,xz_disp,xy_disp,disp_alert,min_vel,max_vel,vel_alert,node_alert
+alerteval_colarrange=id,ND,xz_disp,xy_disp,disp_alert,min_vel,max_vel,vel_alert,node_alert
  
 ############################
 ###        OTHERS        ###
@@ -57,5 +53,5 @@ data_dt=0.5			;time interval between data points, in hours
 rt_window_length=3.		;length of real-time monitoring window, in days
 roll_window_length=3.		;length of rolling/moving window operations in hours
 num_roll_window_ops=2		;number of rolling window operations in the whole monitoring analysis
-col_pos_interval='1D'    ; string expression indicating interval between two adjacent column position dates ex: '1D'= 1 day
-num_col_pos=4            ; number of column position dates to plot 
+col_pos_interval='1D'    	; string expression indicating interval between two adjacent column position dates ex: '1D'= 1 day
+num_col_pos=4            	; number of column position dates to plot 
