@@ -219,20 +219,23 @@ def alert_generation(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velA1, T_v
 
     #adding 'ts' 
     alert_out['ts']=end
-    print alert_out
-    #ceating timeseries alert
-    
     
     #setting ts and node_ID as indices
     alert_out=alert_out.set_index(['ts','node_ID'])
+    timeseries_alert=alert_out.iloc[:,-2:]
     #checks if file exist, append latest alert; else, write new file
     if os.path.exists(proc_monitoring_path+"/alerts/"+colname+proc_monitoring_file):
-        alert_written=pd.read_csv(proc_monitoring_path+"/alerts/"+colname+proc_monitoring_file, header=None, usecols=[0])
-        if alert_written.values[-1]<str(end):
+        alert_written=pd.read_csv(proc_monitoring_path+"/alerts/"+colname+proc_monitoring_file, header=None)
+        check_time=pd.Series(alert_written[0])
+        if check_time.values[-1]<str(end):
             alert_out.to_csv(proc_monitoring_path+"/alerts/"+colname+proc_monitoring_file,
+                             sep=',', header=False,mode='a')
+            timeseries_alert.to_csv(proc_monitoring_path+"/timeseries_alert/"+colname+proc_monitoring_file,
                              sep=',', header=False,mode='a')
     else:
         alert_out.to_csv(proc_monitoring_path+"/alerts/"+colname+proc_monitoring_file,
+                         sep=',', header=False,mode='a')
+        timeseries_alert.to_csv(proc_monitoring_path+"/timeseries_alert/"+colname+proc_monitoring_file,
                          sep=',', header=False,mode='a')
     
     return alert_out
