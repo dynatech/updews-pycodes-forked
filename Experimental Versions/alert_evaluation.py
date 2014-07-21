@@ -78,8 +78,8 @@ def node_alert(colname, xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_v
     alert=pd.DataFrame(data=None)
 
     #adding node IDs
-    alert['node_ID']=[n for n in range(1,1+num_nodes)]
-    alert=alert.set_index('node_ID')
+    alert['id']=[n for n in range(1,1+num_nodes)]
+    alert=alert.set_index('id')
 
     #checking for nodes with no data
     LastGoodData=pd.read_csv(LastGoodData_path+colname+LastGoodData_file,names=LastGoodData_file_headers,parse_dates=[0],index_col=[1])
@@ -226,7 +226,7 @@ def column_alert(alert, num_nodes_to_check):
 
     alert['node_alert']=alert['node_alert'].map({0:'a0',1:'a1',2:'a2'})
     alert['col_alert']=alert['col_alert'].map({-1:'nd',0:'a0',1:'a1',2:'a2'})
-    
+
     return alert
             
 
