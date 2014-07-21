@@ -143,13 +143,14 @@ def compute_node_inst_vel(xz,xy,roll_window_numpts):
     vel_xz=pd.DataFrame(data=None, index=xz.index[roll_window_numpts-1:])
     vel_xy=pd.DataFrame(data=None, index=xy.index[roll_window_numpts-1:])
 
+
     #performing moving window linear regression
     num_nodes=len(xz.columns.tolist())
     for n in range(1,1+num_nodes):
         try:
             lr_xz=ols(y=xz[n],x=td,window=roll_window_numpts,intercept=True)
             lr_xy=ols(y=xy[n],x=td,window=roll_window_numpts,intercept=True)
-        
+       
             vel_xz[n]=np.round(lr_xz.beta.x.values,4)
             vel_xy[n]=np.round(lr_xy.beta.x.values,4)
         except:
@@ -219,27 +220,13 @@ def alert_generation(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velA1, T_v
     #adding 'ts' 
     alert_out['ts']=end
 
-    #creating timeseries data of alert per column
-    x=np.asarray(alert_out['col_alert'])
-    alert_timeseries=pd.DataFrame(data=x, index=[n for n in range(1,num_nodes+1)], columns=[str(end)]).T
-    alert_timeseries=pd.DataFrame(data=alert_timeseries)
-    #checks if file exist, append latest alert; else, write new file
-    if os.path.exists(proc_monitoring_path+"/timeseries_alert/"+colname+proc_monitoring_file):
-        alert_written=pd.read_csv(proc_monitoring_path+"/timeseries_alert/"+colname+proc_monitoring_file,index_col=[0])
-        if alert_timeseries.index.values<str(end):
-            alert_timeseries.to_csv(proc_monitoring_path+"/timeseries_alert/"+colname+proc_monitoring_file,
-                                    sep=',', header=False,mode='a')
-    else:
-        alert_timeseries.to_csv(proc_monitoring_path+"/timeseries_alert/"+colname+proc_monitoring_file,
-                                sep=',', header=False,mode='a')        
     
     #setting ts and node_ID as indices
     alert_out=alert_out.set_index(['ts','node_ID'])
     #checks if file exist, append latest alert; else, write new file
     if os.path.exists(proc_monitoring_path+"/alerts/"+colname+proc_monitoring_file):
-        alert_written=pd.read_csv(proc_monitoring_path+"/alerts/"+colname+proc_monitoring_file,
-                                  names=temp_name_alert,index_col=[1])
-        if alert_written.ts.values[-1]<str(end):
+        alert_written=pd.read_csv(proc_monitoring_path+"/alerts/"+colname+proc_monitoring_file, header=None, usecols=[0])
+        if alert_written.values[-1]<str(end):
             alert_out.to_csv(proc_monitoring_path+"/alerts/"+colname+proc_monitoring_file,
                              sep=',', header=False,mode='a')
     else:
@@ -332,9 +319,6 @@ def df_add_offset_col(df,offset):
     return np.round(df,4)
         
     
-    
-
-
 
 cfg = ConfigParser.ConfigParser()
 cfg.read('IO-config.txt')    
@@ -403,6 +387,8 @@ genproc.generate_proc()
 #1. setting monitoring window
 roll_window_numpts, end, start, offsetstart, monwin = set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_window_ops)
 
+print start
+print end
 #2. getting all column properties
 sensors=pd.read_csv(columnproperties_path+columnproperties_file,names=columnproperties_headers,index_col=None)
 
@@ -445,7 +431,7 @@ for s in range(len(sensors)):
     #10. Alert generation
     alert_out=alert_generation(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velA1, T_velA2, k_ac_ax,
                                num_nodes_to_check,end,proc_monitoring_path,proc_monitoring_file)
-    #print alert_out
+    print alert_out
 
     #11. Plotting column positions
     #plot_column_positions(colname,cs_x,cs_xz_0,cs_xy_0)

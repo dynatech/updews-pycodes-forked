@@ -48,7 +48,6 @@ monitoring_file_headers=ts,id,x,y,z,m
 LastGoodData_file_headers=ts,id,x,y,z,m
 proc_monitoring_file_headers=ts,id,xz,xy,m
 alerteval_colarrange=node_ID,ND,xz_disp,xy_disp,disp_alert,min_vel,max_vel,vel_alert,node_alert
-temp_name_alert=ts,id,nd,xzd,xyd,d,xzv,xyv,v,na,cola
  
 ############################
 ###        OTHERS        ###
