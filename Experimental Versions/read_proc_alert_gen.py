@@ -219,7 +219,9 @@ def alert_generation(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velA1, T_v
 
     #adding 'ts' 
     alert_out['ts']=end
-
+    print alert_out
+    #ceating timeseries alert
+    
     
     #setting ts and node_ID as indices
     alert_out=alert_out.set_index(['ts','node_ID'])
@@ -364,7 +366,6 @@ purged_file_headers = cfg.get('I/O','purged_file_headers').split(',')
 monitoring_file_headers = cfg.get('I/O','monitoring_file_headers').split(',')
 LastGoodData_file_headers = cfg.get('I/O','LastGoodData_file_headers').split(',')
 proc_monitoring_file_headers = cfg.get('I/O','proc_monitoring_file_headers').split(',')
-temp_name_alert = cfg.get('I/O','temp_name_alert').split(',')
 
 #ALERT CONSTANTS
 T_disp = cfg.getfloat('I/O','T_disp')  #m
@@ -431,7 +432,7 @@ for s in range(len(sensors)):
     #10. Alert generation
     alert_out=alert_generation(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velA1, T_velA2, k_ac_ax,
                                num_nodes_to_check,end,proc_monitoring_path,proc_monitoring_file)
-    print alert_out
+    #print alert_out
 
     #11. Plotting column positions
     #plot_column_positions(colname,cs_x,cs_xz_0,cs_xy_0)
