@@ -5,15 +5,15 @@
 ###   LOCAL FILE PATH    ###
 ############################
  
-InputFilePath = C:\Users\acer\Dropbox\Senslope Data\Purged\New\
-MonitoringPath = C:\Users\acer\Dropbox\Senslope Data\Purged\Monitoring\
-OutputFilePathMonitoring = C:\Users\acer\Dropbox\Senslope Data\Proc2\Monitoring\
-OutputFilePathMonitoring2 = C:\Users\acer\Dropbox\Trials 2\ProcMon\			; file path for Piere's local directory when testing codes, instead of editing/overwriting Senslope Data files
+InputFilePath = D:Dropbox\Senslope Data\Purged\New\
+MonitoringPath =D:Dropbox\Senslope Data\Purged\Monitoring\
+OutputFilePathMonitoring = D:Dropbox\Senslope Data\Proc2\Monitoring\
+
 
 CSVOutputFile = Node-level_alerts.csv
 PrintFigures = False									; not being used in present code
-LastGoodData = C:\Users\acer\Dropbox\Senslope Data\Purged\LastGoodData\
-ColumnPropertiesPath = C:\Users\acer\Desktop\updews-pycodes\Stable Versions\
+LastGoodData = D:Dropbox\Senslope Data\Purged\LastGoodData\
+ColumnPropertiesPath = C:\Users\windows user\Desktop\Node Alert Workfolder\Stable Versions\
  
  
 ############################
