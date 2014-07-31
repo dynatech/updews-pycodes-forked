@@ -123,25 +123,21 @@ def GetSensorList():
         cur.execute("use "+ Namedb)
         
         query = 'SELECT name, num_nodes, seg_length FROM site_column_props inner join site_column on site_column_props.s_id=site_column.s_id'
-        #try:
-        cur.execute(query)
-        #except:
-        #print '>> Error parsing database'
         
-        data = cur.fetchall()
+        df = psql.read_sql(query, db)
+
+        df.to_csv("column_properties.csv",index=False,header=False);
         
         # make a sensor list of columnArray class functions
         sensors = []
-        for entry in data:
-            s = columnArray(entry[0],int(entry[1]),float(entry[2]))
+        for s in range(len(df)):
+            s = columnArray(df.name[s],df.num_nodes[s],df.seg_length[s])
             sensors.append(s)
         
         return sensors
     except:
-        print '>> Error getting list from database'
-        return ''
-
-    
+        raise ValueError('Could not get sensor list from database')
+            
 # import values from config file
 configFile = "server-config.txt"
 cfg = ConfigParser.ConfigParser()
