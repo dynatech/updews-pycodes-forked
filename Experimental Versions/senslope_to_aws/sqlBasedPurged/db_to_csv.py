@@ -59,7 +59,7 @@ def extractDBToSQL(table):
     print 'filename parsed = ' + fileName + '\n'
 
     #mysqldump -t -u root -pirc311 senslopedb labb --where="timestamp > '2014-06-19 17:44'" > D:\labb.sql
-    winCmd = 'mysqldump -t -u root -pirc311 senslopedb ' + table + ' --where="timestamp > \'' + TSstart + '\'" > ' + fileName;
+    winCmd = 'mysqldump -t -u root -pirc311 senslopedb_purged ' + table + ' --where="timestamp > \'' + TSstart + '\'" > ' + fileName;
 
     print 'winCmd = ' + winCmd + '\n'
 
