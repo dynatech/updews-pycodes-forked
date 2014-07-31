@@ -92,13 +92,21 @@ def GetRawColumnData(siteid = "", fromTime = "", maxnode = 40):
     if printtostdout:
         PrintOut('Querying database ...')
 
+    # adjust out of bounds limits for xvalue mainly
+    boundsQuery = "select timestamp, id, \
+                  if((xvalue<(1126-4096))&(xvalue>(1024-4096)),xvalue+4096,xvalue) xvalue, \
+                  if((yvalue<(1126-4096))&(yvalue>(1024-4096)),yvalue+4096,yvalue) yvalue, \
+                  if((zvalue<(1126-4096))&(zvalue>(1024-4096)),zvalue+4096,zvalue) zvalue, \
+                  mvalue from senslopedb.%s" % (siteid)
+
+    # nullify all other values once an invalid value is detected
     cond = "(xvalue < %s or abs(yvalue) > %s or abs(zvalue) > %s)" % (xlim,ylim,zlim)
     query = "select timestamp, id, \
             if(%s, null, xvalue) xvalue, \
             if(%s, null, yvalue) yvalue, \
             if(%s, null, zvalue) zvalue, \
             if(mvalue < %s or mvalue > %s, null, mvalue) mvalue \
-            from senslopedb.%s" % (cond,cond,cond,mlowlim,muplim,siteid)
+            from (%s) q2" % (cond,cond,cond,mlowlim,muplim,boundsQuery)
     
     query = "select * from (%s) query1 where (xvalue is not null or mvalue is not null)" % query
 

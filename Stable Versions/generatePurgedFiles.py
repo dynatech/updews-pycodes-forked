@@ -172,10 +172,7 @@ def GenerateLastGoodData(site, df):
     ixs = []
     # cycle through all unique node ids and get the latest data per node
     for nid in np.sort(df.id.unique()):
-
-
         ixs.append(df[df.id == nid]['ts'].idxmax())
-        
 
     # create a copy of the data with lgd indexes
     dflgd1 = df.ix[ixs]
@@ -206,28 +203,36 @@ def GenPurgedFiles():
     sites = GetSensorList()
 
     for site in sites:
-
         siteid = site.name
-        print siteid, 
+        print siteid,
 
-        st = time.clock()
-        df = GetRawColumnData(siteid,'',site.nos)
-        #df = ConvertToDf(data)
-        print time.clock() - st
-        df = PurgeNonAlignedEntries(df)
+        try:
+            # get the latest timestamp in the purged file
+            dfl = pd.read_csv(PurgedFP + siteid + ".csv", names=['ts','id','x','y','z','m'])
+            latestTSinPurged = dfl.ts.iloc[-1]  
+        except IOError:
+            print 'Empty purged file'
+            latestTSinPurged = ''
+
+        data = GetRawColumnData(siteid,latestTSinPurged,site.nos)
+
+        df = PurgeNonAlignedEntries(data)
 
         if siteid=='sinb':
             df = FixOneBitChange(df)
 
-        df.to_csv(PurgedFP + siteid + ".csv", index=False, header=False, float_format='%.0f')
+        # do not change lgd file if no new data has been collected
+        if len(df)>0:
 
-        dflgd = GenerateLastGoodData(site,df)
-        dflgd.to_csv(LastGoodDataFP + siteid + ".csv", index=False, header=False, float_format='%.0f')
+            df.to_csv(PurgedFP + siteid + ".csv", index=False, header=False, float_format='%.0f',mode='a')
+
+            dflgd = GenerateLastGoodData(site,df)
+            dflgd.to_csv(LastGoodDataFP + siteid + ".csv", index=False, header=False, float_format='%.0f')
 
         print 'done'
 
 def GenerateMonitoringPurgedFiles():
-    print 'Generating purged files:'
+    print 'Generating monitoring purged files:'
 
 	# get a list of columnArray classes
     sites = GetSensorList()
@@ -236,7 +241,7 @@ def GenerateMonitoringPurgedFiles():
         siteid = site.name
         print siteid, 
 
-        ft = dt.now()- tda(days=moninterval)
+        ft = dt.now() - tda(days=moninterval)
         data = GetRawColumnData(siteid, ft.strftime("%Y-%m-%d %H:%M:%S"), site.nos)
 
         df = PurgeNonAlignedEntries(data)
@@ -254,9 +259,11 @@ def GenerateMonitoringPurgedFiles():
 
 
 def main():
+    
     while True:
-        GenerateMonitoringPurgedFiles()
         GenPurgedFiles()
+        GenerateMonitoringPurgedFiles()
+        
 
         time.sleep(ReturnNextReportTime(30))
     

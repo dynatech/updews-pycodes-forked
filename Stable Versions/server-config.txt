@@ -26,7 +26,7 @@ xmax = 1200
 mlowlim = 2000
 muplim = 4000
 cutoff = 0.08
-moninterval = 6
+moninterval = 15
 
 [Filter Args]
 window = 101
