@@ -432,6 +432,10 @@ def main():
                                                                                                                proc_monitoring_path,
                                                                                                                proc_monitoring_file)
         #10. Alert generation
+        xz=xz[(xz.index>=end-timedelta(days=3))]  #sorry, hard-coded value again
+        xy=xy[(xz.index>=end-timedelta(days=3))]
+        vel_xz=vel_xz[(xz.index>=end-timedelta(days=3))]
+        vel_xy=vel_xy[(xz.index>=end-timedelta(days=3))]
         alert_out=alert_generation(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velA1, T_velA2, k_ac_ax,
                                    num_nodes_to_check,end,proc_monitoring_path,proc_monitoring_file)
         #print alert_out
