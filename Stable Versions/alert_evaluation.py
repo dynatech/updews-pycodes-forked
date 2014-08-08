@@ -196,22 +196,23 @@ def column_alert(alert, num_nodes_to_check):
                     #proceeding if data is available within set valid date
                     if alert['ND'].values[j-1]!=0:
                         #current adjacent node alert assumes value of current node alert
+                        col_node.append(i-1)
                         col_alert.append(alert['node_alert'].values[i-1])
                         break
                     else:
                         #current adjacent node alert has no data
                         adj_node_alert.append(-1)
-                        
-                        if j==adj_node_ind[-1]:
-                            col_alert.append(max(adj_node_alert))
                     
                 else:
                     if alert['ND'].values[j-1]!=0:
-                        col_node.append(i-1)
-                        col_alert.append(0)
+                        adj_node_alert.append(0)
+               
                     else:
-                        col_node.append(i-1)
-                        col_alert.append(-1)
+                        adj_node_alert.append(-1)
+
+                if j==adj_node_ind[-1]:
+                    col_alert.append(max(adj_node_alert))
+               
         else:
             col_node.append(i-1)
             if alert['ND'].values[i-1]==0:
