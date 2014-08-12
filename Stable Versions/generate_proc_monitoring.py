@@ -80,10 +80,7 @@ def generate_proc():
 
             #5. extracting data within monitoring window
             monitoring=monitoring[(monitoring.ts>=offsetstart)&(monitoring.ts<=end)]
-
-            #6.replacing Nan values with 1023 for x and 0 for y,z,moi
-            monitoring['x']=monitoring['x'].fillna(value=1023)
-            monitoring=monitoring.fillna(value=0)
+            
             
             #7. importing LastGoodData csv file of current column to dataframe
             LastGoodData=pd.read_csv(LastGoodData_path+colname+LastGoodData_file,names=LastGoodData_file_headers,parse_dates=[0],index_col=[1])
