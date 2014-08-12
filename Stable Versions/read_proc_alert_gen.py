@@ -49,16 +49,17 @@ def create_series_list(input_df,monwin,colname,num_nodes):
         curxy=input_df.loc[input_df.id==n,['xy']]
         curm=input_df.loc[input_df.id==n,['m']]  
         #d.resampling node series to 30-min exact intervals
-        try:
+        finite_data=np.sum(np.where(np.isfinite(curxz.values))[0])
+        if finite_data>0:
             curxz=curxz.resample('30Min',how='mean',base=0)
             curxy=curxy.resample('30Min',how='mean',base=0)
             curm=curm.resample('30Min',how='mean',base=0)
-        except:
+        else:
             print colname, n, "ERROR missing node data"
-            #zeroing tilt data if node data is missing
+            #zeroing tilt and moisture data if node data is missing
             curxz=pd.DataFrame(data=np.zeros(len(monwin)), index=monwin.index)
             curxy=pd.DataFrame(data=np.zeros(len(monwin)), index=monwin.index)
-            curm=pd.DataFrame(data=2500*np.zeros(len(monwin)), index=monwin.index)      
+            curm=pd.DataFrame(data=np.zeros(len(monwin)), index=monwin.index)     
         #5e. appending node series to list
         xz_series_list.append(curxz)
         xy_series_list.append(curxy)
@@ -92,7 +93,7 @@ def create_fill_smooth_df(series_list,num_nodes,monwin, roll_window_numpts, to_f
     #returning rounded-off values within monitoring window
     return np.round(df[(df.index>=monwin.index[0])&(df.index<=monwin.index[-1])],4)
 
-def compute_col_pos(xz,xy,col_pos_end, col_pos_interval, col_pos_number):
+def compute_col_pos(xz,xy,col_pos_end, col_pos_interval, col_pos_number, seg_len):
 
     #computing x from xz and xy
     x=pd.DataFrame(data=None,index=xz.index)
@@ -423,7 +424,7 @@ def main():
         vel_xz, vel_xy = compute_node_inst_vel(xz,xy,roll_window_numpts)
         
         #8. computing cumulative displacements
-        cs_x, cs_xz, cs_xy=compute_col_pos(xz,xy,monwin.index[-1], col_pos_interval, col_pos_num)
+        cs_x, cs_xz, cs_xy=compute_col_pos(xz,xy,monwin.index[-1], col_pos_interval, col_pos_num, seg_len)
         
         #9. processing dataframes for output
         xz,xy,xz_0off,xy_0off,vel_xz,vel_xy, vel_xz_0off, vel_xy_0off,cs_x,cs_xz,cs_xy,cs_xz_0,cs_xy_0 = df_to_out(colname,xz,xy,
