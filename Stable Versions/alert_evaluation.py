@@ -192,7 +192,7 @@ def column_alert(alert, num_nodes_to_check):
             adj_node_alert=[]
             for j in adj_node_ind:
                 #comparing current adjacent node velocity with current node velocity
-                if abs(alert['max_vel'].values[j-1])>=abs(alert['max_vel'].values[i-1])*1/(2.**abs(s)):
+                if abs(alert['max_vel'].values[j-1])>=abs(alert['max_vel'].values[i-1])*1/(2.**abs(i-j)):
                     #proceeding if data is available within set valid date
                     if alert['ND'].values[j-1]!=0:
                         #current adjacent node alert assumes value of current node alert
