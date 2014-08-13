@@ -189,29 +189,7 @@ def column_alert(alert, num_nodes_to_check):
                 if i+s<=len(alert): adj_node_ind.append(i+s)
 
             #looping through adjacent nodes to validate current node alert
-            adj_node_alert=[]
-            for j in adj_node_ind:
-                #comparing current adjacent node velocity with current node velocity
-                if abs(alert['max_vel'].values[j-1])>=abs(alert['max_vel'].values[i-1])*1/(2.**abs(i-j)):
-                    #proceeding if data is available within set valid date
-                    if alert['ND'].values[j-1]!=0:
-                        #current adjacent node alert assumes value of current node alert
-                        col_node.append(i-1)
-                        col_alert.append(alert['node_alert'].values[i-1])
-                        break
-                    else:
-                        #current adjacent node alert has no data
-                        adj_node_alert.append(-1)
-                    
-                else:
-                    if alert['ND'].values[j-1]!=0:
-                        adj_node_alert.append(0)
-               
-                    else:
-                        adj_node_alert.append(-1)
-
-                if j==adj_node_ind[-1]:
-                    col_alert.append(max(adj_node_alert))
+            check_adj(adj_node_ind, alert, i, col_node, col_alert)
                
         else:
             col_node.append(i-1)
@@ -227,6 +205,58 @@ def column_alert(alert, num_nodes_to_check):
 
     return alert
             
+def check_adj(adj_node_ind, alert, i, col_node, col_alert):
 
+    adj_node_alert=[]
+    for j in adj_node_ind:
+        if alert['max_vel'].values[i-1]!=0:
+            #comparing current adjacent node velocity with current node velocity
+            if abs(alert['max_vel'].values[j-1])>=abs(alert['max_vel'].values[i-1])*1/(2.**abs(i-j)):
+                #proceeding if data is available within set valid date
+                if alert['ND'].values[j-1]!=0:
+                    #current adjacent node alert assumes value of current node alert
+                    col_node.append(i-1)
+                    col_alert.append(alert['node_alert'].values[i-1])
+                    break
+                else:
+                    #current adjacent node alert has no data
+                    adj_node_alert.append(-1)
+                
+            else:
+                if alert['ND'].values[j-1]!=0:
+                    adj_node_alert.append(0)
+                else:
+                    adj_node_alert.append(-1)
+        else:
+            check_pl_cur=abs(alert['xz_disp'].values[i-1])>=abs(alert['xy_disp'].values[i-1])
+
+            if check_pl_cur==True:
+                max_disp_cur=abs(alert['xz_disp'].values[i-1])
+                max_disp_adj=abs(alert['xz_disp'].values[j-1])
+            else:
+                max_disp_cur=abs(alert['xy_disp'].values[i-1])
+                max_disp_adj=abs(alert['xy_disp'].values[j-1])        
+
+            if max_disp_adj>=max_disp_cur*1/(2.**abs(i-j)):
+                #proceeding if data is available within set valid date
+                if alert['ND'].values[j-1]!=0:
+                    #current adjacent node alert assumes value of current node alert
+                    col_node.append(i-1)
+                    col_alert.append(alert['node_alert'].values[i-1])
+                    break
+                else:
+                    #current adjacent node alert has no data
+                    adj_node_alert.append(-1)
+                
+            else:
+                if alert['ND'].values[j-1]!=0:
+                    adj_node_alert.append(0)
+                else:
+                    adj_node_alert.append(-1)
+            
+        if j==adj_node_ind[-1]:
+            col_alert.append(max(adj_node_alert))
+
+    return col_alert, col_node
 
 
