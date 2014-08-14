@@ -19,9 +19,9 @@ Printtostdout = True
 
 [Value Limits]
 LimitValues = True
-xlim = 500
-ylim = 500
-zlim = 500
+xlim = 100
+ylim = 1126
+zlim = 1126
 xmax = 1200
 mlowlim = 2000
 muplim = 4000
