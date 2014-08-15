@@ -137,6 +137,33 @@ def GetSensorList():
         return sensors
     except:
         raise ValueError('Could not get sensor list from database')
+
+def GetLastGoodData(sitename):
+    try:
+        db, cur = SenslopeDBConnect(NamedbPurged)
+        cur.execute("use "+ NamedbPurged)
+
+        tblname = "%s.%s" % (NamedbPurged, sitename)
+
+        q1 = """select t.timestamp, t.id, t.xvalue, t.yvalue, t.zvalue from %s t
+inner join( select max(timestamp) mt, id, xvalue, yvalue, zvalue from %s
+where xvalue is not null group by id ) ss
+on t.timestamp = ss.mt and t.id = ss.id""" % (tblname, tblname)
+
+        q2 = """select tm.id, tm.mvalue from %s tm
+inner join( select max(timestamp) mt, id, mvalue from %s
+where mvalue is not null group by id ) ssm
+on tm.timestamp = ssm.mt and tm.id = ssm.id""" % (tblname, tblname)
+
+        query = """select t2.timestamp, t2.id, t2.xvalue, t2.yvalue, t2.zvalue, t3.mvalue
+from (%s) t2 inner join (%s) t3 on t2.id = t3.id;""" % (q1, q2)
+        
+        df = psql.read_sql(query, db)
+        df.columns = ['ts','id','x','y','z','m']
+
+        return df
+    except ValueError:
+        raise ValueError('Could not get last good data')
             
 # import values from config file
 configFile = "server-config.txt"

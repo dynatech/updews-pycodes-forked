@@ -168,18 +168,21 @@ def FixOneBitChange(df):
 
 def GenerateLastGoodData(site, df):
 
-    # create list of latest data indexes
-    ixs = []
-    # cycle through all unique node ids and get the latest data per node
-    for nid in np.sort(df.id.unique()):
-        ixs.append(df[df.id == nid]['ts'].idxmax())
+##    # create list of latest data indexes
+##    ixs = []
+##    # cycle through all unique node ids and get the latest data per node
+##    for nid in np.sort(df.id.unique()):
+##        ixs.append(df[df.id == nid]['ts'].idxmax())
+##
+##    # create a copy of the data with lgd indexes
+##    dflgd1 = df.ix[ixs]
+##    
+##    # replace null values with values corresponding to a
+##    # perfect vertical node
+##    dflgd = dflgd1.replace({'x':{np.nan:1023},'y':{np.nan:0},'z':{np.nan:0},'m':{np.nan:0}})
 
-    # create a copy of the data with lgd indexes
-    dflgd1 = df.ix[ixs]
-    
-    # replace null values with values corresponding to a
-    # perfect vertical node
-    dflgd = dflgd1.replace({'x':{np.nan:1023},'y':{np.nan:0},'z':{np.nan:0},'m':{np.nan:0}})
+    # get last good data from purged database
+    dflgd = GetLastGoodData(site.name)
     
     # below are routines to handle nodes that have no data whatsoever
     # create a list of missing nodes    
@@ -193,7 +196,8 @@ def GenerateLastGoodData(site, df):
     dfd.id = pd.Series(missing)
     # append to the lgd datframe
     dflgd = dflgd.append(dfd).sort(['id'])
-    dflgd[['x','y','z','m']] = dflgd[['x','y','z','m']].astype(int)
+    print dflgd
+    #dflgd[['x','y','z','m']] = dflgd[['x','y','z','m']].astype(int)
 
     return dflgd
 	
@@ -226,8 +230,8 @@ def GenPurgedFiles():
 
             df.to_csv(PurgedFP + siteid + ".csv", index=False, header=False, float_format='%.0f',mode='a')
 
-            dflgd = GenerateLastGoodData(site,df)
-            dflgd.to_csv(LastGoodDataFP + siteid + ".csv", index=False, header=False, float_format='%.0f')
+            #dflgd = GenerateLastGoodData(site,df)
+            #dflgd.to_csv(LastGoodDataFP + siteid + ".csv", index=False, header=False, float_format='%.0f')
 
         print 'done'
 
@@ -249,7 +253,10 @@ def GenerateMonitoringPurgedFiles():
         if siteid=='sinb':
             df = FixOneBitChange(df)
 
-        dflgd = pd.read_csv(LastGoodDataFP + siteid + ".csv", names=['ts','id','x','y','z','m'])
+        dflgd = GenerateLastGoodData(site,df)
+        dflgd.to_csv(LastGoodDataFP + "" + siteid + ".csv", index=False, header=False, float_format='%.0f')
+
+        #dflgd = pd.read_csv(LastGoodDataFP + siteid +  ".csv", names=['ts','id','x','y','z','m'])
 
         # get the missing node data from last good data file
         df = df.append(dflgd.loc[~dflgd.id.isin(df.id.unique())])        
@@ -261,7 +268,7 @@ def GenerateMonitoringPurgedFiles():
 def main():
     
     while True:
-        GenPurgedFiles()
+    #GenPurgedFiles()
         GenerateMonitoringPurgedFiles()
         
 
