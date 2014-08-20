@@ -266,13 +266,7 @@ def GenerateMonitoringPurgedFiles():
 
 
 def main():
-    
-    while True:
-    #GenPurgedFiles()
-        GenerateMonitoringPurgedFiles()
-        
-
-        time.sleep(ReturnNextReportTime(30))
+    GenerateMonitoringPurgedFiles()
     
 if __name__ == '__main__':
     main()

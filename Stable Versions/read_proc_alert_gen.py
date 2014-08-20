@@ -451,10 +451,7 @@ def main():
 
 
 if __name__ == '__main__':
-    while True:
-        main()
-    
-        time.sleep(ReturnNextReportTime(30)+180)
+    main()
 
 
 

@@ -91,10 +91,10 @@ def WritePurgedFilesToDb():
 
 def main():
 
-    while True:
-        WritePurgedFilesToDb()
+    #while True:
+    WritePurgedFilesToDb()
 
-        time.sleep(ReturnNextReportTime(30)+180)
+#        time.sleep(ReturnNextReportTime(30)+180)
     
 if __name__ == '__main__':
     main()
