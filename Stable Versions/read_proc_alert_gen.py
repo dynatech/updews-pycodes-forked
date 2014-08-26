@@ -254,7 +254,7 @@ def plot_column_positions(colname,x,xz,xy):
         ax_xz=fig.add_subplot(121)
         ax_xy=fig.add_subplot(122,sharex=ax_xz,sharey=ax_xz)
 
-        for i in cs_x.index:
+        for i in x.index:
             curcolpos_x=x[(x.index==i)].values
 
             curax=ax_xz
@@ -432,7 +432,28 @@ def main():
                                                                                                                cs_x,cs_xz,cs_xy,
                                                                                                                proc_monitoring_path,
                                                                                                                proc_monitoring_file)
-        #10. Alert generation
+        
+        
+        #10. Plotting column positions
+        #relative position
+        plot_column_positions(colname,cs_x,cs_xz_0,cs_xy_0)
+        
+        #absolute position
+        #plot_column_positions(colname,cs_x,cs_xz,cs_xy)
+        
+        #fixing initial x-axis limits
+        curax=plt.gca()
+        curax.set_xlim(-0.05,0.05)
+
+        #11. Plotting displacement and velocity
+        #no offset and zeroing  
+        #plot_disp_vel(colname, xz,xy, vel_xz, vel_xy)
+        
+        #with offset and zeroing  
+        plot_disp_vel(colname, xz_0off,xy_0off, vel_xz_0off, vel_xy_0off)
+        
+        
+        #12. Alert generation
         xz=xz[(xz.index>=end-timedelta(days=3))]  #sorry, hard-coded value again
         xy=xy[(xy.index>=end-timedelta(days=3))]
         vel_xz=vel_xz[(vel_xz.index>=end-timedelta(days=3))]
@@ -441,11 +462,7 @@ def main():
                                    num_nodes_to_check,end,proc_monitoring_path,proc_monitoring_file)
         #print alert_out
 
-        #11. Plotting column positions
-        #plot_column_positions(colname,cs_x,cs_xz_0,cs_xy_0)
-
-        #12. Plotting displacement and velocity
-        #plot_disp_vel(colname, xz_0off,xy_0off, vel_xz_0off, vel_xy_0off)
+       
 
         #plt.show()
 
