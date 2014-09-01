@@ -269,6 +269,22 @@ def check_good_tilt_data(a1,a2,a3):
     
     return filter
 
+############################################################
+##                     MODE FUNCTION                      ##
+############################################################
+def getmode(li):
+    li.sort()
+    numbers = {}
+    for x in li:
+        num = li.count(x)
+        numbers[x] = num
+    highest = max(numbers.values())
+    n = []
+    for m in numbers.keys():
+        if numbers[m] == highest:
+            n.append(m)
+    return n
+
 
 
 
