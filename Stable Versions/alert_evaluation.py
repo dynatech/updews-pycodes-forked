@@ -255,7 +255,7 @@ def check_adj(adj_node_ind, alert, i, col_node, col_alert):
                     adj_node_alert.append(-1)
             
         if j==adj_node_ind[-1]:
-            col_alert.append(max(adj_node_alert))
+            col_alert.append(max(gf.getmode(adj_node_alert)))
 
     return col_alert, col_node
 
