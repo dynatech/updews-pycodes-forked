@@ -208,7 +208,7 @@ def column_alert(alert, num_nodes_to_check, k_ac_ax):
             if alert['ND'].values[i-1]==0:
                 col_alert.append(-1)
             else:
-
+                col_alert.append(alert['node_alert'].values[i-1])
     alert['col_alert']=np.asarray(col_alert)
     
     alert['node_alert']=alert['node_alert'].map({-1:'nd',0:'a0',1:'a1',2:'a2'})
