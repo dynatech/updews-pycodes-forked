@@ -56,7 +56,7 @@ colarrange = cfg.get('I/O','alerteval_colarrange').split(',')
 
 roll_window_numpts=int(1+roll_window_length/data_dt)
 end, start, offsetstart=gf.get_rt_window(rt_window_length,roll_window_numpts,num_roll_window_ops)
-valid_data = end - timedelta(days=1)
+valid_data = end - timedelta(hours=3)
 
 
 
