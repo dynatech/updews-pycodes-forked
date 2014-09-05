@@ -221,7 +221,7 @@ def alert_generation(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velA1, T_v
     alert_out=alert.node_alert(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velA1, T_velA2, k_ac_ax)
 
     #processing column-level alerts
-    alert_out=alert.column_alert(alert_out, num_nodes_to_check)
+    alert_out=alert.column_alert(alert_out, num_nodes_to_check,k_ac_ax)
 
     #adding 'ts' 
     alert_out['ts']=end
