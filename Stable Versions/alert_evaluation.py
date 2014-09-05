@@ -11,7 +11,7 @@ import ConfigParser
 import generic_functions as gf
 
 cfg = ConfigParser.ConfigParser()
-cfg.read('IO-config.txt')
+cfg.read('server-config.txt')
 
 ##set/get values from config file
 
@@ -34,8 +34,7 @@ columnproperties_path = cfg.get('I/O','ColumnPropertiesPath')
 purged_path = cfg.get('I/O','InputFilePath')
 monitoring_path = cfg.get('I/O','MonitoringPath')
 LastGoodData_path = cfg.get('I/O','LastGoodData')
-proc_monitoring_path = cfg.get('I/O','OutputFilePathMonitoring2')
-alert_path = cfg.get('I/O','OutputFilePathMonitoring')
+proc_monitoring_path = cfg.get('I/O','OutputFilePathMonitoring')
 
 #file names
 columnproperties_file = cfg.get('I/O','ColumnProperties')
