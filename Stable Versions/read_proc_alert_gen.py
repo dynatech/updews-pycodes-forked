@@ -228,7 +228,7 @@ def alert_generation(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velA1, T_v
     
     #setting ts and node_ID as indices
     alert_out=alert_out.set_index(['ts','id'])
-    timeseries_alert=alert_out.iloc[:,-2:]
+
     #checks if file exist, append latest alert; else, write new file
 ##    if os.path.exists(proc_monitoring_path+colname+'/'+colname+" "+"alert"+proc_monitoring_file):
 ##        alert_written=pd.read_csv(proc_monitoring_path+colname+'/'+colname+" "+"alert"+proc_monitoring_file, header=None)
