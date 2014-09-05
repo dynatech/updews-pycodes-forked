@@ -3,13 +3,15 @@
 
 
 from datetime import datetime, date, time, timedelta
+from scipy.stats.mstats import mode
+import collections
 import numpy as np
 import pandas as pd
 import ConfigParser
 import generic_functions as gf
 
 cfg = ConfigParser.ConfigParser()
-cfg.read('server-config.txt')
+cfg.read('IO-config.txt')
 
 ##set/get values from config file
 
@@ -32,7 +34,8 @@ columnproperties_path = cfg.get('I/O','ColumnPropertiesPath')
 purged_path = cfg.get('I/O','InputFilePath')
 monitoring_path = cfg.get('I/O','MonitoringPath')
 LastGoodData_path = cfg.get('I/O','LastGoodData')
-proc_monitoring_path = cfg.get('I/O','OutputFilePathMonitoring')
+proc_monitoring_path = cfg.get('I/O','OutputFilePathMonitoring2')
+alert_path = cfg.get('I/O','OutputFilePathMonitoring')
 
 #file names
 columnproperties_file = cfg.get('I/O','ColumnProperties')
@@ -40,6 +43,7 @@ purged_file = cfg.get('I/O','CSVFormat')
 monitoring_file = cfg.get('I/O','CSVFormat')
 LastGoodData_file = cfg.get('I/O','CSVFormat')
 proc_monitoring_file = cfg.get('I/O','CSVFormat')
+alert_file = cfg.get('I/O','CSVFormat')
 
 #file headers
 columnproperties_headers = cfg.get('I/O','columnproperties_headers').split(',')
@@ -86,12 +90,13 @@ def node_alert(colname, xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_v
     LastGoodData=LastGoodData[:num_nodes]
     cond = np.asarray((LastGoodData.ts<valid_data))
     if len(LastGoodData)<num_nodes:
+        print "Error: Missing nodes in Last Good Data"
         x=np.ones(num_nodes-len(LastGoodData),dtype=bool)
         cond=np.append(cond,x)
     alert['ND']=np.where(cond,
                          
                          #No data within valid date 
-                         np.zeros(len(alert)),
+                         np.nan,
                          
                          #Data present within valid date
                          np.ones(len(alert)))
@@ -119,7 +124,7 @@ def node_alert(colname, xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_v
     alert['max_vel']=np.round(np.where(np.abs(xz_vel.values[-1])>=np.abs(xy_vel.values[-1]),
                                        np.abs(xz_vel.values[-1]),
                                        np.abs(xy_vel.values[-1])), 4)
-                                
+                                       
     #checking if proportional velocity is present across node
     alert['vel_alert']=np.where(alert['min_vel'].values/alert['max_vel'].values<k_ac_ax,   
 
@@ -151,6 +156,15 @@ def node_alert(colname, xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_v
                                           alert['vel_alert'].values,
                                           alert['disp_alert'].values))
 
+    
+    alert['disp_alert']=alert['ND']*alert['disp_alert']
+    alert['vel_alert']=alert['ND']*alert['vel_alert']
+    alert['node_alert']=alert['ND']*alert['node_alert']
+    
+    alert['ND']=alert['ND'].fillna(value=0)
+    alert['disp_alert']=alert['disp_alert'].fillna(value=-1)
+    alert['vel_alert']=alert['vel_alert'].fillna(value=-1)
+    alert['node_alert']=alert['node_alert'].fillna(value=-1)
 
     #rearrange columns
     alert=alert.reset_index()
@@ -159,7 +173,7 @@ def node_alert(colname, xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_v
 
     return alert
 
-def column_alert(alert, num_nodes_to_check):
+def column_alert(alert, num_nodes_to_check, k_ac_ax):
 
     #DESCRIPTION
     #Evaluates column-level alerts from node alert and velocity data
@@ -171,8 +185,6 @@ def column_alert(alert, num_nodes_to_check):
     
     #OUTPUT:
     #alert:                             Pandas DataFrame object; same as input dataframe "alert" with additional column for column-level alert
-
-       
 
     col_alert=[]
     col_node=[]
@@ -189,27 +201,27 @@ def column_alert(alert, num_nodes_to_check):
                 if i+s<=len(alert): adj_node_ind.append(i+s)
 
             #looping through adjacent nodes to validate current node alert
-            check_adj(adj_node_ind, alert, i, col_node, col_alert)
+            validity_check(adj_node_ind, alert, i, col_node, col_alert, k_ac_ax)
                
         else:
+
             col_node.append(i-1)
             if alert['ND'].values[i-1]==0:
                 col_alert.append(-1)
             else:
-                col_alert.append(alert['node_alert'].values[i-1])
 
     alert['col_alert']=np.asarray(col_alert)
-
-    alert['node_alert']=alert['node_alert'].map({0:'a0',1:'a1',2:'a2'})
+    
+    alert['node_alert']=alert['node_alert'].map({-1:'nd',0:'a0',1:'a1',2:'a2'})
     alert['col_alert']=alert['col_alert'].map({-1:'nd',0:'a0',1:'a1',2:'a2'})
 
     return alert
-            
-def check_adj(adj_node_ind, alert, i, col_node, col_alert):
 
-    adj_node_alert=[]
-    for j in adj_node_ind:
-        if alert['max_vel'].values[i-1]!=0:
+def validity_check(adj_node_ind, alert, i, col_node, col_alert, k_ac_ax):
+
+    if alert['max_vel'].values[i-1]!=0:
+        adj_node_alert=[]
+        for j in adj_node_ind:
             #comparing current adjacent node velocity with current node velocity
             if abs(alert['max_vel'].values[j-1])>=abs(alert['max_vel'].values[i-1])*1/(2.**abs(i-j)):
                 #proceeding if data is available within set valid date
@@ -227,36 +239,27 @@ def check_adj(adj_node_ind, alert, i, col_node, col_alert):
                     adj_node_alert.append(0)
                 else:
                     adj_node_alert.append(-1)
-        else:
-            check_pl_cur=abs(alert['xz_disp'].values[i-1])>=abs(alert['xy_disp'].values[i-1])
-
-            if check_pl_cur==True:
-                max_disp_cur=abs(alert['xz_disp'].values[i-1])
-                max_disp_adj=abs(alert['xz_disp'].values[j-1])
-            else:
-                max_disp_cur=abs(alert['xy_disp'].values[i-1])
-                max_disp_adj=abs(alert['xy_disp'].values[j-1])        
-
-            if max_disp_adj>=max_disp_cur*1/(2.**abs(i-j)):
-                #proceeding if data is available within set valid date
-                if alert['ND'].values[j-1]!=0:
-                    #current adjacent node alert assumes value of current node alert
-                    col_node.append(i-1)
-                    col_alert.append(alert['node_alert'].values[i-1])
-                    break
-                else:
-                    #current adjacent node alert has no data
-                    adj_node_alert.append(-1)
-                
-            else:
-                if alert['ND'].values[j-1]!=0:
-                    adj_node_alert.append(0)
-                else:
-                    adj_node_alert.append(-1)
             
-        if j==adj_node_ind[-1]:
-            col_alert.append(max(gf.getmode(adj_node_alert)))
+            if j==adj_node_ind[-1]:
+                col_alert.append(max(gf.getmode(adj_node_alert)))
+            
+    else:
+        if alert['ND'].values[i-1]!=0:
+            min_disp=np.round(np.where(np.abs(alert['xz_disp'].values[i-1])<np.abs(alert['xy_disp'].values[i-1]),
+                                       np.abs(alert['xz_disp'].values[i-1]),
+                                       np.abs(alert['xy_disp'].values[i-1])), 4)
 
+            max_disp=np.round(np.where(np.abs(alert['xz_disp'].values[i-1])<np.abs(alert['xy_disp'].values[i-1]),
+                                       np.abs(alert['xy_disp'].values[i-1]),
+                                       np.abs(alert['xz_disp'].values[i-1])), 4)
+
+            
+            col_alert.append(int(np.where(min_disp/max_disp>k_ac_ax,
+                                      alert['node_alert'].values[i-1],
+                                      0)))
+        else:
+            col_alert.append(-1)
+
+        
     return col_alert, col_node
-
 
