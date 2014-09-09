@@ -261,4 +261,31 @@ def validity_check(adj_node_ind, alert, i, col_node, col_alert, k_ac_ax):
 
         
     return col_alert, col_node
+    
+def trending_col(alert,colname):
+
+    latest_alert=alert.loc[:,['id','col_alert']]
+    latest_alert['ts']=end
+    latest_alert=latest_alert[['ts','id','col_alert']]
+    latest_alert=latest_alert.set_index(['ts'])
+
+    proc_alert=pd.read_csv(proc_monitoring_path+colname+'/'+colname+" "+"alert"+alert_file,
+                          header=None,parse_dates=[0],index_col=[0],usecols=[0,1,10])
+
+    proc_alert=proc_alert[(proc_alert.index>=end-timedelta(hours=3))]
+    proc_alert.append(latest_alert)
+    proc_alert[10]=proc_alert[10].map({'nd':-1,'a0':0,'a1':1,'a2':2})
+
+    mode_node=[]
+    for n in range(1,len(alert)+1):
+        trend_col=proc_alert[proc_alert[1]==n]
+        trend_col=trend_col[10].tolist()
+        trend_col=max(gf.getmode(trend_col))
+        mode_node.append(trend_col)
+
+    alert['trend_col_alert']=mode_node
+    alert['trend_col_alert']=alert['trend_col_alert'].map({-1:'nd',0:'a0',1:'a1',2:'a2'})
+
+    return alert
+    
 
