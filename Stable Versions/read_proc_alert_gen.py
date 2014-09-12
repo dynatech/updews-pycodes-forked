@@ -222,8 +222,6 @@ def alert_generation(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velA1, T_v
 
     #processing column-level alerts
     alert_out=alert.column_alert(alert_out, num_nodes_to_check,k_ac_ax)
-
-    trending_col=alert.trending_col(alert_out,colname)
     
     #adding 'ts' 
     alert_out['ts']=end
@@ -242,8 +240,6 @@ def alert_generation(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velA1, T_v
 ##                             sep=',', header=False,mode='a')
 ##    else:
     alert_out.to_csv(proc_monitoring_path+colname+'/'+colname+" "+"alert"+proc_monitoring_file,
-                     sep=',', header=False,mode='a')
-    timeseries_alert.to_csv(proc_monitoring_path+colname+'/'+colname+" "+"timeseries"+proc_monitoring_file,
                      sep=',', header=False,mode='a')
     
     return alert_out
