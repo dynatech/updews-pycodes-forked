@@ -98,21 +98,42 @@ def node_alert(colname, xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_v
                          np.nan,
                          
                          #Data present within valid date
-                         np.ones(len(alert)))
+                         np.zeros(len(alert)))
     
     #evaluating net displacements within real-time window
     alert['xz_disp']=np.round(xz_tilt.values[-1]-xz_tilt.values[0], 3)
     alert['xy_disp']=np.round(xy_tilt.values[-1]-xy_tilt.values[0], 3)
     
-    #checking if displacement threshold is exceeded in either axis
+    #determining minimum and maximum displacement
+    cond = np.asarray(np.abs(alert['xz_disp'].values)<np.abs(alert['xy_disp'].values))
+    min_disp=np.round(np.where(cond,
+                               np.abs(alert['xz_disp'].values),
+                               np.abs(alert['xy_disp'].values)), 4)
+    cond = np.asarray(np.abs(alert['xz_disp'].values)>=np.abs(alert['xy_disp'].values))
+    max_disp=np.round(np.where(cond,
+                               np.abs(alert['xz_disp'].values),
+                               np.abs(alert['xy_disp'].values)), 4)    
+    
+    #checking if displacement threshold is exceeded in either axis    
     cond = np.asarray((np.abs(alert['xz_disp'].values)>T_disp, np.abs(alert['xy_disp'].values)>T_disp))
     alert['disp_alert']=np.where(np.any(cond, axis=0),
 
                                  #disp alert=1
-                                 np.ones(len(alert)),
+                                 np.where(min_disp/max_disp<k_ac_ax,
+                                          np.zeros(len(alert)),
+                                          np.ones(len(alert))),
 
                                  #disp alert=a0
                                  np.zeros(len(alert)))
+                                 
+    #checking for data within 3days+3hours to 3days; HARD CODED VALUES
+    LastGoodData=pd.read_csv(monitoring_path+colname+monitoring_file,names=purged_file_headers,parse_dates=[0],index_col=[0])
+    LastGoodData=LastGoodData[(LastGoodData.index>=end-timedelta(days=3, hours=3))&(LastGoodData.index<=end-timedelta(days=3))]
+
+    for i in range(1,len(alert)+1):
+        node_data=LastGoodData[LastGoodData['id']==i]
+        if len(node_data)==0:
+            alert['disp_alert'].values[i-1]=None                             
  
     #getting minimum axis velocity value
     alert['min_vel']=np.round(np.where(np.abs(xz_vel.values[-1])<np.abs(xy_vel.values[-1]),
@@ -156,10 +177,12 @@ def node_alert(colname, xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_v
                                           alert['disp_alert'].values))
 
     
+    alert['ND']=alert['ND']*alert['disp_alert']
     alert['disp_alert']=alert['ND']*alert['disp_alert']
     alert['vel_alert']=alert['ND']*alert['vel_alert']
     alert['node_alert']=alert['ND']*alert['node_alert']
-    
+
+    alert['ND']=alert['ND'].map({0:1})
     alert['ND']=alert['ND'].fillna(value=0)
     alert['disp_alert']=alert['disp_alert'].fillna(value=-1)
     alert['vel_alert']=alert['vel_alert'].fillna(value=-1)
@@ -203,12 +226,13 @@ def column_alert(alert, num_nodes_to_check, k_ac_ax):
             validity_check(adj_node_ind, alert, i, col_node, col_alert, k_ac_ax)
                
         else:
-
+        
             col_node.append(i-1)
             if alert['ND'].values[i-1]==0:
                 col_alert.append(-1)
             else:
                 col_alert.append(alert['node_alert'].values[i-1])
+                
     alert['col_alert']=np.asarray(col_alert)
     
     alert['node_alert']=alert['node_alert'].map({-1:'nd',0:'a0',1:'a1',2:'a2'})
@@ -218,9 +242,9 @@ def column_alert(alert, num_nodes_to_check, k_ac_ax):
 
 def validity_check(adj_node_ind, alert, i, col_node, col_alert, k_ac_ax):
 
-    if alert['max_vel'].values[i-1]!=0:
-        adj_node_alert=[]
-        for j in adj_node_ind:
+    adj_node_alert=[]
+    for j in adj_node_ind:
+        if alert['vel_alert'].values[i-1]!=0:
             #comparing current adjacent node velocity with current node velocity
             if abs(alert['max_vel'].values[j-1])>=abs(alert['max_vel'].values[i-1])*1/(2.**abs(i-j)):
                 #proceeding if data is available within set valid date
@@ -236,29 +260,41 @@ def validity_check(adj_node_ind, alert, i, col_node, col_alert, k_ac_ax):
             else:
                 if alert['ND'].values[j-1]!=0:
                     adj_node_alert.append(0)
+                    col_alert.append(max(gf.getmode(adj_node_alert)))
+                    break
+                else:
+                    adj_node_alert.append(-1)
+        else:
+            check_pl_cur=abs(alert['xz_disp'].values[i-1])>=abs(alert['xy_disp'].values[i-1])
+
+            if check_pl_cur==True:
+                max_disp_cur=abs(alert['xz_disp'].values[i-1])
+                max_disp_adj=abs(alert['xz_disp'].values[j-1])
+            else:
+                max_disp_cur=abs(alert['xy_disp'].values[i-1])
+                max_disp_adj=abs(alert['xy_disp'].values[j-1])        
+
+            if max_disp_adj>=max_disp_cur*1/(2.**abs(i-j)):
+                #proceeding if data is available within set valid date
+                if alert['ND'].values[j-1]!=0:
+                    #current adjacent node alert assumes value of current node alert
+                    col_node.append(i-1)
+                    col_alert.append(alert['node_alert'].values[i-1])
+                    break
+                else:
+                    #current adjacent node alert has no data
+                    adj_node_alert.append(-1)
+                
+            else:
+                if alert['ND'].values[j-1]!=0:
+                    adj_node_alert.append(0)
+                    col_alert.append(max(gf.getmode(adj_node_alert)))
+                    break
                 else:
                     adj_node_alert.append(-1)
             
-            if j==adj_node_ind[-1]:
-                col_alert.append(max(gf.getmode(adj_node_alert)))
-            
-    else:
-        if alert['ND'].values[i-1]!=0:
-            min_disp=np.round(np.where(np.abs(alert['xz_disp'].values[i-1])<np.abs(alert['xy_disp'].values[i-1]),
-                                       np.abs(alert['xz_disp'].values[i-1]),
-                                       np.abs(alert['xy_disp'].values[i-1])), 4)
-
-            max_disp=np.round(np.where(np.abs(alert['xz_disp'].values[i-1])<np.abs(alert['xy_disp'].values[i-1]),
-                                       np.abs(alert['xy_disp'].values[i-1]),
-                                       np.abs(alert['xz_disp'].values[i-1])), 4)
-
-            
-            col_alert.append(int(np.where(min_disp/max_disp>k_ac_ax,
-                                      alert['node_alert'].values[i-1],
-                                      0)))
-        else:
-            col_alert.append(-1)
-
+        if j==adj_node_ind[-1]:
+            col_alert.append(max(gf.getmode(adj_node_alert)))
         
     return col_alert, col_node
     
