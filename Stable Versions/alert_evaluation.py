@@ -3,7 +3,6 @@
 
 
 from datetime import datetime, date, time, timedelta
-from scipy.stats.mstats import mode
 import collections
 import numpy as np
 import pandas as pd
@@ -213,8 +212,12 @@ def column_alert(alert, num_nodes_to_check, k_ac_ax):
     #looping through each node
     for i in range(1,len(alert)+1):
     
+        if alert['ND'].values[i-1]==0:
+            col_node.append(i-1)
+            col_alert.append(-1)
+    
         #checking if current node alert is 1 or 2
-        if alert['node_alert'].values[i-1]!=0:
+        elif alert['node_alert'].values[i-1]!=0:
             
             #defining indices of adjacent nodes
             adj_node_ind=[]
@@ -226,15 +229,11 @@ def column_alert(alert, num_nodes_to_check, k_ac_ax):
             validity_check(adj_node_ind, alert, i, col_node, col_alert, k_ac_ax)
                
         else:
-        
             col_node.append(i-1)
-            if alert['ND'].values[i-1]==0:
-                col_alert.append(-1)
-            else:
-                col_alert.append(alert['node_alert'].values[i-1])
-                
+            col_alert.append(alert['node_alert'].values[i-1])
+
     alert['col_alert']=np.asarray(col_alert)
-    
+
     alert['node_alert']=alert['node_alert'].map({-1:'nd',0:'a0',1:'a1',2:'a2'})
     alert['col_alert']=alert['col_alert'].map({-1:'nd',0:'a0',1:'a1',2:'a2'})
 
@@ -244,55 +243,43 @@ def validity_check(adj_node_ind, alert, i, col_node, col_alert, k_ac_ax):
 
     adj_node_alert=[]
     for j in adj_node_ind:
-        if alert['vel_alert'].values[i-1]!=0:
-            #comparing current adjacent node velocity with current node velocity
-            if abs(alert['max_vel'].values[j-1])>=abs(alert['max_vel'].values[i-1])*1/(2.**abs(i-j)):
-                #proceeding if data is available within set valid date
-                if alert['ND'].values[j-1]!=0:
-                    #current adjacent node alert assumes value of current node alert
-                    col_node.append(i-1)
-                    col_alert.append(alert['node_alert'].values[i-1])
-                    break
-                else:
-                    #current adjacent node alert has no data
-                    adj_node_alert.append(-1)
-                
-            else:
-                if alert['ND'].values[j-1]!=0:
-                    adj_node_alert.append(0)
-                    col_alert.append(max(gf.getmode(adj_node_alert)))
-                    break
-                else:
-                    adj_node_alert.append(-1)
+        if alert['ND'].values[j-1]==0:
+            adj_node_alert.append(-1)
         else:
-            check_pl_cur=abs(alert['xz_disp'].values[i-1])>=abs(alert['xy_disp'].values[i-1])
-
-            if check_pl_cur==True:
-                max_disp_cur=abs(alert['xz_disp'].values[i-1])
-                max_disp_adj=abs(alert['xz_disp'].values[j-1])
-            else:
-                max_disp_cur=abs(alert['xy_disp'].values[i-1])
-                max_disp_adj=abs(alert['xy_disp'].values[j-1])        
-
-            if max_disp_adj>=max_disp_cur*1/(2.**abs(i-j)):
-                #proceeding if data is available within set valid date
-                if alert['ND'].values[j-1]!=0:
+            if alert['vel_alert'].values[i-1]!=0:
+                #comparing current adjacent node velocity with current node velocity
+                if abs(alert['max_vel'].values[j-1])>=abs(alert['max_vel'].values[i-1])*1/(2.**abs(i-j)):
                     #current adjacent node alert assumes value of current node alert
                     col_node.append(i-1)
                     col_alert.append(alert['node_alert'].values[i-1])
                     break
+                    
                 else:
-                    #current adjacent node alert has no data
-                    adj_node_alert.append(-1)
-                
-            else:
-                if alert['ND'].values[j-1]!=0:
                     adj_node_alert.append(0)
                     col_alert.append(max(gf.getmode(adj_node_alert)))
                     break
+                
+            else:
+                check_pl_cur=abs(alert['xz_disp'].values[i-1])>=abs(alert['xy_disp'].values[i-1])
+
+                if check_pl_cur==True:
+                    max_disp_cur=abs(alert['xz_disp'].values[i-1])
+                    max_disp_adj=abs(alert['xz_disp'].values[j-1])
                 else:
-                    adj_node_alert.append(-1)
-            
+                    max_disp_cur=abs(alert['xy_disp'].values[i-1])
+                    max_disp_adj=abs(alert['xy_disp'].values[j-1])        
+
+                if max_disp_adj>=max_disp_cur*1/(2.**abs(i-j)):
+                    #current adjacent node alert assumes value of current node alert
+                    col_node.append(i-1)
+                    col_alert.append(alert['node_alert'].values[i-1])
+                    break
+                    
+                else:
+                    adj_node_alert.append(0)
+                    col_alert.append(max(gf.getmode(adj_node_alert)))
+                    break
+                
         if j==adj_node_ind[-1]:
             col_alert.append(max(gf.getmode(adj_node_alert)))
         
@@ -305,8 +292,8 @@ def trending_col(alert,colname):
     latest_alert=latest_alert[['ts','id','col_alert']]
     latest_alert=latest_alert.set_index(['ts'])
 
-    proc_alert=pd.read_csv(proc_monitoring_path+colname+'/'+colname+" "+"alert"+alert_file,
-                          header=None,parse_dates=[0],index_col=[0],usecols=[0,1,10])
+    proc_alert=pd.read_csv(proc_monitoring_path+colname+'/'+colname+" "+"alert"+proc_monitoring_file,
+                           header=None,parse_dates=[0],index_col=[0],usecols=[0,1,10])
 
     proc_alert=proc_alert[(proc_alert.index>=end-timedelta(hours=3))]
     proc_alert.append(latest_alert)
@@ -316,8 +303,11 @@ def trending_col(alert,colname):
     for n in range(1,len(alert)+1):
         trend_col=proc_alert[proc_alert[1]==n]
         trend_col=trend_col[10].tolist()
-        trend_col=max(gf.getmode(trend_col))
-        mode_node.append(trend_col)
+        if len(trend_col)==0:
+            mode_node.append(-1)
+        else:
+            trend_col=max(gf.getmode(trend_col))
+            mode_node.append(trend_col)
 
     alert['trend_col_alert']=mode_node
     alert['trend_col_alert']=alert['trend_col_alert'].map({-1:'nd',0:'a0',1:'a1',2:'a2'})
