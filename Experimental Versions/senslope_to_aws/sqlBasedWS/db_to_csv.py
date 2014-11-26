@@ -64,8 +64,7 @@ def extractDBToSQL(table):
     print 'winCmd = ' + winCmd + '\n'
 
     db, cur = SenslopeDBConnect()
-    #query = 'select * from ' + table + ' where xvalue > 0 and zvalue > -500 and id > 0 and id < 41 and timestamp >= "' + TSstart + '" order by timestamp asc limit 10000'
-    query_tstamp = 'select max(timestamp) from (SELECT timestamp FROM ' + table + ' where xvalue > 0 and zvalue > -500 and id > 0 and id < 41 and timestamp > "' + TSstart + '" limit 10000) test'
+    query_tstamp = 'select max(timestamp) from (SELECT timestamp FROM ' + table + ' where timestamp > "' + TSstart + '" limit 10000) test'
 
     print 'Query = ' + query_tstamp + '\n'
     
@@ -116,7 +115,7 @@ def extract_db2():
         
         data = cur.fetchall()
 
-        valid_tables = ['blcb','blct','bolb','gamt','gamb','humt','humb','labb','labt','lipb','lipt','mamb','mamt','oslb','oslt','plab','plat','pugb','pugt','sinb','sinu']
+        valid_tables = ['blcw','bolw','gamw','humw','labw','lipw','mamw','oslw','plaw','pugw','sinw','stats']
         for tbl in valid_tables:        
             extractDBToSQL(tbl)
 
