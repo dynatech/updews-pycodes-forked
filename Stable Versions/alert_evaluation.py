@@ -76,7 +76,7 @@ def node_alert(colname, xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_v
 
     
 
-    #initializing DataFrame object, alert
+     #initializing DataFrame object, alert
     alert=pd.DataFrame(data=None)
 
     #adding node IDs
@@ -85,7 +85,7 @@ def node_alert(colname, xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_v
 
     #checking for nodes with no data
     LastGoodData=pd.read_csv(LastGoodData_path+colname+LastGoodData_file,names=LastGoodData_file_headers,parse_dates=[0],index_col=[1])
-    LastGoodData=LastGoodData[:num_nodes]
+    LastGoodData=LastGoodData[-int(num_nodes):]
     cond = np.asarray((LastGoodData.ts<valid_data))
     if len(LastGoodData)<num_nodes:
         print "Error: Missing nodes in Last Good Data"
@@ -97,12 +97,12 @@ def node_alert(colname, xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_v
                          np.nan,
                          
                          #Data present within valid date
-                         np.zeros(len(alert)))
+                         np.ones(len(alert)))
     
     #evaluating net displacements within real-time window
     alert['xz_disp']=np.round(xz_tilt.values[-1]-xz_tilt.values[0], 3)
     alert['xy_disp']=np.round(xy_tilt.values[-1]-xy_tilt.values[0], 3)
-    
+
     #determining minimum and maximum displacement
     cond = np.asarray(np.abs(alert['xz_disp'].values)<np.abs(alert['xy_disp'].values))
     min_disp=np.round(np.where(cond,
@@ -111,8 +111,8 @@ def node_alert(colname, xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_v
     cond = np.asarray(np.abs(alert['xz_disp'].values)>=np.abs(alert['xy_disp'].values))
     max_disp=np.round(np.where(cond,
                                np.abs(alert['xz_disp'].values),
-                               np.abs(alert['xy_disp'].values)), 4)    
-    
+                               np.abs(alert['xy_disp'].values)), 4)
+
     #checking if displacement threshold is exceeded in either axis    
     cond = np.asarray((np.abs(alert['xz_disp'].values)>T_disp, np.abs(alert['xy_disp'].values)>T_disp))
     alert['disp_alert']=np.where(np.any(cond, axis=0),
@@ -124,7 +124,7 @@ def node_alert(colname, xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_v
 
                                  #disp alert=a0
                                  np.zeros(len(alert)))
-                                 
+    
     #checking for data within 3days+3hours to 3days; HARD CODED VALUES
     LastGoodData=pd.read_csv(monitoring_path+colname+monitoring_file,names=purged_file_headers,parse_dates=[0],index_col=[0])
     LastGoodData=LastGoodData[(LastGoodData.index>=end-timedelta(days=3, hours=3))&(LastGoodData.index<=end-timedelta(days=3))]
@@ -132,8 +132,8 @@ def node_alert(colname, xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_v
     for i in range(1,len(alert)+1):
         node_data=LastGoodData[LastGoodData['id']==i]
         if len(node_data)==0:
-            alert['disp_alert'].values[i-1]=None                             
- 
+            alert['disp_alert'].values[i-1]=None
+
     #getting minimum axis velocity value
     alert['min_vel']=np.round(np.where(np.abs(xz_vel.values[-1])<np.abs(xy_vel.values[-1]),
                                        np.abs(xz_vel.values[-1]),
@@ -175,13 +175,14 @@ def node_alert(colname, xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_v
                                           alert['vel_alert'].values,
                                           alert['disp_alert'].values))
 
-    
+
     alert['ND']=alert['ND']*alert['disp_alert']
     alert['disp_alert']=alert['ND']*alert['disp_alert']
     alert['vel_alert']=alert['ND']*alert['vel_alert']
     alert['node_alert']=alert['ND']*alert['node_alert']
-
-    alert['ND']=alert['ND'].map({0:1})
+    print alert
+    alert['ND']=alert['ND'].map({0:1,1:1})
+    print alert
     alert['ND']=alert['ND'].fillna(value=0)
     alert['disp_alert']=alert['disp_alert'].fillna(value=-1)
     alert['vel_alert']=alert['vel_alert'].fillna(value=-1)
@@ -191,7 +192,7 @@ def node_alert(colname, xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_v
     alert=alert.reset_index()
     cols=colarrange
     alert = alert[cols]
-
+ 
     return alert
 
 def column_alert(alert, num_nodes_to_check, k_ac_ax):
@@ -211,7 +212,7 @@ def column_alert(alert, num_nodes_to_check, k_ac_ax):
     col_node=[]
     #looping through each node
     for i in range(1,len(alert)+1):
-    
+
         if alert['ND'].values[i-1]==0:
             col_node.append(i-1)
             col_alert.append(-1)
@@ -231,7 +232,7 @@ def column_alert(alert, num_nodes_to_check, k_ac_ax):
         else:
             col_node.append(i-1)
             col_alert.append(alert['node_alert'].values[i-1])
-
+    print alert
     alert['col_alert']=np.asarray(col_alert)
 
     alert['node_alert']=alert['node_alert'].map({-1:'nd',0:'a0',1:'a1',2:'a2'})
