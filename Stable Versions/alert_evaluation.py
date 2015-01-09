@@ -180,9 +180,7 @@ def node_alert(colname, xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_v
     alert['disp_alert']=alert['ND']*alert['disp_alert']
     alert['vel_alert']=alert['ND']*alert['vel_alert']
     alert['node_alert']=alert['ND']*alert['node_alert']
-    print alert
     alert['ND']=alert['ND'].map({0:1,1:1})
-    print alert
     alert['ND']=alert['ND'].fillna(value=0)
     alert['disp_alert']=alert['disp_alert'].fillna(value=-1)
     alert['vel_alert']=alert['vel_alert'].fillna(value=-1)
