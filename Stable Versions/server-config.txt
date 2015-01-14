@@ -87,3 +87,5 @@ roll_window_length=3.		;length of rolling/moving window operations in hours
 num_roll_window_ops=2		;number of rolling window operations in the whole monitoring analysis
 col_pos_interval='3D'    	; string expression indicating interval between two adjacent column position dates ex: '1D'= 1 day
 num_col_pos=6            	; number of column position dates to plot 
+alert_time_int=30 		;timeframe of alert files to be saved, in days
+
