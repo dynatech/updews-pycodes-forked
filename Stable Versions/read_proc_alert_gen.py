@@ -231,6 +231,11 @@ def alert_generation(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velA1, T_v
     
     #setting ts and node_ID as indices
     alert_out=alert_out.set_index(['ts','id'])
+    
+    alert_monthly=pd.read_csv(proc_monitoring_path+colname+'/'+colname+" "+"alert"+proc_monitoring_file,
+                              names=alert_headers,parse_dates=[0],index_col=[0])
+    alert_monthly=alert_monthly[(alert_monthly.index>=end-timedelta(days=alert_file_length))]
+    alert_monthly.append(alert_out)   
 
     #checks if file exist, append latest alert; else, write new file
 ##    if os.path.exists(proc_monitoring_path+colname+'/'+colname+" "+"alert"+proc_monitoring_file):
@@ -383,6 +388,7 @@ T_velA1 = cfg.getfloat('I/O','T_velA1') #m/day
 T_velA2 = cfg.getfloat('I/O','T_velA2')  #m/day
 k_ac_ax = cfg.getfloat('I/O','k_ac_ax')
 num_nodes_to_check = cfg.getint('I/O','num_nodes_to_check')
+alert_file_length=cfg.getint('I/O','num_nodes_to_check') # in days
 
 #global variables
 colname,num_nodes,seg_len = '',0,0
