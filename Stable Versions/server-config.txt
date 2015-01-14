@@ -76,13 +76,14 @@ monitoring_file_headers=ts,id,x,y,z,m
 LastGoodData_file_headers=ts,id,x,y,z,m
 proc_monitoring_file_headers=ts,id,xz,xy,m
 alerteval_colarrange=id,ND,xz_disp,xy_disp,disp_alert,min_vel,max_vel,vel_alert,node_alert
+alert_headers=ts,id,ND,xz_disp,xy_disp,disp_alert,min_vel,max_vel,vel_alert,node_alert,col_alert,trending_col
  
 ############################
 ###        OTHERS        ###
 ############################
 data_dt=0.5			;time interval between data points, in hours
-rt_window_length=25.		;length of real-time monitoring window, in days
+rt_window_length=15.		;length of real-time monitoring window, in days
 roll_window_length=3.		;length of rolling/moving window operations in hours
 num_roll_window_ops=2		;number of rolling window operations in the whole monitoring analysis
-col_pos_interval='1D'    	; string expression indicating interval between two adjacent column position dates ex: '1D'= 1 day
-num_col_pos=26            	; number of column position dates to plot 
+col_pos_interval='3D'    	; string expression indicating interval between two adjacent column position dates ex: '1D'= 1 day
+num_col_pos=6            	; number of column position dates to plot 
