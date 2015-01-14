@@ -381,6 +381,7 @@ purged_file_headers = cfg.get('I/O','purged_file_headers').split(',')
 monitoring_file_headers = cfg.get('I/O','monitoring_file_headers').split(',')
 LastGoodData_file_headers = cfg.get('I/O','LastGoodData_file_headers').split(',')
 proc_monitoring_file_headers = cfg.get('I/O','proc_monitoring_file_headers').split(',')
+alert_headers = cfg.get('I/O','alert_headers').split(',')
 
 #ALERT CONSTANTS
 T_disp = cfg.getfloat('I/O','T_disp')  #m
@@ -388,7 +389,7 @@ T_velA1 = cfg.getfloat('I/O','T_velA1') #m/day
 T_velA2 = cfg.getfloat('I/O','T_velA2')  #m/day
 k_ac_ax = cfg.getfloat('I/O','k_ac_ax')
 num_nodes_to_check = cfg.getint('I/O','num_nodes_to_check')
-alert_file_length=cfg.getint('I/O','num_nodes_to_check') # in days
+alert_file_length=cfg.getint('I/O','alert_time_int') # in days
 
 #global variables
 colname,num_nodes,seg_len = '',0,0
