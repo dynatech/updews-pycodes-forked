@@ -49,7 +49,7 @@ def create_series_list(input_df,monwin,colname,num_nodes):
         curxy=input_df.loc[input_df.id==n,['xy']]
         curm=input_df.loc[input_df.id==n,['m']]  
         #d.resampling node series to 30-min exact intervals
-        finite_data=np.sum(np.where(np.isfinite(curxz.values))[0])
+        finite_data=len(np.where(np.isfinite(curxz.values))[0])
         if finite_data>0:
             curxz=curxz.resample('30Min',how='mean',base=0)
             curxy=curxy.resample('30Min',how='mean',base=0)
