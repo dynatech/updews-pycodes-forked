@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 import ConfigParser
 import generic_functions as gf
+import csv
 import sys
 
 cfg = ConfigParser.ConfigParser()
