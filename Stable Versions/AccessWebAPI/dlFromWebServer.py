@@ -6,6 +6,9 @@ function dlFromWebServer: downloads data from webserver
   startDate: (string)
     start date of data to be downloaded
     yyyy-mm-dd
+  endDate: (string)
+    start date of data to be downloaded
+    yyyy-mm-dd
   site: (string)
     corresponding column name of data
   db: (string)
@@ -16,9 +19,9 @@ function dlFromWebServer: downloads data from webserver
     dl('2015-03-01','sinb','senslopedb')
 '''
 
-def dlFromWebServer(startDate,site,db):
+def dlFromWebServer(startDate,endDate,site,db):
 
-  url = 'http://www.dewslandslide.com/ajax/getSenslopeData.php?db=' + db + '&accelsite&site=' + site + '&q=' + startDate
+  url = 'http://www.dewslandslide.com/ajax/getSenslopeData.php?db=' + db + '&accelsite&site=' + site + '&start=' + startDate + '&end=' + endDate
   print "downloading " + site
   print url
   
