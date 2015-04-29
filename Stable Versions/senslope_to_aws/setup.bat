@@ -9,6 +9,7 @@ d:
 mkdir dewslandslide
 cd dewslandslide
 copy "%batchfiledir%uploadScripts\scpToAmazon.sh" "scpToAmazon.sh"
+copy "%batchfiledir%uploadScripts\autoupload.cron" "autoupload.cron"
 
 mkdir keyPair
 mkdir purged
