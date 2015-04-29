@@ -1,0 +1,22 @@
+[File I/O]
+MachineFP = C:\Users\chocolate server\Documents\Earl\Senslope Data Analysis\
+InputFP = InputFiles\
+OutputFP = OutputFiles\
+
+[Data Settings]
+ColName = blct
+Node = 8
+DateStart = 1/1/2010
+DateEnd = 1/30/2015
+csvformat = ts,id,x,y,z,m
+Interval = 1D
+
+[Accel]
+xmax = 1126
+xmin = -1126
+ymax = 1126
+ymin = -1126
+zmax = 1126
+zmin = -1126
+
+
