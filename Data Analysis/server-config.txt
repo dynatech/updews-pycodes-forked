@@ -1,0 +1,91 @@
+[File I/O]
+MachineFilePath = D:Dropbox\Senslope Data\
+PurgedFilePath = Purged\New\
+PurgedMonitoringFilePath = Purged\Monitoring\
+LastGoodDataFilePath = Purged\LastGoodData\
+ProcFilePath = Proc2\New\
+ProcMonitoringFilePath = Proc2\Monitoring\
+AlertFilePath = Alert
+AlertFileName = Node-level_alerts.csv
+ColumnPropertiesFile = column_properties.csv
+
+[DB I/O]
+Hostdb = 192.168.0.111
+Userdb = root
+Passdb = irc311
+Namedb = senslopedb
+NamedbPurged = senslopedb_purged
+Printtostdout = True
+
+[Value Limits]
+LimitValues = True
+xlim = 100
+ylim = 1126
+zlim = 1126
+xmax = 1200
+mlowlim = 2000
+muplim = 4000
+cutoff = 0.08
+moninterval = 15
+
+[Filter Args]
+window = 101
+order = 3
+off_lim = 80
+
+[Datetime range]
+RangeDefault = 3
+
+[Misc]
+Debug = False
+DotProductThreshold = 0.09
+
+[I/O]
+############################
+###   LOCAL FILE PATH    ###
+############################
+InputFilePath = D:Dropbox\Senslope Data\Purged\New\
+MonitoringPath =D:Dropbox\Senslope Data\Purged\Monitoring\
+OutputFilePathMonitoring = D:Dropbox\Senslope Data\Proc2\Monitoring\
+CSVOutputFile = Node-level_alerts.csv
+PrintFigures = False									; not being used in present code
+LastGoodData = D:Dropbox\Senslope Data\Purged\LastGoodData\
+ColumnPropertiesPath = C:\Users\windows user\Desktop\Node Alert Workfolder\Stable Versions\
+ 
+############################
+###      FILE NAMES      ###
+############################
+ColumnProperties=column_properties.csv
+CSVFormat=.csv
+
+#############################
+###    ALERT CONSTANTS    ###
+#############################
+T_disp=0.05 			;Treshold displacement value for alert 1 (in meters)
+T_velA1=0.005			;Treshold velocity value for alert level 1 (in meters/day)
+T_velA2=0.5 			;Treshold velocity value for alert level 2 (in meters/day)
+k_ac_ax=0.1			;minimum value velocity of axis across maximum velocity to consider movement as valid (in percent)
+num_nodes_to_check=5		;number of nodes to check before calling column alert level 1 or 2
+
+############################
+###     FILE HEADERS     ###
+############################
+columnproperties_headers=colname,num_nodes,seg_len
+purged_file_headers=ts,id,x,y,z,m
+monitoring_file_headers=ts,id,x,y,z,m
+LastGoodData_file_headers=ts,id,x,y,z,m
+proc_monitoring_file_headers=ts,id,xz,xy,m
+alerteval_colarrange=id,ND,xz_disp,xy_disp,disp_alert,min_vel,max_vel,vel_alert,node_alert
+alert_headers=ts,id,ND,xz_disp,xy_disp,disp_alert,min_vel,max_vel,vel_alert,node_alert,col_alert,trending_col
+ 
+############################
+###        OTHERS        ###
+############################
+data_dt=0.5			;time interval between data points, in hours
+rt_window_length=15.		;length of real-time monitoring window, in days
+roll_window_length=3.		;length of rolling/moving window operations in hours
+num_roll_window_ops=2		;number of rolling window operations in the whole monitoring analysis
+col_pos_interval='1D'    	; string expression indicating interval between two adjacent column position dates ex: '1D'= 1 day
+num_col_pos=16            	; number of column position dates to plot 
+alert_time_int=30 		;timeframe of alert files to be saved, in days
+
