@@ -1,0 +1,41 @@
+[LocalDB]
+username = root
+host = 127.0.0.1
+password = senslope
+dbname = senslopedb
+
+[I/O]
+writetodb = True
+deleteafterread = True
+savetofile = True
+fileinput = False
+consoleoutput = False
+inputfile = backup.txt
+
+[FilePath]
+directory = D:\dewslandslide\sqlsync\dumps\
+timestamplatest = ..\config\timestamps-config.txt
+awsdump = /home/ubuntu/sqlsync/dumps/
+awstimestamplatest = ../config/timestamps-config.txt
+
+[Serial]
+baudrate = 57600
+sunport = 6
+globeport = 3
+timeout = 5
+smartport = 8
+
+[SMSAlert]
+sunnumbers = 09228412065,09228120490,09253120491
+enable = True
+globenumbers = 
+csvinputfile = Node-level_alerts.csv
+smartnumbers = 
+alertflags = 12
+directory = D:\Dropbox\Senslope Data\Proc\csv
+alertreportinterval = 30
+
+[Misc]
+sleepperiod = 2
+adjustcolumntimeof = MLKT
+
