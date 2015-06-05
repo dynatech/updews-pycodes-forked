@@ -1,5 +1,5 @@
 [File I/O]
-MachineFilePath = D:Dropbox\Senslope Data\
+MachineFilePath = C:\Users\Dynaslope\Desktop\Fresh\Senslope Data\
 PurgedFilePath = Purged\New\
 PurgedMonitoringFilePath = Purged\Monitoring\
 LastGoodDataFilePath = Purged\LastGoodData\
@@ -10,9 +10,9 @@ AlertFileName = Node-level_alerts.csv
 ColumnPropertiesFile = column_properties.csv
 
 [DB I/O]
-Hostdb = 192.168.0.111
+Hostdb = 127.0.0.1
 Userdb = root
-Passdb = irc311
+Passdb = dyn4m1ght
 Namedb = senslopedb
 NamedbPurged = senslopedb_purged
 Printtostdout = True
@@ -46,11 +46,12 @@ DotProductThreshold = 0.09
 ############################
 InputFilePath = D:Dropbox\Senslope Data\Purged\New\
 MonitoringPath =D:Dropbox\Senslope Data\Purged\Monitoring\
-OutputFilePathMonitoring = D:Dropbox\Senslope Data\Proc2\Monitoring\
+OutputFilePathMonitoring = C:\Users\Dynaslope\Desktop\Fresh\Senslope Data\Proc2\Monitoring\
+OutputFilePathMonitoring2 = C:\Users\Dynaslope\Desktop\Fresh\Senslope Data\Proc2\Monitoring\
 CSVOutputFile = Node-level_alerts.csv
 PrintFigures = False									; not being used in present code
 LastGoodData = D:Dropbox\Senslope Data\Purged\LastGoodData\
-ColumnPropertiesPath = C:\Users\windows user\Desktop\Node Alert Workfolder\Stable Versions\
+ColumnPropertiesPath = C:\Users\Dynaslope\Desktop\Fresh\Local\
  
 ############################
 ###      FILE NAMES      ###
