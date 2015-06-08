@@ -420,7 +420,7 @@ columnproperties_path = cfg.get('I/O','ColumnPropertiesPath')
 purged_path = cfg.get('I/O','InputFilePath')
 monitoring_path = cfg.get('I/O','MonitoringPath')
 LastGoodData_path = cfg.get('I/O','LastGoodData')
-proc_monitoring_path = cfg.get('I/O','OutputFilePathMonitoring2')
+proc_monitoring_path = cfg.get('I/O','OutputFilePathMonitoring')
 
 #file names
 columnproperties_file = cfg.get('I/O','ColumnProperties')

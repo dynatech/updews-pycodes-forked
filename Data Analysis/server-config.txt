@@ -48,6 +48,9 @@ InputFilePath = D:Dropbox\Senslope Data\Purged\New\
 MonitoringPath =D:Dropbox\Senslope Data\Purged\Monitoring\
 OutputFilePathMonitoring = C:\Users\Dynaslope\Desktop\Fresh\Senslope Data\Proc2\Monitoring\
 OutputFilePathMonitoring2 = C:\Users\Dynaslope\Desktop\Fresh\Senslope Data\Proc2\Monitoring\
+RainfallFilePath_Dyna = C:\DB Mount\Dropbox\Senslope Data\Purged\Rainfall\
+RainfallFilePath_NOAH =C:\DB Mount\Dropbox\Senslope Data\Proc2\Temp\
+
 CSVOutputFile = Node-level_alerts.csv
 PrintFigures = False									; not being used in present code
 LastGoodData = D:Dropbox\Senslope Data\Purged\LastGoodData\
