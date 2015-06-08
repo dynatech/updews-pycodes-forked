@@ -392,7 +392,7 @@ def remove_nodes(xz,xy,start,end):
     
 
 cfg = ConfigParser.ConfigParser()
-cfg.read('IO-config.txt')    
+cfg.read('server-config.txt')    
 
 ##set/get values from config file
 
