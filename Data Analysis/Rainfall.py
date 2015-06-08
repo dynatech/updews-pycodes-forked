@@ -47,7 +47,7 @@ def set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_w
 roll_window_numpts, end, start, offsetstart, monwin = set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_window_ops)
 
 #Extracting 2-yearm maximum rainfall value of all sites
-properties=pd.read_csv('C:\DB Mount\Dropbox\Dynaslope Project\Documentations\dynaslope_sites.csv',
+properties=pd.read_csv('C:\Users\Piere\Desktop\updewscodes\trunk\Data Analysis\dynaslope_sites.csv',
                        header=False,usecols=[8,16],index_col=[0])
 #Setting threshold value on all sites
 properties['threshold']=properties.iloc[:,0]*1/2
@@ -125,6 +125,6 @@ def get_rain(monwin,properties,end,start):
      
         
 rain_df=get_rain(monwin,properties,end,start)   
-rain_df.to_csv('C:/DB Mount/Dropbox/Trials/rain-graph.csv',header=True,mode='w')
+##rain_df.to_csv('C:/DB Mount/Dropbox/Trials/rain-graph.csv',header=True,mode='w')
 
     

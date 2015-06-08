@@ -12,6 +12,7 @@ import fileinput
 import generic_functions as gf
 import generate_proc_monitoring as genproc
 import alert_evaluation as alert
+import trendforweb
 
 
 def set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_window_ops):
@@ -587,11 +588,11 @@ for s in range(len(sensors)):
     print col_trends
     
     col_trends = Counter(col_trends)    
-#    
+
     with open(proc_monitoring_path+'webtrends.csv', 'ab') as w, open (proc_monitoring_path+"textalert.txt", 'ab') as t:    
         w.write ((col_trends.most_common(1)[0][0]) + ',')
         t.write (colname + ":" + (col_trends.most_common(1)[0][0]) + '\n')
-#        
+      
         if len(calert.index)<7:
             print 'Trending alert note: less than 6 data points for ' + colname
         
@@ -600,43 +601,4 @@ for s in range(len(sensors)):
                    w.truncate()
                    w.write('\n')
         
-    #10.1 Printing of alert files for easy viewing of data
-    alert_report=alert_summary(alert_out,alert_list)
-
-
-   # print alert_disp
-
-#    #11. Plotting column positions
-#    plot_column_positions(colname,cs_x,cs_xz_0,cs_xy_0)
-#    plot_column_positions(colname,cs_x,cs_xz,cs_xy)
-#    plt.savefig('C:\Users\Carlo\Documents\Dynaslope\data\\'+colname+' colpos ',
-#                dpi=320, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
-#
-#    #12. Plotting displacement and velocity
-#    plot_disp_vel(colname, xz_0off,xy_0off, vel_xz_0off, vel_xy_0off)
-#    plt.savefig('C:\Users\Carlo\Documents\Dynaslope\data\\'+colname+' disp_vel ',
-#                dpi=320, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
-#
-#    plt.close()
-
-
-##for a in range(len(alert_list)):
-##    if a==2:
-##        print alert_names[a] + str([al[:5] for al in str(alert_list[a])])
-##    else:    
-##        print alert_names[a] + str(alert_list[a])
-
-
-
-
-
-
-    
-    
-    
-
-    
-    
-
-
-    
+final = trendforweb()

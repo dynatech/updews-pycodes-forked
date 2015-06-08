@@ -35,7 +35,3 @@ def getwebtrend ():
     alert = alert[start:now]
     
     return alert.T
-    
-final = getwebtrend()
-
-print final
