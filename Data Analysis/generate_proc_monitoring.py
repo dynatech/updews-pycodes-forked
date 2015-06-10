@@ -9,7 +9,7 @@ import generic_functions as gf
 
 
 cfg = ConfigParser.ConfigParser()
-cfg.read('IO-config.txt')
+cfg.read('server-config.txt')
 
 
 
