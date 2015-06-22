@@ -6,6 +6,7 @@ import re
 import pandas.io.sql as psql
 import pandas as pd
 import numpy as np
+import StringIO
 
 # Scripts for connecting to local database
 # Needs config file: server-config.txt
@@ -93,27 +94,12 @@ def GetRawAccelData(siteid = "", fromTime = "", maxnode = 40):
     if printtostdout:
         PrintOut('Querying database ...')
 
-    # adjust out of bounds limits for xvalue mainly
-    boundsQuery = "select timestamp, id, \
-                  if((xvalue<(1126-4096))&(xvalue>(1024-4096)),xvalue+4096,xvalue) xvalue, \
-                  if((yvalue<(1126-4096))&(yvalue>(1024-4096)),yvalue+4096,yvalue) yvalue, \
-                  if((zvalue<(1126-4096))&(zvalue>(1024-4096)),zvalue+4096,zvalue) zvalue \
-                  from senslopedb.%s" % (siteid)
-
-    # nullify all other values once an invalid value is detected
-    cond = "(xvalue < %s or abs(yvalue) > %s or abs(zvalue) > %s)" % (xlim,ylim,zlim)
-    query = "select timestamp, id, \
-            if(%s, null, xvalue) xvalue, \
-            if(%s, null, yvalue) yvalue, \
-            if(%s, null, zvalue) zvalue \
-            from (%s) q2" % (cond,cond,cond,boundsQuery)
-    
-    query = "select * from (%s) query1 where (xvalue is not null)" % query
+    query = "select timestamp,id,xvalue,yvalue,zvalue from senslopedb.%s " % (siteid)        
 
     if not fromTime:
         fromTime = "2010-01-01"
         
-    query = query + " and timestamp > '%s'" % fromTime
+    query = query + " where timestamp > '%s'" % fromTime
 
     query = query + " and id >= 1 and id <= %s ;" % (str(maxnode))
 
@@ -167,6 +153,48 @@ def GetLastGoodData(df, colLength):
     print dflgd
     
     return dflgd
+    
+def GenerateLastGoodData():
+    
+    values = '('
+    q = StringIO.StringIO()
+    
+    slist = GetSensorList()
+    
+    for s in slist:
+        
+        print s.name, s.nos
+        
+        df = GetRawAccelData(s.name,'',s.nos)
+        dflgd = GetLastGoodData(df,s.nos)
+           
+        dflgd['name'] = [s.name]*len(dflgd)
+        dflgd = dflgd[['name','id','ts','x','y','z']]
+          
+        dflgd.to_csv(q,header=False, index=False,sep=',',line_terminator='),(')
+        
+        values = values + q.getvalue()
+
+    values = values[:-2]    
+    values = re.sub(r"[a-z]{4,5}",lambda x: '"' + x.group(0) + '"',values) 
+    values = re.sub(r"[0-9\-\s:]{19}",lambda x: '"' + x.group(0) + '"',values)
+#    print values
+    
+    query = "INSERT IGNORE INTO %s.lastgooddata (name,id,timestamp,xvalue,yvalue,zvalue) VALUES %s" %(Namedb,values)    
+    
+#    print query
+    
+    db, cur = SenslopeDBConnect(Namedb)
+    cur.execute("use "+ Namedb)
+    
+    a = cur.execute(query)
+    
+    if a:
+        db.commit()
+
+    db.close()
+   
+        
 
             
 # import values from config file
@@ -190,7 +218,6 @@ xmax = cfg.get(valueSect,'xmax')
 mlowlim = cfg.get(valueSect,'mlowlim')
 muplim = cfg.get(valueSect,'muplim')
 islimval = cfg.getboolean(valueSect,'LimitValues')
-
 
 
 
