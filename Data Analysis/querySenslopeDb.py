@@ -225,7 +225,7 @@ def GetLastGoodData(df, nos, fillMissing=False):
 #            dataframe object of the resultset
 def GetLastGoodDataFromDb(col):
     df = GetDBDataFrame("""SELECT timestamp, id, xvalue, yvalue, zvalue FROM
-                        senslopedb.lastgooddata l where name='%s';""" % (col)
+                        senslopedb.lastgooddata l where name='%s';""" % (col))
     df.columns = ['ts','id','x','y','z']
     # change ts column to datetime
     df.ts = pd.to_datetime(df.ts)

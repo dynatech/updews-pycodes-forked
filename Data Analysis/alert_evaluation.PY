@@ -8,6 +8,9 @@ import pandas as pd
 import ConfigParser
 import generic_functions as gf
 
+from querySenslopeDb import *
+from filterSensorData import *
+
 cfg = ConfigParser.ConfigParser()
 cfg.read('IO-config.txt')
 
@@ -82,7 +85,7 @@ def node_alert(colname, xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_v
     alert=alert.set_index('id')
 
     #checking for nodes with no data
-    LastGoodData=pd.read_csv(LastGoodData_path+colname+LastGoodData_file,names=LastGoodData_file_headers,parse_dates=[0],index_col=[1])
+    LastGoodData= GetLastGoodDataFromDb(colname)
     LastGoodData=LastGoodData[:num_nodes]
     cond = np.asarray((LastGoodData.ts<valid_data))
     if len(LastGoodData)<num_nodes:

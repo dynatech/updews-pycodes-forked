@@ -47,7 +47,7 @@ DotProductThreshold = 0.09
 InputFilePath = D:Dropbox\Senslope Data\Purged\New\
 MonitoringPath =D:Dropbox\Senslope Data\Purged\Monitoring\
 OutputFilePathMonitoring = C:\Users\Dynaslope\Desktop\Fresh\Senslope Data\Proc2\Monitoring\
-OutputFilePathMonitoring2 = C:\Users\Dynaslope\Desktop\Fresh\Senslope Data\Proc2\Monitoring\
+OutputFilePathMonitoring2 = C:\Users\Dynaslope\Desktop\Monitoring Output\
 RainfallFilePath_Dyna = C:\DB Mount\Dropbox\Senslope Data\Purged\Rainfall\
 RainfallFilePath_NOAH =C:\DB Mount\Dropbox\Senslope Data\Proc2\Temp\
 
