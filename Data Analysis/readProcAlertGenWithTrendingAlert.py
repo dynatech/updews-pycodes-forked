@@ -458,8 +458,8 @@ genproc.generate_proc()
 roll_window_numpts, end, start, offsetstart, monwin = set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_window_ops)
 
 #2. getting all column properties
-sensors=pd.read_csv(columnproperties_path+columnproperties_file,names=columnproperties_headers,index_col=None)
-err_nodes=pd.read_csv('err_nodes.csv',header=0,index_col=None,parse_dates=[3,4])
+#sensors=pd.read_csv(columnproperties_path+columnproperties_file,names=columnproperties_headers,index_col=None)
+#err_nodes=pd.read_csv('err_nodes.csv',header=0,index_col=None,parse_dates=[3,4])
 
 nd_alert=[]
 a0_alert=[]
@@ -483,11 +483,13 @@ sensorlist = GetSensorList()
 
 for s in sensorlist:
 #    if s!=21: continue
-    
+    last_col=sensorlist[-1:]
+    last_col=last_col[0]
+    last_col=last_col.name
     #3. getting current column properties
     colname,num_nodes,seg_len= s.name,s.nos,s.seglen
     #print colname, num_nodes, seg_len
-    cur_err_node=err_nodes[(err_nodes.col==colname)]                                        ###NEW
+##    cur_err_node=err_nodes[(err_nodes.col==colname)]                                        ###NEW
     #4. importing proc_monitoring csv file of current column to dataframe
     try:
         proc_monitoring=pd.read_csv(proc_monitoring_path+"Proc\\"+colname+proc_monitoring_file,names=proc_monitoring_file_headers,parse_dates=[0],index_col=[0])
@@ -633,7 +635,7 @@ for s in sensorlist:
             if len(calert.index)<7:
                 print 'Trending alert note: less than 6 data points for ' + colname
             
-            if colname == sensors.iat[-1,0]:
+            if colname == last_col:
                        w.seek(-1, os.SEEK_END)
                        w.truncate()
                        w.write('\n')
