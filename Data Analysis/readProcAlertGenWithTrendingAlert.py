@@ -594,27 +594,27 @@ for s in sensorlist:
      seen.add(line)
      print line, # standard output is now redirected to the file
      
-    out = [0,1,2,6,7,8,9,12,13]
-    
-    if s in out:
+#    out = [0,1,2,6,7,8,9,12,13]
+#    
+#    if s in out:
 #        
 #    print trending_node_alerts 
-        with open (proc_monitoring_path+"textalert.txt", 'ab') as t:
-            if trending_node_alerts.count('a2') != 0:
-                t.write (colname + ":" + 'a2' + '\n')
-            elif trending_node_alerts.count('a1') != 0:
-                t.write (colname + ":" + 'a1' + '\n')
-            elif (colname == 'sinb') or (colname == 'blcb'):
-                if trending_node_alerts.count('a0') > 0:
-                    t.write (colname + ":" + 'a0' + '\n')
-                else:
-                    t.write (colname + ":" + 'nd' + '\n')
+    with open (proc_monitoring_path+"textalert.txt", 'ab') as t:
+        if trending_node_alerts.count('a2') != 0:
+            t.write (colname + ":" + 'a2' + '\n')
+        elif trending_node_alerts.count('a1') != 0:
+            t.write (colname + ":" + 'a1' + '\n')
+        elif (colname == 'sinb') or (colname == 'blcb'):
+            if trending_node_alerts.count('a0') > 0:
+                t.write (colname + ":" + 'a0' + '\n')
             else:
-                trending_node_alerts_count = Counter(trending_node_alerts)  
-                t.write (colname + ":" + (trending_node_alerts_count.most_common(1)[0][0]) + '\n')
-    #        
-            if len(calert.index)<7:
-                print 'Trending alert note: less than 6 data points for ' + colname
+                t.write (colname + ":" + 'nd' + '\n')
+        else:
+            trending_node_alerts_count = Counter(trending_node_alerts)  
+            t.write (colname + ":" + (trending_node_alerts_count.most_common(1)[0][0]) + '\n')
+#        
+        if len(calert.index)<7:
+            print 'Trending alert note: less than 6 data points for ' + colname
                        
     with open(proc_monitoring_path+'webtrends.csv', 'ab') as w:
             if trending_node_alerts.count('a2') != 0:
