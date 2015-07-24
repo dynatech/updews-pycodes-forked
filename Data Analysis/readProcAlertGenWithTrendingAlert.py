@@ -12,7 +12,7 @@ from querySenslopeDb import *
 
 import generic_functions as gf
 import generateProcMonitoring as genproc
-import alert_evaluation as alert
+import alertEvaluation as alert
 
 
 def set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_window_ops):
@@ -393,7 +393,7 @@ def remove_nodes(xz,xy,start,end):
     
 
 cfg = ConfigParser.ConfigParser()
-cfg.read('IO-config.txt')    
+cfg.read('server-config.txt')    
 
 ##set/get values from config file
 
@@ -417,14 +417,14 @@ col_pos_num= cfg.getfloat('I/O','num_col_pos')
 #INPUT/OUTPUT FILES
 
 #local file paths
-columnproperties_path = cfg.get('I/O','ColumnPropertiesPath')
-purged_path = cfg.get('I/O','InputFilePath')
-monitoring_path = cfg.get('I/O','MonitoringPath')
-LastGoodData_path = cfg.get('I/O','LastGoodData')
+#columnproperties_path = cfg.get('I/O','ColumnPropertiesPath')
+#purged_path = cfg.get('I/O','InputFilePath')
+#monitoring_path = cfg.get('I/O','MonitoringPath')
+#LastGoodData_path = cfg.get('I/O','LastGoodData')
 proc_monitoring_path = cfg.get('I/O','OutputFilePathMonitoring2')
 
 #file names
-columnproperties_file = cfg.get('I/O','ColumnProperties')
+#columnproperties_file = cfg.get('I/O','ColumnProperties')
 purged_file = cfg.get('I/O','CSVFormat')
 monitoring_file = cfg.get('I/O','CSVFormat')
 LastGoodData_file = cfg.get('I/O','CSVFormat')
