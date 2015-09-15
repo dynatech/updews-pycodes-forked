@@ -131,6 +131,9 @@ def GetRawAccelData(siteid = "", fromTime = "", maxnode = 40):
         
     query = query + " where timestamp > '%s'" % fromTime
 
+    if len(siteid) == 5:
+        query = query + " and msgid = 32";
+    
     query = query + " and id >= 1 and id <= %s ;" % (str(maxnode))
 
     df =  GetDBDataFrame(query)
