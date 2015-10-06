@@ -46,3 +46,11 @@ ts_stats = 2010-01-01 00:00:00
 timestampend = 2010-01-01 00:00:00
 adjustcolumntimeof = MLKT
 
+ts_agbtaw = 2015-10-06 16:45:00
+ts_baytcw = 2015-10-06 16:45:00
+ts_blcsaw = 2015-10-06 16:45:00
+ts_cudtaw = 2015-10-06 16:45:00
+ts_nagtbw = 2015-10-06 16:45:00
+ts_pepsbw = 2015-10-06 16:45:00
+ts_sagtaw = 2015-10-06 16:45:00
+ts_tuetbw = 2015-10-06 16:45:00

@@ -115,9 +115,15 @@ def extract_db2():
         
         data = cur.fetchall()
 
-        valid_tables = ['blcw','bolw','gamw','humw','labw','lipw','mamw','oslw','plaw','pugw','sinw','stats']
+        valid_tables = ['blcw','bolw','gamw','humw','labw','lipw','mamw', \
+                        'oslw','plaw','pugw','sinw','stats']
         for tbl in valid_tables:        
             extractDBToSQL(tbl)
+
+        valid_arq_tables = ['agbtaw','baytcw','blcsaw','cudtaw','nagtbw',\
+                            'pepsbw','sagtaw','tuetbw']
+        for tbl2 in valid_arq_tables:        
+            extractDBToSQL(tbl2)
 
         #extractDBToSQL('sinb')     
     except IndexError:

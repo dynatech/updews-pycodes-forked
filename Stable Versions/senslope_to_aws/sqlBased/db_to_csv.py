@@ -116,9 +116,23 @@ def extract_db2():
         
         data = cur.fetchall()
 
-        valid_tables = ['blcb','blct','bolb','gamt','gamb','humt','humb','labb','labt','lipb','lipt','mamb','mamt','oslb','oslt','plab','plat','pugb','pugt','sinb','sinu']
+        valid_tables = ['blcb','blct','bolb','gamt','gamb','humt','humb','labb', \
+        				'labt','lipb','lipt','mamb','mamt','oslb','oslt','plab', \
+        				'plat','pugb','pugt','sinb','sinu']
         for tbl in valid_tables:        
             extractDBToSQL(tbl)
+
+        valid_tables_ver2 = ['agbsb','agbta','baysb','bayta','baytc','blcsa', \
+        					'carsb','carta','cudta','cudtb','mcasb','mcata', \
+        					'mesta','nagsa','nagtb','nurta','nurtb','pepsb', \
+        					'pepta','peptc','sagta','sagtb','tuetb']
+        for tbl2 in valid_tables_ver2:        
+            extractDBToSQL(tbl2)
+
+        valid_tables_soms = ['agbsbm','baysbm','blcsam','calsam','calsbm' \
+                            'caltam','mcasbm','pepsbm']
+        for tbl3 in valid_tables_soms:        
+            extractDBToSQL(tbl3)
 
         #extractDBToSQL('sinb')     
     except IndexError:
