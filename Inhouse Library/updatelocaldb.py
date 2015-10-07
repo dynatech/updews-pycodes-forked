@@ -7,15 +7,23 @@ Created on Tue Jun 02 10:20:04 2015
 
 import urllib
 import urllib2
-from StringIO import StringIO
+import datetime
+import time
 import pandas as pd
 import MySQLdb, ConfigParser
+from StringIO import StringIO
+from MySQLdb import OperationalError
 
 dbname = "senslopedb"
+dbhost = "127.0.0.1"
+#dbuser = "root"
+#dbpwd = "dyn4m1ght"
+dbuser = "updews"
+dbpwd = "october50sites"
 
 
 def getLatestTimestamp(col):
-    dbc = MySQLdb.connect(host="127.0.0.1",user="root",passwd="dyn4m1ght",db=dbname)
+    dbc = MySQLdb.connect(host=dbhost,user=dbuser,passwd=dbpwd,db=dbname)
     cur = dbc.cursor()
     query = "select max(timestamp) from %s.%s" % (dbname, col)
     a = cur.execute(query)
@@ -31,7 +39,7 @@ def getLatestTimestamp(col):
         
 def downloadLatestData(col,fromDate='',toDate=''):
     url = 'http://www.dewslandslide.com/ajax/getSenslopeData.php?db=%s&accelsite&site=%s&start=%s&end=%s' % (dbname,col,fromDate,toDate)
-    # print url
+    print url
     print "Downloading", col, "data from", fromDate, "...",
     
     # comment out this part for direct (no proxy) connection
@@ -46,19 +54,39 @@ def downloadLatestData(col,fromDate='',toDate=''):
         s = f.read().strip()
         conv = StringIO(s)
         df = pd.DataFrame.from_csv(conv, sep=',', parse_dates=False)
-        print "done"
+        print "downloadLatestData done"
         return df
     except urllib2.URLError:
         print "<urlopen error [Errno 10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond>"
 
         
    
-def writeDFtoLocalDB(col,df):
-    dbc = MySQLdb.connect(host="127.0.0.1",user="root",passwd="dyn4m1ght",db=dbname)
+def writeDFtoLocalDB(col,df,fromDate='',numDays=30):
+    dbc = MySQLdb.connect(host=dbhost,user=dbuser,passwd=dbpwd,db=dbname)
     print "writing df to", col, "db",
-    df.to_sql(con=dbc, name=col, if_exists='append', flavor='mysql')
-    dbc.close()
-    print "done"
+    #df.to_sql(con=dbc, name=col, if_exists='append', flavor='mysql')
+    #dbc.close()
+    try:
+        df.to_sql(con=dbc, name=col, if_exists='append', flavor='mysql')
+        dbc.close()
+    except OperationalError as e:
+        if 'MySQL server has gone away' in str(e):
+            #limit the number of days to reduce size of update data
+            print 'reconnecting and trying again...'
+            
+            date_1 = datetime.datetime.strptime(fromDate, "%Y-%m-%d %H:%M:%S")
+            end_date = date_1 + datetime.timedelta(days=numDays)
+            toDate = end_date.strftime("%Y-%m-%d %H:%M:%S")
+
+            df = downloadLatestData(col,fromDate,toDate)
+            writeDFtoLocalDB(col,df,fromDate,numDays/2)
+            print e
+            
+            time.sleep(3)
+        else:
+            raise e()
+
+    print "writeDFtoLocalDB done"
 
 #ts = getLatestTimestamp("labb")    
 #df = downloadLatestData("labb", "2013-06-01","2013-07-15")
@@ -92,8 +120,8 @@ sensors=pd.read_csv(columnproperties_path+columnproperties_file,names=columnprop
 
 for col in sensors['colname']:
 	ts = getLatestTimestamp(col)
-	ts2 = ts.strftime("%Y-%m-%d+%H:%M:%S")
+	ts2 = ts.strftime("%Y-%m-%d %H:%M:%S")
 	df = downloadLatestData(col,ts2)
-	writeDFtoLocalDB(col,df)
-	
-    
+	writeDFtoLocalDB(col,df,ts2)
+ 
+ 
