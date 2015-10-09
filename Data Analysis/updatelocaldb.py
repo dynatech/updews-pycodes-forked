@@ -65,7 +65,7 @@ def writeDFtoLocalDB(col,df):
 #writeDFtoLocalDB("labb",df)
 #local file paths
 cfg = ConfigParser.ConfigParser()
-cfg.read('IO-config.txt')    
+cfg.read('server-config.txt')    
 
 columnproperties_path = cfg.get('I/O','ColumnPropertiesPath')
 purged_path = cfg.get('I/O','InputFilePath')
@@ -91,9 +91,11 @@ alert_headers = cfg.get('I/O','alert_headers').split(',')
 sensors=pd.read_csv(columnproperties_path+columnproperties_file,names=columnproperties_headers,index_col=None)
 
 for col in sensors['colname']:
-	ts = getLatestTimestamp(col)
-	ts2 = ts.strftime("%Y-%m-%d+%H:%M:%S")
-	df = downloadLatestData(col,ts2)
-	writeDFtoLocalDB(col,df)
-	
-    
+    try:
+        ts = getLatestTimestamp(col)
+        ts2 = ts.strftime("%Y-%m-%d+%H:%M:%S")
+        df = downloadLatestData(col,ts2)
+        writeDFtoLocalDB(col,df)
+ 
+    except AttributeError:
+        print col + " table does not exist"

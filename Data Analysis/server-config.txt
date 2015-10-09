@@ -54,7 +54,7 @@ RainfallFilePath_NOAH =C:\DB Mount\Dropbox\Senslope Data\Proc2\Temp\
 CSVOutputFile = Node-level_alerts.csv
 PrintFigures = False									; not being used in present code
 LastGoodData = D:Dropbox\Senslope Data\Purged\LastGoodData\
-ColumnPropertiesPath = C:\Users\Dynaslope\Desktop\Fresh\Local\
+ColumnPropertiesPath = C:\Users\Dynaslope\Desktop\Workfolder\trunk\Data Analysis\
  
 ############################
 ###      FILE NAMES      ###
@@ -74,6 +74,7 @@ num_nodes_to_check=5		;number of nodes to check before calling column alert leve
 ############################
 ###     FILE HEADERS     ###
 ############################
+
 columnproperties_headers=colname,num_nodes,seg_len
 purged_file_headers=ts,id,x,y,z,m
 monitoring_file_headers=ts,id,x,y,z,m

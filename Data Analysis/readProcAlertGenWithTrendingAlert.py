@@ -16,7 +16,19 @@ import alertEvaluation as alert
 
 
 def set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_window_ops):
-
+    
+    ##DESCRIPTION:    
+    ##returns number of data points per rolling window, endpoint of interval, starting point of interval, time interval for real-time monitoring, monitoring window dataframe
+    
+    ##INPUT:
+    ##roll_window_length; float; length of rolling/moving window operations, in hours
+    ##data_dt; float; time interval between data points, in hours    
+    ##rt_window_length; float; length of real-time monitoring window, in days
+    ##num_roll_window_ops
+    
+    ##OUTPUT:
+    ##roll_window_numpts, end, start, offsetstart, monwin
+    
     roll_window_numpts=int(1+roll_window_length/data_dt)
     end, start, offsetstart=gf.get_rt_window(rt_window_length,roll_window_numpts,num_roll_window_ops)
     monwin_time=pd.date_range(start=offsetstart, end=end, freq='30Min',name='ts', closed=None)
@@ -24,6 +36,19 @@ def set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_w
     return roll_window_numpts, end, start, offsetstart, monwin
     
 def create_series_list(input_df,monwin,colname,num_nodes):
+    
+    ##DESCRIPTION:
+    ##returns list of xz node series, xy node series and m node series
+    
+    ##INPUT:
+    ##input_df; array of float
+    ##monwin; empty dataframe
+    ##colname; array; list of sites
+    ##num_nodes; integer; number of nodes
+
+    ##OUTPUT:
+    ##xz_series_list, xy_series_list, m_series_list
+    
     #a. initializing lists
     xz_series_list=[]
     xy_series_list=[] 
@@ -41,7 +66,7 @@ def create_series_list(input_df,monwin,colname,num_nodes):
         curxy=input_df.loc[input_df.id==n,['xy']]
         curm=input_df.loc[input_df.id==n,['m']]
         #d.resampling node series to 30-min exact intervals
-        finite_data=len(np.where(np.isfinite(curxz.values))[0])
+        finite_data=len(np.where(np.isfinite(curxz.values.astype(np.float64)))[0])
         if finite_data>0:
             curxz=curxz.resample('30Min',how='mean',base=0)
             curxy=curxy.resample('30Min',how='mean',base=0)
@@ -60,6 +85,20 @@ def create_series_list(input_df,monwin,colname,num_nodes):
     return xz_series_list,xy_series_list,m_series_list
 
 def create_fill_smooth_df(series_list,num_nodes,monwin, roll_window_numpts, to_fill, to_smooth):
+    
+    ##DESCRIPTION:
+    ##returns rounded-off values within monitoring window
+
+    ##INPUT:
+    ##series_list
+    ##num_dodes; integer; number of nodes
+    ##monwin; monitoring window dataframe
+    ##roll_window_numpts; integer; number of data points per rolling window
+    ##to_fill; filling NAN values
+    ##to_smooth; smoothing dataframes with moving average
+
+    ##OUTPUT:
+    ##np.round(df[(df.index>=monwin.index[0])&(df.index<=monwin.index[-1])],4)
     
     #concatenating series list into dataframe
     df=pd.concat(series_list, axis=1, join='outer', names=None)
@@ -86,6 +125,20 @@ def create_fill_smooth_df(series_list,num_nodes,monwin, roll_window_numpts, to_f
     return np.round(df[(df.index>=monwin.index[0])&(df.index<=monwin.index[-1])],4)
 
 def compute_col_pos(xz,xy,col_pos_end, col_pos_interval, col_pos_number):
+
+    ##DESCRIPTION:
+    ##returns rounded values of cumulative displacements
+
+    ##INPUT:
+    ##xz; dataframe; horizontal linear displacements along the planes defined by xa-za
+    ##xy; dataframe; horizontal linear displacements along the planes defined by xa-ya
+    ##col_pos_end; string; right bound for generating dates
+    ##col_pos_interval; string ; interval between two adjacent column position dates
+    ##col_pos_number; integer; number of column position dates to plot
+
+    ##OUTPUT:
+    ##np.round(cs_x,4), np.round(cs_xz,4), np.round(cs_xy,4)    
+    
     #computing x from xz and xy
     x=pd.DataFrame(data=None,index=xz.index)
     num_nodes=len(xz.columns.tolist())
@@ -129,6 +182,26 @@ def compute_col_pos(xz,xy,col_pos_end, col_pos_interval, col_pos_number):
     return np.round(cs_x,4), np.round(cs_xz,4), np.round(cs_xy,4)
     
 def compute_node_inst_vel(xz,xy,roll_window_numpts): 
+
+    ##DESCRIPTION:
+    ##returns rounded-off values of velocity of xz and xy
+
+    ##INPUT:
+    ##xz; dataframe; horizontal linear displacements along the planes defined by xa-za
+    ##xy; dataframe; horizontal linear displacements along the planes defined by xa-ya
+    ##roll_window_numpts; integer; number of data points per rolling window
+
+    ##OUTPUT:
+    ##np.round(vel_xz,4), np.round(vel_xy,4)
+
+#    trimming xz and xy for a more efficient run
+#    end_xz = xz.index[-1]
+#    end_xy = xy.index[-1]
+#    start_xz = end_xz - timedelta(days=4)    
+#    start_xy = end_xy - timedelta(days=4)
+#    xz = xz.loc[start_xz:end_xz]
+#    xy = xy.loc[start_xy:end_xy]    
+    
     #setting up time units in days
     td=xz.index.values-xz.index.values[0]
     td=pd.Series(td/np.timedelta64(1,'D'),index=xz.index)
@@ -160,6 +233,30 @@ def df_to_out(colname,xz,xy,
               cs_x,cs_xz,cs_xy,
               proc_monitoring_path,
               proc_monitoring_file):
+
+    ##DESCRIPTION:
+    ##writes to csv and returns:
+    ##horizontal linear displacements along the planes defined by xa-za, and xa-ya;
+    ##zeroed and offset dataframes of xz and xy;
+    ##velocities of xz and xy;
+    ##zeroed and offset dataframes of velocities of xz and xy;
+    ## resized dataframes of cumulative displacements;
+    ##zeroed and offset dataframes of cumulative displacements
+
+    ##INPUT:
+    ##colname; string; name of site   
+    ##xz; dataframe; horizontal linear displacements along the planes defined by xa-za
+    ##xy; dataframe; horizontal linear displacements along the planes defined by xa-ya
+    ##xz_vel; dataframe; velocity along the planes defined by xa-za
+    ##xy_vel; dataframe; velocity along the planes defined by xa-ya
+    ##cs_x; dataframe; cumulative vertical displacement
+    ##cs_xz; dataframe; cumulative vertical displacement horizontal linear displacements along the planes defined by xa-za
+    ##cs_xy; dataframe; cumulative vertical displacement horizontal linear displacements along the planes defined by xa-ya
+    ##proc_monitoring path; file path
+    ##proc_monitoring_file; file name
+
+    ##OUTPUT:
+    ##xz,xy,   xz_0off,xy_0off,   vel_xz,vel_xy, vel_xz_0off, vel_xy_0off, cs_x,cs_xz,cs_xy,   cs_xz_0,cs_xy_0
 
     monwindate=(xz.index>=vel_xz.index[0])&(xz.index<=vel_xz.index[-1])
 
@@ -204,6 +301,28 @@ def df_to_out(colname,xz,xy,
 
 def alert_generation(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velA1, T_velA2, k_ac_ax,
                      num_nodes_to_check,end,proc_monitoring_path,proc_monitoring_file):
+
+    ##DESCRIPTION:
+    ##returns node level alerts
+
+    ##INPUT:
+    ##colname; string; name of site    
+    ##xz; dataframe; horizontal linear displacements along the planes defined by xa-za
+    ##xy; dataframe; horizontal linear displacements along the planes defined by xa-ya
+    ##xz_vel; dataframe; velocity along the planes defined by xa-za
+    ##xy_vel; dataframe; velocity along the planes defined by xa-ya
+    ##num_nodes; float; number of nodes
+    ##T_disp; float; threshold values for displacement
+    ##T_velA1; float; threshold velocities correspoding to alert level A1
+    ##T_velA2; float; threshold velocities correspoding to alert level A2
+    ##k_ac_ax; float; minimum value of (minimum velocity / maximum velocity) required to consider movement as valid
+    ##num_nodes_to_check; integer; number of adjacent nodes to check for validating current node alert
+    ##end; 
+    ##proc_monitoring path; file path
+    ##proc_monitoring_file; file name
+
+    ##OUTPUT:
+    ##alert_out
  
     #processing node-level alerts
     alert_out=alert.node_alert(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velA1, T_velA2, k_ac_ax)
@@ -234,13 +353,22 @@ def alert_generation(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velA1, T_v
 ##            alert_out.to_csv(proc_monitoring_path+colname+'/'+colname+" "+"alert"+proc_monitoring_file,
 ##                             sep=',', header=False,mode='a')
 ##    else:
-    alert_monthly.to_csv(proc_monitoring_path+"Proc\\"+colname+'/'+colname+" "+"alert"+proc_monitoring_file,
+    alert_monthly.to_csv(proc_monitoring_path+"Proc\\"+colname+'\\'+colname+" "+"alert"+proc_monitoring_file,
                      sep=',', header=False,mode='w')
 
     
     return alert_out
 
 def alert_summary(alert_out,alert_list):
+
+    ##DESCRIPTION:
+    ##creates list of sites per alert level
+
+    ##INPUT:
+    ##alert_out; array
+    ##alert_list; array
+
+
 ##    alert_disp=alert_out.loc[(abs(alert_out.xz_disp)>=T_disp/2)|(abs(alert_out.xy_disp)>=T_disp/2)]
 ##    if len(alert_disp)!=0:
 ##        print alert_disp
@@ -266,6 +394,16 @@ def alert_summary(alert_out,alert_list):
     
     
 def plot_column_positions(colname,x,xz,xy):
+
+    ##DESCRIPTION
+    ##returns plot of xz and xy absolute displacements of each node
+
+    ##INPUT
+    ##colname; array; list of sites
+    ##x; dataframe; vertical displacements
+    ##xz; dataframe; horizontal linear displacements along the planes defined by xa-za
+    ##xy; dataframe; horizontal linear displacements along the planes defined by xa-ya
+
     try:
         fig=plt.figure(1)
         plt.clf()
@@ -296,6 +434,16 @@ def plot_column_positions(colname,x,xz,xy):
     return
     
 def plot_disp_vel(colname, xz,xy,xz_vel,xy_vel):
+
+    ##DESCRIPTION:
+    ##returns plot of xz and xy displacements per node, xz and xy velocities per node
+
+    ##INPUT:
+    ##xz; array of floats; horizontal linear displacements along the planes defined by xa-za
+    ##xy; array of floats; horizontal linear displacements along the planes defined by xa-ya
+    ##xz_vel; array of floats; velocity along the planes defined by xa-za
+    ##xy_vel; array of floats; velocity along the planes defined by xa-ya
+
     try:
         fig=plt.figure(2)
         plt.clf()
@@ -349,7 +497,17 @@ def df_add_offset_col(df,offset):
     return np.round(df,4)
 
 def mask_error_nodes(rawdat_list,err):
-    
+  
+    ##DESCRIPTION:
+    ##
+  
+    ##INPUT:
+    ##rawdat_list; array
+    ##err
+  
+    ##OUTPUT:
+    ## rawdat_list[0],rawdat_list[1],rawdat_list[2]
+  
     lastdate=rawdat_list[0].index.values[-1]
     err.reset_index(drop=True, inplace=True)
     err.fillna(value=lastdate, inplace=True)
@@ -375,6 +533,19 @@ def mask_error_nodes(rawdat_list,err):
     return rawdat_list[0],rawdat_list[1],rawdat_list[2]
 
 def remove_nodes(xz,xy,start,end):
+
+    ##DESCRIPTION:
+    ##returns array of floats; horizontal linear displacements along the planes defined by xa-za and xa-ya, respectively
+
+    ##INPUT:
+    ##xz; array of floats; horizontal linear displacements along the planes defined by xa-za
+    ##xy; array of floats; horizontal linear displacements along the planes defined by xa-ya
+    ##start; float
+    ##end: float
+
+    ##OUTPUT:
+    ##xz, xy
+
     node_exclude=np.arange(start,end+1)
     print node_exclude
     if len(node_exclude)>0:
@@ -390,7 +561,7 @@ def remove_nodes(xz,xy,start,end):
 
     return xz,xy
         
-    
+start_time=datetime.now()
 
 cfg = ConfigParser.ConfigParser()
 cfg.read('server-config.txt')    
@@ -475,14 +646,14 @@ print "Generating plots and alerts for:"
 names = ['ts','col_a']
 fmt = '%Y-%m-%d %H:%M'
 hr = end - timedelta(hours=3)
-with open(proc_monitoring_path+'webtrends.csv', 'ab') as w,open (proc_monitoring_path+"textalert.txt", 'wb') as t:
+with open(proc_monitoring_path+'webtrends.csv', 'ab') as w,open (proc_monitoring_path+"textalert.txt", 'wb'), open (proc_monitoring_path+"textalert2.txt", 'wb') as t:
     t.write('As of ' + end.strftime(fmt) + ':\n')
     w.write(end.strftime(fmt) + ',')
 
 sensorlist = GetSensorList()
 
 for s in sensorlist:
-#    if s!=21: continue
+#    if s.name!='blcb': continue
     last_col=sensorlist[-1:]
     last_col=last_col[0]
     last_col=last_col.name
@@ -604,16 +775,24 @@ for s in sensorlist:
     with open (proc_monitoring_path+"textalert.txt", 'ab') as t:
         if trending_node_alerts.count('a2') != 0:
             t.write (colname + ":" + 'a2' + '\n')
+            a2_alert.append(colname)
         elif trending_node_alerts.count('a1') != 0:
             t.write (colname + ":" + 'a1' + '\n')
+            a1_alert.append(colname)
         elif (colname == 'sinb') or (colname == 'blcb'):
             if trending_node_alerts.count('a0') > 0:
                 t.write (colname + ":" + 'a0' + '\n')
+                a0_alert.append(colname)
             else:
                 t.write (colname + ":" + 'nd' + '\n')
+                nd_alert.append(colname)
         else:
             trending_node_alerts_count = Counter(trending_node_alerts)  
             t.write (colname + ":" + (trending_node_alerts_count.most_common(1)[0][0]) + '\n')
+            if (trending_node_alerts_count.most_common(1)[0][0] == 'a0'):
+                a0_alert.append(colname)
+            else:
+                nd_alert.append(colname)
 #        
         if len(calert.index)<7:
             print 'Trending alert note: less than 6 data points for ' + colname
@@ -640,6 +819,7 @@ for s in sensorlist:
                        w.truncate()
                        w.write('\n')
     print alert_out
+    
 #    alert_out.to_csv(proc_monitoring_path+colname+'/'+colname+" "+"alert2"+proc_monitoring_file, sep=',', header=False,mode='a')
 
 
@@ -651,12 +831,12 @@ for s in sensorlist:
 #    plt.savefig('C:\Users\Carlo\Documents\Dynaslope\data\\'+colname+' colpos ',
 #                dpi=320, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
 #
-#    #12. Plotting displacement and velocity
-#    plot_disp_vel(colname, xz_0off,xy_0off, vel_xz_0off, vel_xy_0off)
-#    plt.savefig('C:\Users\Carlo\Documents\Dynaslope\data\\'+colname+' disp_vel ',
-#                dpi=320, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
-#
-#    plt.close()
+    #12. Plotting displacement and velocity
+    plot_disp_vel(colname, xz_0off,xy_0off, vel_xz_0off, vel_xy_0off)
+    plt.savefig(proc_monitoring_path+colname+' disp_vel ',
+                dpi=320, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
+
+    plt.close()
 
 
 ##for a in range(len(alert_list)):
@@ -665,12 +845,17 @@ for s in sensorlist:
 ##    else:    
 ##        print alert_names[a] + str(alert_list[a])
 
+with open (proc_monitoring_path+"textalert2.txt", 'ab') as t:
+    t.write ('a0: ' + ','.join(sorted(a0_alert)) + '\n')
+    t.write ('nd: ' + ','.join(sorted(nd_alert)) + '\n')
+    t.write ('a1: ' + ','.join(sorted(a1_alert)) + '\n')
+    t.write ('a2: ' + ','.join(sorted(a2_alert)) + '\n')
 
 
 
-
-
-    
+end_time = datetime.now() - start_time
+with open (proc_monitoring_path+"timer.txt", 'ab') as p:
+    p.write (start_time.strftime(fmt) + ": " + str(end_time) + '\n')
     
     
 

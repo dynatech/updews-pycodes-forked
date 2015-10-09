@@ -8,7 +8,6 @@ from querySenslopeDb import *
 from filterSensorData import *
 import generic_functions as gf
 
-
 cfg = ConfigParser.ConfigParser()
 cfg.read('server-config.txt')
 
@@ -76,10 +75,8 @@ def generate_proc():
             
 #        if colname != "sint": continue
     ##    print "\nDATA for ",colname," as of ", end.strftime("%Y-%m-%d %H:%M")
-
-
         monitoring=GetRawAccelData(colname,offsetstart)
-
+        
         try:
             monitoring=applyFilters(monitoring)
             LastGoodData=GetLastGoodData(monitoring,num_nodes)
@@ -120,7 +117,6 @@ def generate_proc():
         ##    print monitoring.tail(20)
         
         monitoring.to_csv(proc_monitoring_path+"Proc\\"+colname+proc_monitoring_file,sep=',', header=False,mode='w')
-
 
        
 generate_proc()

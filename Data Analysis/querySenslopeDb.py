@@ -44,7 +44,7 @@ def GetLatestTimestamp(nameDb, table):
     a = cur.fetchall()
     if a:
         return a[0][0]
-    else:
+    else: 
         return ''
 		
 def CreateAccelTable(table_name, nameDB):
@@ -90,7 +90,6 @@ def GetDBDataFrame(query):
     a = ''
     try:
         db, cur = SenslopeDBConnect(Namedb)
-
         df = psql.read_sql(query, db)
         # df.columns = ['ts','id','x','y','z','m']
         # change ts column to datetime
@@ -100,6 +99,7 @@ def GetDBDataFrame(query):
         return df
     except KeyboardInterrupt:
         PrintOut("Exception detected in accessing database")
+        
 
 #GetRawAccelData(siteid = "", fromTime = "", maxnode = 40): 
 #    retrieves raw data from the database table specified by parameters
