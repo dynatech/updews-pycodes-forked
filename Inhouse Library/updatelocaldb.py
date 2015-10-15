@@ -26,13 +26,13 @@ def getLatestTimestamp(col):
     dbc = MySQLdb.connect(host=dbhost,user=dbuser,passwd=dbpwd,db=dbname)
     cur = dbc.cursor()
     query = "select max(timestamp) from %s.%s" % (dbname, col)
-    a = cur.execute(query)
-    ret = ''
+    ret = 0
     try:
+        a = cur.execute(query)
         ret = cur.fetchall()[0][0]
     except TypeError:
         print "Error"
-        ret = ''
+        ret = 0
     finally:
         dbc.close()
         return ret
@@ -88,9 +88,6 @@ def writeDFtoLocalDB(col,df,fromDate='',numDays=30):
 
     print "writeDFtoLocalDB done"
 
-#ts = getLatestTimestamp("labb")    
-#df = downloadLatestData("labb", "2013-06-01","2013-07-15")
-#writeDFtoLocalDB("labb",df)
 #local file paths
 cfg = ConfigParser.ConfigParser()
 cfg.read('IO-config.txt')    
@@ -120,6 +117,12 @@ sensors=pd.read_csv(columnproperties_path+columnproperties_file,names=columnprop
 
 for col in sensors['colname']:
 	ts = getLatestTimestamp(col)
+	if ts == 0:
+		#I plan to use this portion of the code to auto generate tables that
+          # don't exist in the database of the local machine running the script
+		print 'There is no table named: ' + col
+		continue
+ 
 	ts2 = ts.strftime("%Y-%m-%d %H:%M:%S")
 	df = downloadLatestData(col,ts2)
 	writeDFtoLocalDB(col,df,ts2)
