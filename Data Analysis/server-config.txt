@@ -45,11 +45,13 @@ DotProductThreshold = 0.09
 ###   LOCAL FILE PATH    ###
 ############################
 InputFilePath = D:Dropbox\Senslope Data\Purged\New\
-MonitoringPath =D:Dropbox\Senslope Data\Purged\Monitoring\
+MonitoringPath = D:Dropbox\Senslope Data\Purged\Monitoring\
+NDFilePath = C:\Users\Dynaslope\Desktop\Monitoring Output\ND back analysis\
+EQFilePath = C:\Users\Dynaslope\Desktop\Fresh\Local\
 OutputFilePathMonitoring = C:\Users\Dynaslope\Desktop\Fresh\Senslope Data\Proc2\Monitoring\
 OutputFilePathMonitoring2 = C:\Users\Dynaslope\Desktop\Monitoring Output\
 RainfallFilePath_Dyna = C:\DB Mount\Dropbox\Senslope Data\Purged\Rainfall\
-RainfallFilePath_NOAH =C:\DB Mount\Dropbox\Senslope Data\Proc2\Temp\
+RainfallFilePath_NOAH = C:\DB Mount\Dropbox\Senslope Data\Proc2\Temp\
 
 CSVOutputFile = Node-level_alerts.csv
 PrintFigures = False									; not being used in present code

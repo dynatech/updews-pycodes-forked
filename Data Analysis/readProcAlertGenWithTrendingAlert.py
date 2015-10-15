@@ -338,10 +338,7 @@ def alert_generation(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velA1, T_v
     #setting ts and node_ID as indices
     alert_out=alert_out.set_index(['ts','id'])
 
-    alert_monthly=pd.read_csv(proc_monitoring_path+"Proc\\"+colname+"\\"+colname+" "+"alert"+proc_monitoring_file,
-                              names=alert_headers,parse_dates=[0],index_col=[0])
-    alert_monthly=alert_monthly[(alert_monthly.index>=end-timedelta(days=alert_file_length))]
-    alert_monthly.append(alert_out)
+
 
     
 
@@ -353,8 +350,16 @@ def alert_generation(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velA1, T_v
 ##            alert_out.to_csv(proc_monitoring_path+colname+'/'+colname+" "+"alert"+proc_monitoring_file,
 ##                             sep=',', header=False,mode='a')
 ##    else:
-    alert_monthly.to_csv(proc_monitoring_path+"Proc\\"+colname+'\\'+colname+" "+"alert"+proc_monitoring_file,
-                     sep=',', header=False,mode='w')
+    if os.path.exists(proc_monitoring_path+"Proc\\"+colname+"\\"+colname+" "+"alert"+proc_monitoring_file):
+        alert_monthly=pd.read_csv(proc_monitoring_path+"Proc\\"+colname+"\\"+colname+" "+"alert"+proc_monitoring_file,
+                                  names=alert_headers,parse_dates=[0],index_col=[0])
+        alert_monthly=alert_monthly[(alert_monthly.index>=end-timedelta(days=alert_file_length))]
+        alert_monthly.append(alert_out)
+        alert_monthly.to_csv(proc_monitoring_path+"Proc\\"+colname+'\\'+colname+" "+"alert"+proc_monitoring_file,
+                             sep=',', header=False,mode='w')
+    else:
+        alert_out.to_csv(proc_monitoring_path+"Proc\\"+colname+'\\'+colname+" "+"alert"+proc_monitoring_file,
+                         sep=',', header=False,mode='w')
 
     
     return alert_out
@@ -593,6 +598,9 @@ col_pos_num= cfg.getfloat('I/O','num_col_pos')
 #monitoring_path = cfg.get('I/O','MonitoringPath')
 #LastGoodData_path = cfg.get('I/O','LastGoodData')
 proc_monitoring_path = cfg.get('I/O','OutputFilePathMonitoring2')
+nd_path = cfg.get('I/O', 'NDFilePath')
+senslope_monitoring_path = cfg.get('I/O','OutputFilePathMonitoring')
+eq_file_path = cfg.get('I/O', 'EQFilePath')
 
 #file names
 #columnproperties_file = cfg.get('I/O','ColumnProperties')
@@ -651,6 +659,9 @@ with open(proc_monitoring_path+'webtrends.csv', 'ab') as w,open (proc_monitoring
     w.write(end.strftime(fmt) + ',')
 
 sensorlist = GetSensorList()
+
+for col in sensorlist:
+    print col.name
 
 for s in sensorlist:
 #    if s.name!='blcb': continue
@@ -818,9 +829,16 @@ for s in sensorlist:
                        w.seek(-1, os.SEEK_END)
                        w.truncate()
                        w.write('\n')
-    print alert_out
     
-#    alert_out.to_csv(proc_monitoring_path+colname+'/'+colname+" "+"alert2"+proc_monitoring_file, sep=',', header=False,mode='a')
+    print alert_out
+  
+#    prints to csv: node alert, column alert and trending alert of sites with nd alert
+        
+    for colname in nd_alert:
+        if os.path.exists(nd_path + colname + proc_monitoring_file):
+            alert_out[['node_alert', 'col_alert', 'trending_alert']].to_csv(nd_path + colname + proc_monitoring_file, sep=',', header=False, mode='a')
+        else:
+            alert_out[['node_alert', 'col_alert', 'trending_alert']].to_csv(nd_path + colname + proc_monitoring_file, sep=',', header=True, mode='w')
 
 
    # print alert_disp
@@ -852,15 +870,29 @@ with open (proc_monitoring_path+"textalert2.txt", 'ab') as t:
     t.write ('a2: ' + ','.join(sorted(a2_alert)) + '\n')
 
 
+#Prints rainfall alerts, text alert and eq summary in one file
+
+with open (proc_monitoring_path+"all_alerts.txt", 'wb') as allalerts:
+    with open (proc_monitoring_path+"textalert2.txt") as txtalert:
+        n = 0
+        for line in txtalert:
+            if n != 1 or n != 2:
+                allalerts.write(line)
+            n += 1
+    allalerts.write('\n')
+    with open (senslope_monitoring_path+"rainfallalert.txt") as rainfallalert:
+        n = 0
+        for line in rainfallalert:
+            if n != 1 or n != 2:
+                allalerts.write(line)
+            n += 1
+    allalerts.write('\n')
+    with open (eq_file_path+"eqsummary.txt") as eqsummary:
+        for line in eqsummary:
+            allalerts.write(line)
+
+
 
 end_time = datetime.now() - start_time
 with open (proc_monitoring_path+"timer.txt", 'ab') as p:
     p.write (start_time.strftime(fmt) + ": " + str(end_time) + '\n')
-    
-    
-
-    
-    
-
-
-    
