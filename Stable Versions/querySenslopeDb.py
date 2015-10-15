@@ -122,7 +122,7 @@ def GetSensorList():
         db, cur = SenslopeDBConnect(Namedb)
         cur.execute("use "+ Namedb)
         
-        query = 'SELECT name, num_nodes, seg_length FROM site_column_props inner join site_column on site_column_props.s_id=site_column.s_id order by name asc'
+        query = 'SELECT name, num_nodes, seg_length FROM site_column_props'
         
         df = psql.read_sql(query, db)
 
