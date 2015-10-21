@@ -13,6 +13,7 @@ import pandas as pd
 import MySQLdb, ConfigParser
 from StringIO import StringIO
 from MySQLdb import OperationalError
+from pandas.io import sql
 
 dbname = "senslopedb"
 dbhost = "127.0.0.1"
@@ -38,7 +39,7 @@ def getLatestTimestamp(col):
         return ret
         
 def downloadLatestData(col,fromDate='',toDate=''):
-    url = 'http://www.dewslandslide.com/ajax/getSenslopeData.php?db=%s&accelsite&site=%s&start=%s&end=%s' % (dbname,col,fromDate,toDate)
+    url = 'http://www.dewslandslide.com/ajax/getSenslopeData2.php?db=%s&accelsite&site=%s&start=%s&end=%s' % (dbname,col,fromDate,toDate)
     print url
     print "Downloading", col, "data from", fromDate, "...",
     
@@ -52,6 +53,7 @@ def downloadLatestData(col,fromDate='',toDate=''):
     try:
         f = urllib2.urlopen(url);
         s = f.read().strip()
+        #print s
         conv = StringIO(s)
         df = pd.DataFrame.from_csv(conv, sep=',', parse_dates=False)
         print "downloadLatestData done"
@@ -123,8 +125,9 @@ for col in sensors['colname']:
 		print 'There is no table named: ' + col
 		continue
  
-	ts2 = ts.strftime("%Y-%m-%d %H:%M:%S")
+	ts2 = ts.strftime("%Y-%m-%d+%H:%M:%S")
 	df = downloadLatestData(col,ts2)
+	print df
 	writeDFtoLocalDB(col,df,ts2)
  
  
