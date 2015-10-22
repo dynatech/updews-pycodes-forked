@@ -23,6 +23,7 @@ dbhost = "127.0.0.1"
 #dbpwd = "dyn4m1ght"
 dbuser = "updews"
 dbpwd = "october50sites"
+entryLimit = 600
 
 
 def getLatestTimestamp(col):
@@ -80,7 +81,7 @@ def createSensorTable(table,version):
         return ret      
         
 def downloadLatestData(col,fromDate='',toDate=''):
-    url = 'http://www.dewslandslide.com/ajax/getSenslopeData.php?db=%s&accelsite&site=%s&limit=500&start=%s&end=%s' % (dbname,col,fromDate,toDate)
+    url = 'http://www.dewslandslide.com/ajax/getSenslopeData.php?db=%s&accelsite&site=%s&limit=%s&start=%s&end=%s' % (dbname,col,entryLimit,fromDate,toDate)
     print url
     print "Downloading", col, "data from", fromDate, "...",
     
@@ -129,9 +130,13 @@ def downloadSiteColumnData(col):
         #return df
     except urllib2.URLError:
         print "<urlopen error [Errno 10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond>"
+        return None
     
     except ValueError:
         print "No Data from web server. Table does not exist on web server"
+        return None
+        
+    return True
    
 def writeDFtoLocalDB(col,df,fromDate='',numDays=30):
     dbc = MySQLdb.connect(host=dbhost,user=dbuser,passwd=dbpwd,db=dbname)
@@ -188,22 +193,32 @@ alert_headers = cfg.get('I/O','alert_headers').split(',')
 sensors=pd.read_csv(columnproperties_path+columnproperties_file,names=columnproperties_headers,index_col=None)
 
 for col in sensors['colname']:
-	print col
-	ts = getLatestTimestamp(col)
-	if ts == 0:
-		# auto generate tables that don't exist in the database of the local 
- 		# machine running the script
-		print 'There is no table named: ' + col
-		downloadSiteColumnData(col)
-		ts2 = "2000-01-01+00:00:00"
-		continue
-	elif ts == None:
-		ts2 = "2000-01-01+00:00:00"
-	else:
-     		ts2 = ts.strftime("%Y-%m-%d+%H:%M:%S")
- 
-	df = downloadLatestData(col,ts2)
-	#print df
-	writeDFtoLocalDB(col,df,ts2)
- 
- 
+	downloadMore = True
+	while downloadMore:
+    
+		print col
+		ts = getLatestTimestamp(col)
+		if ts == 0:
+        		# auto generate tables that don't exist in the database of the local 
+         		# machine running the script
+			print 'There is no table named: ' + col
+			existingOnWebServer = downloadSiteColumnData(col)
+			ts2 = "2000-01-01+00:00:00"
+   
+			if existingOnWebServer == None:
+    				downloadMore = False
+				
+			continue
+		elif ts == None:
+			ts2 = "2000-01-01+00:00:00"
+		else:
+			ts2 = ts.strftime("%Y-%m-%d+%H:%M:%S")
+        
+		df = downloadLatestData(col,ts2)
+		numElements = len(df.index)
+		print "Number of dataframe elements: %s" % (numElements)
+		#print df
+		writeDFtoLocalDB(col,df,ts2)
+
+		if numElements < entryLimit:
+			downloadMore = False
