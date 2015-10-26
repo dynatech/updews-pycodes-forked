@@ -13,10 +13,18 @@ import filterSensorData
 # Needs config file: server-config.txt
 
 class columnArray:
-    def __init__(self, name, number_of_segments, segment_length):
+    def __init__(self, name, number_of_segments, segment_length, col_length):
         self.name = name
         self.nos = number_of_segments
-        self.seglen = segment_length     
+        self.seglen = segment_length
+        self.collength = col_length
+
+class rainArray:
+    def __init__(self, name, max_rain_2year, rain_senslope, rain_arq):
+        self.name = name
+        self.twoyrmx = max_rain_2year
+        self.oldsite = rain_senslope
+        self.newsite = rain_arq
 
 
 def SenslopeDBConnect(nameDB):
@@ -144,6 +152,60 @@ def GetRawAccelData(siteid = "", fromTime = "", maxnode = 40):
     
     return df
 
+#GetRawRainData(siteid = "", fromTime = "", maxnode = 40): 
+#    retrieves raw data from the database table specified by parameters
+#    
+#    Parameters:
+#        siteid: str
+#            sitename or column name of the sensor column
+#        fromTime: str 
+#            starting time of the query that needs to be retrieved
+#            
+#    Returns:
+#        df: dataframe object 
+#            dataframe object of the result set 
+def GetRawRainData(siteid = "", fromTime = ""):
+
+    if not siteid:
+        raise ValueError('no site id entered')
+    
+    if printtostdout:
+        PrintOut('Querying database ...')
+    
+    oldsite = []
+    newsite = []
+    rainlist = GetRainList()
+    for s in rainlist:
+        oldsite += [s.oldsite]
+        newsite += [s.newsite]
+    
+    try:    
+        if siteid in oldsite:
+        
+            query = "select timestamp, rain from senslopedb.%s " % (siteid)
+            
+        elif siteid in newsite:
+        
+            query = "select timestamp, r15m from senslopedb.%s " % (siteid)
+        
+        if not fromTime:
+            fromTime = "2010-01-01"
+            
+        query = query + " where timestamp > '%s'" % fromTime
+    
+        df =  GetDBDataFrame(query)
+        
+        df.columns = ['ts','rain']
+        # change ts column to datetime
+        df.ts = pd.to_datetime(df.ts)
+        
+        return df
+        
+    except UnboundLocalError:
+        print 'No ' + siteid + ' table in SQL'
+
+
+
 #GetSensorList():
 #    returns a list of columnArray objects from the database tables
 #    
@@ -155,21 +217,49 @@ def GetSensorList():
         db, cur = SenslopeDBConnect(Namedb)
         cur.execute("use "+ Namedb)
         
-        query = 'SELECT name, num_nodes, seg_length FROM site_column_props'
+        query = 'SELECT name, num_nodes, seg_length, col_length FROM site_column_props'
         
         df = psql.read_sql(query, db)
-
+    
         df.to_csv("column_properties.csv",index=False,header=False);
         
         # make a sensor list of columnArray class functions
         sensors = []
         for s in range(len(df)):
-            s = columnArray(df.name[s],df.num_nodes[s],df.seg_length[s])
+            if df.name[s] == 'mcatb' or df.name[s] == 'messb':
+                continue
+            s = columnArray(df.name[s],df.num_nodes[s],df.seg_length[s],df.col_length[s])
             sensors.append(s)
-        
         return sensors
     except:
         raise ValueError('Could not get sensor list from database')
+
+
+#GetRainList():
+#    returns a list of columnArray objects from the database tables
+#    
+#    Returns:
+#        sensorlist: list
+#            list of columnArray (see class definition above)
+def GetRainList():
+    try:
+        db, cur = SenslopeDBConnect(Namedb)
+        cur.execute("use "+ Namedb)
+        
+        query = 'SELECT name, max_rain_2year, rain_senslope, rain_arq FROM site_rain_props'
+        
+        df = psql.read_sql(query, db)
+        
+        # make a sensor list of columnArray class functions
+        sensors = []
+        for s in range(len(df)):
+            s = rainArray(df.name[s],df.max_rain_2year[s],df.rain_senslope[s],df.rain_arq[s])
+            sensors.append(s)
+            
+        return sensors
+    except:
+        raise ValueError('Could not get sensor list from database')
+
         
 #GetLastGoodData(df, nos, fillMissing=False):
 #    evaluates the last good data from the input df
@@ -303,7 +393,7 @@ def GenerateLastGoodData():
 
             
 # import values from config file
-configFile = "server-config.txt"
+configFile = "IO-config.txt"
 cfg = ConfigParser.ConfigParser()
 cfg.read(configFile)
 
