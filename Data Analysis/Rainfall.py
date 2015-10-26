@@ -7,6 +7,7 @@ import ConfigParser
 
 import generic_functions as gf
 import rainDownload as rd
+from querySenslopeDb import *
 
 def set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_window_ops):
 
@@ -208,6 +209,7 @@ num_roll_window_ops = cfg.getfloat('I/O','num_roll_window_ops')
 
 #string expression indicating interval between two adjacent column position dates ex: '1D'= 1 day
 col_pos_interval= cfg.get('I/O','col_pos_interval') 
+
 #number of column position dates to plot
 col_pos_num= cfg.getfloat('I/O','num_col_pos')
 
@@ -217,20 +219,12 @@ rain=cfg.get('I/O','rainfall_sites').split(',')
 #INPUT/OUTPUT FILES
 
 #local file paths
-columnproperties_path = cfg.get('I/O','ColumnPropertiesPath')
-whole_data_path = cfg.get('I/O','WholeDataPath')
-proc_monitoring_path = cfg.get('I/O','OutputFilePathMonitoring2')
-rainfall_path = cfg.get('I/O','RainfallFilePath')
+proc_monitoring_path = cfg.get('I/O','OutputFilePathMonitoring')
+rainfall_path = cfg.get('I/O','RainfallFilePath') #dropbox
 
 #file names
-columnproperties_file = cfg.get('I/O','ColumnProperties')
 proc_monitoring_file = cfg.get('I/O','CSVFormat')
-whole_data_file = cfg.get('I/O','CSVFormat')
 rainfall_file = cfg.get('I/O','CSVFormat')
-
-#file headers
-columnproperties_headers = cfg.get('I/O','columnproperties_headers').split(',')
-whole_data_file_headers = cfg.get('I/O','proc_monitoring_file_headers').split(',')
 
 #ALERT CONSTANTS
 T_disp = cfg.getfloat('I/O','T_disp')  #m
@@ -241,15 +235,10 @@ num_nodes_to_check = cfg.getint('I/O','num_nodes_to_check')
 
 
 
+#MAIN
+
 #1. setting monitoring window
 roll_window_numpts, end, start, offsetstart, monwin = set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_window_ops)
-
-moi_data=pd.read_csv(proc_monitoring_path+"moisture_properties"+proc_monitoring_file,
-                     names=['col','id','min','max'],index_col='col')
-sensors=pd.read_csv(columnproperties_path+columnproperties_file,names=columnproperties_headers,index_col=None)
-##start=datetime.combine(date(2014,10,3),time(0,0,0))
-##end=datetime.combine(date(2014,10,17),time(0,0,0))
-##offsetstart=datetime.combine(date(2014,10,3),time(0,0,0))
 
 end = datetime.now()
 #end = roundtime(end)
@@ -259,12 +248,37 @@ index = pd.date_range(end-timedelta(10), periods=11, freq='D')
 columns=['maxhalf','max']
 base = pd.DataFrame(index=index, columns=columns)
 
-rd.getrain()
+#rd.getrain()
 
 tsn=end.strftime("%Y-%m-%d %H-%M-%S")
-tmx=pd.read_csv("C:\Users\Dynaslope\Desktop\Fresh\Local\\rainlist.csv",
-                         names=['site','twoyrmx'],index_col=None)
-index=range(len(tmx))
+#tmx=pd.read_csv("C:\Users\Dynaslope\Desktop\Fresh\Local\\rainlist.csv",
+#                         names=['site','twoyrmx'],index_col=None)
+
+tmx = GetRainList()
+oldsite = []
+newsite = []
+twoyrmx = []
+name = []
+for s in tmx:
+    oldsite += [s.oldsite]
+    newsite += [s.newsite]
+    twoyrmx += [s.twoyrmx]
+    name += [s.name]
+for s in range(len(name)):
+    name[s] = name[s][0:3]+'w'
+oldrainlist = pd.DataFrame({'twoyrmx': twoyrmx, 'site': oldsite})
+newrainlist = pd.DataFrame({'twoyrmx': twoyrmx, 'site': newsite})
+allrainlist = pd.DataFrame({'twoyrmx': twoyrmx, 'site': name})
+rainlist = newrainlist.fillna(oldrainlist)
+rainlist = rainlist.fillna(allrainlist)
+rainlist =rainlist.dropna()
+rainlist = rainlist.drop_duplicates(['site'], take_last = True)
+site = rainlist['site'].values
+twoyrmx = rainlist['twoyrmx'].values
+
+#empty dataframe
+#index=range(len(tmx))
+index = range(len(rainlist))
 columns=['site','1D','3D','DataSource','alert','advisory']
 summary = pd.DataFrame(index=index, columns=columns)
 
@@ -272,38 +286,38 @@ summary = pd.DataFrame(index=index, columns=columns)
 #alert summary container, r0 sites at alert[0], r1 sites at alert[1], nd sites at alert[2]
 alert = [[],[],[],[]]
 
-#    t.write('Summary of Rainfall Alert Generation for '+tsn+'\n')
-
-for s in range(len(tmx)):
+#for s in range(len(tmx)):
+for s in range(len(rainlist)):
     
-#    if s!=34: continue
-#    r,twoyrmax = rain['site'][s],tmx['twoyrmx'][s]
-#    r=tmx[s]
-    r,twoyrmax=tmx['site'][s],tmx['twoyrmx'][s]
+#    r,twoyrmax=tmx['site'][s],tmx['twoyrmx'][s]
+    r,twoyrmax = site[s], twoyrmx[s]
     halfmax=twoyrmax/2
-#    tmx = tmx.groupby('site')
-#    tmx = tmx.get_group(r)
-#    twoyrmax = tmx['twoyrmx'][0]
-#    tm
     print r
     print "GR"
-#    print twoyrmax
-#    twoyrmax = get2yrmax(r)
-#    print twoyrmax
     
     try:
         print"\n"
         print "Generating Rainfall plots for "+r+" from rain gauge data"
-    ##    if r!='lipw': continue
-        rainfall=pd.read_csv(rainfall_path+r+rainfall_file,parse_dates='timestamp',
-                             usecols=['timestamp','rain'],index_col='timestamp')
         
-        rainfall=rainfall[(rainfall.index>=start)]
-        rainfall=rainfall[(rainfall.index<=end)]
+#        rainfall=pd.read_csv(rainfall_path+r+rainfall_file,parse_dates='timestamp',
+#                             usecols=['timestamp','rain'],index_col='timestamp')
+        rainfall = GetRawRainData(r, start)
+        rainfall = rainfall.set_index('ts')
+        
+        if rainfall.index[-1:]<end:
+            blankdf_time=pd.date_range(start=start, end=end, freq='15Min',name='timestamp', closed=None)
+            blankdf=pd.DataFrame(data=np.nan*np.ones(len(blankdf_time)), index=blankdf_time,columns=['rain'])
+            blankdf=blankdf[-1:]
+            rainfall=rainfall.append(blankdf)
+        
+#        rainfall=rainfall[(rainfall.index>=start)] #not needed in db based input
+#        rainfall=rainfall[(rainfall.index<=end)] #not needed in db based input
+        
         rainfall=rainfall.resample('15min',how='sum')
         if len(rainfall.index)<1:
             print "No data within desired window"
             print "Generating Rainfall ASTI plots for "+r+" due to lack of rain gauge data within desired window"
+            rd.getrain(r)
             ASTIplot(r,offsetstart,end,tsn)
             datasource="ASTI (Empty Rain Gauge Data)"
             summary_writer(s,r,datasource,twoyrmax,halfmax,summary,alert)
@@ -331,14 +345,6 @@ for s in range(len(tmx)):
             plot3=rainfall3             # 72-hr cumulative rainfall
             plot4=sub['maxhalf']        # half of 2-yr max rainfall
             plot5=sub['max']            # 2-yr max rainfall
-#            for s in len(plot2['rain']):
-#                hammer = plot2['rain'][s]
-#                if hammer>twoyrmax:
-#                    print hammer
-#            print plot1.index.values
-#            plot3=rainfall2
-#            plot3['']=twoyrmax
-#            plot3=plot3.drop('rain',1)
             plt.plot(plot1.index,plot1,color='#db4429') # instantaneous rainfall data
             plt.plot(plot2.index,plot2,color='#5ac126') # 24-hr cumulative rainfall
             plt.plot(plot3.index,plot3,color="#0d90d0") # 72-hr cumulative rainfall
@@ -355,6 +361,7 @@ for s in range(len(tmx)):
         try:
             print"\n"
             print "Generating Rainfall ASTI plots for "+r+" due to lack of site csv file"
+            rd.getrain(r)
             ASTIplot(r,offsetstart,end,tsn)
             datasource="ASTI (No Rain Gauge Data)"
             summary_writer(s,r,datasource,twoyrmax,halfmax,summary,alert)
