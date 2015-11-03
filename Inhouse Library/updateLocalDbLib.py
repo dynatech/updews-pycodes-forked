@@ -135,9 +135,7 @@ def downloadLatestData(col,fromDate='',toDate=''):
         print "<urlopen error [Errno 10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond>"
 
 def downloadFullSiteColumnTable():
-    #url = 'http://localhost/temp/getSenslopeData.php?db=%s&sitecolumnjson' % (dbname)
-    url = 'http://www.dewslandslide.com/ajax/getSenslopeData.php?db=%s&sitecolumnjson' % (dbname)  
-    #url = 'http://www.dewslandslide.com'    
+    url = 'http://www.dewslandslide.com/ajax/getSenslopeData.php?db=%s&sitecolumnjson' % (dbname)     
     print url
     
     try:
@@ -169,7 +167,31 @@ def downloadFullColumnPropsTable():
         df = pd.DataFrame(jsonData)
         df = df.set_index(['s_id'])
         print "downloadFullColumnPropsTable done" 
-        print df
+        #print df
+    except urllib2.URLError:
+        print "<urlopen error [Errno 10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond>"
+        #return empty data frame
+        return pd.DataFrame()
+    
+    except ValueError:
+        print "No Data from web server. Table does not exist on web server"
+        #return empty data frame
+        return pd.DataFrame()
+        
+    return df
+
+def downloadFullRainPropsTable():
+    #url = 'http://localhost/temp/getSenslopeData.php?db=%s&columninfojson' % (dbname)
+    url = 'http://www.dewslandslide.com/ajax/getSenslopeData.php?db=%s&raininfojson' % (dbname)
+    #url = 'http://www.dewslandslide.com'    
+    print url
+    
+    try:
+        jsonData = pd.read_json(url, orient='columns')
+        df = pd.DataFrame(jsonData)
+        df = df.set_index(['name'])
+        print "downloadFullColumnPropsTable done" 
+        #print df
     except urllib2.URLError:
         print "<urlopen error [Errno 10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond>"
         #return empty data frame
@@ -356,6 +378,22 @@ def updateColumnPropsTable():
     df = downloadFullColumnPropsTable()
     isDFempty = df.empty
     targetTable = "site_column_props"
+    
+    if isDFempty == True:
+        print 'Update failed...'
+    else:
+        print 'Updating %s table...' % (targetTable)
+        numElements = len(df.index)
+        print "Number of %s elements: %s" % (targetTable, numElements)
+          
+        truncateTable(targetTable)
+        writeDFtoLocalDB(targetTable,df)
+        
+#update the site_rain_props data
+def updateRainPropsTable():
+    df = downloadFullRainPropsTable()
+    isDFempty = df.empty
+    targetTable = "site_rain_props"
     
     if isDFempty == True:
         print 'Update failed...'
