@@ -45,6 +45,17 @@ def getLatestTimestamp(col):
         print ret
         return ret
         
+def getSiteColumnsList():
+    dbc = MySQLdb.connect(host=dbhost,user=dbuser,passwd=dbpwd,db=dbname)
+    cur = dbc.cursor()
+    query = "select name from %s.site_column where s_id < 100 order by name asc" % (dbname)
+
+    df = pd.read_sql(query, con=dbc)
+    #print df
+    print "Number of loaded records: ", len(df)
+    dbc.close()
+    return df
+        
 def checkEntryExistence(table,col,value):
     dbc = MySQLdb.connect(host=dbhost,user=dbuser,passwd=dbpwd,db=dbname)
     cur = dbc.cursor()
@@ -326,7 +337,10 @@ sensors=pd.read_csv(columnproperties_path+columnproperties_file,names=columnprop
 
 #update the site tables for accelerometer data
 def updateAccelData():
-    for col in sensors['colname']:
+    sensors = getSiteColumnsList()    
+    
+    for index, row in sensors.iterrows():
+    	col = row['name']
     	downloadMore = True
     	while downloadMore:
         
@@ -355,7 +369,7 @@ def updateAccelData():
     		writeAccelToLocalDB(col,df,ts2)
     
     		if numElements < entryLimit:
-    			downloadMore = False
+    			downloadMore = False      
 
 #update the site_column data
 def updateSiteColumnTable():
