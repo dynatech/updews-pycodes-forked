@@ -25,6 +25,9 @@ dbuser = "updews"
 dbpwd = "october50sites"
 entryLimit = 600
 
+###############################################################################
+# Read from Database
+###############################################################################
 
 def getLatestTimestamp(col):
     dbc = MySQLdb.connect(host=dbhost,user=dbuser,passwd=dbpwd,db=dbname)
@@ -57,6 +60,10 @@ def checkEntryExistence(table,col,value):
     finally:
         dbc.close()
         return ret
+    
+###############################################################################
+# Create Tables on Database    
+###############################################################################
         
 def createSensorTable(table,version):
     dbc = MySQLdb.connect(host=dbhost,user=dbuser,passwd=dbpwd,db=dbname)
@@ -80,6 +87,30 @@ def createSensorTable(table,version):
         dbc.close()
         return ret      
         
+###############################################################################
+# Truncate Tables on Database    
+###############################################################################        
+        
+def truncateTable(col):
+    dbc = MySQLdb.connect(host=dbhost,user=dbuser,passwd=dbpwd,db=dbname)
+    cur = dbc.cursor()
+    query = "SET foreign_key_checks = 0; TRUNCATE TABLE %s.%s;" % (dbname, col)
+    ret = 0
+    try:
+        a = cur.execute(query)
+        ret = cur.fetchall()[0][0]
+    except TypeError:
+        print "Error"
+        ret = 0
+    finally:
+        dbc.close()
+        print ret
+        return ret            
+        
+###############################################################################
+# Download data from the dewslandslide web API        
+###############################################################################        
+        
 def downloadLatestData(col,fromDate='',toDate=''):
     url = 'http://www.dewslandslide.com/ajax/getSenslopeData.php?db=%s&accelsite&site=%s&limit=%s&start=%s&end=%s' % (dbname,col,entryLimit,fromDate,toDate)
     print url
@@ -102,6 +133,32 @@ def downloadLatestData(col,fromDate='',toDate=''):
         return df
     except urllib2.URLError:
         print "<urlopen error [Errno 10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond>"
+
+def downloadFullSiteColumnTable():
+    #url = 'http://localhost/temp/getSenslopeData.php?db=%s&sitecolumnjson' % (dbname)
+    url = 'http://www.dewslandslide.com/ajax/getSenslopeData.php?db=senslopedb&sitecolumnjson'    
+    #url = 'http://www.dewslandslide.com'    
+    print url
+    
+    try:
+        jsonData = pd.read_json(url, orient='columns')
+        df = pd.DataFrame(jsonData)
+        df = df.set_index(['s_id'])
+        print "downloadFullSiteColumnTable done" 
+        print df
+
+        #return df
+    except urllib2.URLError:
+        print "<urlopen error [Errno 10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond>"
+        #return None
+        return pd.DataFrame()
+    
+    except ValueError:
+        print "No Data from web server. Table does not exist on web server"
+        #return None
+        return pd.DataFrame()
+        
+    return df
 
 def downloadSiteColumnData(col):
     url = 'http://localhost/temp/getSenslopeData.php?db=%s&singlesitecolumn&name=%s' % (dbname,col)
@@ -138,11 +195,40 @@ def downloadSiteColumnData(col):
         
     return True
    
+###############################################################################
+# Writes to Database
+###############################################################################   
+   
+# Append Write
 def writeDFtoLocalDB(col,df,fromDate='',numDays=30):
     dbc = MySQLdb.connect(host=dbhost,user=dbuser,passwd=dbpwd,db=dbname)
     print "writing df to", col, "db",
-    #df.to_sql(con=dbc, name=col, if_exists='append', flavor='mysql')
-    #dbc.close()
+    df.to_sql(con=dbc, name=col, if_exists='append', flavor='mysql')
+    dbc.close()
+
+    print "writeDFtoLocalDB done"   
+
+# Overwrite (Used mostly on static info updating)
+def overwriteDFtoLocalDB(col,df):   
+    dbc = MySQLdb.connect(host=dbhost,user=dbuser,passwd=dbpwd,db=dbname)
+    print "writing df to", col, "db",
+
+    try:
+        df.to_sql(con=dbc, name=col, if_exists='replace', flavor='mysql')
+        dbc.close()
+    except OperationalError as e:
+        if 'MySQL server has gone away' in str(e):
+            print 'write failed...'
+            time.sleep(3)
+        else:
+            raise e()
+
+    print "overwriteDFtoLocalDB done"    
+
+def writeAccelToLocalDB(col,df,fromDate='',numDays=30):
+    dbc = MySQLdb.connect(host=dbhost,user=dbuser,passwd=dbpwd,db=dbname)
+    print "writing df to", col, "db",
+
     try:
         df.to_sql(con=dbc, name=col, if_exists='append', flavor='mysql')
         dbc.close()
@@ -156,14 +242,16 @@ def writeDFtoLocalDB(col,df,fromDate='',numDays=30):
             toDate = end_date.strftime("%Y-%m-%d %H:%M:%S")
 
             df = downloadLatestData(col,fromDate,toDate)
-            writeDFtoLocalDB(col,df,fromDate,numDays/2)
+            writeAccelToLocalDB(col,df,fromDate,numDays/2)
             print e
             
             time.sleep(3)
         else:
             raise e()
 
-    print "writeDFtoLocalDB done"
+    print "writeAccelToLocalDB done"
+
+###############################################################################
 
 #local file paths
 cfg = ConfigParser.ConfigParser()
@@ -192,6 +280,7 @@ alert_headers = cfg.get('I/O','alert_headers').split(',')
 
 sensors=pd.read_csv(columnproperties_path+columnproperties_file,names=columnproperties_headers,index_col=None)
 
+#update the site tables for accelerometer data
 def updateAccelData():
     for col in sensors['colname']:
     	downloadMore = True
@@ -219,10 +308,23 @@ def updateAccelData():
     		numElements = len(df.index)
     		print "Number of dataframe elements: %s" % (numElements)
     		#print df
-    		writeDFtoLocalDB(col,df,ts2)
+    		writeAccelToLocalDB(col,df,ts2)
     
     		if numElements < entryLimit:
     			downloadMore = False
-       
-#update the site tables for accelerometer data
-#updateAccelData()
+
+#update the site_column data
+def updateSiteColumnTable():
+    df = downloadFullSiteColumnTable()
+    isDFempty = df.empty
+
+    if isDFempty == True:
+        print 'Update failed...'
+    else:
+        print 'Updating...'
+        targetTable = "site_column"        
+        
+        truncateTable(targetTable)
+        writeDFtoLocalDB(targetTable,df)
+
+        

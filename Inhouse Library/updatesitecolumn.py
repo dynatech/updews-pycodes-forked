@@ -8,4 +8,4 @@ Created on Tue Jun 02 10:20:04 2015
 import updateLocalDbLib as updatedb
 
 #update the site tables for accelerometer data
-updatedb.updateAccelData()
+updatedb.updateSiteColumnTable()
