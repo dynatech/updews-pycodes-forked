@@ -124,7 +124,7 @@ def GetDBDataFrame(query):
 #    Returns:
 #        df: dataframe object 
 #            dataframe object of the result set 
-def GetRawAccelData(siteid = "", fromTime = "", maxnode = 40):
+def GetRawAccelData(siteid = "", fromTime = "", maxnode = 40, msgid = 32):
 
     if not siteid:
         raise ValueError('no site id entered')
@@ -140,10 +140,10 @@ def GetRawAccelData(siteid = "", fromTime = "", maxnode = 40):
     query = query + " where timestamp > '%s'" % fromTime
 
     if len(siteid) == 5:
-        query = query + " and msgid = 32";
+        query = query + " and msgid = %s" % (msgid);
     
     query = query + " and id >= 1 and id <= %s ;" % (str(maxnode))
-
+    #print query
     df =  GetDBDataFrame(query)
     
     df.columns = ['ts','id','x','y','z']
