@@ -143,7 +143,7 @@ def GetRawAccelData(siteid = "", fromTime = "", maxnode = 40, msgid = 32):
         query = query + " and msgid = %s" % (msgid);
     
     query = query + " and id >= 1 and id <= %s ;" % (str(maxnode))
-    #print query
+    print query
     df =  GetDBDataFrame(query)
     
     df.columns = ['ts','id','x','y','z']
@@ -220,7 +220,6 @@ def GetSensorList():
         query = 'SELECT name, num_nodes, seg_length, col_length FROM site_column_props'
         
         df = psql.read_sql(query, db)
-    
         df.to_csv("column_properties.csv",index=False,header=False);
         
         # make a sensor list of columnArray class functions
@@ -234,6 +233,17 @@ def GetSensorList():
     except:
         raise ValueError('Could not get sensor list from database')
 
+def GetSensorDF():
+    try:
+        db, cur = SenslopeDBConnect(Namedb)
+        cur.execute("use "+ Namedb)
+        
+        query = 'SELECT name, num_nodes, seg_length, col_length FROM site_column_props'
+        
+        df = psql.read_sql(query, db)
+        return df
+    except:
+        raise ValueError('Could not get sensor list from database')
 
 #GetRainList():
 #    returns a list of columnArray objects from the database tables
