@@ -122,6 +122,31 @@ def rangeFilterAccel(dff):
 #    return dff[dfl.x.notnull()]
     return dff[dff.x.notnull()]
     
+### Prado - Created this version to remove warnings
+def rangeFilterAccel2(dff):
+    x_index = (dff.x<-2970) & (dff.x>-3072)
+    y_index = (dff.y<-2970) & (dff.y>-3072)
+    z_index = (dff.z<-2970) & (dff.z>-3072)
+    
+    ## adjust accelerometer values for valid overshoot ranges
+    dff.loc[x_index,'x'] = dff.loc[x_index,'x'] + 4096
+    dff.loc[y_index,'y'] = dff.loc[y_index,'y'] + 4096
+    dff.loc[z_index,'z'] = dff.loc[z_index,'z'] + 4096
+    
+    x_range = ((dff.x > 1126) | (dff.x < 100))
+    y_range = abs(dff.y) > 1126
+    z_range = abs(dff.z) > 1126
+    
+    ## remove all invalid values
+    dff.loc[x_range,'x'] = np.nan
+    dff.loc[y_range,'y'] = np.nan
+    dff.loc[z_range,'z'] = np.nan
+    
+#    dfl = dff.x * dff.y * dff.z
+    
+#    return dff[dfl.x.notnull()]
+    return dff[dff.x.notnull()]
+    
 def orthogonalFilter(df):
     
     # remove all non orthogonal value
@@ -133,7 +158,8 @@ def orthogonalFilter(df):
     
 def applyFilters(dfl, orthof=True, rangef=True, outlierf=True):
     if rangef:
-        dfl = rangeFilterAccel(dfl)     
+        #dfl = rangeFilterAccel(dfl)   
+        dfl = rangeFilterAccel2(dfl)   
     if orthof: 
         dfl = orthogonalFilter(dfl)
     if outlierf:
