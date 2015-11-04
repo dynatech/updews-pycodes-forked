@@ -393,7 +393,7 @@ def GenerateLastGoodData():
 
             
 # import values from config file
-configFile = "IO-config.txt"
+configFile = "server-config.txt"
 cfg = ConfigParser.ConfigParser()
 cfg.read(configFile)
 
