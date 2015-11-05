@@ -216,8 +216,8 @@ def downloadFullRainPropsTable():
     return df
 
 def downloadSiteColumnData(col):
-    url = 'http://localhost/temp/getSenslopeData.php?db=%s&singlesitecolumn&name=%s' % (dbname,col)
-    #print url
+    url = 'http://www.dewslandslide.com/ajax/getSenslopeData.php?db=%s&singlesitecolumn&name=%s' % (dbname,col)
+    print url
     
     try:
         jsonData = pd.read_json(url, orient='columns')
