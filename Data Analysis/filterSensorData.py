@@ -163,6 +163,7 @@ def applyFilters(dfl, orthof=True, rangef=True, outlierf=True):
         try:
             dfl = dfl.drop('id',1).reset_index() 
         except:
-            print "Extra 'id' doesn't exist already. No need to remove. Proceed!"
+            #print "Extra 'id' doesn't exist already. No need to remove. Proceed!"
+            return dfl
         
     return dfl
