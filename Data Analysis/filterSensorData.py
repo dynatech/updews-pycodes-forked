@@ -5,13 +5,6 @@ Created on Thu Jun 18 14:39:48 2015
 @author: senslope
 """
 
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Feb 10 15:23:27 2015
-
-@author: Mark Laurence O. Peña
-"""
-
 import pandas as pd
 import numpy as np
 import time
@@ -102,7 +95,7 @@ def outlierFilter(df):
     dflogic = df.x * df.y * df.z
     
     df = df[dflogic.notnull()]
-    
+   
     return df
 
 def rangeFilterAccel(dff):
@@ -164,6 +157,12 @@ def applyFilters(dfl, orthof=True, rangef=True, outlierf=True):
         dfl = orthogonalFilter(dfl)
     if outlierf:
         dfl = dfl.set_index('ts').groupby('id').apply(outlierFilter)
-        dfl = dfl.drop('id',1).reset_index() 
+        
+        #some results don't have the "extra id" which is why no removal is 
+        #necessary
+        try:
+            dfl = dfl.drop('id',1).reset_index() 
+        except:
+            print "Extra 'id' doesn't exist already. No need to remove. Proceed!"
         
     return dfl

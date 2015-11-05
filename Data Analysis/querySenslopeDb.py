@@ -124,7 +124,7 @@ def GetDBDataFrame(query):
 #    Returns:
 #        df: dataframe object 
 #            dataframe object of the result set 
-def GetRawAccelData(siteid = "", fromTime = "", maxnode = 40, msgid = 32):
+def GetRawAccelData(siteid = "", fromTime = "", maxnode = 40, msgid = 32, targetnode = -1):
 
     if not siteid:
         raise ValueError('no site id entered')
@@ -142,7 +142,11 @@ def GetRawAccelData(siteid = "", fromTime = "", maxnode = 40, msgid = 32):
     if len(siteid) == 5:
         query = query + " and msgid = %s" % (msgid);
     
-    query = query + " and id >= 1 and id <= %s ;" % (str(maxnode))
+    if targetnode <= 0:
+        query = query + " and id >= 1 and id <= %s ;" % (str(maxnode))
+    else:
+        query = query + " and id = %s;" % (targetnode)
+    
     print query
     df =  GetDBDataFrame(query)
     
@@ -235,12 +239,14 @@ def GetSensorList():
 
 def GetSensorDF():
     try:
-        db, cur = SenslopeDBConnect(Namedb)
-        cur.execute("use "+ Namedb)
+        #db, cur = SenslopeDBConnect(Namedb)
+        #cur.execute("use "+ Namedb)
         
         query = 'SELECT name, num_nodes, seg_length, col_length FROM site_column_props'
         
-        df = psql.read_sql(query, db)
+        #df = psql.read_sql(query, db)
+        
+        df = GetDBDataFrame(query)
         return df
     except:
         raise ValueError('Could not get sensor list from database')
