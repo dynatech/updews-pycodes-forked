@@ -414,24 +414,44 @@ def GenerateLastGoodData():
 # import values from config file
 configFile = "server-config.txt"
 cfg = ConfigParser.ConfigParser()
-cfg.read(configFile)
 
-DBIOSect = "DB I/O"
-Hostdb = cfg.get(DBIOSect,'Hostdb')
-Userdb = cfg.get(DBIOSect,'Userdb')
-Passdb = cfg.get(DBIOSect,'Passdb')
-Namedb = cfg.get(DBIOSect,'Namedb')
-NamedbPurged = cfg.get(DBIOSect,'NamedbPurged')
-printtostdout = cfg.getboolean(DBIOSect,'Printtostdout')
-
-valueSect = 'Value Limits'
-xlim = cfg.get(valueSect,'xlim')
-ylim = cfg.get(valueSect,'ylim')
-zlim = cfg.get(valueSect,'zlim')
-xmax = cfg.get(valueSect,'xmax')
-mlowlim = cfg.get(valueSect,'mlowlim')
-muplim = cfg.get(valueSect,'muplim')
-islimval = cfg.getboolean(valueSect,'LimitValues')
+try:
+    cfg.read(configFile)
+    
+    DBIOSect = "DB I/O"
+    Hostdb = cfg.get(DBIOSect,'Hostdb')
+    Userdb = cfg.get(DBIOSect,'Userdb')
+    Passdb = cfg.get(DBIOSect,'Passdb')
+    Namedb = cfg.get(DBIOSect,'Namedb')
+    NamedbPurged = cfg.get(DBIOSect,'NamedbPurged')
+    printtostdout = cfg.getboolean(DBIOSect,'Printtostdout')
+    
+    valueSect = 'Value Limits'
+    xlim = cfg.get(valueSect,'xlim')
+    ylim = cfg.get(valueSect,'ylim')
+    zlim = cfg.get(valueSect,'zlim')
+    xmax = cfg.get(valueSect,'xmax')
+    mlowlim = cfg.get(valueSect,'mlowlim')
+    muplim = cfg.get(valueSect,'muplim')
+    islimval = cfg.getboolean(valueSect,'LimitValues')
+except:
+    #default values are used for missing configuration files or for cases when
+    #sensitive info like db access credentials must not be viewed using a browser
+    print "No file named: %s. Trying Default Configuration" % (configFile)
+    Hostdb = "127.0.0.1"
+    Userdb = "root"
+    Passdb = "senslope"
+    Namedb = "senslopedb"
+    NamedbPurged = "senslopedb_purged"
+    printtostdout = True
+    
+    xlim = 100
+    ylim = 1126
+    zlim = 1126
+    xmax = 1200
+    mlowlim = 2000
+    muplim = 4000
+    islimval = True   
 
 
 
