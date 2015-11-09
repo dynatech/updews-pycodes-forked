@@ -38,31 +38,47 @@ def getFilteredAll():
                 print "No valid filtered data for %s" % (targetTable)
 
 #get filtered data for a selected site
+#let us set "nil" for the "empty value" received from PHP's GET
 def getFilteredData():
-    try:
+    try: #site selection
         site = sys.argv[1]
     except IndexError:
         print "No site has been selected. Script unable to run!"
+        return
         
-    try:
-        node = sys.argv[2] 
-    except IndexError:
-        node = '-1'   
+    try: #node selection
+        node = sys.argv[2]
 
-    try:
+        if node == 'nil':
+            node = -1
+    except IndexError:
+        node = -1
+
+    try: #start date
         start = sys.argv[3]
+
+        if start == 'nil':
+            start = ''
     except IndexError:
         start = ''
         
-    try:
+    try: #end date
         end = sys.argv[4] 
+
+        if end == 'nil':
+            end = ''
     except IndexError:
         end = ''       
         
-    try:
+    try: #switch between accel 1 and 2
         msgid = sys.argv[5] 
+
+        if msgid == 'nil':
+            msgid = 32
     except IndexError:
         msgid = 32
+
+    #print "variables: %s %s %s %s %s" % (site,node,start,end,msgid)
 
     df = qs.GetRawAccelData(siteid = site, fromTime = start, toTime = end, msgid = msgid, targetnode = node)
     numElements = len(df.index)
@@ -80,3 +96,5 @@ def getFilteredData():
             print dfajson
         else:
             print "No valid filtered data for %s" % (site)
+
+getFilteredData()
