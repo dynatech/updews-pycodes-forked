@@ -6,22 +6,7 @@ from datetime import datetime as dt
 from sqlalchemy import create_engine
 from querySenslopeDb import *
 
-# import values from config file
-configFile = "server-config.txt"
-cfg = ConfigParser.ConfigParser()
-cfg.read(configFile)
-
-DBIOSect = "DB I/O"
-Hostdb = cfg.get(DBIOSect,'Hostdb')
-Userdb = cfg.get(DBIOSect,'Userdb')
-Passdb = cfg.get(DBIOSect,'Passdb')
-Namedb = cfg.get(DBIOSect,'Namedb')
-NamedbPurged = cfg.get(DBIOSect,'NamedbPurged')
-printtostdout = cfg.getboolean(DBIOSect,'Printtostdout')
-
 def GenLsbAlerts():
-    engine = create_engine('mysql+mysqldb://%s:%s@%s/%s' % (Userdb,Passdb,Hostdb,NamedbPurged))
-    
     sites = GetSensorList()
     
     alertTxt = ""
@@ -30,11 +15,13 @@ def GenLsbAlerts():
     
     for site in sites:
         for nid in range(1, site.nos+1):
-            query = "select timestamp, id, xvalue, yvalue, zvalue from senslopedb.%s where timestamp > '%s' and id=%s;" % (site.name, (dt.now()-td(7)).strftime("%y/%m/%d %H:%M:%S"), nid )
-            #a = cur.execute(query)
-            #.columns=['ts','id','x','y','z','m']
-            df = pd.io.sql.read_sql(query,engine)
-            df.columns = ['ts','id','x','y','z']
+            df = ofd.getFilteredData(isCmd = False, inSite = site.name, inNode = nid, inStart = (dt.now()-td(7)).strftime("%y/%m/%d %H:%M:%S"))
+            isDFempty = df.empty
+            
+            if isDFempty == True:
+                PrintOut('No Data Available... for %s %s' % (site.name, nid))    
+                continue
+            
             df = df.set_index(['ts'])
 
             df2 = df.copy()

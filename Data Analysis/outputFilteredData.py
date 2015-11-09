@@ -40,44 +40,51 @@ def getFilteredAll():
 
 #get filtered data for a selected site
 #let us set "nil" for the "empty value" received from PHP's GET
-def getFilteredData():
-    try: #site selection
-        site = sys.argv[1]
-    except IndexError:
-        print "No site has been selected. Script unable to run!"
-        return
-        
-    try: #node selection
-        node = sys.argv[2]
-
-        if node == 'nil':
+def getFilteredData(isCmd = True, inSite = "", inNode = 1, inStart = "", inEnd = "", inMsgid = 32):
+    if isCmd == True:
+        try: #site selection
+            site = sys.argv[1]
+        except IndexError:
+            print "No site has been selected. Script unable to run!"
+            return
+            
+        try: #node selection
+            node = sys.argv[2]
+    
+            if node == 'nil':
+                node = -1
+        except IndexError:
             node = -1
-    except IndexError:
-        node = -1
-
-    try: #start date
-        start = sys.argv[3]
-
-        if start == 'nil':
+    
+        try: #start date
+            start = sys.argv[3]
+    
+            if start == 'nil':
+                start = ''
+        except IndexError:
             start = ''
-    except IndexError:
-        start = ''
-        
-    try: #end date
-        end = sys.argv[4] 
-
-        if end == 'nil':
-            end = ''
-    except IndexError:
-        end = ''       
-        
-    try: #switch between accel 1 and 2
-        msgid = sys.argv[5] 
-
-        if msgid == 'nil':
+            
+        try: #end date
+            end = sys.argv[4] 
+    
+            if end == 'nil':
+                end = ''
+        except IndexError:
+            end = ''       
+            
+        try: #switch between accel 1 and 2
+            msgid = sys.argv[5] 
+    
+            if msgid == 'nil':
+                msgid = 32
+        except IndexError:
             msgid = 32
-    except IndexError:
-        msgid = 32
+    else:
+        site = inSite
+        node = inNode
+        start = inStart
+        end = inEnd
+        msgid = inMsgid
 
     #print "variables: %s %s %s %s %s" % (site,node,start,end,msgid)
 
@@ -86,7 +93,7 @@ def getFilteredData():
     qs.PrintOut("Number of %s Raw elements: %s" % (site, numElements))
     
     if numElements > 0:
-        df_filtered = fs.applyFilters(df, orthof=True, rangef=True, outlierf=True)
+        df_filtered = fs.applyFilters(df, orthof=True, rangef=True, outlierf=False)
         numFiltered = len(df_filtered.index)
         
         if numFiltered > 0:
