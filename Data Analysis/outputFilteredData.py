@@ -1,3 +1,4 @@
+import pandas as pd
 import querySenslopeDb as qs
 import filterSensorData as fs
 import sys
@@ -90,11 +91,21 @@ def getFilteredData():
         
         if numFiltered > 0:
             qs.PrintOut("Number of %s filtered elements: %s" % (site, numFiltered))
-
-            dfajson = df_filtered.to_json(orient="records",date_format='iso')
-            dfajson = dfajson.replace("T"," ").replace("Z","").replace(".000","")
-            print dfajson
+            return df_filtered
         else:
             print "No valid filtered data for %s" % (site)
+            return pd.DataFrame()
+    
+    #return empty dataframe
+    return pd.DataFrame()
 
-getFilteredData()
+def getFilteredDataJSON():
+    dfa = getFilteredData()
+    isDFempty = dfa.empty
+    
+    if isDFempty == True:
+        print 'No Data Available...'
+    else:
+        dfajson = dfa.to_json(orient="records",date_format='iso')
+        dfajson = dfajson.replace("T"," ").replace("Z","").replace(".000","")
+        print dfajson
