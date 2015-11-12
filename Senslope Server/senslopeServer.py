@@ -783,8 +783,7 @@ def RunSenslopeServer(network):
 
     if not FileInput:
         try:
-            gsmInit(Port)
-        
+            gsmInit(Port)        
         except serial.SerialException:
             print ">> ERROR: Could not open COM %r!" % (Port+1)
             print '**NO COM PORT FOUND**'
@@ -814,122 +813,87 @@ def RunSenslopeServer(network):
     while True:
         m = countmsg()
         if m>0:
-            if not FileInput:
-                # make a list of all messages
-                # remove the OK field
-                # isolate each message by using +CMGL as delimiter
-                # make sure start of string is not a legitimate message
-                allmsgs = 'd' + gsmcmd('AT+CMGL="ALL"')
-                allmsgs = allmsgs.replace("\r\nOK\r\n",'').split("+CMGL")[1:]
-                if allmsgs:
-                    temp = allmsgs.pop(0) #removes "=ALL"
+            # # make a list of all messages
+            # # remove the OK field
+            # # isolate each message by using +CMGL as delimiter
+            # # make sure start of string is not a legitimate message
+            # allmsgs = 'd' + gsmcmd('AT+CMGL="ALL"')
+            # allmsgs = allmsgs.replace("\r\nOK\r\n",'').split("+CMGL")[1:]
+            # if allmsgs:
+                # temp = allmsgs.pop(0) #removes "=ALL"
                 
-            else:
-                print '>> Reading from: ', InputFile
-                f = open(InputFile,'r')
-                allmsgs = f.readlines()
-                #allmsgs = a.split(":")[1:]
-                f.close()
-
+            allmsgs = getAllSms(network)
+            
             while allmsgs:
-                if not FileInput:
-                    #gets per text message
-                    temp = allmsgs.pop(0)
-                                 
-                    if SaveToFile:
-                        try:
-                            mon = dt.now().strftime("-%Y-%B-")
-                            f = open("D:\\Server Files\\Consolidated\\"+network+mon+'backup.txt','a')
-                            f.write(temp)
-                            f.close()
-                        except:
-                            print 'Warning: Cannot write to "backup.txt".'
-                    temp = temp.replace('\n','').split("\r")
-                    #msg = message
-                    try:
-                        sender = re.search(r'[0-9]{12}',temp[0]).group(0)
-                    except:
-                        print 'Sender unknown.'
-                        sender = "UNK"
-                    #msg.num = re.search(r': [0-9]{1,2},',temp[0]).group(0).strip(': ,')
-                    txtnum = re.search(r': [0-9]{1,2},',temp[0]).group(0).strip(': ,')
-                    try:
-                        txtdatetimeStr = re.search(r'\d\d/\d\d/\d\d,\d\d:\d\d:\d\d',temp[0]).group(0)
-                        txtdatetime = dt.strptime(txtdatetimeStr,'%y/%m/%d,%H:%M:%S').strftime('%Y-%m-%d %H:%M:00')
-                    except:
-                        print "Error in date time conversion"
-                    line = temp[1]
-                        
-                else:
-                    temp = allmsgs.pop(0)
-                    temp = temp.replace('\n','').split("\r")
-                    line = temp[0]
-                
-                msgname = checkNameOfNumber(sender)
+            
+                #gets per text message
+                msg = allmsgs.pop(0)
+                             
+                msgname = checkNameOfNumber(msg.simnum)
                 ##### Added for V1 sensors removes unnecessary characters pls see function PreProcessColumnV1(data)
-                if line.find("DUE*") >0:
-                   line = PreProcessColumnV1(line)
+                if msg.data.find("DUE*") >0:
+                   msg.data = PreProcessColumnV1(msg.data)
                 ####not sure where to put this function for trial
                 
-                if len(line.split("*")[0]) == 5:
+                if len(msg.data.split("*")[0]) == 5:
                     try:
-                        dlist = ProcTwoAccelColData(line,sender,txtdatetime)
+                        dlist = ProcTwoAccelColData(msg.data,msg.simnum,msg.dt)
                         #print dlist
                         if dlist:
                             if len(dlist[0][0]) == 6:
-                                WriteSomsDataToDb(dlist,txtdatetime)
+                                WriteSomsDataToDb(dlist,msg.dt)
                             else:
-                                WriteTwoAccelDataToDb(dlist,txtdatetime)
+                                WriteTwoAccelDataToDb(dlist,msg.dt)
                     except IndexError:
                         print "\n\n>> Error: Possible data type error"
-                        print line
-                elif len(line)>4 and line[4] == '*':
-                    #ProcessColumn(line)
-                    ProcessColumn(line,txtdatetime,sender)
+                        print msg.data
+                elif len(msg.data)>4 and msg.data[4] == '*':
+                    #ProcessColumn(msg.data)
+                    ProcessColumn(msg.data,msg.dt,msg.simnum)
                 #check if message is from rain gauge
-                elif re.search("(\w{4})[, ](\d{02}\/\d{02}\/\d{02},\d{02}:\d{02}:\d{02})[,\*](-*\d{2}.\d,\d{1,3},\d{1,3},\d{1,2}.\d{1,2},\d.\d{1,2},\d{1,2}),*\*?",line):
-                    ProcessRain(line,sender)
-                elif re.search(r'(\w{4})[-](\d{1,2}[.]\d{02}),(\d{01}),(\d{1,2})/(\d{1,2}),#(\d),(\d),(\d{1,2}),(\d)[*](\d{10})',line):
-                    ProcessStats(line,txtdatetime)
-                elif line[:4] == "ARQ+":
-                    ProcessARQWeather(line,sender)
+                elif re.search("(\w{4})[, ](\d{02}\/\d{02}\/\d{02},\d{02}:\d{02}:\d{02})[,\*](-*\d{2}.\d,\d{1,3},\d{1,3},\d{1,2}.\d{1,2},\d.\d{1,2},\d{1,2}),*\*?",msg.data):
+                    ProcessRain(msg.data,msg.simnum)
+                elif re.search(r'(\w{4})[-](\d{1,2}[.]\d{02}),(\d{01}),(\d{1,2})/(\d{1,2}),#(\d),(\d),(\d{1,2}),(\d)[*](\d{10})',msg.data):
+                    ProcessStats(msg.data,msg.dt)
+                elif msg.data[:4] == "ARQ+":
+                    ProcessARQWeather(msg.data,msg.simnum)
                     
                 #if message is from piezometer
-                elif line[4:7] == "PZ*":
-                    ProcessPiezometer(line, sender)
+                elif msg.data[4:7] == "PZ*":
+                    ProcessPiezometer(msg.data, msg.simnum)
                 else:
                     print '\n\n*******************************************************'
                     print '>> Unrecognized message format: '
-                    print 'NUM: ' , sender
-                    print 'MSG: ' , line
+                    print 'NUM: ' , msg.simnum
+                    print 'MSG: ' , msg.data
                     
-                #msgname = checkNameOfNumber(sender)
+                msgname = checkNameOfNumber(msg.simnum)
                 if msgname:
-                    updateLastMsgReceivedTable(txtdatetime,msgname,sender,line)
+                    updateLastMsgReceivedTable(msg.dt,msgname,msg.simnum,msg.data)
                     
                     if SaveToFile:
                         dir = "D:\\Server Files\\Consolidated\\"+"\\Inbox"+"\\"+msgname
                         if not os.path.exists(dir):
                             os.makedirs(dir)
                         f = open(dir+'\\'+msgname+'-backup.txt','a')
-                        f.write(txtdatetime+',')
-                        f.write(line+'\n')
+                        f.write(msg.dt+',')
+                        f.write(msg.data+'\n')
                         f.close()
                         
                 else:
                     f = open("D:\\Server Files\\Consolidated\\"+"Unknown-sender.txt",'a')
-                    f.write(txtdatetime+',')
-                    f.write(sender+',')
-                    f.write(line+'\n')
+                    f.write(msg.dt+',')
+                    f.write(msg.simnum+',')
+                    f.write(msg.data+'\n')
                     f.close()
                         
                 if DeleteAfterRead and not FileInput:
                     print 'Deleting message...'
                     try:
-                        gsmcmd('AT+CMGD='+txtnum).strip()
+                        gsmcmd('AT+CMGD='+msg.num).strip()
                         print 'OK'
                     except:
-                        print 'Error deleting message: ', line
+                        print 'Error deleting message: ', msg.data
 
             if FileInput:
                 break

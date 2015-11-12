@@ -1,4 +1,5 @@
-import serial, datetime, ConfigParser, time
+import serial, datetime, ConfigParser, time, re
+from datetime import datetime as dt
 
 cfg = ConfigParser.ConfigParser()
 cfg.read('senslope-server-config.txt')
@@ -7,13 +8,14 @@ gsm = serial.Serial()
 Baudrate = cfg.getint('Serial', 'Baudrate')
 Timeout = cfg.getint('Serial', 'Timeout')
 ConsoleOutput = cfg.getboolean('I/O','consoleoutput')
+SaveToFile = cfg.getboolean('I/O','savetofile')
 
 class sms:
-    def __init__(self,num,data,sender,dt):
-       self.num = ''
-       self.sender = ''
-       self.data = ''
-       self.dt = ''
+    def __init__(self,num,sender,data,dt):
+       self.num = num
+       self.simnum = sender
+       self.data = data
+       self.dt = dt
        
 def gsmInit(port):
     print 'Connecting to GSM modem at COM',
@@ -142,5 +144,43 @@ def countmsg():
     except ValueError:
         print '>> ValueError:'
         print b
-        return -2        
+        return -2   
+
+def getAllSms(network):
+    allmsgs = 'd' + gsmcmd('AT+CMGL="ALL"')
+    allmsgs = allmsgs.replace("\r\nOK\r\n",'').split("+CMGL")[1:]
+    if allmsgs:
+        temp = allmsgs.pop(0) #removes "=ALL"
+        
+    msglist = []
+    
+    for msg in allmsgs:
+        if SaveToFile:
+            mon = dt.now().strftime("-%Y-%B-")
+            f = open("D:\\Server Files\\Consolidated\\"+network+mon+'backup.txt','a')
+            f.write(temp)
+            f.close()
+                
+        msg = msg.replace('\n','').split("\r")
+        
+        txtnum = re.search(r': [0-9]{1,2},',msg[0]).group(0).strip(': ,')
+        
+        try:
+            sender = re.search(r'[0-9]{12}',msg[0]).group(0)
+        except ValueError:
+            print 'Sender unknown.'
+            sender = "UNK"
+            continue
+            
+        try:
+            txtdatetimeStr = re.search(r'\d\d/\d\d/\d\d,\d\d:\d\d:\d\d',msg[0]).group(0)
+            txtdatetime = dt.strptime(txtdatetimeStr,'%y/%m/%d,%H:%M:%S').strftime('%Y-%m-%d %H:%M:00')
+        except:
+            print "Error in date time conversion"
+                
+        smsItem = sms(txtnum, sender, msg[1], txtdatetimeStr)
+        
+        msglist.append(smsItem)
+        
+    return msglist
         
