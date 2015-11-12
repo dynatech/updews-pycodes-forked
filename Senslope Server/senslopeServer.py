@@ -9,134 +9,7 @@ import emailer
 global gsm_network
 global anomalysave
 from senslopedbio import *
-#---------------------------------------------------------------------------------------------------------------------------
-
-#class message:
-#    def __init__(self,num,data,sender,):
-#        self.num = ''
-#        self.sender = ''
-#        self.data = ''
-#        self.dt = ''
-        
-def gsmflush():
-    """Removes any pending inputs from the GSM modem and checks if it is alive."""
-    try:
-        gsm.flushInput()
-        gsm.flushOutput()
-        ghost = gsm.read(gsm.inWaiting())
-        stat = gsmcmd('\x1a\rAT\r')    
-        while('E' in stat):
-            gsm.flushInput()
-            gsm.flushOutput()
-            ghost = gsm.read(gsm.inWaiting())
-            stat = gsmcmd('\x1a\rAT\r')
-        if ConsoleOutput:
-            print '>> Flushing GSM buffer:', ghost
-            print '>> Modem status: ', stat
-    except serial.SerialException:
-        print "NO SERIAL COMMUNICATION (gsmflush)"
-        RunSenslopeServer(gsm_network)
-    
-def gsmcmd(cmd):
-    """
-    Sends a command 'cmd' to GSM Module
-    Returns the reply of the module
-    Usage: str = gsmcmd()
-    """
-    try:
-        gsm.flushInput()
-        gsm.flushOutput()
-        a = ''
-        now = time.time()
-        gsm.write(cmd+'\r\n')
-        while a.find('OK')<0 and time.time()<now+30:
-                #print cmd
-                #gsm.write(cmd+'\r\n')
-                a += gsm.read(gsm.inWaiting())
-                #a += gsm.read()
-                #print '+' + a
-                #print a
-                time.sleep(0.5)
-        if time.time()>now+30:
-                a = '>> Error: GSM Unresponsive'
-        return a
-    except serial.SerialException:
-        print "NO SERIAL COMMUNICATION (gsmcmd)"
-        RunSenslopeServer(gsm_network)
-		
-def sendMsg(alert_msg, number):
-    """
-    Sends a command 'cmd' to GSM Module
-    Returns the reply of the module
-    Usage: str = gsmcmd()
-    """
-    try: 
-        gsm.flushInput()
-        gsm.flushOutput()
-        a = ''
-        now = time.time()
-        preamble = "AT+CMGS=\""+number+"\""
-        print "\nMSG:"+alert_msg
-        print "NUM:"+number
-        gsm.write(preamble+"\r")
-        while a.find('>')<0 and time.time()<now+30:
-                #print cmd
-                #gsm.write(cmd+'\r\n')
-                a += gsm.read(gsm.inWaiting())
-                #a += gsm.read()
-                #print '+' + a
-                #print a
-                time.sleep(0.5)
-
-        if time.time()>now+30:  
-                a = '>> Error: GSM Unresponsive'
-        
-        gsm.flushInput()
-        gsm.flushOutput()
-        a = ''
-        now = time.time()
-        gsm.write(alert_msg+chr(26))
-        while a.find('OK\r\n')<0 and time.time()<now+30:
-                #print cmd
-                #gsm.write(cmd+'\r\n')
-                a += gsm.read(gsm.inWaiting())
-                #a += gsm.read()
-                #print '+' + a
-                #print a
-                time.sleep(0.5)
-        if time.time()>now+30:
-                a = '>> Error: GSM Unresponsive'
-        return a
-    except serial.SerialException:
-        print "NO SERIAL COMMUNICATION (sendmsg)"
-        RunSenslopeServer(gsm_network)	
-
-def countmsg():
-    global anomalysave
-    """
-    Gets the # of SMS messages stored in GSM modem.
-    Usage: c = countmsg()
-    """
-    if FileInput:
-        return 1
-    anomalysave = ''
-    b = gsmcmd('AT+CPMS?')
-    anomalysave = b
-    try:
-        c = int( b.split(',')[1] )
-        #print '>>>> ', c
-        return c
-    except IndexError:
-        print 'count_msg b = ',b
-        if b:
-            return 0
-        else:
-            return -1
-        ##if GSM sent blank data maybe GSM is inactive
-    except ValueError:
-        print '>> ValueError:'
-        print b
-        return -2
+from gsmSerialio import *
 #---------------------------------------------------------------------------------------------------------------------------
 
 def updateSimNumTable(name,sim_num,date_activated):
@@ -910,15 +783,7 @@ def RunSenslopeServer(network):
 
     if not FileInput:
         try:
-            print 'Connecting to GSM modem at COM',
-            gsm.port = Port
-            gsm.baudrate = Baudrate
-            gsm.timeout = Timeout
-            gsm.open()
-            #gsmflush()
-            print Port+1
-            print 'Switching to no-echo mode', gsmcmd('ATE0').strip('\r\n')
-            print 'Switching to text mode', gsmcmd('AT+CMGF=1').rstrip('\r\n')
+            gsmInit(Port)
         
         except serial.SerialException:
             print ">> ERROR: Could not open COM %r!" % (Port+1)
@@ -1150,64 +1015,7 @@ def RunSenslopeServer(network):
                 emailer.sendmessage(sender,sender_password,receiver,sender,subject,active_message)               
                 email_flg = 1
             
-            #if last_backup.day != today.day:
-            #    last_backup = runBackup()
-
-
-        # timetosend, minute_of_last_alert = timeToSendAlertMessage(minute_of_last_alert)
-        # if SMSAlertEnable and timetosend:
-            # print "\n\n**********************\nEvaluating CSV Alert File..."
-            # # open csv input file for alerts
-            # filename = ("D:\\Dropbox\\Senslope Data\\Proc2\\Monitoring\\alerts\\alertSMS.txt")
-            # csvAlertInputFile = open(filename,'r')
-            # smsAlertMessage = csvAlertInputFile.read()
-            # csvAlertInputFile.close()
-
-##            try:
-##                matches = re.findall(regEx,csvAlertText)
-##                if not matches:
-##                    print "No alerts detected... "
-##                else:
-##                    for line in matches:
-##                        smsAlertMessage = smsAlertMessage.join(line)
-##                        csvAlerts += 1
-##                    print "Number of alerts: ",csvAlerts
-##
-##                if len(smsAlertMessage) > 160:
-##                    print "Alert message too long. There might be an error."
-##                    smsAlertMessage = smsAlertMessage[:10]
-##                    
-##            except:
-##                print "Unknown error detected in reading alert file: ", sys.exc_info()[0]
-
-            # if len(smsAlertMessage)>0:
-                # if len(smsAlertMessage)>160:
-                    # sms = [smsAlertMessage[:160],smsAlertMessage[160:]]
-                # else:
-                    # sms = [smsAlertMessage[:160]]
-
-                # for msg in sms:
-                    # print "Sending alert message..."
-
-                    # # get report numbers
-                    # cfg.read('senslope-server-config.txt')
-                    # if network == "SUN":
-                        # Numbers = cfg.get('SMSAlert','SmartNumbers')
-                    # elif network == "GLOBE":
-                        # Numbers = cfg.get('SMSAlert', 'GlobeNumbers') 
-                    # else:
-                        # Numbers = cfg.get('SMSAlert', 'SmartNumbers')
-
-                    # if Numbers:
-                        # for n in Numbers.split(","):            
-                            # sendMsg(msg, n)
-                        # print "done"
-            # print "Alert messaging done...\n\n"
-            
-            #if last_backup.day != today.day:
-            #    last_backup = runBackup()
-                
-                
+        
     if not FileInput:
         gsm.close()
     test = raw_input('>> End of Code: Press any key to exit')
@@ -1225,7 +1033,7 @@ DeleteAfterRead = cfg.getboolean('I/O','deleteafterread')
 SaveToFile = cfg.getboolean('I/O','savetofile')
 WriteToDB = cfg.getboolean('I/O','writetodb')
 
-gsm = serial.Serial() 
+# gsm = serial.Serial() 
 Baudrate = cfg.getint('Serial', 'Baudrate')
 Timeout = cfg.getint('Serial', 'Timeout')
 Namedb = cfg.get('LocalDB', 'DBName')
