@@ -8,7 +8,7 @@ import winsound
 import emailer
 global gsm_network
 global anomalysave
-import senslopedbio
+from senslopedbio import *
 #---------------------------------------------------------------------------------------------------------------------------
 
 #class message:
@@ -139,77 +139,6 @@ def countmsg():
         return -2
 #---------------------------------------------------------------------------------------------------------------------------
 
-def SenslopeDBConnect():
-    while True:
-        try:
-            db = MySQLdb.connect(host = Hostdb, user = Userdb, passwd = Passdb, db = Namedb)
-            cur = db.cursor()
-            return db, cur
-        except MySQLdb.OperationalError:
-            print '6.',
-            time.sleep(2)
-
-def InitLocalDB():
-    db, cur = SenslopeDBConnect()
-    cur.execute("CREATE DATABASE IF NOT EXISTS %s" %Namedb)
-    cur.execute("USE %s"%Namedb)
-    db.close()
-   
-def createTable(table_name):
-    db, cur = SenslopeDBConnect()
-    cur.execute("CREATE DATABASE IF NOT EXISTS %s" %Namedb)
-    cur.execute("USE %s"%Namedb)
-    cur.execute("CREATE TABLE IF NOT EXISTS %s(timestamp datetime, id int, xvalue int, yvalue int, zvalue int, mvalue int, PRIMARY KEY (timestamp, id))" %table_name)
-    db.close()
-
-def createTableTwoAccelSensor(table_name):
-    db, cur = SenslopeDBConnect()
-    try:
-        cur.execute("CREATE DATABASE IF NOT EXISTS %s" %Namedb)
-        cur.execute("USE %s"%Namedb)
-        cur.execute("CREATE TABLE IF NOT EXISTS %s(timestamp datetime, id int, msgid smallint, xvalue int, yvalue int, zvalue int, batt double, PRIMARY KEY (timestamp, id, msgid))" %table_name)
-    except MySQLdb.ProgrammingError:
-        print ">> Error: creating table for table name '", table_name, "'"
-        return
-    db.close()
-
-def createTableWeather(table_name):
-    db, cur = SenslopeDBConnect()
-    cur.execute("CREATE DATABASE IF NOT EXISTS %s" %Namedb)
-    cur.execute("USE %s"%Namedb)
-    cur.execute("CREATE TABLE IF NOT EXISTS %s(timestamp datetime, name char(4), temp double,wspd int, wdir int,rain double,batt double, csq int, PRIMARY KEY (timestamp, name))" %table_name)
-    db.close()
-    
-def createTableARQWeather(table_name):
-    db, cur = SenslopeDBConnect()
-    cur.execute("CREATE DATABASE IF NOT EXISTS %s" %Namedb)
-    cur.execute("USE %s"%Namedb)
-    cur.execute("CREATE TABLE IF NOT EXISTS %s(timestamp datetime, name char(6), r15m double, r24h double, batv1 double, batv2 double, cur double, boostv1 double, boostv2 double, charge int, csq int, temp double, hum double, flashp int, PRIMARY KEY (timestamp, name))" %table_name)
-    db.close()
-    
-def createTablePiezodata(table_name):
-    db, cur = SenslopeDBConnect()
-    cur.execute("CREATE DATABASE IF NOT EXISTS %s" %Namedb)
-    cur.execute("USE %s"%Namedb)
-    cur.execute("CREATE TABLE IF NOT EXISTS %s(timestamp datetime, name char(7), msgid int , freq double,PRIMARY KEY (timestamp, name))"%table_name)
-    db.close()   
-    
-def createTableStats(table_name):
-    db, cur = SenslopeDBConnect()
-    #Namedb = "stats"
-    cur.execute("CREATE DATABASE IF NOT EXISTS %s" %Namedb)
-    cur.execute("USE %s"%Namedb)
-    cur.execute("CREATE TABLE IF NOT EXISTS %s(timestamp datetime, site char(4), voltage double, chan int, att int, retVal int, msgs int, sim int, csq int, sd int, PRIMARY KEY (timestamp, site))" %table_name)
-    db.close()
-    
-def createTableSOMS(table_name):
-    db, cur = SenslopeDBConnect()
-    #Namedb = "stats"
-    cur.execute("CREATE DATABASE IF NOT EXISTS %s" %Namedb)
-    cur.execute("USE %s"%Namedb)
-    cur.execute("CREATE TABLE IF NOT EXISTS %s(timestamp datetime, id int, msgid smallint, mval1 int, mval2 int, PRIMARY KEY (timestamp, id, msgid))" %table_name)
-    db.close()
-    
 def updateSimNumTable(name,sim_num,date_activated):
     db, cur = SenslopeDBConnect()
     
@@ -497,7 +426,7 @@ def WriteTwoAccelDataToDb(dlist,msgtime):
     if WriteToDB:
         for item in dlist:
             db, cur = SenslopeDBConnect()
-            createTableTwoAccelSensor(item[0])
+            createTable(item[0], "sensor v2")
             timetowrite = str(item[1])
             query = query + """('%s',%s,%s,%s,%s,%s,%s),""" % (timetowrite,str(item[2]),str(item[3]),str(item[4]),str(item[5]),str(item[6]),str(item[7]))
 
@@ -546,7 +475,7 @@ def WriteSomsDataToDb(dlist,msgtime):
     if WriteToDB:
         for item in dlist:
             db, cur = SenslopeDBConnect()
-            createTableSOMS(item[0])
+            createTable(item[0], "soms")
             timetowrite = str(item[1])
             query = query + """('%s',%s,%s,%s,%s),""" % (timetowrite,str(item[2]),str(item[3]),str(item[4]),str(item[5]))
 
@@ -686,7 +615,7 @@ def ProcessColumn(line,txtdatetime,sender):
         if WriteToDB and i!=0:
             db, cur = SenslopeDBConnect()
             
-            createTable(str(msgtable))
+            createTable(str(msgtable), "sensor v1")
 
             try:
                 
@@ -740,7 +669,7 @@ def ProcessPiezometer(line,sender):
         # try:
     if WriteToDB:
         db, cur = SenslopeDBConnect()        
-        createTablePiezodata(str(msgname))
+        createTable(str(msgname), "piezo")
         try:
           query = """INSERT INTO %s(timestamp, name, msgid, freq ) VALUES ('%s','%s', %s, %s )""" %(msgname,txtdatetime,msgname, siteid, piezodata)
             
@@ -825,7 +754,7 @@ def ProcessARQWeather(line,sender):
         db, cur = SenslopeDBConnect()
         
         if msgname:
-            createTableARQWeather(str(msgname))
+            createTable(str(msgname), "arqweather")
         else:
             print ">> Error: Number does not have station name yet"
             return
@@ -895,7 +824,7 @@ def ProcessRain(line,sender):
     if WriteToDB:
         db, cur = SenslopeDBConnect()
         
-        createTableWeather(str(msgtable))
+        createTable(str(msgtable),"weather")
 
         try:
             query = """INSERT INTO %s (timestamp,name,temp,wspd,wdir,rain,batt,csq) VALUES ('%s','%s',%s)""" %(msgtable,txtdatetime,msgtable,data)
@@ -967,7 +896,7 @@ def ProcessStats(line,txtdatetime):
     if WriteToDB:
         db, cur = SenslopeDBConnect()
 
-        createTableStats(str(msgtable))
+        createTable(str(msgtable),"stats")
             
         try:
             query = """INSERT INTO %s (timestamp,site,voltage,chan,att,retVal,msgs,sim,csq,sd)
