@@ -176,7 +176,7 @@ def updateSimNumTable(name,sim_num,date_activated):
                 break
             else:
                 print '>> Warning: Query has no result set (updateSimNumTable)'
-                time.sleep(5)
+                # time.sleep(5)
         except MySQLdb.OperationalError:
             print '2.',
             raise KeyboardInterrupt
@@ -254,38 +254,6 @@ def timeToSendAlertMessage(ref_minute):
         return 0,ref_minute
     else:
         return 1,current_minute
-
-# def WriteLinesToDB(lines):
-    # if not WriteToDB:
-        # print "Writing to database not enabled"
-        # return
-
-    # for line in lines:
-        # db, cur = SenslopeDBConnect()
-
-        # [msgtable,msgdatetime,nid,xval,yval,zval,mval] = line
-
-        
-
-        # try:
-            # query = """INSERT INTO %s
-                # (timestamp,id,xvalue,yvalue,zvalue,mvalue)
-                # VALUES ('%s',%s,%s,%s,%s,%s)""" %(msgtable,msgdatetime,str(nid),str(xval),str(yval),str(zval),str(mval))
-
-            # a = cur.execute(query)
-            # if a:
-                # db.commit()
-            # else:
-                # print '>> Warning: Query has no result set (WriteLinesToDB)'
-                # time.sleep(2)
-        # except KeyError:
-            # print '>> Error: Writing to database'
-        # except MySQLdb.IntegrityError:
-            # print '>> Warning: Duplicate entry detected'
-            
-        # db.close()
-            
-        # print "%s\t%s\t%s\t%s\t%s" % (str(nid),str(xval),str(yval),str(zval),str(mval))
 
 def twoscomp(hexstr):
     # print hexstr
@@ -691,9 +659,10 @@ def ProcessPiezometer(line,sender):
             print '>> Warning: Duplicate entry detected'
         # except:
             # print '>> Unknown error in message data: ', sys.exc_info()[0], sys.exc_info()[1] 
-        # db.close()
+        db.close()
         #except:
         #    print '>> Error: Rain format corrupted',
+        
     
     print 'End of Process Piezometer data'
 
@@ -783,6 +752,7 @@ def ProcessARQWeather(line,sender):
         # db.close()
         #except:
         #    print '>> Error: Rain format corrupted',
+        db.close()
     
     print 'End of Process ARQ weather data'
     
@@ -924,25 +894,6 @@ def ProcessStats(line,txtdatetime):
     
     print 'End of Process status data'
     
-def runBackup():
-    print '>> Backing up Database..',
-    try:
-        query = 'mysqldump -h '+Hostdb+' -u '+Userdb+' -p'+\
-                  Passdb+' '+Namedb+' > '+Namedb+'-backup.sql'
-        os.system(query)
-    except:
-        print '>> Error backing up database'
-    else:
-        print 'done'
-
-    print '>> Updating csv files..'
-    extract_db()
-    #format_data()
-    #extract_rain()
-    print 'done'
-
-    return dt.today()
-
 def RunSenslopeServer(network):
     global gsm_network
     global anomalysave
