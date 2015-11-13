@@ -765,6 +765,17 @@ def ProcessStats(line,txtdatetime):
     
     print 'End of Process status data'
     
+def SendRoutineEmail(network):
+    sender = '1234dummymailer@gmail.com'
+    sender_password = '1234dummy'
+    receiver = 'ggilbertluis@gmail.com'
+    subject = dt.today().strftime("ACTIVE " + network + " SERVER Notification as  of %A, %B %d, %Y, %X")
+    active_message = '\nGood Day!\n\nYou received this email because ' + network + ' SERVER is still active!\nPlease pray for me so that I can be active as always!\n Thanks!\n\n-' + network + ' Server\n'
+    emailer.sendmessage(sender,sender_password,receiver,sender,subject,active_message)
+    receiver = 'dynabeta@gmail.com'
+    emailer.sendmessage(sender,sender_password,receiver,sender,subject,active_message)    
+
+    
 def RunSenslopeServer(network):
     minute_of_last_alert = dt.now().minute
     timetosend = 0
@@ -922,47 +933,15 @@ def RunSenslopeServer(network):
                         emailer.sendmessage(sender,sender_password,receiver,sender,subject,nogsm_message)
                         email_flg = 1
         elif m == -2:
-            print 'Value error\nNow Saving to Anomaly text file'
-            today = dt.today()
-            nowdate = today.strftime("as  of %A, %B %d, %Y, %X")
-            if network=='GLOBE':
-                f = open("Anomaly-GlobeServer.txt",'a')
-            else:
-                f = open("Anomaly-SmartServer.txt",'a')            
-            f.write('\ncount_msg return ='+ str(m) + '\n')
-            f.write('\nanomaly data = '+ anomalysave)
-            f.write('\nDate/time:'+ nowdate )
-            f.close()
-                        
+            print '>> Error in parsing mesages: No data returned by GSM'            
         else:
-            print 'Some other error\nNow Saving to Anomaly text file'
-            today = dt.today()
-            nowdate = today.strftime("as  of %A, %B %d, %Y, %X")
-            if network=='GLOBE':
-                f = open("Anomaly-GlobeServer.txt",'a')
-            else:
-                f = open("Anomaly-SmartServer.txt",'a') 
-                
-            f.write('\nSome other anomaly,\ncount_msg return ='+ str(m)+ '\n')
-            f.write('\nanomaly data = '+ anomalysave)
-            f.write('\nDate/time:'+ nowdate)
-            f.close()
+            print '>> Error in parsing mesages: Error unknown'
+            
                         
         today = dt.today()
         if (today.minute % 30 == 0):
             if (not email_flg):
-                sender = '1234dummymailer@gmail.com'
-                sender_password = '1234dummy'
-                receiver = 'ggilbertluis@gmail.com'
-                if (network == 'GLOBE'):
-                    subject = today.strftime("ACTIVE GLOBE SERVER Notification as  of %A, %B %d, %Y, %X")
-                    active_message = '\nGood Day!\n\nYou received this email because GLOBE SERVER is still active!\nPlease pray for me so that I can be active as always!\n Thanks!\n\n- Globe Server\n'
-                else:
-                    subject = today.strftime("ACTIVE SMART SERVER Notification as  of %A, %B %d, %Y, %X")
-                    active_message = '\nGood Day!\n\nYou received this email because SMART SERVER is still active!\nPlease pray for me so that I can be active as always!\n Thanks!\n\n-Smart Server\n'
-                emailer.sendmessage(sender,sender_password,receiver,sender,subject,active_message)
-                receiver = 'dynabeta@gmail.com'
-                emailer.sendmessage(sender,sender_password,receiver,sender,subject,active_message)               
+                SendRoutineEmail(network)                    
                 email_flg = 1
             
         
