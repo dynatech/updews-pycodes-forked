@@ -100,7 +100,7 @@ def getFilteredData(isCmd = True, inSite = "", inNode = 1, inStart = "", inEnd =
             qs.PrintOut("Number of %s filtered elements: %s" % (site, numFiltered))
             return df_filtered
         else:
-            print "No valid filtered data for %s" % (site)
+            qs.PrintOut("No valid filtered data for %s" % (site))
             return pd.DataFrame()
     
     #return empty dataframe
