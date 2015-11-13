@@ -154,7 +154,7 @@ def ProcTwoAccelColData(msg,sender,txtdatetime):
     print '\n\n*******************************************************'
     print msg
 
-    dtype = msgsplit[1]
+    dtype = msgsplit[1].upper()
    
     datastr = msgsplit[2]
     
@@ -162,19 +162,14 @@ def ProcTwoAccelColData(msg,sender,txtdatetime):
   
     if datastr == '':
         datastr = '000000000000000'
-        print "Error: No parsed data in sms"
+        print ">> Error: No parsed data in sms"
         return
    
     if len(ts) < 10:
-       print 'Error in time value format: '
+       print '>> Error in time value format: '
        return
        
-    if sender == '639175940773':
-        # timestamp = dt.strptime(txtdatetime,'%y%m%d%H%M').strftime('%Y-%m-%d %H:%M:00')
-        colid = 'BAYTC'
-        print '>> name change',
-    else:
-        timestamp = "20"+ts[0:2]+"-"+ts[2:4]+"-"+ts[4:6]+" "+ts[6:8]+":"+ts[8:10]+":00"
+    timestamp = "20"+ts[0:2]+"-"+ts[2:4]+"-"+ts[4:6]+" "+ts[6:8]+":"+ts[8:10]+":00"
         #print '>>',
     #print timestamp
     #timestamp = dt.strptime(txtdatetime,'%y%m%d%H%M').strftime('%Y-%m-%d %H:%M:00')
@@ -183,42 +178,21 @@ def ProcTwoAccelColData(msg,sender,txtdatetime):
     except ValueError:
         print "Error: wrong timestamp format", ts
 
-    if dtype == 'x' or dtype == 'X':
+    if dtype == 'Y' or dtype == 'X':
        n = 15
-       accel = 1
-    elif dtype == 'y' or dtype == 'Y':
-        n = 15  
-        accel =2
-    elif dtype == 'b':
+    elif dtype == 'B':
         n = 12
         colid =  colid + 'M'
-    # elif dtype == 'c':
-        # n = 7
-        # colid =  colid + 'W'    
-    # elif dtype == 'w':
-        # n = 26
-    # elif dtype == 'W':
-        # n = 23
-    # elif dtype == 'z':
-        # n = 8
-    # elif dtype == 'Z':
-        # n = 5
-    # elif dtype == 'a':
-        # n = 15
-    # elif dtype == '0':
-        
-        # n = 15
-        # datastr = '010000000000000'
-    
+    elif dtype == 'C':
+        if colid == "AGBSB":
+            raise IndexError("AGBSB still has wrong format")
+        n = 7
+        colid =  colid + 'M'
     else:
         raise IndexError("Undefined data format " + dtype )
     
     outl = []
  
-    # print datastr
-    
-    # updateSimNumTable(colid,sender,timestamp[:10])
-
     # PARTITION hte message into n characters
     sd = [datastr[i:i+n] for i in range(0,len(datastr),n)]
     
@@ -249,6 +223,7 @@ def ProcTwoAccelColData(msg,sender,txtdatetime):
                 try:
                     m2 = twoscomp(piece[7:10])
                 except:
+                    # for soms 'c' data
                     m2 = 'NULL'
                 line = [colid,timestamp,ID,msgID,m1,m2]
                 print line
@@ -271,9 +246,6 @@ def WriteTwoAccelDataToDb(dlist,msgtime):
 
     query = query[:-1]
     try:
-        # query = """INSERT INTO %s
-            # (timestamp,id,msgid,xvalue,yvalue,zvalue,batt)
-            # VALUES ('%s',%s,%s,%s,%s,%s,%s)""" %(str(item[0]),timetowrite,str(item[2]),str(item[3]),str(item[4]),str(item[5]),str(item[6]),str(item[7]))
         retry = 0
         while True:
             try:
@@ -305,7 +277,7 @@ def WriteTwoAccelDataToDb(dlist,msgtime):
         print '>> Warning: Duplicate entry detected'
         
             
-        db.close()
+    db.close()
         
     #print "%s\t%s\t%s\t%s\t%s" % (str(node_id),str(valueX),str(valueY),str(valueZ),str(valueF))
 
@@ -349,10 +321,9 @@ def WriteSomsDataToDb(dlist,msgtime):
         print '>> Warning: Duplicate entry detected'
         
             
-        db.close()
+    db.close()
         
-    #print "%s\t%s\t%s\t%s\t%s" % (str(node_id),str(valueX),str(valueY),str(valueZ),str(valueF))   
-    
+   
 def PreProcessColumnV1(data):
     data = data.replace("DUE","")
     data = data.replace(",","*")
@@ -361,9 +332,6 @@ def PreProcessColumnV1(data):
     return data
     
 def ProcessColumn(line,txtdatetime,sender):
-    #msg = message
-    
-    #print 'line: ' + line
     msgtable = line[0:4]
     print '\n\n*******************************************************'
     print 'SITE: ' + msgtable
