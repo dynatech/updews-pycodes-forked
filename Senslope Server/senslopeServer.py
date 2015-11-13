@@ -490,12 +490,15 @@ def ProcessPiezometer(line,sender):
         msgname = linesplit[0]
         print 'msg_name: '+msgname        
         data = linesplit[1]
-        siteid = int(data[:2])
+        msgid = int(('0x'+data[:2]), 16)
         p1 = int(('0x'+data[2:4]), 16)*100
         p2 = int(('0x'+data[4:6]), 16)
         p3 = int(('0x'+data[6:]), 16)*.01
         piezodata = p1+p2+p3
-        txtdatetime = dt.strptime(linesplit[2],'%y%m%d%H%M%S').strftime('%Y-%m-%d %H:%M:00')
+        try:
+            txtdatetime = dt.strptime(linesplit[2],'%y%m%d%H%M%S').strftime('%Y-%m-%d %H:%M:00')
+        except ValueError:
+            txtdatetime = dt.strptime(linesplit[2],'%y%m%d%H%M').strftime('%Y-%m-%d %H:%M:00')
             
     except IndexError and AttributeError:
         print '\n>> Error: Piezometer message format is not recognized'
@@ -510,7 +513,7 @@ def ProcessPiezometer(line,sender):
         db, cur = SenslopeDBConnect()        
         createTable(str(msgname), "piezo")
         try:
-          query = """INSERT INTO %s(timestamp, name, msgid, freq ) VALUES ('%s','%s', %s, %s )""" %(msgname,txtdatetime,msgname, siteid, piezodata)
+          query = """INSERT INTO %s(timestamp, name, msgid, freq ) VALUES ('%s','%s', %s, %s )""" %(msgname,txtdatetime,msgname, str(msgid), str(piezodata))
             
             # print query
         except ValueError:
@@ -787,29 +790,28 @@ def RunSenslopeServer(network):
     else:
         Port = cfg.getint('Serial', 'SmartPort') - 1
 
-    if not FileInput:
-        try:
-            gsmInit(Port)        
-        except serial.SerialException:
-            print ">> ERROR: Could not open COM %r!" % (Port+1)
-            print '**NO COM PORT FOUND**'
-            while True:
-                if not FileInput:
-                    gsm.close()
-                    if (not email_flg):
-                        sender = '1234dummymailer@gmail.com'
-                        sender_password = '1234dummy'
-                        receiver = 'ggilbertluis@gmail.com'
-                        noserial_message = 'Please fix me'
-                        if (network == 'GLOBE'):
-                            subject = 'No Serial Email Notification (GLOBE SERVER)'
-                        else:
-                            subject = 'No Serial Email Notification (SMART SERVER)'
-                            
-                        emailer.sendmessage(sender,sender_password,receiver,sender,subject,noserial_message)
-                        receiver = 'dynabeta@gmail.com'
-                        emailer.sendmessage(sender,sender_password,receiver,sender,subject,noserial_message)
-                        email_flg = 1
+    
+    try:
+        gsmInit(Port)        
+    except serial.SerialException:
+        print ">> ERROR: Could not open COM %r!" % (Port+1)
+        print '**NO COM PORT FOUND**'
+        gsm.close()
+        if (not email_flg):
+            sender = '1234dummymailer@gmail.com'
+            sender_password = '1234dummy'
+            receiver = 'ggilbertluis@gmail.com'
+            noserial_message = 'Please fix me'
+            if (network == 'GLOBE'):
+                subject = 'No Serial Email Notification (GLOBE SERVER)'
+            else:
+                subject = 'No Serial Email Notification (SMART SERVER)'
+                
+            emailer.sendmessage(sender,sender_password,receiver,sender,subject,noserial_message)
+            receiver = 'dynabeta@gmail.com'
+            emailer.sendmessage(sender,sender_password,receiver,sender,subject,noserial_message)
+            email_flg = 1
+            return
 			
     # force backup
     #last_backup = runBackup()
