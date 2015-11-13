@@ -120,31 +120,43 @@ def sendMsg(alert_msg, number):
     except serial.SerialException:
         print "NO SERIAL COMMUNICATION (sendmsg)"
         RunSenslopeServer(gsm_network)	
+        
+def logError(log):
+    nowdate = dt.today().strftime("%A, %B %d, %Y, %X")
+    f = open("errorLog.txt","a")
+    f.write(nowdate+','+log.replace('\r','%').replace('\n','%') + '\n')
+    f.close()
+    
 
 def countmsg():
-    global anomalysave
     """
     Gets the # of SMS messages stored in GSM modem.
     Usage: c = countmsg()
     """
-    anomalysave = ''
-    b = gsmcmd('AT+CPMS?')
-    anomalysave = b
-    try:
-        c = int( b.split(',')[1] )
-        #print '>>>> ', c
-        return c
-    except IndexError:
-        print 'count_msg b = ',b
-        if b:
-            return 0
-        else:
-            return -1
-        ##if GSM sent blank data maybe GSM is inactive
-    except ValueError:
-        print '>> ValueError:'
-        print b
-        return -2   
+    while True:
+        b = ''
+        c = ''
+        b = gsmcmd('AT+CPMS?')
+        
+        try:
+            c = int( b.split(',')[1] )
+            #print '>>>> ', c
+            return c
+        except IndexError:
+            print 'count_msg b = ',b
+            logError(b)
+            if b:
+                return 0                
+            else:
+                return -1
+                
+            ##if GSM sent blank data maybe GSM is inactive
+        except ValueError:
+            print '>> ValueError:'
+            print b
+            print '>> Retryring message reading'
+            logError(b)
+            # return -2   
 
 def getAllSms(network):
     allmsgs = 'd' + gsmcmd('AT+CMGL="ALL"')
@@ -158,7 +170,7 @@ def getAllSms(network):
         if SaveToFile:
             mon = dt.now().strftime("-%Y-%B-")
             f = open("D:\\Server Files\\Consolidated\\"+network+mon+'backup.txt','a')
-            f.write(temp)
+            f.write(msg)
             f.close()
                 
         msg = msg.replace('\n','').split("\r")
@@ -166,11 +178,10 @@ def getAllSms(network):
         txtnum = re.search(r': [0-9]{1,2},',msg[0]).group(0).strip(': ,')
         
         try:
-            sender = re.search(r'[0-9]{12}',msg[0]).group(0)
-        except ValueError:
-            print 'Sender unknown.'
+            sender = re.search(r'[0-9]{11,12}',msg[0]).group(0)
+        except AttributeError:
+            print 'Sender unknown.', msg[0]
             sender = "UNK"
-            continue
             
         try:
             txtdatetimeStr = re.search(r'\d\d/\d\d/\d\d,\d\d:\d\d:\d\d',msg[0]).group(0)

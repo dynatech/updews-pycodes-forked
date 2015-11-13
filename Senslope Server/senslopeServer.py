@@ -6,8 +6,6 @@ from datetime import datetime as dt
 from datetime import timedelta as td
 import winsound
 import emailer
-global gsm_network
-global anomalysave
 from senslopedbio import *
 from gsmSerialio import *
 #---------------------------------------------------------------------------------------------------------------------------
@@ -768,9 +766,6 @@ def ProcessStats(line,txtdatetime):
     print 'End of Process status data'
     
 def RunSenslopeServer(network):
-    global gsm_network
-    global anomalysave
-    gsm_network  = network
     minute_of_last_alert = dt.now().minute
     timetosend = 0
     email_flg = 0
@@ -795,7 +790,7 @@ def RunSenslopeServer(network):
                         sender_password = '1234dummy'
                         receiver = 'ggilbertluis@gmail.com'
                         noserial_message = 'Please fix me'
-                        if (gsm_network == 'GLOBE'):
+                        if (network == 'GLOBE'):
                             subject = 'No Serial Email Notification (GLOBE SERVER)'
                         else:
                             subject = 'No Serial Email Notification (SMART SERVER)'
@@ -813,15 +808,6 @@ def RunSenslopeServer(network):
     while True:
         m = countmsg()
         if m>0:
-            # # make a list of all messages
-            # # remove the OK field
-            # # isolate each message by using +CMGL as delimiter
-            # # make sure start of string is not a legitimate message
-            # allmsgs = 'd' + gsmcmd('AT+CMGL="ALL"')
-            # allmsgs = allmsgs.replace("\r\nOK\r\n",'').split("+CMGL")[1:]
-            # if allmsgs:
-                # temp = allmsgs.pop(0) #removes "=ALL"
-                
             allmsgs = getAllSms(network)
             
             while allmsgs:
@@ -892,7 +878,7 @@ def RunSenslopeServer(network):
                     try:
                         gsmcmd('AT+CMGD='+msg.num).strip()
                         print 'OK'
-                    except:
+                    except ValueError:
                         print 'Error deleting message: ', msg.data
 
             if FileInput:
@@ -926,7 +912,7 @@ def RunSenslopeServer(network):
                         sender_password = '1234dummy'
                         receiver = 'ggilbertluis@gmail.com'
                         nogsm_message = 'Please fix me'
-                        if (gsm_network == 'GLOBE'):
+                        if (network == 'GLOBE'):
                             subject = 'GSM INACTIVE Notification (GLOBE SERVER)'
                         else:
                             subject = 'GSM INACTIVE Notification (SMART SERVER)'
@@ -939,7 +925,7 @@ def RunSenslopeServer(network):
             print 'Value error\nNow Saving to Anomaly text file'
             today = dt.today()
             nowdate = today.strftime("as  of %A, %B %d, %Y, %X")
-            if gsm_network=='GLOBE':
+            if network=='GLOBE':
                 f = open("Anomaly-GlobeServer.txt",'a')
             else:
                 f = open("Anomaly-SmartServer.txt",'a')            
@@ -952,7 +938,7 @@ def RunSenslopeServer(network):
             print 'Some other error\nNow Saving to Anomaly text file'
             today = dt.today()
             nowdate = today.strftime("as  of %A, %B %d, %Y, %X")
-            if gsm_network=='GLOBE':
+            if network=='GLOBE':
                 f = open("Anomaly-GlobeServer.txt",'a')
             else:
                 f = open("Anomaly-SmartServer.txt",'a') 
@@ -968,7 +954,7 @@ def RunSenslopeServer(network):
                 sender = '1234dummymailer@gmail.com'
                 sender_password = '1234dummy'
                 receiver = 'ggilbertluis@gmail.com'
-                if (gsm_network == 'GLOBE'):
+                if (network == 'GLOBE'):
                     subject = today.strftime("ACTIVE GLOBE SERVER Notification as  of %A, %B %d, %Y, %X")
                     active_message = '\nGood Day!\n\nYou received this email because GLOBE SERVER is still active!\nPlease pray for me so that I can be active as always!\n Thanks!\n\n- Globe Server\n'
                 else:
@@ -986,6 +972,7 @@ def RunSenslopeServer(network):
 
 """ Global variables"""
 checkIfActive = True
+anomalysave = ''
 
 cfg = ConfigParser.ConfigParser()
 cfg.read('senslope-server-config.txt')
