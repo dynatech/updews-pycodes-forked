@@ -773,9 +773,11 @@ def RunSenslopeServer(network):
     except serial.SerialException:
         print ">> ERROR: Could not open COM %r!" % (Port+1)
         print '**NO COM PORT FOUND**'
-        gsm.close()
         serverstate = 'serial'
-        SendRoutineEmail(network,serverstate)
+        SendAlertEmail(network,serverstate)
+        while True:
+            gsm.close()
+            
 
 			
     # force backup
@@ -884,7 +886,7 @@ def RunSenslopeServer(network):
             print'GSM MODULE MAYBE INACTIVE'
             serverstate = 'inactive'
             gsm.close()
-            SendRoutineEmail(network,serverstate)
+            SendAlertEmail(network,serverstate)
 
 			
         elif m == -2:
@@ -897,7 +899,7 @@ def RunSenslopeServer(network):
         if (today.minute % 30 == 0):
             serverstate = 'active'
             if (not email_flg):
-                SendRoutineEmail(network, serverstate)
+                SendAlertEmail(network, serverstate)
                 email_flg = 1;
             
         
