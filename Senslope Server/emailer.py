@@ -23,8 +23,12 @@ def sendmessage(user,pw,toaddr,fromaddr,subject,msg):
         server.sendmail(fromaddr, [toaddr], msg.as_string())
         server.quit()
         print 'email sent to ', toaddr
-    except smtplib.SMTPException:
-        print 'Unable to send email this time'
+    except smtplib.SMTPException as errmsg::
+        print 'Caught exception smtplib.SMTPException: %s.\n>>>>>Unable to send email this time'% ermsg
+	except socket.gaierror as errmsg:
+        print 'Caught exception socket.gaierror: %s.\n>>>>>Unable to send email this time'% ermsg
+	except socket.error as errmsg:
+		print 'Caught exception socket.error: %s\n>>>>>Unable to send email this time'% errmsg
        
     
 def getmessagefromsender(addr,pw,sender):
