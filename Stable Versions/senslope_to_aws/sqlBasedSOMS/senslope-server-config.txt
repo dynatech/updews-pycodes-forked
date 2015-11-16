@@ -1,0 +1,43 @@
+[LocalDB]
+username = root
+host = 127.0.0.1
+password = irc311
+dbname = senslopedb
+
+[I/O]
+writetodb = True
+deleteafterread = True
+savetofile = True
+fileinput = False
+consoleoutput = False
+inputfile = backup.txt
+
+[Serial]
+baudrate = 57600
+sunport = 6
+globeport = 3
+timeout = 5
+smartport = 8
+
+[SMSAlert]
+sunnumbers = 09228412065,09228120490,09253120491
+enable = True
+globenumbers = 
+csvinputfile = Node-level_alerts.csv
+smartnumbers = 
+alertflags = 12
+directory = D:\Dropbox\Senslope Data\Proc\csv
+alertreportinterval = 30
+
+[Misc]
+sleepperiod = 2
+adjustcolumntimeof = BLCB,LABT,PLAT,PLAB,BOLB,LIPT,MAMB
+ts_agbsbm = 2015-11-14 08:01:00
+ts_baysbm = 2015-11-16 09:31:00
+ts_blcsam = 2015-10-06 18:00:00
+ts_calsam = 2015-10-07 10:01:00
+ts_calsbm = 2015-10-20 11:02:00
+ts_caltam = 2015-10-07 11:32:00
+ts_mcasbm = 2015-11-15 04:01:00
+ts_pepsbm = 2015-10-06 18:00:00
+

@@ -48,7 +48,7 @@ def extractDBToSQL(table):
     
     #table = 'labb'
     tbase = dt.strptime('"2010-10-1 00:00:00"', '"%Y-%m-%d %H:%M:%S"')
-    print '>> Extracting ' + table + ' purged data from database ..\n'  
+    print '>> Extracting ' + table + ' SOMS data from database ..\n'  
 
     print 'TS Start = ' + TSstart + '\n'
 
@@ -64,8 +64,7 @@ def extractDBToSQL(table):
     print 'winCmd = ' + winCmd + '\n'
 
     db, cur = SenslopeDBConnect()
-    #query = 'select * from ' + table + ' where xvalue > 0 and zvalue > -500 and id > 0 and id < 41 and timestamp >= "' + TSstart + '" order by timestamp asc limit 10000'
-    query_tstamp = 'select max(timestamp) from (SELECT timestamp FROM ' + table + ' where xvalue > 0 and zvalue > -500 and id > 0 and id < 41 and timestamp > "' + TSstart + '" limit 10000) test'
+    query_tstamp = 'select max(timestamp) from (SELECT timestamp FROM ' + table + ' where timestamp > "' + TSstart + '" limit 10000) test'
 
     print 'Query = ' + query_tstamp + '\n'
     
@@ -116,25 +115,10 @@ def extract_db2():
         
         data = cur.fetchall()
 
-        #valid_tables = ['blcb','blct','bolb','gamt','gamb','humt','humb','labb','labt','lipb','lipt','mamb','mamt','oslb','oslt','plab','plat','pugb','pugt','sinb','sinu']
-        valid_tables_ver3 = ['dadta','dadtb','lunsa','luntb','luntc','magta', \
-                            'magtb','magtc','magtd','sibta','sibtb', \
-                            'sumta','sumtb','tueta']
-        for tbl3 in valid_tables_ver3:        
-            extractDBToSQL(tbl3)   
-
-        valid_tables = ['blcb','blct','bolb','gamt','gamb','humt','humb','labb', \
-                        'labt','lipb','lipt','mamb','mamt','oslb','oslt','plab', \
-                        'plat','pugb','pugt','sinb','sinu']
-        for tbl in valid_tables:        
-            extractDBToSQL(tbl)
-
-        valid_tables_ver2 = ['agbsb','agbta','baysb','bayta','baytc','blcsa', \
-                            'carsb','carta','cudta','cudtb','mcasb','mcata', \
-                            'mesta','nagsa','nagtb','nurta','nurtb','pepsb', \
-                            'pepta','peptc','sagta','sagtb','tuetb']
-        for tbl2 in valid_tables_ver2:        
-            extractDBToSQL(tbl2) 
+        valid_tables_soms = ['agbsbm','baysbm','blcsam','calsam','calsbm', \
+                            'caltam','mcasbm','pepsbm']
+        for tbl4 in valid_tables_soms:        
+            extractDBToSQL(tbl4)
 
         #extractDBToSQL('sinb')     
     except IndexError:

@@ -1,8 +1,8 @@
-cd sqlBased
+cd sqlBasedWS
 start python gen_sql.py
 
-cd ../sqlBasedPurged
+cd ../sqlBased
 start python gen_sql.py
 
-cd ../sqlBasedWS
+cd ../sqlBasedSOMS
 start python gen_sql.py
