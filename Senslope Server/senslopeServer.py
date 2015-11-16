@@ -742,17 +742,17 @@ def SendAlertEmail(network, serverstate):
     receiver = 'ggilbertluis@gmail.com'
 	
 	## select if serial error if active server if inactive server
-	if serverstate == 'active':
-		subject = dt.today().strftime("ACTIVE " + network + " SERVER Notification as  of %A, %B %d, %Y, %X")
-		active_message = '\nGood Day!\n\nYou received this email because ' + network + ' SERVER is still active!\nThanks!\n\n-' + network + ' Server\n'
-	elif serverstate = 'serial':
-		subject = dt.today().strftime(network + 'SERVER No Serial Notification  as  of %A, %B %d, %Y, %X')
-		active_message = '\nGood Day!\n\nYou received this email because ' + network + ' SERVER is NOT connected to Serial Port!\nPlease fix me.\nThanks!\n\n-' + network + ' Server\n'
-	elif serverstate = 'inactive':
-		subject = dt.today().strftime(network + 'SERVER No Serial Notification  as  of %A, %B %d, %Y, %X')
-		active_message = '\nGood Day!\n\nYou received this email because ' + network + ' SERVER is now INACTIVE!\\nPlease fix me.\nThanks!\n\n-' + network + ' Server\n'
+    if serverstate == 'active':
+        subject = dt.today().strftime("ACTIVE " + network + " SERVER Notification as  of %A, %B %d, %Y, %X")
+        active_message = '\nGood Day!\n\nYou received this email because ' + network + ' SERVER is still active!\nThanks!\n\n-' + network + ' Server\n'
+    elif serverstate == 'serial':
+        subject = dt.today().strftime(network + 'SERVER No Serial Notification  as  of %A, %B %d, %Y, %X')
+        active_message = '\nGood Day!\n\nYou received this email because ' + network + ' SERVER is NOT connected to Serial Port!\nPlease fix me.\nThanks!\n\n-' + network + ' Server\n'
+    elif serverstate == 'inactive':
+        subject = dt.today().strftime(network + 'SERVER No Serial Notification  as  of %A, %B %d, %Y, %X')
+        active_message = '\nGood Day!\n\nYou received this email because ' + network + ' SERVER is now INACTIVE!\\nPlease fix me.\nThanks!\n\n-' + network + ' Server\n'
 	
-	emailer.sendmessage(sender,sender_password,receiver,sender,subject,active_message)
+    emailer.sendmessage(sender,sender_password,receiver,sender,subject,active_message)
     receiver = 'dynabeta@gmail.com'
     emailer.sendmessage(sender,sender_password,receiver,sender,subject,active_message)
 	
@@ -774,9 +774,9 @@ def RunSenslopeServer(network):
         print ">> ERROR: Could not open COM %r!" % (Port+1)
         print '**NO COM PORT FOUND**'
         gsm.close()
-		serverstate = 'serial'
-		SendRoutineEmail(network,serverstate) 
-		while True:
+        serverstate = 'serial'
+        SendRoutineEmail(network,serverstate)
+
 			
     # force backup
     #last_backup = runBackup()
@@ -881,11 +881,11 @@ def RunSenslopeServer(network):
                     email_flg = 0;
                 
         elif m == -1:
-            print'GSM MODULE MAYBE INACTIVE' 
-			serverstate = 'inactive'
-			gsm.close()
-			SendRoutineEmail(network,serverstate) 
-			while True:
+            print'GSM MODULE MAYBE INACTIVE'
+            serverstate = 'inactive'
+            gsm.close()
+            SendRoutineEmail(network,serverstate)
+
 			
         elif m == -2:
             print '>> Error in parsing mesages: No data returned by GSM'            
@@ -895,10 +895,10 @@ def RunSenslopeServer(network):
                         
         today = dt.today()
         if (today.minute % 30 == 0):
-			serverstate = 'active'
+            serverstate = 'active'
             if (not email_flg):
                 SendRoutineEmail(network, serverstate)
-				email_flg = 1;
+                email_flg = 1;
             
         
     if not FileInput:
