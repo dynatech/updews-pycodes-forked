@@ -76,15 +76,17 @@ def generate_proc():
 #        if colname != "sint": continue
     ##    print "\nDATA for ",colname," as of ", end.strftime("%Y-%m-%d %H:%M")
         monitoring=GetRawAccelData(colname,offsetstart)
-        
+#        monitoring = monitoring.set_index('id')
+
         try:
             monitoring=applyFilters(monitoring)
             LastGoodData=GetLastGoodData(monitoring,num_nodes)
             PushLastGoodData(LastGoodData,colname)
             LastGoodData = GetLastGoodDataFromDb(colname)
+            print 'Done'
         except:
             LastGoodData = GetLastGoodDataFromDb(colname)
-        
+            print 'error'
         if len(LastGoodData)<num_nodes: print colname, " Missing nodes in LastGoodData"
 
         #7. extracting last data outside monitoring window
@@ -106,17 +108,16 @@ def generate_proc():
         monitoring=monitoring.drop(['x','y','z'],axis=1)
 
         #12. setting ts as index
-        monitoring['id']=monitoring.index.values
+#        monitoring['id']=monitoring.index.values
         monitoring=monitoring.set_index('ts')
 
         #13. reordering columns
         monitoring=monitoring[['id','xz','xy']]
-
+#        print monitoring
             
         ##    print "\n",colname
         ##    print monitoring.tail(20)
         
         monitoring.to_csv(proc_monitoring_path+"Proc\\"+colname+proc_monitoring_file,sep=',', header=False,mode='w')
 
-       
-generate_proc()
+#generate_proc()

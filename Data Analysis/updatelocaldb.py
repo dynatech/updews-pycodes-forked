@@ -99,3 +99,5 @@ for col in sensors['colname']:
  
     except AttributeError:
         print col + " table does not exist"
+    except:
+        print col + " Error"
