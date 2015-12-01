@@ -739,9 +739,9 @@ def ProcessStats(line,txtdatetime):
 def SendAlertEmail(network, serverstate):
     sender = '1234dummymailer@gmail.com'
     sender_password = '1234dummy'
-    receiver = 'ggilbertluis@gmail.com'
+ receiver =['ggilbertluis@gmail.com', 'dynabeta@gmail.com']
 	
-	## select if serial error if active server if inactive server
+    ## select if serial error if active server if inactive server
     if serverstate == 'active':
         subject = dt.today().strftime("ACTIVE " + network + " SERVER Notification as  of %A, %B %d, %Y, %X")
         active_message = '\nGood Day!\n\nYou received this email because ' + network + ' SERVER is still active!\nThanks!\n\n-' + network + ' Server\n'
@@ -752,8 +752,6 @@ def SendAlertEmail(network, serverstate):
         subject = dt.today().strftime(network + 'SERVER No Serial Notification  as  of %A, %B %d, %Y, %X')
         active_message = '\nGood Day!\n\nYou received this email because ' + network + ' SERVER is now INACTIVE!\\nPlease fix me.\nThanks!\n\n-' + network + ' Server\n'
 	
-    emailer.sendmessage(sender,sender_password,receiver,sender,subject,active_message)
-    receiver = 'dynabeta@gmail.com'
     emailer.sendmessage(sender,sender_password,receiver,sender,subject,active_message)
 	
 def RunSenslopeServer(network):
