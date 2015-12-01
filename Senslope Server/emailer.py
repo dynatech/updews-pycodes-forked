@@ -13,14 +13,16 @@ def sendmessage(user,pw,toaddr,fromaddr,subject,msg):
     msg = MIMEText(msg)
     msg['Subject'] = subject
     msg['From'] = fromaddr
-    msg['To'] = toaddr
+    ##msg['To'] = toaddr
+    msg['To'] = ", ".join(toaddr)
     
     # Sending the mail  
     try:
         server = smtplib.SMTP('smtp.gmail.com:587')
         server.starttls()
         server.login(user,pw)
-        server.sendmail(fromaddr, [toaddr], msg.as_string())
+        ##server.sendmail(fromaddr, [toaddr], msg.as_string())
+        server.sendmail(fromaddr, toaddr, msg.as_string())
         server.quit()
         print 'email sent to ', toaddr
     except smtplib.SMTPException as errmsg:
