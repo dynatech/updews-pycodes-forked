@@ -739,7 +739,7 @@ def ProcessStats(line,txtdatetime):
 def SendAlertEmail(network, serverstate):
     sender = '1234dummymailer@gmail.com'
     sender_password = '1234dummy'
- receiver =['ggilbertluis@gmail.com', 'dynabeta@gmail.com']
+    receiver =['ggilbertluis@gmail.com', 'dynabeta@gmail.com']
 	
     ## select if serial error if active server if inactive server
     if serverstate == 'active':
