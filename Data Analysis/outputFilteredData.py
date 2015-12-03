@@ -100,19 +100,34 @@ def getFilteredData(isCmd = True, inSite = "", inNode = 1, inStart = "", inEnd =
             qs.PrintOut("Number of %s filtered elements: %s" % (site, numFiltered))
             return df_filtered
         else:
-            qs.PrintOut("No valid filtered data for %s" % (site))
+            print "No valid filtered data for %s" % (site)
             return pd.DataFrame()
     
     #return empty dataframe
     return pd.DataFrame()
 
 def getFilteredDataJSON():
+    try: #show/hide the node id
+        showid = sys.argv[6] 
+
+        if showid == '0':
+            showid = False
+        else:
+            showid = True
+    except IndexError:
+        showid = True
+
     dfa = getFilteredData()
     isDFempty = dfa.empty
     
     if isDFempty == True:
         print 'No Data Available...'
     else:
+        #hide id
+        if showid == False:
+            dfa = dfa.drop('id',1)
+
         dfajson = dfa.to_json(orient="records",date_format='iso')
         dfajson = dfajson.replace("T"," ").replace("Z","").replace(".000","")
+
         print dfajson
