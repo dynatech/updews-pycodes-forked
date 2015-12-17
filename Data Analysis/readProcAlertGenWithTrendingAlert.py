@@ -259,7 +259,6 @@ def df_to_out(colname,xz,xy,
     ##OUTPUT:
     ##xz,xy,   xz_0off,xy_0off,   vel_xz,vel_xy, vel_xz_0off, vel_xy_0off, cs_x,cs_xz,cs_xy,   cs_xz_0,cs_xy_0
 
-    monwindate=(xz.index>=vel_xz.index[0])&(xz.index<=vel_xz.index[-1])
 
     #resizing dataframes
     xz=xz[(xz.index>=vel_xz.index[0])&(xz.index<=vel_xz.index[-1])]
@@ -375,9 +374,6 @@ def alert_summary(alert_out,alert_list):
     ##alert_list; array
 
 
-##    alert_disp=alert_out.loc[(abs(alert_out.xz_disp)>=T_disp/2)|(abs(alert_out.xy_disp)>=T_disp/2)]
-##    if len(alert_disp)!=0:
-##        print alert_disp
     
     nd_check=alert_out.loc[(alert_out['node_alert']=='nd')|(alert_out['col_alert']=='nd')]
     if len(nd_check)>(num_nodes/2):
@@ -464,7 +460,6 @@ def plot_disp_vel(colname, xz,xy,xz_vel,xy_vel):
         xz.plot(ax=curax,legend=False)
         curax.set_title(colname+' XZ')
         curax.set_ylabel('disp, m', fontsize='small')
-        #curax.set_ylim(-0.1,0.1)
         
         curax=ax_xyd
         plt.sca(curax)
@@ -475,7 +470,6 @@ def plot_disp_vel(colname, xz,xy,xz_vel,xy_vel):
         plt.sca(curax)
         xz_vel.plot(ax=curax,legend=False)
         curax.set_ylabel('vel, m/day', fontsize='small')
-        #curax.set_ylim(-0.01,0.01)
         
         curax=ax_xyv
         plt.sca(curax)
@@ -534,7 +528,6 @@ def mask_error_nodes(rawdat_list,err):
 
             rawdat_list[r]=data2
 
-##            print rawdat_list[r].ix[subindex]
 
     return rawdat_list[0],rawdat_list[1],rawdat_list[2]
 
@@ -594,10 +587,6 @@ col_pos_num= cfg.getfloat('I/O','num_col_pos')
 #INPUT/OUTPUT FILES
 
 #local file paths
-#columnproperties_path = cfg.get('I/O','ColumnPropertiesPath')
-#purged_path = cfg.get('I/O','InputFilePath')
-#monitoring_path = cfg.get('I/O','MonitoringPath')
-#LastGoodData_path = cfg.get('I/O','LastGoodData')
 proc_monitoring_path = cfg.get('I/O','OutputFilePathMonitoring2')
 nd_path = cfg.get('I/O', 'NDFilePath')
 senslope_monitoring_path = cfg.get('I/O','OutputFilePathMonitoring')
@@ -800,11 +789,6 @@ for s in sensorlist:
      seen.add(line)
      print line, # standard output is now redirected to the file
      
-#    out = [0,1,2,6,7,8,9,12,13]
-#    
-#    if s in out:
-#        
-#    print trending_node_alerts 
     with open (proc_monitoring_path+"textalert.txt", 'ab') as t:
         if working_node_alerts.count('a2') != 0:
             t.write (colname + ":" + 'a2' + '\n')
@@ -863,8 +847,6 @@ for s in sensorlist:
             alert_out[['node_alert', 'col_alert', 'trending_alert']].to_csv(nd_path + colname + proc_monitoring_file, sep=',', header=True, mode='w')
 
 
-   # print alert_disp
-
 #    #11. Plotting column positions
     plot_column_positions(colname,cs_x,cs_xz_0,cs_xy_0)
     plot_column_positions(colname,cs_x,cs_xz,cs_xy)
@@ -878,12 +860,6 @@ for s in sensorlist:
 
     plt.close()
 
-
-##for a in range(len(alert_list)):
-##    if a==2:
-##        print alert_names[a] + str([al[:5] for al in str(alert_list[a])])
-##    else:    
-##        print alert_names[a] + str(alert_list[a])
 
 with open (proc_monitoring_path+"textalert2.txt", 'ab') as t:
     t.write ('a0: ' + ','.join(sorted(a0_alert)) + '\n')
@@ -934,6 +910,7 @@ with open(proc_monitoring_path+"NDlog.csv", 'ab') as ND:
     if len(a0_alert) == 0 and len(a1_alert) == 0 and len(a2_alert) == 0:
         ND.write(end.strftime(fmt) + ',D,')
         ND.write("ND on all sites,")
+        ND.write(',\n')
 
 if len(a0_alert) != 0 or len(a1_alert) != 0 or len(a2_alert) != 0:
     with open(proc_monitoring_path+"NDlog.csv", 'ab') as ND:
@@ -994,13 +971,13 @@ with open(proc_monitoring_path + "ND7x.csv", 'ab') as ND7x:
             NDlog['description'].values[2] and NDlog['description'].values[3] and NDlog['description'].values[4] \
             and NDlog['description'].values[5]:
                 ND7 += [n]
-        ND7x.write(end.strftime(fmt) + ',')
-        ND7x.write(';'.join(ND7))
-        ND7x.write('\n')
+        if len(ND7) != 0:
+            ND7x.write(end.strftime(fmt) + ',')
+            ND7x.write(';'.join(ND7))
+            ND7x.write('\n')
     except IndexError:
         pass
-#f = pd.read_csv(proc_monitoring_path+"ND7x.csv", names = ['ts', 'col'], parse_dates='ts', index_col='ts')
-#end.strftime(fmt) + ' ND: ' +','.join(f[(f.index==end)]['col'][0].split(';'))
+
 
 end_time = datetime.now() - start_time
 with open (proc_monitoring_path+"timer.txt", 'ab') as p:
