@@ -55,6 +55,17 @@ def getSiteColumnsList():
     print "Number of loaded records: ", len(df)
     dbc.close()
     return df
+    
+def getSiteSomsList():
+    dbc = MySQLdb.connect(host=dbhost,user=dbuser,passwd=dbpwd,db=dbname)
+    cur = dbc.cursor()
+    query = "select name from %s.site_column where s_id < 100 and CHAR_LENGTH(name) = 5 and SUBSTRING(name, 4, 1) = 's' order by name asc;" % (dbname)
+
+    df = pd.read_sql(query, con=dbc)
+    #print df
+    print "Number of loaded records: ", len(df)
+    dbc.close()
+    return df
         
 def checkEntryExistence(table,col,value):
     dbc = MySQLdb.connect(host=dbhost,user=dbuser,passwd=dbpwd,db=dbname)
@@ -84,6 +95,11 @@ def createSensorTable(table,version):
         query = "CREATE TABLE `%s`.`%s` (`timestamp` DATETIME NOT NULL DEFAULT '0000-00-00 00:00:00',`id` INT(11) NOT NULL DEFAULT '0',`xvalue` INT(11) NULL DEFAULT NULL,`yvalue` INT(11) NULL DEFAULT NULL,`zvalue` INT(11) NULL DEFAULT NULL,`mvalue` INT(11) NULL DEFAULT NULL,PRIMARY KEY (`id`, `timestamp`)) ENGINE = InnoDB DEFAULT CHARACTER SET = latin1;" % (dbname,table)
     elif version == 2:
         query = "CREATE TABLE `%s`.`%s` (`timestamp` DATETIME NOT NULL DEFAULT '0000-00-00 00:00:00',`id` INT(11) NOT NULL DEFAULT '0',`msgid` SMALLINT(6) NOT NULL DEFAULT '0',`xvalue` INT(11) NULL DEFAULT NULL,`yvalue` INT(11) NULL DEFAULT NULL,`zvalue` INT(11) NULL DEFAULT NULL,`batt` DOUBLE NULL DEFAULT NULL, PRIMARY KEY (`id`, `msgid`,`timestamp`)) ENGINE = InnoDB DEFAULT CHARACTER SET = latin1;" % (dbname,table)
+    elif version == 3:
+        query = "CREATE TABLE `%s`.`%s` (`timestamp` DATETIME NOT NULL DEFAULT '0000-00-00 00:00:00',`id` INT(11) NOT NULL DEFAULT '0',`msgid` SMALLINT(6) NOT NULL DEFAULT '0',`xvalue` INT(11) NULL DEFAULT NULL,`yvalue` INT(11) NULL DEFAULT NULL,`zvalue` INT(11) NULL DEFAULT NULL,`batt` DOUBLE NULL DEFAULT NULL, PRIMARY KEY (`id`, `msgid`,`timestamp`)) ENGINE = InnoDB DEFAULT CHARACTER SET = latin1;" % (dbname,table)    
+    elif version == "soms":
+        query = "CREATE TABLE IF NOT EXISTS %s(timestamp datetime, id int, msgid smallint, mval1 int, mval2 int, PRIMARY KEY (timestamp, id, msgid))" %table
+    
     #print query
     print "Created sensor table version %s: '%s'" % (version,table)
     ret = 0
@@ -97,6 +113,7 @@ def createSensorTable(table,version):
     finally:
         dbc.close()
         return ret      
+
         
 ###############################################################################
 # Truncate Tables on Database    
@@ -215,6 +232,52 @@ def downloadFullRainPropsTable():
         
     return df
 
+def downloadSoilMoistureTablesList():
+    url = 'http://www.dewslandslide.com/ajax/getSenslopeData.php?db=%s&sitesomsjson' % (dbname)     
+    print url
+    
+    try:
+        jsonData = pd.read_json(url, orient='columns')
+        df = pd.DataFrame(jsonData)
+        df = df.set_index(['name'])
+        print "downloadSoilMoistureTablesList done" 
+        #print df
+    except urllib2.URLError:
+        print "<urlopen error [Errno 10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond>"
+        #return empty data frame
+        return pd.DataFrame()
+    
+    except ValueError:
+        print "No Data from web server. Table does not exist on web server"
+        #return empty data frame
+        return pd.DataFrame()
+        
+    return df
+    
+def downloadSoilMoistureData(col,fromDate='',toDate=''):
+    url = 'http://www.dewslandslide.com/ajax/getSenslopeData.php?db=%s&sitesomsdata&site=%s&limit=%s&start=%s&end=%s' % (dbname,col,entryLimit,fromDate,toDate)    
+    print url
+    
+    try:
+        jsonData = pd.read_json(url, orient='columns')
+        df = pd.DataFrame(jsonData)
+        df = df.set_index(['timestamp'])
+        print "downloadSoilMoistureData done" 
+        #print df
+    except urllib2.URLError:
+        print "<urlopen error [Errno 10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond>"
+        #return empty data frame
+        return pd.DataFrame()
+    except ValueError:
+        print "No Data from web server. Table does not exist on web server"
+        #return empty data frame
+        return pd.DataFrame()
+    except:
+        print "returned null"
+        return pd.DataFrame()
+        
+    return df
+
 def downloadSiteColumnData(col):
     url = 'http://www.dewslandslide.com/ajax/getSenslopeData.php?db=%s&singlesitecolumn&name=%s' % (dbname,col)
     print url
@@ -308,47 +371,79 @@ def writeAccelToLocalDB(col,df,fromDate='',numDays=30):
 
 ###############################################################################
 
-#local file paths
-cfg = ConfigParser.ConfigParser()
-cfg.read('IO-config.txt')    
-
-columnproperties_path = cfg.get('I/O','ColumnPropertiesPath')
-purged_path = cfg.get('I/O','InputFilePath')
-monitoring_path = cfg.get('I/O','MonitoringPath')
-LastGoodData_path = cfg.get('I/O','LastGoodData')
-proc_monitoring_path = cfg.get('I/O','OutputFilePathMonitoring2')
-
-#file names
-columnproperties_file = cfg.get('I/O','ColumnProperties')
-purged_file = cfg.get('I/O','CSVFormat')
-monitoring_file = cfg.get('I/O','CSVFormat')
-LastGoodData_file = cfg.get('I/O','CSVFormat')
-proc_monitoring_file = cfg.get('I/O','CSVFormat')
-
-#file headers
-columnproperties_headers = cfg.get('I/O','columnproperties_headers').split(',')
-purged_file_headers = cfg.get('I/O','purged_file_headers').split(',')
-monitoring_file_headers = cfg.get('I/O','monitoring_file_headers').split(',')
-LastGoodData_file_headers = cfg.get('I/O','LastGoodData_file_headers').split(',')
-proc_monitoring_file_headers = cfg.get('I/O','proc_monitoring_file_headers').split(',')
-alert_headers = cfg.get('I/O','alert_headers').split(',')
-
-sensors=pd.read_csv(columnproperties_path+columnproperties_file,names=columnproperties_headers,index_col=None)
-
 #update the site tables for accelerometer data
 def updateAccelData():
     sensors = getSiteColumnsList()    
     
     for index, row in sensors.iterrows():
-    	col = row['name']
-    	downloadMore = True
-    	while downloadMore:
+        col = row['name']
+        #print "current column is: %s" % (col)
+        downloadMore = True
+        while downloadMore:
+            print col
+            ts = getLatestTimestamp(col)
+            if ts == 0:
+                # auto generate tables that don't exist in the database of the local 
+                # machine running the script
+                print 'There is no table named: ' + col
+                existingOnWebServer = downloadSiteColumnData(col)
+                ts2 = "2000-01-01+00:00:00"
+       
+                if existingOnWebServer == None:
+                    downloadMore = False
+                    
+                continue
+            elif ts == None:
+                ts2 = "2000-01-01+00:00:00"
+            else:
+                ts2 = ts.strftime("%Y-%m-%d+%H:%M:%S")
+            
+            df = downloadLatestData(col,ts2)
+            
+            try:
+                numElements = len(df.index)
+                print "Number of dataframe elements: %s" % (numElements)
+                #print df
+                writeAccelToLocalDB(col,df,ts2)
         
-    		print col
+                if numElements < entryLimit:
+                    downloadMore = False     
+            except:
+                print "No additional data downloaded for %s" % (col)
+                downloadMore = False
+ 
+
+#update the soms tables for soil moisture data
+def updateSomsData():
+    somsList = getSiteSomsList()
+    somsListWeb = downloadSoilMoistureTablesList()
+    
+    print "Local List"
+    for index, row in somsList.iterrows():
+        soms = row['name'] + 'm'
+        #print soms
+        
+        if soms in somsListWeb.index:
+            print "%s exists on the web!!!" % (soms)
+
+            ts = getLatestTimestamp(soms)
+            if ts == 0:
+                print 'There is no table named: ' + soms
+                createSensorTable(soms,"soms")
+                ts2 = "2000-01-01+00:00:00"
+                continue
+            elif ts == None:
+            	ts2 = "2000-01-01+00:00:00"
+            else:
+            	ts2 = ts.strftime("%Y-%m-%d+%H:%M:%S")
+             
+            df = downloadSoilMoistureData(soms,ts2)
+            print df
+'''
     		ts = getLatestTimestamp(col)
     		if ts == 0:
-            		# auto generate tables that don't exist in the database of the local 
-             		# machine running the script
+            	# auto generate tables that don't exist in the database of the local 
+             	# machine running the script
     			print 'There is no table named: ' + col
     			existingOnWebServer = downloadSiteColumnData(col)
     			ts2 = "2000-01-01+00:00:00"
@@ -369,7 +464,10 @@ def updateAccelData():
     		writeAccelToLocalDB(col,df,ts2)
     
     		if numElements < entryLimit:
-    			downloadMore = False      
+    			downloadMore = False  
+'''
+
+
 
 #update the site_column data
 def updateSiteColumnTable():
