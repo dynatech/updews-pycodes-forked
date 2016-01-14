@@ -1,5 +1,5 @@
 import os
-from datetime import datetime, date, time, timedelta
+from datetime import datetime, timedelta
 import pandas as pd
 from pandas.stats.api import ols
 import numpy as np
@@ -496,69 +496,69 @@ def df_add_offset_col(df,offset):
         df[n]=df[n] + (len(df.columns)-n)*offset
     return np.round(df,4)
 
-def mask_error_nodes(rawdat_list,err):
-  
-    ##DESCRIPTION:
-    ##
-  
-    ##INPUT:
-    ##rawdat_list; array
-    ##err
-  
-    ##OUTPUT:
-    ## rawdat_list[0],rawdat_list[1],rawdat_list[2]
-  
-    lastdate=rawdat_list[0].index.values[-1]
-    err.reset_index(drop=True, inplace=True)
-    err.fillna(value=lastdate, inplace=True)
+#def mask_error_nodes(rawdat_list,err):
+#  
+#    ##DESCRIPTION:
+#    ##
+#  
+#    ##INPUT:
+#    ##rawdat_list; array
+#    ##err
+#  
+#    ##OUTPUT:
+#    ## rawdat_list[0],rawdat_list[1],rawdat_list[2]
+#  
+#    lastdate=rawdat_list[0].index.values[-1]
+#    err.reset_index(drop=True, inplace=True)
+#    err.fillna(value=lastdate, inplace=True)
+#
+#    for i in range(len(err)):
+#        err_node=err.id.values[i]
+#        start=err.start[i]
+#        end=err.end[i]
+#
+#        for r in range(len(rawdat_list)):
+#            data=rawdat_list[r]
+#
+#            subindex=data[(data.index>=start)*(data.index<=end)].index
+#
+#            data2=data.copy()
+#            print data2.ix[subindex,err_node]
+#            data2.ix[subindex,err_node]=np.nan
+#
+#            rawdat_list[r]=data2
+#
+#
+#    return rawdat_list[0],rawdat_list[1],rawdat_list[2]
 
-    for i in range(len(err)):
-        err_node=err.id.values[i]
-        start=err.start[i]
-        end=err.end[i]
-
-        for r in range(len(rawdat_list)):
-            data=rawdat_list[r]
-
-            subindex=data[(data.index>=start)*(data.index<=end)].index
-
-            data2=data.copy()
-            print data2.ix[subindex,err_node]
-            data2.ix[subindex,err_node]=np.nan
-
-            rawdat_list[r]=data2
-
-
-    return rawdat_list[0],rawdat_list[1],rawdat_list[2]
-
-def remove_nodes(xz,xy,start,end):
-
-    ##DESCRIPTION:
-    ##returns array of floats; horizontal linear displacements along the planes defined by xa-za and xa-ya, respectively
-
-    ##INPUT:
-    ##xz; array of floats; horizontal linear displacements along the planes defined by xa-za
-    ##xy; array of floats; horizontal linear displacements along the planes defined by xa-ya
-    ##start; float
-    ##end: float
-
-    ##OUTPUT:
-    ##xz, xy
-
-    node_exclude=np.arange(start,end+1)
-    print node_exclude
-    if len(node_exclude)>0:
-        for node in node_exclude:
-            xz2=xz.copy()
-            xy2=xy.copy()
-            
-            xz2.ix[xz2.index,node]=0.
-            xy2.ix[xy2.index,node]=0.
-            
-            xz=xz2
-            xy=xy2
-
-    return xz,xy
+#def remove_nodes(xz,xy,start,end):
+#
+#    ##DESCRIPTION:
+#    ##returns array of floats; horizontal linear displacements along the planes defined by xa-za and xa-ya, respectively
+#
+#    ##INPUT:
+#    ##xz; array of floats; horizontal linear displacements along the planes defined by xa-za
+#    ##xy; array of floats; horizontal linear displacements along the planes defined by xa-ya
+#    ##start; float
+#    ##end: float
+#
+#    ##OUTPUT:
+#    ##xz, xy
+#
+#    node_exclude=np.arange(start,end+1)
+#    print node_exclude
+#    if len(node_exclude)>0:
+#        for node in node_exclude:
+#            xz2=xz.copy()
+#            xy2=xy.copy()
+#            
+#            xz2.ix[xz2.index,node]=0.
+#            xy2.ix[xy2.index,node]=0.
+#            
+#            xz=xz2
+#            xy=xy2
+#
+#    return xz,xy
         
 start_time=datetime.now()
 
@@ -600,10 +600,9 @@ LastGoodData_file = cfg.get('I/O','CSVFormat')
 proc_monitoring_file = cfg.get('I/O','CSVFormat')
 
 #file headers
-columnproperties_headers = cfg.get('I/O','columnproperties_headers').split(',')
-purged_file_headers = cfg.get('I/O','purged_file_headers').split(',')
-monitoring_file_headers = cfg.get('I/O','monitoring_file_headers').split(',')
-LastGoodData_file_headers = cfg.get('I/O','LastGoodData_file_headers').split(',')
+#purged_file_headers = cfg.get('I/O','purged_file_headers').split(',')
+#monitoring_file_headers = cfg.get('I/O','monitoring_file_headers').split(',')
+#LastGoodData_file_headers = cfg.get('I/O','LastGoodData_file_headers').split(',')
 proc_monitoring_file_headers = cfg.get('I/O','proc_monitoring_file_headers').split(',')
 alert_headers = cfg.get('I/O','alert_headers').split(',')
 alertgen_headers = cfg.get('I/O','alertgen_headers').split(',')
@@ -621,16 +620,13 @@ alert_file_length=cfg.getint('I/O','alert_time_int') # in days
 
 #MAIN
 
-#0. Uncomment if you want to update proc_monitoring CSVs
+# Uncomment if you want to update proc_monitoring CSVs
 genproc.generate_proc()
 
-#1. setting monitoring window
+# setting monitoring window
 roll_window_numpts, end, start, offsetstart, monwin = set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_window_ops)
 
-#2. getting all column properties
-#sensors=pd.read_csv(columnproperties_path+columnproperties_file,names=columnproperties_headers,index_col=None)
-#err_nodes=pd.read_csv('err_nodes.csv',header=0,index_col=None,parse_dates=[3,4])
-
+# creating summary of alerts
 nd_alert=[]
 a0_alert=[]
 a1_alert=[]
@@ -638,8 +634,7 @@ a2_alert=[]
 alert_list=[a2_alert,a1_alert,a0_alert,nd_alert]
 alert_names=['a2: ','a1: ','a0: ','ND: ']
 
-######################### 
- 
+# creating dictionary of working nodes per site
 wn = open('working_nodes.txt', 'r')
 working_nodes = {}
 for line in wn:
@@ -649,33 +644,34 @@ for line in wn:
         lst[i] = int(lst[i])
     nodes = lst[1:len(lst)]
     working_nodes[site] = nodes
- 
-######################### 
 
 print "Generating plots and alerts for:"
 
 names = ['ts','col_a']
 fmt = '%Y-%m-%d %H:%M'
 hr = end - timedelta(hours=3)
-with open(proc_monitoring_path+'webtrends.csv', 'ab') as w, open (proc_monitoring_path+"textalert.txt", 'wb'), open (proc_monitoring_path+"textalert2.txt", 'wb') as t:
+with open(proc_monitoring_path+'webtrends.csv', 'ab') as w, open (proc_monitoring_path+"textalert.txt", 'wb') as t, open (proc_monitoring_path+"textalert2.txt", 'wb') as t2:
     t.write('As of ' + end.strftime(fmt) + ':\n')
+    t2.write('As of ' + end.strftime(fmt) + ':\n')
     w.write(end.strftime(fmt) + ',')
 
+# getting list of sensors
 sensorlist = GetSensorList()
 
 for col in sensorlist:
     print col.name
 
 for s in sensorlist:
-#    if s.name!='blcb': continue
+
     last_col=sensorlist[-1:]
     last_col=last_col[0]
     last_col=last_col.name
-    #3. getting current column properties
+    
+    # getting current column properties
     colname,num_nodes,seg_len= s.name,s.nos,s.seglen
-    #print colname, num_nodes, seg_len
-##    cur_err_node=err_nodes[(err_nodes.col==colname)]                                        ###NEW
-    #4. importing proc_monitoring csv file of current column to dataframe
+    print colname, num_nodes, seg_len
+
+    # importing proc_monitoring csv file of current column to dataframe
     try:
         proc_monitoring=pd.read_csv(proc_monitoring_path+"Proc\\"+colname+proc_monitoring_file,names=proc_monitoring_file_headers,parse_dates=[0],index_col=[0])
         print proc_monitoring
@@ -684,31 +680,29 @@ for s in sensorlist:
         print "     ",colname, "ERROR...missing/empty proc monitoring csv"
         continue
 
-    #5. creating series lists per node
+    # creating series lists per node
     xz_series_list,xy_series_list,m_series_list = create_series_list(proc_monitoring,monwin,colname,num_nodes)
 
-    #6. create, fill and smooth dataframes from series lists
+    # create, fill and smooth dataframes from series lists
     xz=create_fill_smooth_df(xz_series_list,num_nodes,monwin, roll_window_numpts,1,1)
     xy=create_fill_smooth_df(xy_series_list,num_nodes,monwin, roll_window_numpts,1,1)
     m=create_fill_smooth_df(m_series_list,num_nodes,monwin, roll_window_numpts,0,0)
-    #xz,xy,m=mask_error_nodes([xz,xy,m],cur_err_node)                                        ###NEW
     
-    #7. computing instantaneous velocity
+    # computing instantaneous velocity
     vel_xz, vel_xy = compute_node_inst_vel(xz,xy,roll_window_numpts)
     
-    #8. computing cumulative displacements
+    # computing cumulative displacements
     cs_x, cs_xz, cs_xy=compute_col_pos(xz,xy,monwin.index[-1], col_pos_interval, col_pos_num)
 
-    #9. processing dataframes for output
+    # processing dataframes for output
     xz,xy,xz_0off,xy_0off,vel_xz,vel_xy, vel_xz_0off, vel_xy_0off,cs_x,cs_xz,cs_xy,cs_xz_0,cs_xy_0 = df_to_out(colname,xz,xy,
                                                                                                                vel_xz,vel_xy,
                                                                                                                cs_x,cs_xz,cs_xy,
                                                                                                                proc_monitoring_path,
                                                                                                                proc_monitoring_file)
-                                                                                                                       
-    
-    #10. Alert generation
-    xz=xz[(xz.index>=end-timedelta(days=3))]  #sorry, hard-coded value again
+                                                                                                                          
+    # Alert generation
+    xz=xz[(xz.index>=end-timedelta(days=3))]
     xy=xy[(xy.index>=end-timedelta(days=3))]
     vel_xz=vel_xz[(vel_xz.index>=end-timedelta(days=3))]
     vel_xy=vel_xy[(vel_xy.index>=end-timedelta(days=3))]
@@ -747,6 +741,7 @@ for s in sensorlist:
     if calert.empty:
         continue
     
+    # trending node alert for all nodes
     trending_node_alerts = []
     for n in range(1,1+num_nodes): # working_nodes.get(colname)
         node_trend = pd.Series.tolist(calert[n])
@@ -765,13 +760,10 @@ for s in sensorlist:
             print "No node data for node " + n + " in" + colname
         trending_node_alerts.extend(mode)
 
-###############################
-
+    # treinding node alert for working nodes
     working_node_alerts = []
     for n in working_nodes.get(colname):
-        working_node_alerts += [trending_node_alerts[n-1]]
-
-###############################    
+        working_node_alerts += [trending_node_alerts[n-1]] 
         
     #adding trending node alerts to alert output table 
     alert_out['trending_alert']=trending_node_alerts
@@ -788,7 +780,8 @@ for s in sensorlist:
 
      seen.add(line)
      print line, # standard output is now redirected to the file
-     
+    
+    # writes sensor name and sensor alerts alphabetically, one sensor per row, in textalert.txt
     with open (proc_monitoring_path+"textalert.txt", 'ab') as t:
         if working_node_alerts.count('a2') != 0:
             t.write (colname + ":" + 'a2' + '\n')
@@ -813,7 +806,8 @@ for s in sensorlist:
 #        
         if len(calert.index)<7:
             print 'Trending alert note: less than 6 data points for ' + colname
-                       
+    
+    # writes sensor alerts in one row in webtrends.csv
     with open(proc_monitoring_path+'webtrends.csv', 'ab') as w:
             if working_node_alerts.count('a2') != 0:
                 w.write ('a2' + ',')
@@ -860,7 +854,7 @@ for s in sensorlist:
 
     plt.close()
 
-
+# writes list of site per alert level in textalert2.txt
 with open (proc_monitoring_path+"textalert2.txt", 'ab') as t:
     t.write ('a0: ' + ','.join(sorted(a0_alert)) + '\n')
     t.write ('nd: ' + ','.join(sorted(nd_alert)) + '\n')
@@ -899,19 +893,19 @@ sensors['name']=name
 sensors['nos']=nos
 sensors=sensors.set_index('name')
 
+# gets list of working sites
 working_sites = []
 with open('working_sites.txt', 'r') as SQLsites:
     for line in SQLsites:
         working_sites += [line.split('\n')[0]]
         
 
-
+# creates list of sites with no data and classifies whether its raw or filtered
 with open(proc_monitoring_path+"NDlog.csv", 'ab') as ND:
     if len(a0_alert) == 0 and len(a1_alert) == 0 and len(a2_alert) == 0:
         ND.write(end.strftime(fmt) + ',D,')
         ND.write("ND on all sites,")
         ND.write(',\n')
-
 if len(a0_alert) != 0 or len(a1_alert) != 0 or len(a2_alert) != 0:
     with open(proc_monitoring_path+"NDlog.csv", 'ab') as ND:
         ND.write(end.strftime(fmt) + ',D,')
@@ -944,6 +938,7 @@ if len(a0_alert) != 0 or len(a1_alert) != 0 or len(a2_alert) != 0:
                 ND.write(colname + '(r-' + str(len(rawND)) + '/' + num_nodes + ');')
         ND.write(',\n')
 
+# creates list of site with no data for 7 consecutive times
 with open(proc_monitoring_path + "ND7x.csv", 'ab') as ND7x:
     try:
         NDlog = pd.read_csv(proc_monitoring_path + "NDlog.csv", names = ['ts', 'R or A or D', 'description', 'responder'], parse_dates = 'ts', index_col = 'ts')
@@ -978,7 +973,7 @@ with open(proc_monitoring_path + "ND7x.csv", 'ab') as ND7x:
     except IndexError:
         pass
 
-
+# records the number of minutes the code runs
 end_time = datetime.now() - start_time
 with open (proc_monitoring_path+"timer.txt", 'ab') as p:
     p.write (start_time.strftime(fmt) + ": " + str(end_time) + '\n')

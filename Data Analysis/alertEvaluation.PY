@@ -75,8 +75,6 @@ def node_alert(colname, xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_v
     #alert:                             Pandas DataFrame object, with length equal to number of nodes, and columns for displacements along axes,
     #                                   displacement alerts, minimum and maximum velocities, velocity alerts and final node alerts
 
-    
-
     #initializing DataFrame object, alert
     alert=pd.DataFrame(data=None)
 
@@ -205,6 +203,7 @@ def column_alert(alert, num_nodes_to_check, k_ac_ax):
     
     #OUTPUT:
     #alert:                             Pandas DataFrame object; same as input dataframe "alert" with additional column for column-level alert
+
     print alert
     col_alert=[]
     col_node=[]
@@ -239,6 +238,21 @@ def column_alert(alert, num_nodes_to_check, k_ac_ax):
     return alert
 
 def validity_check(adj_node_ind, alert, i, col_node, col_alert, k_ac_ax):
+
+    #DESCRIPTION
+    #used in validating current node alert
+
+    #INPUT
+    #adj_node_ind                       Indices of adjacent node
+    #alert:                             Pandas DataFrame object, with length equal to number of nodes, and columns for displacements along axes,
+    #                                   displacement alerts, minimum and maximum velocities, velocity alerts, final node alerts and olumn-level alert
+    #i                                  Integer, used for counting
+    #col_node                           Integer, current node
+    #col_alert                          Integer, current node alert
+    #k_ac_ax                            float; minimum value of (minimum velocity / maximum velocity) required to consider movement as valid
+    
+    #OUTPUT:
+    #col_alert, col_node                             
 
     adj_node_alert=[]
     for j in adj_node_ind:
@@ -283,5 +297,3 @@ def validity_check(adj_node_ind, alert, i, col_node, col_alert, k_ac_ax):
             col_alert.append(max(gf.getmode(adj_node_alert)))
         
     return col_alert, col_node
-
-

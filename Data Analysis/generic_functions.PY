@@ -104,24 +104,6 @@ def x_from_xzxy(seg_len, xz, xy):
                              seg_len*np.ones(len(xz)),
                              np.sqrt(seg_len**2-np.power(diagbase,2))),2)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ############################################################
 ##      SENSOR DATA FILTER FUNCTION                      ##
 ############################################################

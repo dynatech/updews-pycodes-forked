@@ -1,115 +1,59 @@
 import os
-from datetime import datetime, date, time, timedelta
+from datetime import datetime, timedelta
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import ConfigParser
+import math
 
 import generic_functions as gf
 import rainDownload as rd
-from querySenslopeDb import *
+
+plt.ioff()
+
+STARTTIME = datetime.now()
 
 def set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_window_ops):
 
     ##DESCRIPTION:    
-    ##returns number of data points per rolling window, endpoint of interval, starting point of interval, time interval for real-time monitoring, empty dataframe
+    ##returns number of data points per rolling window, endpoint of interval, starting point of interval, starting point of interval with offset to account for moving window operations, empty dataframe
     
     ##INPUT:
     ##roll_window_length; float; length of rolling/moving window operations, in hours
     ##data_dt; float; time interval between data points, in hours    
     ##rt_window_length; float; length of real-time monitoring window, in days
-    ##num_roll_window_ops
+    ##num_roll_window_ops; float; number of rolling window operations in the whole monitoring analysis
     
     ##OUTPUT:
     ##roll_window_numpts, end, start, offsetstart, monwin
     
     roll_window_numpts=int(1+roll_window_length/data_dt)
     end, start, offsetstart=gf.get_rt_window(rt_window_length,roll_window_numpts,num_roll_window_ops)
-    start=datetime(2010,10,1)
     monwin_time=pd.date_range(start=start, end=end, freq='30Min',name='ts', closed=None)
     monwin=pd.DataFrame(data=np.nan*np.ones(len(monwin_time)), index=monwin_time)
 
     return roll_window_numpts, end, start, offsetstart, monwin
 
-def create_series_list(input_df,monwin,colname,num_nodes):
-    
-    ##DESCRIPTION:
-    ##returns list of xz node series, xy node series and m node series
-    
-    ##INPUT:
-    ##input_df; dataframe
-    ##monwin; empty dataframe
-    ##colname; string; name of site
-    ##num_nodes; integer; number of nodes
-
-    ##OUTPUT:
-    ##xz_series_list, xy_series_list, m_series_list
-
-    #a. initializing lists
-    m_series_list=[]
-
-    #b.appending monitoring window dataframe to lists
-    m_series_list.append(monwin)
-   
-    for n in range(1,1+num_nodes):
-        #c.creating node series        
-        curm=input_df.loc[input_df.id==n,['m']]
-
-        #d.resampling node series to 30-min exact intervals
-        finite_data=np.sum(np.where(np.isfinite(curm.values))[0])
-
-        if finite_data>0:
-            curm=curm.resample('30min',how='mean',base=0)
-        else:
-            print colname, n, "ERROR missing node data"
-            #zeroing tilt data if node data is missing
-            curm=pd.DataFrame(data=np.nan*np.ones(len(monwin)), index=monwin.index)      
-        #5e. appending node series to list
-        m_series_list.append(curm)
-    
-    #concatenating series list into dataframe
-    df=pd.concat(m_series_list, axis=1, join='outer', names=None)
-
-    #renaming columns
-    df.columns=[a for a in np.arange(0,1+num_nodes)]
-    df=df.drop(0,1)
-    df=df.resample('30min',how='mean',base=0)
-    df=df.dropna(thresh=1)
-
-    return np.round(df,4)
-
-def norm_minmax(moi_data,m_df):
-
-    ##DESCRIPTION:
-    ##returns normalized
-
-    ##INPUT:
-    ##moi_data; array
-    ##m_df; array
-
-    ##OUTPUT:
-    ##norm_minmax
-    
-    normalized=[]
-    for n in range(1,1+num_nodes):
-        rel_minmax=moi_data[moi_data.index==colname]
-        nod_rel_min=float(rel_minmax.loc[rel_minmax.id==n,['min']].values)
-        nod_rel_max=float(rel_minmax.loc[rel_minmax.id==n,['max']].values)
-        norm_minmax=(m_df[n] - nod_rel_min)/(nod_rel_max - nod_rel_min)
-        normalized.append(norm_minmax)
-
-    norm_minmax=pd.concat(normalized, axis=1, join='outer')
-    return norm_minmax
-
 def ASTIplot(r,offsetstart,end,tsn):
-    print"\n"
+
+    ##DESCRIPTION:
+    ##prints timestamp and intsantaneous rainfall
+    ##plots instantaneous rainfall data, 24-hr cumulative and 72-hr rainfall, and half of 2-yr max and 2-yr max rainfall for 10 days
+
+    ##INPUT:
+    ##r; string; site code
+    ##offsetstart; datetime; starting point of interval with offset to account for moving window operations
+    ##end; datetime; end of interval
+    ##tsn; string; datetime format allowed in savefig
+
 ##    if r!='lipw': continue
+
     rainfall=pd.read_csv("C:\Users\Dynaslope\Desktop\Fresh\Local\ASTI\\"+r+rainfall_file,parse_dates='timestamp',
                          names=['timestamp','rain'],index_col='timestamp')
-    rainfall=rainfall[(rainfall.index>=start)]
+    rainfall=rainfall[(rainfall.index>=offsetstart)]
     rainfall=rainfall[(rainfall.index<=end)]
     rainfall=rainfall.resample('15min',how='sum')
-#        print rainfall
+
     plt.xticks(rotation=70, size=5)
     
     #getting the rolling sum for the last24 hours
@@ -150,17 +94,32 @@ def onethree_val_writer(colname):
     ##returns cumulative sum for one day and three days
 
     ##INPUT:
-    ##colname; array; list of sites
+    ##colname; string; site code
 
     ##OUTPUT:
     ##one, three
 
     try:
-        one=pd.read_csv(proc_monitoring_path+'CumSum Rainfall//'+colname+' 1d'+proc_monitoring_file,sep=',')
+        one=pd.read_csv(proc_monitoring_path+'CumSum Rainfall//'+colname+' 1d'+proc_monitoring_file,sep=',', header = 0, names = ['timestamp', 'rain'], index_col = 'timestamp')
+
+        if end - pd.to_datetime(one.index[-1:]) > timedelta(1):
+            blankdf_time=pd.date_range(start=start_time, end=end, freq='15Min',name='timestamp', closed=None)
+            blankdf=pd.DataFrame(data=np.nan*np.ones(len(blankdf_time)), index=blankdf_time,columns=['rain'])
+            blankdf=blankdf[-1:]
+            one=one.append(blankdf)
+
         one = float(one.rain[-1:])
      
-        three=pd.read_csv(proc_monitoring_path+'CumSum Rainfall//'+colname+' 3d'+proc_monitoring_file,sep=',')
+        three=pd.read_csv(proc_monitoring_path+'CumSum Rainfall//'+colname+' 3d'+proc_monitoring_file,sep=',', header = 0, names = ['timestamp', 'rain'], index_col = 'timestamp')
+
+        if end - pd.to_datetime(three.index[-1:]) > timedelta(1):
+            blankdf_time=pd.date_range(start=start_time, end=end, freq='15Min',name='timestamp', closed=None)
+            blankdf=pd.DataFrame(data=np.nan*np.ones(len(blankdf_time)), index=blankdf_time,columns=['rain'])
+            blankdf=blankdf[-1:]
+            three=three.append(blankdf)
+
         three = float(three.rain[-1:])
+
     except:
         one=None
         three=None
@@ -168,6 +127,18 @@ def onethree_val_writer(colname):
     return one,three
         
 def summary_writer(s,r,datasource,twoyrmax,halfmax,summary,alert):
+
+    ##DESCRIPTION:
+    ##inserts data to summary
+
+    ##INPUT:
+    ##s; float; index    
+    ##r; string; site code
+    ##datasource; string; source of data: ASTI1-3, SENSLOPE Rain Gauge
+    ##twoyrmax; float; 2-yr max rainfall, threshold for three day cumulative rainfall
+    ##halfmax; float; half of 2-yr max rainfall, threshold for one day cumulative rainfall
+    ##summary; dataframe; contains site codes with its corresponding one and three days cumulative sum, data source, alert level and advisory
+    ##alert; array; alert summary container, r0 sites at alert[0], r1a sites at alert[1], r1b sites at alert[2],  nd sites at alert[3]
 
     one,three=onethree_val_writer(r)
     if one>=halfmax or three>=twoyrmax:
@@ -180,7 +151,7 @@ def summary_writer(s,r,datasource,twoyrmax,halfmax,summary,alert):
             alert[1].append(r+' ('+str(one)+')')
         else:
             alert[2].append(r+' ('+str(three)+')')        
-    elif one==None:
+    elif one==None or math.isnan(one):
         ralert='nd'
         advisory='---'
         alert[3].append(r)
@@ -209,18 +180,16 @@ num_roll_window_ops = cfg.getfloat('I/O','num_roll_window_ops')
 
 #string expression indicating interval between two adjacent column position dates ex: '1D'= 1 day
 col_pos_interval= cfg.get('I/O','col_pos_interval') 
-
 #number of column position dates to plot
 col_pos_num= cfg.getfloat('I/O','num_col_pos')
 
-#file names of rainfall data
-rain=cfg.get('I/O','rainfall_sites').split(',')
 
 #INPUT/OUTPUT FILES
 
 #local file paths
 proc_monitoring_path = cfg.get('I/O','OutputFilePathMonitoring')
-rainfall_path = cfg.get('I/O','RainfallFilePath') #dropbox
+rainfall_path = cfg.get('I/O','RainfallFilePath')
+ASTIpath = cfg.get('I/O', 'ASTIpath')
 
 #file names
 proc_monitoring_file = cfg.get('I/O','CSVFormat')
@@ -235,92 +204,66 @@ num_nodes_to_check = cfg.getint('I/O','num_nodes_to_check')
 
 
 
-#MAIN
-
 #1. setting monitoring window
 roll_window_numpts, end, start, offsetstart, monwin = set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_window_ops)
 
-end = datetime.now()
-#end = roundtime(end)
-start = end - timedelta(days=10)
+start_time = end - timedelta(days=1)
 
 index = pd.date_range(end-timedelta(10), periods=11, freq='D')
 columns=['maxhalf','max']
 base = pd.DataFrame(index=index, columns=columns)
 
-#rd.getrain()
-
 tsn=end.strftime("%Y-%m-%d %H-%M-%S")
-#tmx=pd.read_csv("C:\Users\Dynaslope\Desktop\Fresh\Local\\rainlist.csv",
-#                         names=['site','twoyrmx'],index_col=None)
-
-tmx = GetRainList()
-oldsite = []
-newsite = []
-twoyrmx = []
-name = []
-for s in tmx:
-    oldsite += [s.oldsite]
-    newsite += [s.newsite]
-    twoyrmx += [s.twoyrmx]
-    name += [s.name]
-for s in range(len(name)):
-    name[s] = name[s][0:3]+'w'
-oldrainlist = pd.DataFrame({'twoyrmx': twoyrmx, 'site': oldsite})
-newrainlist = pd.DataFrame({'twoyrmx': twoyrmx, 'site': newsite})
-allrainlist = pd.DataFrame({'twoyrmx': twoyrmx, 'site': name})
-rainlist = newrainlist.fillna(oldrainlist)
-rainlist = rainlist.fillna(allrainlist)
-rainlist =rainlist.dropna()
-rainlist = rainlist.drop_duplicates(['site'], take_last = True)
-site = rainlist['site'].values
-twoyrmx = rainlist['twoyrmx'].values
-
-#empty dataframe
-#index=range(len(tmx))
-index = range(len(rainlist))
+tmx=pd.read_csv("C:\Users\Dynaslope\Desktop\Fresh\Local\\rainlist.csv",
+                         names=['site','twoyrmx'],index_col=None)
+index=range(len(tmx))
 columns=['site','1D','3D','DataSource','alert','advisory']
 summary = pd.DataFrame(index=index, columns=columns)
 
 
-#alert summary container, r0 sites at alert[0], r1 sites at alert[1], nd sites at alert[2]
+#alert summary container, r0 sites at alert[0], r1a sites at alert[1], r1b sites at alert[2],  nd sites at alert[3]
 alert = [[],[],[],[]]
 
-#for s in range(len(tmx)):
-for s in range(len(rainlist)):
+
+
+for s in range(len(tmx)):
     
-#    r,twoyrmax=tmx['site'][s],tmx['twoyrmx'][s]
-    r,twoyrmax = site[s], twoyrmx[s]
+    r,twoyrmax=tmx['site'][s],tmx['twoyrmx'][s]
     halfmax=twoyrmax/2
     print r
-    print "GR"
     
     try:
         print"\n"
         print "Generating Rainfall plots for "+r+" from rain gauge data"
-        
-#        rainfall=pd.read_csv(rainfall_path+r+rainfall_file,parse_dates='timestamp',
-#                             usecols=['timestamp','rain'],index_col='timestamp')
-        rainfall = GetRawRainData(r, start)
-        rainfall = rainfall.set_index('ts')
-        
+    ##    if r!='lipw': continue
+        rainfall=pd.read_csv(rainfall_path+r+rainfall_file,parse_dates='timestamp',
+                             usecols=['timestamp','rain'],index_col='timestamp')
         if rainfall.index[-1:]<end:
-            blankdf_time=pd.date_range(start=start, end=end, freq='15Min',name='timestamp', closed=None)
+            blankdf_time=pd.date_range(start=start_time, end=end, freq='15Min',name='timestamp', closed=None)
             blankdf=pd.DataFrame(data=np.nan*np.ones(len(blankdf_time)), index=blankdf_time,columns=['rain'])
             blankdf=blankdf[-1:]
             rainfall=rainfall.append(blankdf)
-        
-#        rainfall=rainfall[(rainfall.index>=start)] #not needed in db based input
-#        rainfall=rainfall[(rainfall.index<=end)] #not needed in db based input
-        
+        rainfall=rainfall[(rainfall.index>=start_time)]
+        rainfall=rainfall[(rainfall.index<=end)]
         rainfall=rainfall.resample('15min',how='sum')
-        if len(rainfall.index)<1:
+        print rainfall
+        rain_timecheck=rainfall[(rainfall.index>=end-timedelta(days=1))]
+        if len(rain_timecheck.dropna())<1:
             print "No data within desired window"
             print "Generating Rainfall ASTI plots for "+r+" due to lack of rain gauge data within desired window"
-            rd.getrain(r)
+            for n in range(1,4):            
+                rd.getrain(r, n)
+                if os.stat(ASTIpath+r+rainfall_file).st_size != 0:
+                    a = pd.read_csv(ASTIpath+r+rainfall_file,parse_dates='timestamp', names=['timestamp','rain'])
+                    latest_ts = pd.to_datetime(a[0:1]['timestamp'].values[0])
+                    if end - latest_ts < timedelta(hours=0.5):
+                        break
+                
+            
             ASTIplot(r,offsetstart,end,tsn)
-            datasource="ASTI (Empty Rain Gauge Data)"
+            datasource="ASTI" + str(n) + " (Empty Rain Gauge Data)"
             summary_writer(s,r,datasource,twoyrmax,halfmax,summary,alert)
+                    
         else:
             plt.xticks(rotation=70, size=5)       
             
@@ -338,13 +281,14 @@ for s in range(len(rainlist)):
             sub=base
             sub['maxhalf'] = halfmax  
             sub['max'] = twoyrmax
-
+    
             #assigning df to plot variables (to avoid caveats ? expressed from Spyder)
             plot1=rainfall              # instantaneous rainfall data
             plot2=rainfall2             # 24-hr cumulative rainfall
             plot3=rainfall3             # 72-hr cumulative rainfall
             plot4=sub['maxhalf']        # half of 2-yr max rainfall
             plot5=sub['max']            # 2-yr max rainfall
+
             plt.plot(plot1.index,plot1,color='#db4429') # instantaneous rainfall data
             plt.plot(plot2.index,plot2,color='#5ac126') # 24-hr cumulative rainfall
             plt.plot(plot3.index,plot3,color="#0d90d0") # 72-hr cumulative rainfall
@@ -361,9 +305,16 @@ for s in range(len(rainlist)):
         try:
             print"\n"
             print "Generating Rainfall ASTI plots for "+r+" due to lack of site csv file"
-            rd.getrain(r)
+            for n in range(1,4):            
+                rd.getrain(r, n)
+                if os.stat(ASTIpath+r+rainfall_file).st_size != 0:
+                    a = pd.read_csv(ASTIpath+r+rainfall_file,parse_dates='timestamp', names=['timestamp','rain'])
+                    latest_ts = pd.to_datetime(a[0:1]['timestamp'].values[0])
+                    if end - latest_ts < timedelta(hours=0.5):
+                        break
+            
             ASTIplot(r,offsetstart,end,tsn)
-            datasource="ASTI (No Rain Gauge Data)"
+            datasource="ASTI" + str(n) + " (No Rain Gauge Data)"
             summary_writer(s,r,datasource,twoyrmax,halfmax,summary,alert)
             
         except:
@@ -371,6 +322,8 @@ for s in range(len(rainlist)):
             summary_writer(s,r,datasource,twoyrmax,halfmax,summary,alert)
             continue
 
+
+#Writes dataframe containaining site codes with its corresponding one and three days cumulative sum, data source, alert level and advisory
 summary.to_csv('C:\Users\Dynaslope\Desktop\\Fresh\Local\Rainfall Plots\\'+'Summary of Rainfall Alert Generation for '+tsn+proc_monitoring_file,sep=',',mode='w')
 print summary
 
@@ -383,11 +336,12 @@ with open (proc_monitoring_path+"rainfallalert.txt", 'wb') as t:
     t.write ('r1b: ' + ','.join(sorted(alert[2])) + '\n')
 
 
-# Deleting old data files (less than 10 days)
+# Deleting old data files (more than 10 days)
 for dirpath, dirnames, filenames in os.walk('C:\Users\Dynaslope\Desktop\\Fresh\Local\Rainfall Plots\\'):
     for file in filenames:
         curpath = os.path.join(dirpath, file)
         file_modified = datetime.fromtimestamp(os.path.getmtime(curpath))
         if datetime.now() - file_modified > timedelta(days = 10):
             os.remove(curpath)
-    
+
+ENDTIME = datetime.now()
