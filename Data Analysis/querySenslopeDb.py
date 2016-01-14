@@ -26,6 +26,13 @@ class rainArray:
         self.oldsite = rain_senslope
         self.newsite = rain_arq
 
+class coordsArray:
+    def __init__(self, name, lat, lon, barangay):
+        self.name = name
+        self.lat = lat
+        self.lon = lon
+        self.bgy = barangay
+
 
 def SenslopeDBConnect(nameDB):
     while True:
@@ -171,6 +178,7 @@ def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid
 #    Returns:
 #        df: dataframe object 
 #            dataframe object of the result set 
+
 def GetRawRainData(siteid = "", fromTime = ""):
 
     if not siteid:
@@ -219,6 +227,26 @@ def GetRawRainData(siteid = "", fromTime = ""):
 #    Returns:
 #        sensorlist: list
 #            list of columnArray (see class definition above)
+
+def GetCoordsList():
+    try:
+        db, cur = SenslopeDBConnect(Namedb)
+        cur.execute("use "+ Namedb)
+        
+        query = 'SELECT name, lat, lon, barangay FROM site_column'
+        
+        df = psql.read_sql(query, db)
+        
+        # make a sensor list of columnArray class functions
+        sensors = []
+        for s in range(len(df)):
+            s = coordsArray(df.name[s],df.lat[s],df.lon[s],df.barangay[s])
+            sensors.append(s)
+            
+        return sensors
+    except:
+        raise ValueError('Could not get sensor list from database')
+
 def GetSensorList():
     try:
         db, cur = SenslopeDBConnect(Namedb)
