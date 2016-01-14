@@ -13,28 +13,18 @@ def sendmessage(user,pw,toaddr,fromaddr,subject,msg):
     msg = MIMEText(msg)
     msg['Subject'] = subject
     msg['From'] = fromaddr
-    ##msg['To'] = toaddr
-    msg['To'] = ", ".join(toaddr)
+    msg['To'] = toaddr
     
     # Sending the mail  
-    try:
-        server = smtplib.SMTP('smtp.gmail.com:587')
-        server.starttls()
-        server.login(user,pw)
-        ##server.sendmail(fromaddr, [toaddr], msg.as_string())
-        server.sendmail(fromaddr, toaddr, msg.as_string())
-        server.quit()
-        print 'email sent to ', toaddr
-    except smtplib.SMTPException as errmsg:
-        print 'Caught exception smtplib.SMTPException: %s.\n>>>>>Unable to send email this time'% errmsg
-    except smtplib.socket.gaierror as errmsg:
-        print 'Caught exception smtplib.socket.gaierror: %s.\n>>>>>Unable to send email this time'% errmsg
-    except smtplib.socket.error as errmsg:
-        print 'Caught exception smtplib.socket.error: %s\n>>>>>Unable to send email this time'% errmsg
-       
+    server = smtplib.SMTP('smtp.gmail.com:587')
+    server.starttls()
+    server.login(user,pw)
+    server.sendmail(fromaddr, [toaddr], msg.as_string())
+    server.quit()
+    print 'email sent'
     
-def getmessagefromsender(addr,pw,sender):
-    
+def getmessagefromsender(addr,pw,sender,n):
+    mlist=[]
     mail = imaplib.IMAP4_SSL('imap.gmail.com')
     mail.login(addr, pw)
     mail.list()
@@ -44,13 +34,22 @@ def getmessagefromsender(addr,pw,sender):
     searchstring = '(FROM "'+sender+ '")'
     
     typ, num = mail.search(None, searchstring)
-    msg=mail.fetch(num[0][-1], '(RFC822)')
-    
-    header_data = msg[1][0][1]
-    
-    parser = HeaderParser()
-    msg = parser.parsestr(header_data)
-    
+    num=num[0].split(' ')   
+    num=num[-n:]
+    for s in range(len(num)):        
+        
+        msg=mail.fetch(int(num[s]), '(RFC822)')      
+#        print msg
+        header_data = msg[1][0][1]    
+#        print header_data
+        parser = HeaderParser()
+        msg = parser.parsestr(header_data)
+        mlist.append(msg)
+
+    mail.logout()
+    return mlist
+
+def parsemsg(msg):    
 #    date=msg['Date']
     date=msg['Date']
     date = email.utils.parsedate_tz(date)
@@ -59,9 +58,7 @@ def getmessagefromsender(addr,pw,sender):
     subj=msg['Subject']
 #    fromaddr = email.utils.parseaddr(msg['From'])[1]
     text= msg.get_payload(decode=True)
-
-    mail.logout()
-    return subj,cleantext(text),date
+    return cleantext(subj),cleantext(text),date
 
 def cleantext(txt):
         txt=txt.replace(u'\r\n','\n')
