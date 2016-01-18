@@ -451,10 +451,10 @@ def plot_disp_vel(colname, xz,xy,xz_vel,xy_vel):
         plt.clf()
         ax_xzd=fig.add_subplot(141)
         ax_xyd=fig.add_subplot(142,sharex=ax_xzd,sharey=ax_xzd)
-
+    
         ax_xzv=fig.add_subplot(143)
         ax_xyv=fig.add_subplot(144,sharex=ax_xzv,sharey=ax_xzv)
-
+    
         curax=ax_xzd
         plt.sca(curax)
         xz.plot(ax=curax,legend=False)
@@ -475,8 +475,42 @@ def plot_disp_vel(colname, xz,xy,xz_vel,xy_vel):
         plt.sca(curax)
         xy_vel.plot(ax=curax,legend=False)
         
-        fig.tight_layout()
+        # rotating xlabel
         
+        for tick in ax_xzd.xaxis.get_minor_ticks():
+            tick.label.set_rotation('vertical')
+            tick.label.set_fontsize(8)
+            
+        for tick in ax_xyd.xaxis.get_minor_ticks():
+            tick.label.set_rotation('vertical')
+            tick.label.set_fontsize(8)
+    
+        for tick in ax_xzv.xaxis.get_minor_ticks():
+            tick.label.set_rotation('vertical')
+            tick.label.set_fontsize(8)
+    
+        for tick in ax_xyv.xaxis.get_minor_ticks():
+            tick.label.set_rotation('vertical')
+            tick.label.set_fontsize(8)
+    
+        for tick in ax_xzd.xaxis.get_major_ticks():
+            tick.label.set_rotation('vertical')
+            tick.label.set_fontsize(8)
+            
+        for tick in ax_xyd.xaxis.get_major_ticks():
+            tick.label.set_rotation('vertical')
+            tick.label.set_fontsize(8)
+    
+        for tick in ax_xzv.xaxis.get_major_ticks():
+            tick.label.set_rotation('vertical')
+            tick.label.set_fontsize(8)
+    
+        for tick in ax_xyv.xaxis.get_major_ticks():
+            tick.label.set_rotation('vertical')
+            tick.label.set_fontsize(8)
+                
+        fig.tight_layout()
+            
         
     except:      
         print colname, "ERROR in plotting displacements and velocities"
@@ -663,6 +697,9 @@ for col in sensorlist:
 
 for s in sensorlist:
 
+#    if s.name != 'pugt':
+#        continue
+
     last_col=sensorlist[-1:]
     last_col=last_col[0]
     last_col=last_col.name
@@ -840,16 +877,23 @@ for s in sensorlist:
         else:
             alert_out[['node_alert', 'col_alert', 'trending_alert']].to_csv(nd_path + colname + proc_monitoring_file, sep=',', header=True, mode='w')
 
-
 #    #11. Plotting column positions
     plot_column_positions(colname,cs_x,cs_xz_0,cs_xy_0)
     plot_column_positions(colname,cs_x,cs_xz,cs_xy)
-    plt.savefig(proc_monitoring_path+colname+' colpos ',
+    if colname == 'pugt':
+        v = end.strftime('%Y-%m-%d %H-%M')
+    else:
+        v = ''
+    plt.savefig(proc_monitoring_path+colname+' colpos '+v,
                 dpi=320, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
 #
     #12. Plotting displacement and velocity
     plot_disp_vel(colname, xz_0off,xy_0off, vel_xz_0off, vel_xy_0off)
-    plt.savefig(proc_monitoring_path+colname+' disp_vel ',
+    if colname == 'pugt':
+        v = end.strftime('%Y-%m-%d %H-%M')
+    else:
+        v = ''
+    plt.savefig(proc_monitoring_path+colname+' disp_vel '+v,
                 dpi=320, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
 
     plt.close()
@@ -908,35 +952,38 @@ with open(proc_monitoring_path+"NDlog.csv", 'ab') as ND:
         ND.write(',\n')
 if len(a0_alert) != 0 or len(a1_alert) != 0 or len(a2_alert) != 0:
     with open(proc_monitoring_path+"NDlog.csv", 'ab') as ND:
-        ND.write(end.strftime(fmt) + ',D,')
-        for colname in nd_alert:
-            filtered = pd.read_csv(proc_monitoring_path+"Proc\\"+colname+"\\"+colname+" "+"alert"+proc_monitoring_file, names=alert_headers,parse_dates='ts',index_col='ts')
-            filtered = filtered[(filtered.index>=end)]
-            print 'filtered'            
-            print filtered
-            raw = GetRawAccelData(colname, end - timedelta(hours=0.5))
-            raw = raw.set_index('ts')
-            raw = raw[(raw.index>=end)]
-            print 'raw'            
-            print raw
-            filteredND = []
-            rawND = []
-            for i in filtered.loc[filtered['node_alert']=='nd', ['id']].values:
-                if i[0] in raw['id'].values:
-                    filteredND += [str(i[0])]
-                else:
-                    rawND += [str(i[0])]
-            print 'filtered nodes'
-            print filteredND
-            print 'raw nodes'            
-            print rawND
-            num_nodes = str(sensors.loc[sensors.index==colname, ['nos']].values[0][0])
-            print num_nodes
-            if len(filteredND) != 0 and colname in working_sites:
-                ND.write(colname + '(f-' + str(len(filteredND)) + '/' + num_nodes + ');')
-            if len(rawND) != 0 and colname in working_sites:
-                ND.write(colname + '(r-' + str(len(rawND)) + '/' + num_nodes + ');')
-        ND.write(',\n')
+        try:
+            ND.write(end.strftime(fmt) + ',D,')
+            for colname in nd_alert:
+                filtered = pd.read_csv(proc_monitoring_path+"Proc\\"+colname+"\\"+colname+" "+"alert"+proc_monitoring_file, names=alert_headers,parse_dates='ts',index_col='ts')
+                filtered = filtered[(filtered.index>=end)]
+                print 'filtered'            
+                print filtered
+                raw = GetRawAccelData(colname, end - timedelta(hours=0.5))
+                raw = raw.set_index('ts')
+                raw = raw[(raw.index>=end)]
+                print 'raw'            
+                print raw
+                filteredND = []
+                rawND = []
+                for i in filtered.loc[filtered['node_alert']=='nd', ['id']].values:
+                    if i[0] in raw['id'].values:
+                        filteredND += [str(i[0])]
+                    else:
+                        rawND += [str(i[0])]
+                print 'filtered nodes'
+                print filteredND
+                print 'raw nodes'            
+                print rawND
+                num_nodes = str(sensors.loc[sensors.index==colname, ['nos']].values[0][0])
+                print num_nodes
+                if len(filteredND) != 0 and colname in working_sites:
+                    ND.write(colname + '(f-' + str(len(filteredND)) + '/' + num_nodes + ');')
+                if len(rawND) != 0 and colname in working_sites:
+                    ND.write(colname + '(r-' + str(len(rawND)) + '/' + num_nodes + ');')
+            ND.write(',\n')
+        except:
+            pass
 
 # creates list of site with no data for 7 consecutive times
 with open(proc_monitoring_path + "ND7x.csv", 'ab') as ND7x:
@@ -970,7 +1017,7 @@ with open(proc_monitoring_path + "ND7x.csv", 'ab') as ND7x:
             ND7x.write(end.strftime(fmt) + ',')
             ND7x.write(';'.join(ND7))
             ND7x.write('\n')
-    except IndexError:
+    except:
         pass
 
 # records the number of minutes the code runs
