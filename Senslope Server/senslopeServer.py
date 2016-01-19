@@ -753,11 +753,28 @@ def SendAlertEmail(network, serverstate):
         active_message = '\nGood Day!\n\nYou received this email because ' + network + ' SERVER is now INACTIVE!\\nPlease fix me.\nThanks!\n\n-' + network + ' Server\n'
 	
     emailer.sendmessage(sender,sender_password,receiver,sender,subject,active_message)
-	
+	#numlist = cfg.get(network.lower())
+    
+def SendAlertGsm(network):
+    try:
+        if network == 'GLOBE':    
+            numlist = globenumbers.split(",")
+        else:
+            numlist = smartnumbers.split(",")
+        f = open("D:\\Server Files\\Consolidated\\DYNA\\all_alerts.txt",'r')
+        alllines = f.read()
+        f.close()
+        for n in numlist:
+            sendMsg(alllines,n)
+    except IndexError:
+        print "Error sending all_alerts.txt"
+    
 def RunSenslopeServer(network):
     minute_of_last_alert = dt.now().minute
     timetosend = 0
     email_flg = 0
+    txtalert_flg = 0
+    global checkIfActive
     if network == "SUN":
         Port = cfg.getint('Serial', 'SunPort') - 1
     elif network == "GLOBE":
@@ -795,11 +812,16 @@ def RunSenslopeServer(network):
                              
                 msgname = checkNameOfNumber(msg.simnum)
                 ##### Added for V1 sensors removes unnecessary characters pls see function PreProcessColumnV1(data)
-                if msg.data.find("DUE*") >0:
-                   msg.data = PreProcessColumnV1(msg.data)
+                # if msg.data.find("DUE*") >0:
+                   # msg.data = PreProcessColumnV1(msg.data)
                 ####not sure where to put this function for trial
                 
-                if len(msg.data.split("*")[0]) == 5:
+                if re.findall('[^A-Zabcyx0-9\*\+\.\/,:-]',msg.data):
+                    print ">> Error: Unexpected characters/s detected in ", msg.data
+                    f = open("D:\\Server Files\\Consolidated\\"+network+'Nonalphanumeric_errorlog.txt','a')
+                    f.write(msg.dt + ',' + msg.simnum + ',' + msg.data+ '\n')
+                    f.close
+                elif len(msg.data.split("*")[0]) == 5:
                     try:
                         dlist = ProcTwoAccelColData(msg.data,msg.simnum,msg.dt)
                         #print dlist
@@ -879,6 +901,8 @@ def RunSenslopeServer(network):
                 checkIfActive = True
                 if (today.minute % 10):
                     email_flg = 0;
+                    txtalert_flg = 0;
+                    
                 
         elif m == -1:
             print'GSM MODULE MAYBE INACTIVE'
@@ -899,6 +923,15 @@ def RunSenslopeServer(network):
             if (not email_flg):
                 SendAlertEmail(network, serverstate)
                 email_flg = 1;
+            
+            
+                
+        if (today.minute == 10 or today.minute == 40) and (not txtalert_flg):
+        #if (today.minute % 10 == 0):
+            fpath = "D:\\Server Files\\Consolidated\\DYNA\\all_alerts.txt"
+            txtalert_flg = 1;
+            if os.path.isfile(fpath) and os.path.getsize(fpath) > 0:
+                SendAlertGsm(network)
             
         
     if not FileInput:
@@ -936,3 +969,8 @@ Directory = cfg.get('SMSAlert','Directory')
 CSVInputFile = cfg.get('SMSAlert','CSVInputFile')
 AlertFlags = cfg.get('SMSAlert','AlertFlags')
 AlertReportInterval = cfg.getint('SMSAlert','AlertReportInterval')
+
+##SMS alert numbers
+smartnumbers = cfg.get('SMSAlert', 'smartnumbers')
+globenumbers = cfg.get('SMSAlert', 'globenumbers')
+

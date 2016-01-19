@@ -174,8 +174,13 @@ def getAllSms(network):
             f.close()
                 
         msg = msg.replace('\n','').split("\r")
-        
-        txtnum = re.search(r': [0-9]{1,2},',msg[0]).group(0).strip(': ,')
+        try:
+            txtnum = re.search(r': [0-9]{1,2},',msg[0]).group(0).strip(': ,')
+        except AttributeError:
+            # particular msg may be some extra strip of string 
+            print ">> Error: message may not have correct construction", msg[0]
+            logError("wrong construction\n"+msg[0])
+            continue
         
         try:
             sender = re.search(r'[0-9]{11,12}',msg[0]).group(0)
