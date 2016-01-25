@@ -69,6 +69,14 @@ def CreateAccelTable(table_name, nameDB):
     cur.execute("USE %s"%nameDB)
     cur.execute("CREATE TABLE IF NOT EXISTS %s(timestamp datetime, id int, xvalue int, yvalue int, zvalue int, mvalue int, PRIMARY KEY (timestamp, id))" %table_name)
     db.close()
+
+def CreateColAlertsTable(table_name, nameDB):
+    db = MySQLdb.connect(host = Hostdb, user = Userdb, passwd = Passdb)
+    cur = db.cursor()
+    #cur.execute("CREATE DATABASE IF NOT EXISTS %s" %nameDB)
+    cur.execute("USE %s"%nameDB)
+    cur.execute("CREATE TABLE IF NOT EXISTS %s(sitecode varchar(8), timestamp datetime, id int, alerts varchar(8), PRIMARY KEY (sitecode, timestamp, id))" %table_name)
+    db.close()
 	
 #GetDBResultset(query): executes a mysql like code "query"
 #    Parameters:
@@ -307,6 +315,18 @@ def GetRainList():
     except:
         raise ValueError('Could not get sensor list from database')
 
+def GetRainProps():
+    try:
+        db, cur = SenslopeDBConnect(Namedb)
+        cur.execute("use "+ Namedb)
+        
+        query = 'SELECT name, max_rain_2year, rain_senslope, rain_arq, rain_noah, rain_noah2, rain_noah3 FROM site_rain_props'
+        
+        df = psql.read_sql(query, db)
+        
+        return df
+    except:
+        raise ValueError('Could not get sensor list from database')
         
 #GetLastGoodData(df, nos, fillMissing=False):
 #    evaluates the last good data from the input df

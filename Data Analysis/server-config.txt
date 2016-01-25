@@ -44,15 +44,28 @@ DotProductThreshold = 0.09
 ############################
 ###   LOCAL FILE PATH    ###
 ############################
-NDFilePath = C:\Users\Dynaslope\Desktop\Monitoring Output\ND back analysis\
-EQFilePath = C:\Users\Dynaslope\Desktop\Fresh\Local\
 OutputFilePathMonitoring = C:\Users\Dynaslope\Desktop\Fresh\Senslope Data\Proc2\Monitoring\
 OutputFilePathMonitoring2 = C:\Users\Dynaslope\Desktop\Monitoring Output\
- 
+
+NDFilePath = C:\Users\Dynaslope\Desktop\Monitoring Output\ND back analysis\
+OutputFilePath = C:\Users\Dynaslope\Desktop\Monitoring Output\
+ProcFilePath = C:\Users\Dynaslope\Desktop\Monitoring Output\Proc\
+ColAlertsFilePath = C:\Users\Dynaslope\Desktop\Monitoring Output\col alerts\
+TrendAlertsFilePath = C:\Users\Dynaslope\Desktop\Monitoring Output\trend alerts\
+
 ############################
 ###      FILE NAMES      ###
 ############################
-CSVFormat=.csv
+CSVFormat = .csv
+eqsummary = eqsummary.txt
+webtrends = webtrends.csv
+textalert = textalert.txt
+textalert2 = textalert2.txt
+rainfallalert = rainfallalert.txt
+allalerts = all_alerts.txt
+timer = timer.txt
+NDlog = NDlog.csv
+ND7x = ND7x.csv
 
 #############################
 ###    ALERT CONSTANTS    ###

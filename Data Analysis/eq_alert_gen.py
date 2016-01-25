@@ -8,7 +8,20 @@ from bs4 import BeautifulSoup
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
-import QuerySenslopeDb as q
+import querySenslopeDb as q
+import ConfigParser
+
+# import values from config file
+configFile = "server-config.txt"
+cfg = ConfigParser.ConfigParser()
+
+cfg.read(configFile)
+
+#local file paths
+output_file_path = cfg.get('I/O','OutputFilePath')
+
+#file names
+eqsummary = cfg.get('I/O', 'eqsummary')
 
 dataset =[None]*6
 end = datetime.now().replace(microsecond=0)
@@ -61,12 +74,12 @@ try:
         x+=1
     
 #    uncomment if testing a user-specified quake
-#    mag= 4.7
+#    mag= 6.7
 #    lat= 07.17
 #    lon= 125.54
 #    ts = end-timedelta(minutes=15)
     
-    with open ('eqsummary.txt', 'w') as z:
+    with open (output_file_path+eqsummary, 'w') as z:
         z.write (('as of ') + str(end) + ':\n')
         
     #checks if quake is within last 30mins   
@@ -80,7 +93,7 @@ try:
                     cnt = 0
                     
                     sensors = q.GetCoordsList()                    
-                    coords = pd.DataFrame(columns='name','lat','lon')
+                    coords = pd.DataFrame(columns=['name','lat','lon'])
 
                     for s in sensors:
                         coords.loc[s] = pd.Series({'name':s.name, 'lat':s.lat, 'lon':s.lon})
@@ -113,8 +126,10 @@ try:
            
 except IOError:
     end = datetime.now().replace(microsecond=0)
-    with open ('eqsummary.txt', 'w') as z:
+    with open (output_file_path+eqsummary, 'w') as z:
         z.write (('as of ') + str(end) + ':\n')
         z.write('Error. Please check if SOEPD site is down or your internet connection. \n')
         z.write('SOEPD site: http://www.phivolcs.dost.gov.ph/html/update_SOEPD/EQLatest.html')
+        
+print 'eqsummary done'
     

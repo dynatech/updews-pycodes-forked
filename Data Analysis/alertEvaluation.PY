@@ -30,28 +30,8 @@ num_roll_window_ops = cfg.getfloat('I/O','num_roll_window_ops')
 
 #INPUT/OUTPUT FILES
 
-#local file paths
-#columnproperties_path = cfg.get('I/O','ColumnPropertiesPath')
-#purged_path = cfg.get('I/O','InputFilePath')
-#monitoring_path = cfg.get('I/O','MonitoringPath')
-#LastGoodData_path = cfg.get('I/O','LastGoodData')
-proc_monitoring_path = cfg.get('I/O','OutputFilePathMonitoring2')
-
-#file names
-#columnproperties_file = cfg.get('I/O','ColumnProperties')
-purged_file = cfg.get('I/O','CSVFormat')
-monitoring_file = cfg.get('I/O','CSVFormat')
-LastGoodData_file = cfg.get('I/O','CSVFormat')
-proc_monitoring_file = cfg.get('I/O','CSVFormat')
-
 #file headers
-columnproperties_headers = cfg.get('I/O','columnproperties_headers').split(',')
-purged_file_headers = cfg.get('I/O','purged_file_headers').split(',')
-monitoring_file_headers = cfg.get('I/O','monitoring_file_headers').split(',')
-LastGoodData_file_headers = cfg.get('I/O','LastGoodData_file_headers').split(',')
-proc_monitoring_file_headers = cfg.get('I/O','proc_monitoring_file_headers').split(',')
 colarrange = cfg.get('I/O','alerteval_colarrange').split(',')
-
 
 
 roll_window_numpts=int(1+roll_window_length/data_dt)
@@ -123,15 +103,6 @@ def node_alert(colname, xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_v
                                  #disp alert=a0
                                  np.zeros(len(alert)))
     
-#    #checking for data within 3days+3hours to 3days; HARD CODED VALUES
-#    LastGoodData=pd.read_csv(monitoring_path+colname+monitoring_file,names=purged_file_headers,parse_dates=[0],index_col=[0])
-#    LastGoodData=LastGoodData[(LastGoodData.index>=end-timedelta(days=3, hours=3))&(LastGoodData.index<=end-timedelta(days=3))]
-#
-#    for i in range(1,len(alert)+1):
-#        node_data=LastGoodData[LastGoodData['id']==i]
-#        if len(node_data)==0:
-#            alert['disp_alert'].values[i-1]=None
-
     #getting minimum axis velocity value
     alert['min_vel']=np.round(np.where(np.abs(xz_vel.values[-1])<np.abs(xy_vel.values[-1]),
                                        np.abs(xz_vel.values[-1]),

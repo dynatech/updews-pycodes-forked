@@ -35,7 +35,6 @@ num_roll_window_ops = cfg.getfloat('I/O','num_roll_window_ops')
 proc_monitoring_path=cfg.get('I/O','OutputFilePathMonitoring2')
 
 #file names
-LastGoodData_file = cfg.get('I/O','CSVFormat')
 proc_monitoring_file = cfg.get('I/O','CSVFormat')
 
 #file headers

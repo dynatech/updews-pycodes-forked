@@ -232,8 +232,8 @@ def compute_node_inst_vel(xz,xy,roll_window_numpts):
 def df_to_out(colname,xz,xy,
               vel_xz,vel_xy,
               cs_x,cs_xz,cs_xy,
-              proc_monitoring_path,
-              proc_monitoring_file):
+              proc_file_path,
+              CSVFormat):
 
     ##DESCRIPTION:
     ##writes to csv and returns:
@@ -253,8 +253,8 @@ def df_to_out(colname,xz,xy,
     ##cs_x; dataframe; cumulative vertical displacement
     ##cs_xz; dataframe; cumulative vertical displacement horizontal linear displacements along the planes defined by xa-za
     ##cs_xy; dataframe; cumulative vertical displacement horizontal linear displacements along the planes defined by xa-ya
-    ##proc_monitoring path; file path
-    ##proc_monitoring_file; file name
+    ##proc_file_path; file path
+    ##CSVFormat; file type
 
     ##OUTPUT:
     ##xz,xy,   xz_0off,xy_0off,   vel_xz,vel_xy, vel_xz_0off, vel_xy_0off, cs_x,cs_xz,cs_xy,   cs_xz_0,cs_xy_0
@@ -294,13 +294,13 @@ def df_to_out(colname,xz,xy,
     for d in range(len(df_list)):
         df=df_list[d,0]
         fname=df_list[d,1]
-        df.to_csv(proc_monitoring_path+"Proc\\"+colname+'\\'+colname+" "+fname+proc_monitoring_file,
+        df.to_csv(proc_file_path+colname+"\\"+colname+" "+fname+CSVFormat,
                   sep=',', header=False,mode='w')
 
     return xz,xy,   xz_0off,xy_0off,   vel_xz,vel_xy, vel_xz_0off, vel_xy_0off, cs_x,cs_xz,cs_xy,   cs_xz_0,cs_xy_0
 
 def alert_generation(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velA1, T_velA2, k_ac_ax,
-                     num_nodes_to_check,end,proc_monitoring_path,proc_monitoring_file):
+                     num_nodes_to_check,end,proc_file_path,CSVFormat):
 
     ##DESCRIPTION:
     ##returns node level alerts
@@ -318,8 +318,8 @@ def alert_generation(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velA1, T_v
     ##k_ac_ax; float; minimum value of (minimum velocity / maximum velocity) required to consider movement as valid
     ##num_nodes_to_check; integer; number of adjacent nodes to check for validating current node alert
     ##end; 
-    ##proc_monitoring path; file path
-    ##proc_monitoring_file; file name
+    ##proc_file_path; file path
+    ##CSVFormat; file type
 
     ##OUTPUT:
     ##alert_out
@@ -340,25 +340,18 @@ def alert_generation(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velA1, T_v
     
 
     #checks if file exist, append latest alert; else, write new file
-##    if os.path.exists(proc_monitoring_path+colname+'/'+colname+" "+"alert"+proc_monitoring_file):
-##        alert_written=pd.read_csv(proc_monitoring_path+colname+'/'+colname+" "+"alert"+proc_monitoring_file,header=None, error_bad_lines=False)
-##        check_time=pd.Series(alert_written[0])
-##        if check_time.values[-1]<str(end):
-##            alert_out.to_csv(proc_monitoring_path+colname+'/'+colname+" "+"alert"+proc_monitoring_file,
-##                             sep=',', header=False,mode='a')
-##    else:
-    if os.path.exists(proc_monitoring_path+"Proc\\"+colname+"\\"+colname+" "+"alert"+proc_monitoring_file) and os.stat(proc_monitoring_path+"Proc\\"+colname+"\\"+colname+" "+"alert"+proc_monitoring_file).st_size != 0:
-        alert_monthly=pd.read_csv(proc_monitoring_path+"Proc\\"+colname+"\\"+colname+" "+"alert"+proc_monitoring_file,
+    if os.path.exists(proc_file_path+colname+"\\"+colname+" "+"alert"+CSVFormat) and os.stat(proc_file_path+colname+"\\"+colname+" "+"alert"+CSVFormat).st_size != 0:
+        alert_monthly=pd.read_csv(proc_file_path+colname+"\\"+colname+" "+"alert"+CSVFormat,
                                   names=alert_headers,parse_dates='ts',index_col='ts')
         alert_monthly=alert_monthly[(alert_monthly.index>=end-timedelta(days=alert_file_length))]
         alert_monthly=alert_monthly.reset_index()
         alert_monthly=alert_monthly.set_index(['ts','id'])
         alert_monthly=alert_monthly.append(alert_out)
         alert_monthly=alert_monthly[alertgen_headers]
-        alert_monthly.to_csv(proc_monitoring_path+"Proc\\"+colname+'\\'+colname+" "+"alert"+proc_monitoring_file,
+        alert_monthly.to_csv(proc_file_path+colname+"\\"+colname+" "+"alert"+CSVFormat,
                              sep=',', header=False,mode='w')
     else:
-        alert_out.to_csv(proc_monitoring_path+"Proc\\"+colname+'\\'+colname+" "+"alert"+proc_monitoring_file,
+        alert_out.to_csv(proc_file_path+colname+"\\"+colname+" "+"alert"+CSVFormat,
                          sep=',', header=False,mode='w')
 
     
@@ -530,69 +523,6 @@ def df_add_offset_col(df,offset):
         df[n]=df[n] + (len(df.columns)-n)*offset
     return np.round(df,4)
 
-#def mask_error_nodes(rawdat_list,err):
-#  
-#    ##DESCRIPTION:
-#    ##
-#  
-#    ##INPUT:
-#    ##rawdat_list; array
-#    ##err
-#  
-#    ##OUTPUT:
-#    ## rawdat_list[0],rawdat_list[1],rawdat_list[2]
-#  
-#    lastdate=rawdat_list[0].index.values[-1]
-#    err.reset_index(drop=True, inplace=True)
-#    err.fillna(value=lastdate, inplace=True)
-#
-#    for i in range(len(err)):
-#        err_node=err.id.values[i]
-#        start=err.start[i]
-#        end=err.end[i]
-#
-#        for r in range(len(rawdat_list)):
-#            data=rawdat_list[r]
-#
-#            subindex=data[(data.index>=start)*(data.index<=end)].index
-#
-#            data2=data.copy()
-#            print data2.ix[subindex,err_node]
-#            data2.ix[subindex,err_node]=np.nan
-#
-#            rawdat_list[r]=data2
-#
-#
-#    return rawdat_list[0],rawdat_list[1],rawdat_list[2]
-
-#def remove_nodes(xz,xy,start,end):
-#
-#    ##DESCRIPTION:
-#    ##returns array of floats; horizontal linear displacements along the planes defined by xa-za and xa-ya, respectively
-#
-#    ##INPUT:
-#    ##xz; array of floats; horizontal linear displacements along the planes defined by xa-za
-#    ##xy; array of floats; horizontal linear displacements along the planes defined by xa-ya
-#    ##start; float
-#    ##end: float
-#
-#    ##OUTPUT:
-#    ##xz, xy
-#
-#    node_exclude=np.arange(start,end+1)
-#    print node_exclude
-#    if len(node_exclude)>0:
-#        for node in node_exclude:
-#            xz2=xz.copy()
-#            xy2=xy.copy()
-#            
-#            xz2.ix[xz2.index,node]=0.
-#            xy2.ix[xy2.index,node]=0.
-#            
-#            xz=xz2
-#            xy=xy2
-#
-#    return xz,xy
         
 start_time=datetime.now()
 
@@ -621,22 +551,26 @@ col_pos_num= cfg.getfloat('I/O','num_col_pos')
 #INPUT/OUTPUT FILES
 
 #local file paths
-proc_monitoring_path = cfg.get('I/O','OutputFilePathMonitoring2')
 nd_path = cfg.get('I/O', 'NDFilePath')
-senslope_monitoring_path = cfg.get('I/O','OutputFilePathMonitoring')
-eq_file_path = cfg.get('I/O', 'EQFilePath')
+output_file_path = cfg.get('I/O','OutputFilePath')
+proc_file_path = cfg.get('I/O','ProcFilePath')
+ColAlerts_file_path = cfg.get('I/O','ColAlertsFilePath')
+TrendAlerts_file_path = cfg.get('I/O','TrendAlertsFilePath')
 
 #file names
 #columnproperties_file = cfg.get('I/O','ColumnProperties')
-purged_file = cfg.get('I/O','CSVFormat')
-monitoring_file = cfg.get('I/O','CSVFormat')
-LastGoodData_file = cfg.get('I/O','CSVFormat')
-proc_monitoring_file = cfg.get('I/O','CSVFormat')
+CSVFormat = cfg.get('I/O','CSVFormat')
+webtrends = cfg.get('I/O','webtrends')
+textalert = cfg.get('I/O','textalert')
+textalert2 = cfg.get('I/O','textalert2')
+rainfallalert = cfg.get('I/O','rainfallalert')
+allalerts = cfg.get('I/O','allalerts')
+eqsummary = cfg.get('I/O','eqsummary')
+timer = cfg.get('I/O','timer')
+NDlog = cfg.get('I/O','NDlog')
+ND7x = cfg.get('I/O','ND7x')
 
 #file headers
-#purged_file_headers = cfg.get('I/O','purged_file_headers').split(',')
-#monitoring_file_headers = cfg.get('I/O','monitoring_file_headers').split(',')
-#LastGoodData_file_headers = cfg.get('I/O','LastGoodData_file_headers').split(',')
 proc_monitoring_file_headers = cfg.get('I/O','proc_monitoring_file_headers').split(',')
 alert_headers = cfg.get('I/O','alert_headers').split(',')
 alertgen_headers = cfg.get('I/O','alertgen_headers').split(',')
@@ -684,7 +618,7 @@ print "Generating plots and alerts for:"
 names = ['ts','col_a']
 fmt = '%Y-%m-%d %H:%M'
 hr = end - timedelta(hours=3)
-with open(proc_monitoring_path+'webtrends.csv', 'ab') as w, open (proc_monitoring_path+"textalert.txt", 'wb') as t, open (proc_monitoring_path+"textalert2.txt", 'wb') as t2:
+with open(output_file_path+webtrends, 'ab') as w, open (output_file_path+textalert, 'wb') as t, open (output_file_path+textalert2, 'wb') as t2:
     t.write('As of ' + end.strftime(fmt) + ':\n')
     t2.write('As of ' + end.strftime(fmt) + ':\n')
     w.write(end.strftime(fmt) + ',')
@@ -710,7 +644,7 @@ for s in sensorlist:
 
     # importing proc_monitoring csv file of current column to dataframe
     try:
-        proc_monitoring=pd.read_csv(proc_monitoring_path+"Proc\\"+colname+proc_monitoring_file,names=proc_monitoring_file_headers,parse_dates=[0],index_col=[0])
+        proc_monitoring=pd.read_csv(proc_file_path+colname+CSVFormat,names=proc_monitoring_file_headers,parse_dates=[0],index_col=[0])
         print proc_monitoring
         print "\n", colname
     except:
@@ -735,8 +669,8 @@ for s in sensorlist:
     xz,xy,xz_0off,xy_0off,vel_xz,vel_xy, vel_xz_0off, vel_xy_0off,cs_x,cs_xz,cs_xy,cs_xz_0,cs_xy_0 = df_to_out(colname,xz,xy,
                                                                                                                vel_xz,vel_xy,
                                                                                                                cs_x,cs_xz,cs_xy,
-                                                                                                               proc_monitoring_path,
-                                                                                                               proc_monitoring_file)
+                                                                                                               proc_file_path,
+                                                                                                               CSVFormat)
                                                                                                                           
     # Alert generation
     xz=xz[(xz.index>=end-timedelta(days=3))]
@@ -744,11 +678,11 @@ for s in sensorlist:
     vel_xz=vel_xz[(vel_xz.index>=end-timedelta(days=3))]
     vel_xy=vel_xy[(vel_xy.index>=end-timedelta(days=3))]
     alert_out=alert_generation(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velA1, T_velA2, k_ac_ax,
-                               num_nodes_to_check,end,proc_monitoring_path,proc_monitoring_file)
+                               num_nodes_to_check,end,proc_file_path,CSVFormat)
     print alert_out
     
     try:
-        with open(proc_monitoring_path+"col alerts\\"+colname+'.csv', "ab") as col_alert:
+        with open(ColAlerts_file_path+colname+'.csv', "ab") as col_alert:
             current = pd.Series.tolist(alert_out.col_alert)
             current.insert(0, end.strftime(fmt))
             wr = csv.writer(col_alert, quoting=False)
@@ -757,7 +691,7 @@ for s in sensorlist:
         print "No column alert files for " + colname
   
     seen = set() # set for fast O(1) amortized lookup
-    for line in fileinput.FileInput(proc_monitoring_path+"\\col alerts\\"+colname+'.csv', inplace=1):
+    for line in fileinput.FileInput(ColAlerts_file_path+colname+'.csv', inplace=1):
         if line in seen: continue # skip duplicate
 
         seen.add(line)
@@ -768,7 +702,7 @@ for s in sensorlist:
     for n in range(1,1+num_nodes):
         trend_node_headers.append(n)
         
-    calert = pd.read_csv((proc_monitoring_path+'col alerts//' + colname + '.csv'), names=trend_node_headers)
+    calert = pd.read_csv((ColAlerts_file_path + colname + '.csv'), names=trend_node_headers)
     calert['ts'] = pd.to_datetime(calert['ts'], format=fmt)
     calert = calert.set_index(pd.DatetimeIndex(calert['ts']))
     calert = calert.drop('ts', axis = 1)
@@ -806,20 +740,20 @@ for s in sensorlist:
     alert_out['trending_alert']=trending_node_alerts
     print alert_out
     
-    with open(proc_monitoring_path+"\\trend alerts\\"+colname+'.csv', "ab") as c:
+    with open(TrendAlerts_file_path+colname+'.csv', "ab") as c:
         trending_node_alerts.insert(0, end.strftime(fmt))
         wr = csv.writer(c, quoting=False)
         wr.writerows([trending_node_alerts])   
     
     seen = set() # set for fast O(1) amortized lookup
-    for line in fileinput.FileInput(proc_monitoring_path+"\\trend alerts\\"+colname+'.csv', inplace=1):
+    for line in fileinput.FileInput(TrendAlerts_file_path+colname+'.csv', inplace=1):
      if line in seen: continue # skip duplicate
 
      seen.add(line)
      print line, # standard output is now redirected to the file
     
-    # writes sensor name and sensor alerts alphabetically, one sensor per row, in textalert.txt
-    with open (proc_monitoring_path+"textalert.txt", 'ab') as t:
+    # writes sensor name and sensor alerts alphabetically, one sensor per row, in textalert
+    with open (output_file_path+textalert, 'ab') as t:
         if working_node_alerts.count('a2') != 0:
             t.write (colname + ":" + 'a2' + '\n')
             a2_alert.append(colname)
@@ -844,8 +778,8 @@ for s in sensorlist:
         if len(calert.index)<7:
             print 'Trending alert note: less than 6 data points for ' + colname
     
-    # writes sensor alerts in one row in webtrends.csv
-    with open(proc_monitoring_path+'webtrends.csv', 'ab') as w:
+    # writes sensor alerts in one row in webtrends
+    with open(output_file_path+webtrends, 'ab') as w:
             if working_node_alerts.count('a2') != 0:
                 w.write ('a2' + ',')
             elif working_node_alerts.count('a1') != 0:
@@ -872,10 +806,10 @@ for s in sensorlist:
 #    prints to csv: node alert, column alert and trending alert of sites with nd alert
         
     for colname in nd_alert:
-        if os.path.exists(nd_path + colname + proc_monitoring_file):
-            alert_out[['node_alert', 'col_alert', 'trending_alert']].to_csv(nd_path + colname + proc_monitoring_file, sep=',', header=False, mode='a')
+        if os.path.exists(nd_path + colname + CSVFormat):
+            alert_out[['node_alert', 'col_alert', 'trending_alert']].to_csv(nd_path + colname + CSVFormat, sep=',', header=False, mode='a')
         else:
-            alert_out[['node_alert', 'col_alert', 'trending_alert']].to_csv(nd_path + colname + proc_monitoring_file, sep=',', header=True, mode='w')
+            alert_out[['node_alert', 'col_alert', 'trending_alert']].to_csv(nd_path + colname + CSVFormat, sep=',', header=True, mode='w')
 
 #    #11. Plotting column positions
     plot_column_positions(colname,cs_x,cs_xz_0,cs_xy_0)
@@ -884,7 +818,7 @@ for s in sensorlist:
         v = end.strftime('%Y-%m-%d %H-%M')
     else:
         v = ''
-    plt.savefig(proc_monitoring_path+colname+' colpos '+v,
+    plt.savefig(output_file_path+colname+' colpos '+v,
                 dpi=320, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
 #
     #12. Plotting displacement and velocity
@@ -893,13 +827,13 @@ for s in sensorlist:
         v = end.strftime('%Y-%m-%d %H-%M')
     else:
         v = ''
-    plt.savefig(proc_monitoring_path+colname+' disp_vel '+v,
+    plt.savefig(output_file_path+colname+' disp_vel '+v,
                 dpi=320, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
 
     plt.close()
 
-# writes list of site per alert level in textalert2.txt
-with open (proc_monitoring_path+"textalert2.txt", 'ab') as t:
+# writes list of site per alert level in textalert2
+with open (output_file_path+textalert2, 'ab') as t:
     t.write ('a0: ' + ','.join(sorted(a0_alert)) + '\n')
     t.write ('nd: ' + ','.join(sorted(nd_alert)) + '\n')
     t.write ('a1: ' + ','.join(sorted(a1_alert)) + '\n')
@@ -908,22 +842,22 @@ with open (proc_monitoring_path+"textalert2.txt", 'ab') as t:
 
 #Prints rainfall alerts, text alert and eq summary in one file
 
-with open (proc_monitoring_path+"all_alerts.txt", 'wb') as allalerts:
-    with open (proc_monitoring_path+"textalert2.txt") as txtalert:
+with open (output_file_path+allalerts, 'wb') as allalerts:
+    with open (output_file_path+textalert2) as txtalert:
         n = 0
         for line in txtalert:
             if n == 0 or n == 3 or n == 4:
                 allalerts.write(line)
             n += 1
     allalerts.write('\n')
-    with open (senslope_monitoring_path+"rainfallalert.txt") as rainfallalert:
+    with open (output_file_path+rainfallalert) as rainfallalert:
         n = 0
         for line in rainfallalert:
             if n == 0 or n == 3 or n == 4:
                 allalerts.write(line)
             n += 1
     allalerts.write('\n')
-    with open (eq_file_path+"eqsummary.txt") as eqsummary:
+    with open (output_file_path+eqsummary) as eqsummary:
         for line in eqsummary:
             allalerts.write(line)
 
@@ -945,17 +879,17 @@ with open('working_sites.txt', 'r') as SQLsites:
         
 
 # creates list of sites with no data and classifies whether its raw or filtered
-with open(proc_monitoring_path+"NDlog.csv", 'ab') as ND:
+with open(output_file_path+NDlog, 'ab') as ND:
     if len(a0_alert) == 0 and len(a1_alert) == 0 and len(a2_alert) == 0:
         ND.write(end.strftime(fmt) + ',D,')
         ND.write("ND on all sites,")
         ND.write(',\n')
 if len(a0_alert) != 0 or len(a1_alert) != 0 or len(a2_alert) != 0:
-    with open(proc_monitoring_path+"NDlog.csv", 'ab') as ND:
+    with open(output_file_path+NDlog, 'ab') as ND:
         try:
             ND.write(end.strftime(fmt) + ',D,')
             for colname in nd_alert:
-                filtered = pd.read_csv(proc_monitoring_path+"Proc\\"+colname+"\\"+colname+" "+"alert"+proc_monitoring_file, names=alert_headers,parse_dates='ts',index_col='ts')
+                filtered = pd.read_csv(proc_file_path+colname+"\\"+colname+" "+"alert"+CSVFormat, names=alert_headers,parse_dates='ts',index_col='ts')
                 filtered = filtered[(filtered.index>=end)]
                 print 'filtered'            
                 print filtered
@@ -986,9 +920,9 @@ if len(a0_alert) != 0 or len(a1_alert) != 0 or len(a2_alert) != 0:
             pass
 
 # creates list of site with no data for 7 consecutive times
-with open(proc_monitoring_path + "ND7x.csv", 'ab') as ND7x:
+with open(output_file_path + ND7x, 'ab') as ND7x:
     try:
-        NDlog = pd.read_csv(proc_monitoring_path + "NDlog.csv", names = ['ts', 'R or A or D', 'description', 'responder'], parse_dates = 'ts', index_col = 'ts')
+        NDlog = pd.read_csv(output_file_path + "NDlog.csv", names = ['ts', 'R or A or D', 'description', 'responder'], parse_dates = 'ts', index_col = 'ts')
         NDlog = NDlog[(NDlog.index>=end-timedelta(hours=3))]
         if len(NDlog.loc[NDlog['R or A or D']=='R']) != 0 and len(NDlog.loc[NDlog['R or A or D']=='D']) < 7:
             ND7x.write('')
@@ -1022,5 +956,5 @@ with open(proc_monitoring_path + "ND7x.csv", 'ab') as ND7x:
 
 # records the number of minutes the code runs
 end_time = datetime.now() - start_time
-with open (proc_monitoring_path+"timer.txt", 'ab') as p:
+with open (output_file_path+timer, 'ab') as p:
     p.write (start_time.strftime(fmt) + ": " + str(end_time) + '\n')

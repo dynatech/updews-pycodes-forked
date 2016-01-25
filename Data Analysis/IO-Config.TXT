@@ -4,17 +4,16 @@
 ############################
 ###   LOCAL FILE PATH    ###
 ############################
- 
-OutputFilePathMonitoring = C:\Users\Dynaslope\Desktop\Fresh\Senslope Data\Proc2\Monitoring\
-RainfallFilePath = C:\Users\Dynaslope\Dropbox\Senslope Data\Purged\Rainfall\
-ASTIpath = C:\Users\Dynaslope\Desktop\Fresh\Local\ASTI\
+OutputFilePath = C:\Users\Dynaslope\Desktop\Monitoring Output\
+CumSumFilePath = C:\Users\Dynaslope\Desktop\Monitoring Output\CumSum Rainfall\
+ASTIpath = C:\Users\Dynaslope\Desktop\Monitoring Output\ASTI\
+RainfallPlotsPath = C:\Users\Dynaslope\Desktop\Monitoring Output\Rainfall Plots\
 
 ############################
 ###      FILE NAMES      ###
 ############################
- 
 CSVFormat=.csv
-
+rainfallalert = rainfallalert.txt
  
 #############################
 ###    ALERT CONSTANTS    ###
@@ -30,7 +29,7 @@ num_nodes_to_check=5		;number of nodes to check before calling column alert leve
 ############################
 
 data_dt=0.5			;time interval between data points, in hours
-rt_window_length=31.		;length of real-time monitoring window, in days
+rt_window_length=10.		;length of real-time monitoring window, in days
 roll_window_length=3.		;length of rolling/moving window operations in hours
 num_roll_window_ops=2		;number of rolling window operations in the whole monitoring analysis
 col_pos_interval='1D'    	; string expression indicating interval between two adjacent column position dates ex: '1D'= 1 day
