@@ -158,7 +158,7 @@ def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid
         query = query + " and timestamp < '%s'" % toTime
 
     if len(siteid) == 5:
-        query = query + " and msgid = %s" % (msgid);
+        query = query + " and (msgid & 1) = (%s & 1)" % (msgid);
     
     if targetnode <= 0:
         query = query + " and id >= 1 and id <= %s ;" % (str(maxnode))
@@ -186,7 +186,6 @@ def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid
 #    Returns:
 #        df: dataframe object 
 #            dataframe object of the result set 
-
 def GetRawRainData(siteid = "", fromTime = ""):
 
     if not siteid:
@@ -485,13 +484,13 @@ try:
 except:
     #default values are used for missing configuration files or for cases when
     #sensitive info like db access credentials must not be viewed using a browser
-    print "No file named: %s. Trying Default Configuration" % (configFile)
+    #print "No file named: %s. Trying Default Configuration" % (configFile)
     Hostdb = "127.0.0.1"
     Userdb = "root"
     Passdb = "senslope"
     Namedb = "senslopedb"
     NamedbPurged = "senslopedb_purged"
-    printtostdout = True
+    printtostdout = False
     
     xlim = 100
     ylim = 1126
