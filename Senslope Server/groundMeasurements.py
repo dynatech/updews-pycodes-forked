@@ -1,7 +1,18 @@
 import re
 from datetime import datetime as dt
+import ConfigParser
 
 def getGndMeas(text):
+
+  cfg = ConfigParser.ConfigParser()
+  cfg.read('senslope-server-config.txt')
+
+  print '\n\n*******************************************************'  
+  faildateen = cfg.get('ReplyMessages','FailDateEN')
+  failtimeen = cfg.get('ReplyMessages','FailTimeEN')
+  failmeasen = cfg.get('ReplyMessages','FailMeasEN')
+  failweaen = cfg.get('ReplyMessages','FailWeaEN')
+  failobven = cfg.get('ReplyMessages','FailObvEN')
 
   print text
   
@@ -20,7 +31,7 @@ def getGndMeas(text):
     date_str = date_str.replace(" ","")
     sms_date = dt.strptime(date_str+"2016","%d%b%Y").strftime("%Y-%m-%d")
   else:
-    raise ValueError("You have an ERROR on your date format")
+    raise ValueError(faildateen)
   
   # check time
   # if 
@@ -32,7 +43,7 @@ def getGndMeas(text):
     else:
       sms_time = dt.strptime(sms_time_str,"%I%p").strftime("%H:%M:00")
   else:
-    raise ValueError("You have an ERROR on your time format")
+    raise ValueError(failtimeen)
   
   # get all the measurement pairs
   meas_pattern = "[A-J] \d{1,3}\.*\d{0,2}C*M*"
@@ -41,19 +52,19 @@ def getGndMeas(text):
   if meas:
     pass
   else:
-    raise ValueError("You have an ERROR on the measurements entered")
+    raise ValueError(failmeasen)
   
   try:
     wrecord = re.search("(?<="+meas[-1]+" )\w+(?= )",cleanText).group(0)
     print wrecord
   except AttributeError:
-    raise ValueError("No weather description recorded")
+    raise ValueError(failweaen)
     
   try:
     observer_name = re.search("(?<="+wrecord+" ).+$",cleanText).group(0)
     print observer_name
   except AttributeError:
-    raise ValueError("No observer name reported")
+    raise ValueError(failobven)
     
   gnd_records = ""
   for m in meas:
@@ -72,5 +83,7 @@ def getGndMeas(text):
   wea_desc = "('"+sms_date+" "+sms_time+"','"+sms_list[0]+"','"+sms_list[1]+"','"+observer_name+"','"+wrecord+"')"
   
   return gnd_records, wea_desc
+  
+
   
   

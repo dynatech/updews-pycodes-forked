@@ -116,6 +116,8 @@ def sendMsg(alert_msg, number):
                 time.sleep(0.5)
         if time.time()>now+30:
                 a = '>> Error: GSM Unresponsive'
+        else:
+            print ">> Message sent!"
         return a
     except serial.SerialException:
         print "NO SERIAL COMMUNICATION (sendmsg)"

@@ -931,11 +931,18 @@ def RunSenslopeServer(network):
                 if re.search("(ROUTINE)|(EVENT)", msg.data.upper()):
                     try:
                         gm,w = getGndMeas(msg.data)
-                    except ValueError:
+                        RecordGroundMeasurements(gm)
+                        RecordManualWeather(w)
+                        a = sendMsg(successen, msg.simnum)
+                    except ValueError as e:
                         print ">> Error in manual ground measurement SMS"
-                    
-                    RecordGroundMeasurements(gm)
-                    RecordManualWeather(w)
+                        sendMsg(str(e), msg.simnum)
+                    finally:
+                        f = open(smsgndfile, 'a')
+                        f.write(msg.dt+',')
+                        f.write(msg.simnum+',')
+                        f.write(msg.data+'\n')
+                        f.close()
                 elif re.findall('[^A-Zabcyx0-9\*\+\.\/\,\:\#-]',msg.data):
                     print ">> Error: Unexpected characters/s detected in ", msg.data
                     f = open("D:\\Server Files\\Consolidated\\"+network+'Nonalphanumeric_errorlog.txt','a')
@@ -1095,8 +1102,11 @@ Directory = cfg.get('SMSAlert','Directory')
 CSVInputFile = cfg.get('SMSAlert','CSVInputFile')
 AlertFlags = cfg.get('SMSAlert','AlertFlags')
 AlertReportInterval = cfg.getint('SMSAlert','AlertReportInterval')
+smsgndfile = cfg.get('SMSAlert','SMSgndmeasfile')
 
 ##SMS alert numbers
 smartnumbers = cfg.get('SMSAlert', 'smartnumbers')
 globenumbers = cfg.get('SMSAlert', 'globenumbers')
+
+successen = cfg.get('ReplyMessages','SuccessEN')
 

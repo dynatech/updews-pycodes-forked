@@ -22,16 +22,26 @@ smartport = 17
 [SMSAlert]
 sunnumbers = 09228412065,09228120490,09253120491
 enable = True
-globenumbers = 09176023735,09177215154,09166685391
+globenumbers=09166685391,09054537225,09068386258,09178825084,09163938789
 csvinputfile = Node-level_alerts.csv
-smartnumbers = 09997445018
+smartnumbers=09288263063,09984405687
 alertflags = 12
 directory = D:\Dropbox\Senslope Data\Proc\csv
 alertreportinterval = 30
+SMSgndmeasfile = C:\Users\windows user\Desktop\Ground Measurement Backup\smsbackup.txt
 
 [Misc]
 timestampstart = None
 timestampend = None
 sleepperiod = 2
-adjustcolumntimeof =
+adjustcolumntimeof =OSLB
+
+[ReplyMessages]
+SuccessEN = Success! Thank you for sending your ground measurements.
+SuccessTAG = Ayos! Salamat sa pag text ng inyong mga sukat ng crack.
+FailDateEN = Error! There is a problem with your DATE format. Please check your SMS and try again.
+FailTimeEN = Error! There is a problem with your TIME format. Please check your SMS and try again.
+FailMeasEN = Error! There is a problem with your ground measurements format.  Please check your SMS and try again.
+FailWeaEN = Error! There is no weather information sent.  Please check your SMS and try again.
+FailObvEN = Error! You did not put your name on the text message.  Please check your SMS and try again.
 
