@@ -8,6 +8,7 @@ import winsound
 import emailer
 from senslopedbio import *
 from gsmSerialio import *
+from groundMeasurements import *
 #---------------------------------------------------------------------------------------------------------------------------
 
 def updateSimNumTable(name,sim_num,date_activated):
@@ -60,6 +61,40 @@ def updateSimNumTable(name,sim_num,date_activated):
             
     db.close()
 
+def logRuntimeStatus(script_name,status):
+    db, cur = SenslopeDBConnect()
+    
+    logtimestamp = dt.today().strftime("%Y-%m-%d %X")
+    
+    # print ">> Saveing last meesage receievd"
+    while True:
+        try:
+            query = """insert into senslopedb.runtimelog
+                (timestamp,script_name,status)
+                values ('%s','%s','%s')
+                """ %(logtimestamp,script_name,status)
+        
+            a = cur.execute(query)
+            if a:
+                db.commit()
+                print ">> Runtime log, Status: ", status
+                break
+            else:
+                print '>> Warning: Query has no result set (logRuntimeStatus)'
+                
+                time.sleep(2)
+                break
+        # except MySQLdb.OperationalError:
+        except IndexError:
+            print '3.',
+            raise KeyboardInterrupt
+        except MySQLdb.ProgrammingError:
+            print ">> Cannot write entry"
+            break
+            
+            
+    db.close()
+       
 def updateLastMsgReceivedTable(txtdatetime,name,sim_num,msg):
     db, cur = SenslopeDBConnect()
     
@@ -92,9 +127,6 @@ def updateLastMsgReceivedTable(txtdatetime,name,sim_num,msg):
             print ">> Cannot write entry"
             break
             
-            
-    db.close()
-       
 def checkNameOfNumber(number):
     db, cur = SenslopeDBConnect()
     
@@ -181,7 +213,8 @@ def ProcTwoAccelColData(msg,sender,txtdatetime):
     if dtype == 'Y' or dtype == 'X':
        n = 15
     elif dtype == 'B':
-        n = 12
+        n = 10
+        ### change from 12 to 10 01/25/16 by anna
         colid =  colid + 'M'
     elif dtype == 'C':
         if colid == "AGBSB":
@@ -768,12 +801,89 @@ def SendAlertGsm(network):
             sendMsg(alllines,n)
     except IndexError:
         print "Error sending all_alerts.txt"
+
+def RecordGroundMeasurements(gnd_meas):
+    # print gnd_meas
     
+    db, cur = SenslopeDBConnect()
+    
+    createTable("gndmeas","gndmeas")
+    
+    query = "INSERT IGNORE INTO gndmeas (timestamp, meas_type, site_id, observer_name, crack_id, meas) VALUES " + gnd_meas
+    
+    # print query
+    
+    try:
+        retry = 0
+        while True:
+            try:
+                a = cur.execute(query)
+                # db.commit()
+                if a:
+                    db.commit()
+                    break
+                else:
+                    print '>> Warning: Query has no result set (RecordGndMeasurements)'
+                    time.sleep(2)
+                    break
+            except MySQLdb.OperationalError:
+            #except IndexError:
+                print '5.',
+                #time.sleep(2)
+                if retry > 10:
+                    return
+                else:
+                    retry += 1
+                    time.sleep(2)
+    except KeyError:
+        print '>> Error: Writing to database'
+    except MySQLdb.IntegrityError:
+        print '>> Warning: Duplicate entry detected'
+
+def RecordManualWeather(mw_text):
+    # print gnd_meas
+    
+    db, cur = SenslopeDBConnect()
+    
+    createTable("manualweather","manualweather")
+    
+    query = "INSERT IGNORE INTO manualweather (timestamp, meas_type, site_id, observer_name, weatherdesc) VALUES " + mw_text
+    
+    # print query
+    
+    try:
+        retry = 0
+        while True:
+            try:
+                a = cur.execute(query)
+                # db.commit()
+                if a:
+                    db.commit()
+                    break
+                else:
+                    print '>> Warning: Query has no result set (RecordManualWeather)'
+                    time.sleep(2)
+                    break
+            except MySQLdb.OperationalError:
+            #except IndexError:
+                print '5.',
+                #time.sleep(2)
+                if retry > 10:
+                    return
+                else:
+                    retry += 1
+                    time.sleep(2)
+    except KeyError:
+        print '>> Error: Writing to database'
+    except MySQLdb.IntegrityError:
+        print '>> Warning: Duplicate entry detected'
+        
 def RunSenslopeServer(network):
     minute_of_last_alert = dt.now().minute
     timetosend = 0
     email_flg = 0
     txtalert_flg = 0
+    logruntimeflag = True
     global checkIfActive
     if network == "SUN":
         Port = cfg.getint('Serial', 'SunPort') - 1
@@ -793,6 +903,8 @@ def RunSenslopeServer(network):
         while True:
             gsm.close()
             
+    createTable("runtimelog","runtime")
+    logRuntimeStatus(network,"startup")
 
 			
     # force backup
@@ -812,11 +924,19 @@ def RunSenslopeServer(network):
                              
                 msgname = checkNameOfNumber(msg.simnum)
                 ##### Added for V1 sensors removes unnecessary characters pls see function PreProcessColumnV1(data)
-                # if msg.data.find("DUE*") >0:
-                   # msg.data = PreProcessColumnV1(msg.data)
+                if msg.data.find("DUE*") >0:
+                   msg.data = PreProcessColumnV1(msg.data)
                 ####not sure where to put this function for trial
                 
-                if re.findall('[^A-Zabcyx0-9\*\+\.\/,:-]',msg.data):
+                if re.search("(ROUTINE)|(EVENT)", msg.data.upper()):
+                    try:
+                        gm,w = getGndMeas(msg.data)
+                    except ValueError:
+                        print ">> Error in manual ground measurement SMS"
+                    
+                    RecordGroundMeasurements(gm)
+                    RecordManualWeather(w)
+                elif re.findall('[^A-Zabcyx0-9\*\+\.\/\,\:\#-]',msg.data):
                     print ">> Error: Unexpected characters/s detected in ", msg.data
                     f = open("D:\\Server Files\\Consolidated\\"+network+'Nonalphanumeric_errorlog.txt','a')
                     f.write(msg.dt + ',' + msg.simnum + ',' + msg.data+ '\n')
@@ -920,13 +1040,19 @@ def RunSenslopeServer(network):
         today = dt.today()
         if (today.minute % 30 == 0):
             serverstate = 'active'
+            if logruntimeflag:
+                logRuntimeStatus(network,"alive")
+                logruntimeflag = False
+            
             if (not email_flg):
                 SendAlertEmail(network, serverstate)
-                email_flg = 1;
+                email_flg = 1
+        else:
+            logruntimeFlag = True
             
             
                 
-        if (today.minute == 10 or today.minute == 40) and (not txtalert_flg):
+        if (today.minute == 20 or today.minute == 50) and (not txtalert_flg):
         #if (today.minute % 10 == 0):
             fpath = "D:\\Server Files\\Consolidated\\DYNA\\all_alerts.txt"
             txtalert_flg = 1;
