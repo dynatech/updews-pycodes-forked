@@ -49,3 +49,37 @@ def createTable(table_name, type):
         
     db.close()
 
+def commitToDb(query, identifier):
+    db, cur = SenslopeDBConnect()
+    
+    try:
+        retry = 0
+        while True:
+            try:
+                a = cur.execute(query)
+                # db.commit()
+                if a:
+                    db.commit()
+                    break
+                else:
+                    print '>> Warning: Query has no result set', identifier
+                    db.commit()
+                    time.sleep(2)
+                    break
+            except MySQLdb.OperationalError:
+            #except IndexError:
+                print '5.',
+                #time.sleep(2)
+                if retry > 10:
+                    break
+                else:
+                    retry += 1
+                    time.sleep(2)
+    except KeyError:
+        print '>> Error: Writing to database', identifier
+    except MySQLdb.IntegrityError:
+        print '>> Warning: Duplicate entry detected', identifier
+    except:
+        print '>> Unexpected error in writing to database query', query, 'from', identifier
+    finally:
+        db.close()

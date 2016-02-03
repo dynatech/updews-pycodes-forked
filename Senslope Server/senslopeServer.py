@@ -34,98 +34,33 @@ def updateSimNumTable(name,sim_num,date_activated):
         except MySQLdb.OperationalError:
             print '1.',
             raise KeyboardInterrupt
-            
-    while True:
-        try:
-            query = """INSERT INTO senslopedb.site_column_sim_nums
+    
+    query = """INSERT INTO senslopedb.site_column_sim_nums
                 (name,sim_num,date_activated)
                 VALUES ('%s','%s','%s')""" %(name,sim_num,date_activated)
-        
-            a = cur.execute(query)
-            if a:
-                db.commit()
-                print ">> Number written to database", name, sim_num
-                break
-            else:
-                print '>> Warning: Query has no result set (updateSimNumTable)'
-                # time.sleep(5)
-        except MySQLdb.OperationalError:
-            print '2.',
-            raise KeyboardInterrupt
-        except MySQLdb.IntegrityError:
-            print '>> Duplicate entry', name, sim_num
-            break
-        except MySQLdb.ProgrammingError:
-            print ">> Cannot write entry"
-            break
-            
-    db.close()
 
-def logRuntimeStatus(script_name,status):
-    db, cur = SenslopeDBConnect()
+    commitToDb(query, 'updateSimNumTable')                
     
+def logRuntimeStatus(script_name,status):
     logtimestamp = dt.today().strftime("%Y-%m-%d %X")
     
-    # print ">> Saveing last meesage receievd"
-    while True:
-        try:
-            query = """insert into senslopedb.runtimelog
+    query = """insert into senslopedb.runtimelog
                 (timestamp,script_name,status)
                 values ('%s','%s','%s')
                 """ %(logtimestamp,script_name,status)
-        
-            a = cur.execute(query)
-            if a:
-                db.commit()
-                print ">> Runtime log, Status: ", status
-                break
-            else:
-                print '>> Warning: Query has no result set (logRuntimeStatus)'
-                
-                time.sleep(2)
-                break
-        # except MySQLdb.OperationalError:
-        except IndexError:
-            print '3.',
-            raise KeyboardInterrupt
-        except MySQLdb.ProgrammingError:
-            print ">> Cannot write entry"
-            break
-            
-            
-    db.close()
+    
+    commitToDb(query, 'logRuntimeStatus')
        
 def updateLastMsgReceivedTable(txtdatetime,name,sim_num,msg):
-    db, cur = SenslopeDBConnect()
-    
-    # print ">> Saveing last meesage receievd"
-    while True:
-        try:
-            query = """insert into senslopedb.last_msg_received
+    query = """insert into senslopedb.last_msg_received
                 (timestamp,name,sim_num,last_msg)
                 values ('%s','%s','%s','%s')
                 on DUPLICATE key update
                 timestamp = '%s',
                 sim_num = '%s',
                 last_msg = '%s'""" %(txtdatetime,name,sim_num,msg,txtdatetime,sim_num,msg)
-        
-            a = cur.execute(query)
-            if a:
-                db.commit()
-                print ">> Message written to database", name, sim_num
-                break
-            else:
-                print '>> Warning: Query has no result set (updateLastMsgReceivedTable)'
                 
-                time.sleep(2)
-                break
-        except MySQLdb.OperationalError:
-        # except IndexError:
-            print '3.',
-            raise KeyboardInterrupt
-        except MySQLdb.ProgrammingError:
-            print ">> Cannot write entry"
-            break
+    commitToDb(query, 'updateLastMsgReceivedTable')
             
 def checkNameOfNumber(number):
     db, cur = SenslopeDBConnect()
@@ -140,7 +75,7 @@ def checkNameOfNumber(number):
                 out = cur.fetchall()
                 return out[0][0]                    
             else:
-                print '>> Number not in database'
+                print '>> Number not in database', number
                 return ''
         except MySQLdb.OperationalError:
         # except KeyboardInterrupt:
@@ -183,7 +118,6 @@ def ProcTwoAccelColData(msg,sender,txtdatetime):
         print 'wrong master name'
         return
 
-    print '\n\n*******************************************************'
     print msg
 
     dtype = msgsplit[1].upper()
@@ -217,8 +151,6 @@ def ProcTwoAccelColData(msg,sender,txtdatetime):
         ### change from 12 to 10 01/25/16 by anna
         colid =  colid + 'M'
     elif dtype == 'C':
-        if colid == "AGBSB":
-            raise IndexError("AGBSB still has wrong format")
         n = 7
         colid =  colid + 'M'
     else:
@@ -272,91 +204,26 @@ def WriteTwoAccelDataToDb(dlist,msgtime):
     query = """INSERT IGNORE INTO %s (timestamp,id,msgid,xvalue,yvalue,zvalue,batt) VALUES """ % str(dlist[0][0])
     if WriteToDB:
         for item in dlist:
-            db, cur = SenslopeDBConnect()
             createTable(item[0], "sensor v2")
             timetowrite = str(item[1])
             query = query + """('%s',%s,%s,%s,%s,%s,%s),""" % (timetowrite,str(item[2]),str(item[3]),str(item[4]),str(item[5]),str(item[6]),str(item[7]))
 
     query = query[:-1]
-    try:
-        retry = 0
-        while True:
-            try:
-                a = cur.execute(query)
-                # db.commit()
-                if a:
-                    db.commit()
-                    break
-                else:
-                    print '>> Warning: Query has no result set (WriteTwoAccelDataToDb)'
-                    time.sleep(2)
-                    break
-            except MySQLdb.OperationalError:
-                print '5.',
-                #time.sleep(2)
-                if retry > 10:
-                    return
-                else:
-                    retry += 1
-                    time.sleep(2)
-            except MySQLdb.ProgrammingError:
-                print ">> Unable to write to table '" + str(item[0]) + "'"
-                return
-                    
-            
-    except KeyError:
-        print '>> Error: Writing to database'
-    except MySQLdb.IntegrityError:
-        print '>> Warning: Duplicate entry detected'
-        
-            
-    db.close()
-        
-    #print "%s\t%s\t%s\t%s\t%s" % (str(node_id),str(valueX),str(valueY),str(valueZ),str(valueF))
-
+    
+    commitToDb(query, 'WriteTwoAccelDataToDb')
+   
 def WriteSomsDataToDb(dlist,msgtime):
     query = """INSERT IGNORE INTO %s (timestamp,id,msgid,mval1,mval2) VALUES """ % str(dlist[0][0])
     if WriteToDB:
         for item in dlist:
-            db, cur = SenslopeDBConnect()
             createTable(item[0], "soms")
             timetowrite = str(item[1])
             query = query + """('%s',%s,%s,%s,%s),""" % (timetowrite,str(item[2]),str(item[3]),str(item[4]),str(item[5]))
 
     query = query[:-1]
-    #print query
-    try:
-        
-        retry = 0
-        while True:
-            try:
-                a = cur.execute(query)
-                # db.commit()
-                if a:
-                    db.commit()
-                    break
-                else:
-                    print '>> Warning: Query has no result set (WriteSomsDataToDb)'
-                    time.sleep(2)
-                    break
-            except MySQLdb.OperationalError:
-            #except IndexError:
-                print '5.',
-                #time.sleep(2)
-                if retry > 10:
-                    return
-                else:
-                    retry += 1
-                    time.sleep(2)
-    except KeyError:
-        print '>> Error: Writing to database'
-    except MySQLdb.IntegrityError:
-        print '>> Warning: Duplicate entry detected'
-        
-            
-    db.close()
-        
-   
+    
+    commitToDb(query, 'WriteSomsDataToDb')
+    
 def PreProcessColumnV1(data):
     data = data.replace("DUE","")
     data = data.replace(",","*")
@@ -366,7 +233,6 @@ def PreProcessColumnV1(data):
     
 def ProcessColumn(line,txtdatetime,sender):
     msgtable = line[0:4]
-    print '\n\n*******************************************************'
     print 'SITE: ' + msgtable
     ##msgdata = line[5:len(line)-11] #data is 6th char, last 10 char are date
     msgdata = (line.split('*'))[1]
@@ -453,25 +319,8 @@ def ProcessColumn(line,txtdatetime,sender):
         # print query
 
         if WriteToDB and i!=0:
-            db, cur = SenslopeDBConnect()
-            
             createTable(str(msgtable), "sensor v1")
-
-            try:
-                
-                a = cur.execute(query)
-                if a:
-                    db.commit()
-                else:
-                    print '>> Warning: Query has no result set (ProcessColumn)'
-                    time.sleep(2)
-                    
-            except KeyError:
-                print '>> Error: Writing to database'
-            except MySQLdb.IntegrityError:
-                print '>> Warning: Duplicate entry detected'
-                
-            db.close()
+            commitToDb(query, 'ProcessColumn')
                 
     except KeyboardInterrupt:
         print '\n>>Error: Unknown'
@@ -483,7 +332,6 @@ def ProcessColumn(line,txtdatetime,sender):
 
 def ProcessPiezometer(line,sender):    
     #msg = message
-    print '\n\n*******************************************************'   
     print 'Piezometer data: ' + line
     try:
     #PUGBPZ*13173214*1511091800 
@@ -511,7 +359,6 @@ def ProcessPiezometer(line,sender):
 
         # try:
     if WriteToDB:
-        db, cur = SenslopeDBConnect()        
         createTable(str(msgname), "piezo")
         try:
           query = """INSERT INTO %s(timestamp, name, msgid, freq ) VALUES ('%s','%s', %s, %s )""" %(msgname,txtdatetime,msgname, str(msgid), str(piezodata))
@@ -521,32 +368,14 @@ def ProcessPiezometer(line,sender):
             print '>> Error writing query string.', 
             return
         
-        try:
-            a = cur.execute(query)
-            if a:
-                db.commit()
-            else:
-                print '>> Query has no result set (ProcessPiezometer)'
-                time.sleep(2)
-        except KeyError:
-            print '>> Error: Writing to database'
-        except MySQLdb.IntegrityError:
-            print '>> Warning: Duplicate entry detected'
-        # except:
-            # print '>> Unknown error in message data: ', sys.exc_info()[0], sys.exc_info()[1] 
-        db.close()
-        #except:
-        #    print '>> Error: Rain format corrupted',
+        commitToDb(query, 'ProcessPiezometer')
         
-    
     print 'End of Process Piezometer data'
 
-        
 def ProcessARQWeather(line,sender):
     
     #msg = message
 
-    print '\n\n*******************************************************'   
     print 'ARQ Weather data: ' + line
 
     try:
@@ -595,8 +424,6 @@ def ProcessARQWeather(line,sender):
 
     # try:
     if WriteToDB:
-        db, cur = SenslopeDBConnect()
-        
         if msgname:
             createTable(str(msgname), "arqweather")
         else:
@@ -610,32 +437,14 @@ def ProcessARQWeather(line,sender):
             print '>> Error writing query string.', 
             return
 
-        
-        try:
-            a = cur.execute(query)
-            if a:
-                db.commit()
-            else:
-                print '>> Query has no result set (ProcessARQWeather)'
-                time.sleep(2)
-        except KeyError:
-            print '>> Error: Writing to database'
-        except MySQLdb.IntegrityError:
-            print '>> Warning: Duplicate entry detected'
-        # except:
-            # print '>> Unknown error in message data: ', sys.exc_info()[0], sys.exc_info()[1] 
-        # db.close()
-        #except:
-        #    print '>> Error: Rain format corrupted',
-        db.close()
-    
+        commitToDb(query, 'ProcessARQWeather')
+           
     print 'End of Process ARQ weather data'
     
 def ProcessRain(line,sender):
     
     #msg = message
 
-    print '\n\n*******************************************************'   
     print 'Weather data: ' + line
 
     try:
@@ -667,8 +476,6 @@ def ProcessRain(line,sender):
 
     #try:
     if WriteToDB:
-        db, cur = SenslopeDBConnect()
-        
         createTable(str(msgtable),"weather")
 
         try:
@@ -678,30 +485,12 @@ def ProcessRain(line,sender):
             print '>> Error writing weather data to database. ' +  line
             return
 
+        commitToDb(query, 'ProcesRain')
         
-        try:
-            a = cur.execute(query)
-            if a:
-                db.commit()
-                print a
-            else:
-                print '>> Query has no resultset (ProcessRain)'
-                time.sleep(2)
-        except KeyError:
-            print '>> Error: Writing to database'
-        except MySQLdb.IntegrityError:
-            print '>> Warning: Duplicate entry detected'
-        except:
-            print '>> Unknown error in message data: ', sys.exc_info()[0], sys.exc_info()[1] 
-        db.close()
-    #except:
-    #    print '>> Error: Rain format corrupted',
-    
     print 'End of Process weather data'
 
 def ProcessStats(line,txtdatetime):
 
-    print '\n\n*******************************************************'
     print 'Site status: ' + line
     
     try:
@@ -739,8 +528,6 @@ def ProcessStats(line,txtdatetime):
         return
 
     if WriteToDB:
-        db, cur = SenslopeDBConnect()
-
         createTable(str(msgtable),"stats")
             
         try:
@@ -752,21 +539,8 @@ def ProcessStats(line,txtdatetime):
             return
 
         
-        try:
-            a = cur.execute(query)
-            if a:
-                db.commit()
-            else:
-                print '>> No 3'
-                time.sleep(2)
-        except KeyError:
-            print '>> Error: Writing to database'
-        except MySQLdb.IntegrityError:
-            print '>> Warning: Duplicate entry detected'
-        except:
-            print '>> Unknown error in message data: ', sys.exc_info()[0], sys.exc_info()[1] 
-        db.close()
-    
+        commitToDb(query, 'ProcessStats')
+        
     print 'End of Process status data'
     
 def SendAlertEmail(network, serverstate):
@@ -786,7 +560,6 @@ def SendAlertEmail(network, serverstate):
         active_message = '\nGood Day!\n\nYou received this email because ' + network + ' SERVER is now INACTIVE!\\nPlease fix me.\nThanks!\n\n-' + network + ' Server\n'
 	
     emailer.sendmessage(sender,sender_password,receiver,sender,subject,active_message)
-	#numlist = cfg.get(network.lower())
     
 def SendAlertGsm(network):
     try:
@@ -805,78 +578,22 @@ def SendAlertGsm(network):
 def RecordGroundMeasurements(gnd_meas):
     # print gnd_meas
     
-    db, cur = SenslopeDBConnect()
-    
     createTable("gndmeas","gndmeas")
     
     query = "INSERT IGNORE INTO gndmeas (timestamp, meas_type, site_id, observer_name, crack_id, meas) VALUES " + gnd_meas
     
     # print query
     
-    try:
-        retry = 0
-        while True:
-            try:
-                a = cur.execute(query)
-                # db.commit()
-                if a:
-                    db.commit()
-                    break
-                else:
-                    print '>> Warning: Query has no result set (RecordGndMeasurements)'
-                    time.sleep(2)
-                    break
-            except MySQLdb.OperationalError:
-            #except IndexError:
-                print '5.',
-                #time.sleep(2)
-                if retry > 10:
-                    return
-                else:
-                    retry += 1
-                    time.sleep(2)
-    except KeyError:
-        print '>> Error: Writing to database'
-    except MySQLdb.IntegrityError:
-        print '>> Warning: Duplicate entry detected'
+    commitToDb(query, 'RecordGroundMeasurements')
 
 def RecordManualWeather(mw_text):
     # print gnd_meas
-    
-    db, cur = SenslopeDBConnect()
     
     createTable("manualweather","manualweather")
     
     query = "INSERT IGNORE INTO manualweather (timestamp, meas_type, site_id, observer_name, weatherdesc) VALUES " + mw_text
     
-    # print query
-    
-    try:
-        retry = 0
-        while True:
-            try:
-                a = cur.execute(query)
-                # db.commit()
-                if a:
-                    db.commit()
-                    break
-                else:
-                    print '>> Warning: Query has no result set (RecordManualWeather)'
-                    time.sleep(2)
-                    break
-            except MySQLdb.OperationalError:
-            #except IndexError:
-                print '5.',
-                #time.sleep(2)
-                if retry > 10:
-                    return
-                else:
-                    retry += 1
-                    time.sleep(2)
-    except KeyError:
-        print '>> Error: Writing to database'
-    except MySQLdb.IntegrityError:
-        print '>> Warning: Duplicate entry detected'
+    commitToDb(query, 'RecordManualWeather')
         
 def RunSenslopeServer(network):
     minute_of_last_alert = dt.now().minute
@@ -919,6 +636,7 @@ def RunSenslopeServer(network):
             
             while allmsgs:
             
+                print '\n\n*******************************************************'
                 #gets per text message
                 msg = allmsgs.pop(0)
                              
@@ -926,9 +644,7 @@ def RunSenslopeServer(network):
                 ##### Added for V1 sensors removes unnecessary characters pls see function PreProcessColumnV1(data)
                 if msg.data.find("DUE*") >0:
                    msg.data = PreProcessColumnV1(msg.data)
-                ####not sure where to put this function for trial
-                
-                if re.search("(ROUTINE)|(EVENT)", msg.data.upper()):
+                elif re.search("(ROUTINE)|(EVENT)", msg.data.upper()):
                     try:
                         gm,w = getGndMeas(msg.data)
                         RecordGroundMeasurements(gm)
@@ -975,7 +691,6 @@ def RunSenslopeServer(network):
                 elif msg.data[4:7] == "PZ*":
                     ProcessPiezometer(msg.data, msg.simnum)
                 else:
-                    print '\n\n*******************************************************'
                     print '>> Unrecognized message format: '
                     print 'NUM: ' , msg.simnum
                     print 'MSG: ' , msg.data
