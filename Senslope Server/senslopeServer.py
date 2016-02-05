@@ -662,7 +662,7 @@ def RunSenslopeServer(network):
                         f.close()
                 elif re.findall('[^A-Zabcyx0-9\*\+\.\/\,\:\#-]',msg.data):
                     print ">> Error: Unexpected characters/s detected in ", msg.data
-                    f = open("D:\\Server Files\\Consolidated\\"+network+'Nonalphanumeric_errorlog.txt','a')
+                    f = open(unexpectedchardir+network+'Nonalphanumeric_errorlog.txt','a')
                     f.write(msg.dt + ',' + msg.simnum + ',' + msg.data+ '\n')
                     f.close
                 elif len(msg.data.split("*")[0]) == 5:
@@ -701,7 +701,7 @@ def RunSenslopeServer(network):
                     updateLastMsgReceivedTable(msg.dt,msgname,msg.simnum,msg.data)
                     
                     if SaveToFile:
-                        dir = "D:\\Server Files\\Consolidated\\"+"\\Inbox"+"\\"+msgname
+                        dir = inboxdir+msgname
                         if not os.path.exists(dir):
                             os.makedirs(dir)
                         f = open(dir+'\\'+msgname+'-backup.txt','a')
@@ -710,7 +710,7 @@ def RunSenslopeServer(network):
                         f.close()
                         
                 else:
-                    f = open("D:\\Server Files\\Consolidated\\"+"Unknown-sender.txt",'a')
+                    f = open(unknownsenderfile,'a')
                     f.write(msg.dt+',')
                     f.write(msg.simnum+',')
                     f.write(msg.data+'\n')
@@ -777,7 +777,7 @@ def RunSenslopeServer(network):
                 
         if (today.minute == 20 or today.minute == 50) and (not txtalert_flg):
         #if (today.minute % 10 == 0):
-            fpath = "D:\\Server Files\\Consolidated\\DYNA\\all_alerts.txt"
+            fpath = allalertsfile
             txtalert_flg = 1;
             if os.path.isfile(fpath) and os.path.getsize(fpath) > 0:
                 SendAlertGsm(network)
@@ -825,4 +825,9 @@ smartnumbers = cfg.get('SMSAlert', 'smartnumbers')
 globenumbers = cfg.get('SMSAlert', 'globenumbers')
 
 successen = cfg.get('ReplyMessages','SuccessEN')
+
+unexpectedchardir = cfg.get('FileIO','unexpectedchardir')
+inboxdir = cfg.get('FileIO','inboxdir')
+unknownsenderfile = cfg.get('FileIO','unknownsenderfile')
+allalertsfile = cfg.get('FileIO','allalertsfile')
 

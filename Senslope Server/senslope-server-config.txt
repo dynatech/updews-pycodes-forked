@@ -45,3 +45,10 @@ FailMeasEN = Error! There is a problem with your ground measurements format.  Pl
 FailWeaEN = Error! There is no weather information sent.  Please check your SMS and try again.
 FailObvEN = Error! You did not put your name on the text message.  Please check your SMS and try again.
 
+[FileIO]
+unexpectedchardir = D:\Server Files\Consolidated\
+inboxdir = D:\Server Files\Consolidated\Inbox\
+unknownsenderfile = D:\Server Files\Consolidated\Unknown-sender.txt
+allalertsfile = D:\Server Files\Consolidated\DYNA\all_alerts.txt
+
+
