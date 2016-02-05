@@ -644,7 +644,8 @@ def RunSenslopeServer(network):
                 ##### Added for V1 sensors removes unnecessary characters pls see function PreProcessColumnV1(data)
                 if msg.data.find("DUE*") >0:
                    msg.data = PreProcessColumnV1(msg.data)
-                elif re.search("(ROUTINE)|(EVENT)", msg.data.upper()):
+                   ProcessColumn(msg.data,msg.dt,msg.simnum)
+                elif re.search("(R(((O|0)*U*)|(U*(O|0)*))T*[(I|1|L)E]*N*(E|3)* )|((E|3)(V|B)*(E|3)*(N|M)*(T|\+)* )", msg.data.upper()):
                     try:
                         gm,w = getGndMeas(msg.data)
                         RecordGroundMeasurements(gm)

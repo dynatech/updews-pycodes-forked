@@ -17,19 +17,30 @@ def getGndMeas(text):
   print text
   
   # clean the message
-  cleanText = text.upper()
-  sms_list = re.split(" +",re.sub("\W"," ",cleanText))
+  cleanText = re.sub(" +"," ",text.upper())
+  sms_list = re.split(" ",re.sub("\W"," ",cleanText))
   
   sms_date = ""
   sms_time = ""
   records = []
   
+  # check measearement type
+  if sms_list[0][0] == 'R':
+    meas_type = "ROUTINE"
+  else:
+    meas_type = "EVENT"
+  
   # check date
-  date_search = re.search("\d{1,2} {0,1}[JFMASOND][A-Z]{2}",cleanText)
+  date_search = re.search("[JFMASOND][A-Z]{2} *\d{1,2} *(201[67]){0,1}",cleanText)
   if date_search:
-    date_str = date_search.group(0)
-    date_str = date_str.replace(" ","")
-    sms_date = dt.strptime(date_str+"2016","%d%b%Y").strftime("%Y-%m-%d")
+    date_str = date_search.group(0).replace(" ","")
+    if len(date_str) < 6:
+        date_str = date_str + "2016"        
+    print date_str
+    try:
+        sms_date = dt.strptime(date_str,"%b%d%Y").strftime("%Y-%m-%d")
+    except ValueError:
+        raise ValueError(faildateen)
   else:
     raise ValueError(faildateen)
   
@@ -46,7 +57,7 @@ def getGndMeas(text):
     raise ValueError(failtimeen)
   
   # get all the measurement pairs
-  meas_pattern = "[A-J] \d{1,3}\.*\d{0,2}C*M*"
+  meas_pattern = "[A-Z] \d{1,3}\.*\d{0,2}C*M*"
   meas = re.findall(meas_pattern,cleanText)
   # create records list
   if meas:
@@ -80,7 +91,7 @@ def getGndMeas(text):
     
   gnd_records = gnd_records[:-1]
   
-  wea_desc = "('"+sms_date+" "+sms_time+"','"+sms_list[0]+"','"+sms_list[1]+"','"+observer_name+"','"+wrecord+"')"
+  wea_desc = "('"+sms_date+" "+sms_time+"','"+meas_type+"','"+sms_list[1]+"','"+observer_name+"','"+wrecord+"')"
   
   return gnd_records, wea_desc
   
