@@ -127,7 +127,7 @@ def onethree_val_writer(colname):
     
     return one,three
         
-def summary_writer(s,r,datasource,twoyrmax,halfmax,summary,alert):
+def summary_writer(s,r,datasource,twoyrmax,halfmax,summary,alert,alert_df):
 
     ##DESCRIPTION:
     ##inserts data to summary
@@ -140,7 +140,7 @@ def summary_writer(s,r,datasource,twoyrmax,halfmax,summary,alert):
     ##halfmax; float; half of 2-yr max rainfall, threshold for one day cumulative rainfall
     ##summary; dataframe; contains site codes with its corresponding one and three days cumulative sum, data source, alert level and advisory
     ##alert; array; alert summary container, r0 sites at alert[0], r1a sites at alert[1], r1b sites at alert[2],  nd sites at alert[3]
-
+    ##alert_df;array of tuples; alert summary container; format: (site,alert)
     one,three=onethree_val_writer(r)
     if one>=halfmax or three>=twoyrmax:
         ralert='r1'
@@ -148,18 +148,23 @@ def summary_writer(s,r,datasource,twoyrmax,halfmax,summary,alert):
         if one>=halfmax and three>=twoyrmax:
             alert[1].append(r+' ('+str(one)+')')
             alert[2].append(r+' ('+str(three)+')')
+            alert_df.append((r,'r1a, r1b'))
         elif one>=halfmax:
             alert[1].append(r+' ('+str(one)+')')
+            alert_df.append((r,'r1a'))
         else:
-            alert[2].append(r+' ('+str(three)+')')        
+            alert[2].append(r+' ('+str(three)+')')
+            alert_df.append((r,'r1b'))
     elif one==None or math.isnan(one):
         ralert='nd'
         advisory='---'
         alert[3].append(r)
+        alert_df.append((r,'nd'))
     else:
         ralert='r0'
         advisory='---'
         alert[0].append(r)
+        alert_df.append((r,'r0'))
     summary.loc[s]=[r,one,three,datasource,ralert,advisory]
             
 cfg = ConfigParser.ConfigParser()
@@ -233,6 +238,10 @@ summary = pd.DataFrame(index=index, columns=columns)
 
 #alert summary container, r0 sites at alert[0], r1a sites at alert[1], r1b sites at alert[2],  nd sites at alert[3]
 alert = [[],[],[],[]]
+alert_df = []
+
+#Set if JSON format will be printed
+set_json = False
 
 for s in range(len(rainprops)):    
     
@@ -276,7 +285,7 @@ for s in range(len(rainprops)):
                             
             ASTIplot(r,offsetstart,end,tsn)
             datasource="ASTI" + str(n) + " (Empty Rain Gauge Data)"
-            summary_writer(s,r,datasource,twoyrmax,halfmax,summary,alert)
+            summary_writer(s,r,datasource,twoyrmax,halfmax,summary,alert,alert_df)
                     
         else:
             plt.xticks(rotation=70, size=5)       
@@ -313,7 +322,7 @@ for s in range(len(rainprops)):
             plt.close()
             print rainfall[-1:]           
             datasource="SENSLOPE Rain Gauge"
-            summary_writer(s,r,datasource,twoyrmax,halfmax,summary,alert)
+            summary_writer(s,r,datasource,twoyrmax,halfmax,summary,alert,alert_df)
 
     except:
         try:
@@ -333,11 +342,11 @@ for s in range(len(rainprops)):
             
             ASTIplot(r,offsetstart,end,tsn)
             datasource="ASTI" + str(n) + " (No Rain Gauge Data)"
-            summary_writer(s,r,datasource,twoyrmax,halfmax,summary,alert)
+            summary_writer(s,r,datasource,twoyrmax,halfmax,summary,alert,alert_df)
             
         except:
             datasource="No Alert! No ASTI/SENSLOPE Data"
-            summary_writer(s,r,datasource,twoyrmax,halfmax,summary,alert)
+            summary_writer(s,r,datasource,twoyrmax,halfmax,summary,alert,alert_df)
             continue
 
 
@@ -352,6 +361,26 @@ with open (output_file_path+rainfallalert, 'wb') as t:
     t.write ('r0: ' + ','.join(sorted(alert[0])) + '\n')
     t.write ('r1a: ' + ','.join(sorted(alert[1])) + '\n')
     t.write ('r1b: ' + ','.join(sorted(alert[2])) + '\n')
+
+#Printing of alerts using JSON format
+if set_json:
+    #create data frame as for easy conversion to JSON format
+    
+    for i in range(len(alert_df)): alert_df[i] = (end,) + alert_df[i]
+    dfa = pd.DataFrame(alert_df,columns = ['timestamp','site','r alert'])
+    
+    #converting the data frame to JSON format
+    dfajson = dfa.to_json(orient="records",date_format='iso')
+    
+    #ensuring proper datetime format
+    i = 0
+    while i <= len(dfajson):
+        if dfajson[i:i+9] == 'timestamp':
+            dfajson = dfajson[:i] + dfajson[i:i+36].replace("T"," ").replace("Z","").replace(".000","") + dfajson[i+36:]
+            i += 1
+        else:
+            i += 1
+    print dfajson
 
 
 # Deleting old data files (more than 10 days)
