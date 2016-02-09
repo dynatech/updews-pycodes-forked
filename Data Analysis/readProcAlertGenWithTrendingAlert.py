@@ -682,7 +682,7 @@ for s in sensorlist:
     print alert_out
     
     try:
-        with open(ColAlerts_file_path+colname+'.csv', "ab") as col_alert:
+        with open(ColAlerts_file_path+colname+CSVFormat, "ab") as col_alert:
             current = pd.Series.tolist(alert_out.col_alert)
             current.insert(0, end.strftime(fmt))
             wr = csv.writer(col_alert, quoting=False)
@@ -691,18 +691,18 @@ for s in sensorlist:
         print "No column alert files for " + colname
   
     seen = set() # set for fast O(1) amortized lookup
-    for line in fileinput.FileInput(ColAlerts_file_path+colname+'.csv', inplace=1):
+    for line in fileinput.FileInput(ColAlerts_file_path+colname+CSVFormat, inplace=1):
         if line in seen: continue # skip duplicate
 
         seen.add(line)
         print line, # standard output is now redirected to the file  
 
-    #reads col alert/site.csv, takes data from last 3hrs only stored as 'calert' df
+    #reads col alert\site.csv, takes data from last 3hrs only stored as 'calert' df
     trend_node_headers = ['ts']
     for n in range(1,1+num_nodes):
         trend_node_headers.append(n)
         
-    calert = pd.read_csv((ColAlerts_file_path + colname + '.csv'), names=trend_node_headers)
+    calert = pd.read_csv((ColAlerts_file_path + colname + CSVFormat), names=trend_node_headers)
     calert['ts'] = pd.to_datetime(calert['ts'], format=fmt)
     calert = calert.set_index(pd.DatetimeIndex(calert['ts']))
     calert = calert.drop('ts', axis = 1)
@@ -728,11 +728,12 @@ for s in sensorlist:
         elif 'a0' in mode:
             mode = ['a0']
         else:
-            print "No node data for node " + n + " in" + colname
+            print "No node data for node " + str(n) + " in" + colname
         trending_node_alerts.extend(mode)
 
     # treinding node alert for working nodes
     working_node_alerts = []
+
     for n in working_nodes.get(colname):
         working_node_alerts += [trending_node_alerts[n-1]] 
         
@@ -740,13 +741,13 @@ for s in sensorlist:
     alert_out['trending_alert']=trending_node_alerts
     print alert_out
     
-    with open(TrendAlerts_file_path+colname+'.csv', "ab") as c:
+    with open(TrendAlerts_file_path+colname+CSVFormat, "ab") as c:
         trending_node_alerts.insert(0, end.strftime(fmt))
         wr = csv.writer(c, quoting=False)
         wr.writerows([trending_node_alerts])   
     
     seen = set() # set for fast O(1) amortized lookup
-    for line in fileinput.FileInput(TrendAlerts_file_path+colname+'.csv', inplace=1):
+    for line in fileinput.FileInput(TrendAlerts_file_path+colname+CSVFormat, inplace=1):
      if line in seen: continue # skip duplicate
 
      seen.add(line)
@@ -814,20 +815,20 @@ for s in sensorlist:
 #    #11. Plotting column positions
     plot_column_positions(colname,cs_x,cs_xz_0,cs_xy_0)
     plot_column_positions(colname,cs_x,cs_xz,cs_xy)
-    if colname == 'pugt':
-        v = end.strftime('%Y-%m-%d %H-%M')
-    else:
-        v = ''
-    plt.savefig(output_file_path+colname+' colpos '+v,
+#    if colname == 'pugt':
+#        v = end.strftime('%Y-%m-%d %H-%M')
+#    else:
+#        v = ''
+    plt.savefig(output_file_path+colname+' colpos ',
                 dpi=320, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
 #
     #12. Plotting displacement and velocity
     plot_disp_vel(colname, xz_0off,xy_0off, vel_xz_0off, vel_xy_0off)
-    if colname == 'pugt':
-        v = end.strftime('%Y-%m-%d %H-%M')
-    else:
-        v = ''
-    plt.savefig(output_file_path+colname+' disp_vel '+v,
+#    if colname == 'pugt':
+#        v = end.strftime('%Y-%m-%d %H-%M')
+#    else:
+#        v = ''
+    plt.savefig(output_file_path+colname+' disp_vel ',
                 dpi=320, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
 
     plt.close()
@@ -922,7 +923,7 @@ if len(a0_alert) != 0 or len(a1_alert) != 0 or len(a2_alert) != 0:
 # creates list of site with no data for 7 consecutive times
 with open(output_file_path + ND7x, 'ab') as ND7x:
     try:
-        NDlog = pd.read_csv(output_file_path + "NDlog.csv", names = ['ts', 'R or A or D', 'description', 'responder'], parse_dates = 'ts', index_col = 'ts')
+        NDlog = pd.read_csv(output_file_path + NDlog, names = ['ts', 'R or A or D', 'description', 'responder'], parse_dates = 'ts', index_col = 'ts')
         NDlog = NDlog[(NDlog.index>=end-timedelta(hours=3))]
         if len(NDlog.loc[NDlog['R or A or D']=='R']) != 0 and len(NDlog.loc[NDlog['R or A or D']=='D']) < 7:
             ND7x.write('')
