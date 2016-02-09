@@ -591,6 +591,10 @@ alert_file_length=cfg.getint('I/O','alert_time_int') # in days
 # Uncomment if you want to update proc_monitoring CSVs
 genproc.generate_proc()
 
+#Set as true if printing by JSON would be done
+set_json = False
+
+
 # setting monitoring window
 roll_window_numpts, end, start, offsetstart, monwin = set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_window_ops)
 
@@ -599,6 +603,7 @@ nd_alert=[]
 a0_alert=[]
 a1_alert=[]
 a2_alert=[]
+alert_df = []
 alert_list=[a2_alert,a1_alert,a0_alert,nd_alert]
 alert_names=['a2: ','a1: ','a0: ','ND: ']
 
@@ -758,23 +763,29 @@ for s in sensorlist:
         if working_node_alerts.count('a2') != 0:
             t.write (colname + ":" + 'a2' + '\n')
             a2_alert.append(colname)
+            alert_df.append((end,colname,'a2'))                
         elif working_node_alerts.count('a1') != 0:
             t.write (colname + ":" + 'a1' + '\n')
             a1_alert.append(colname)
+            alert_df.append((end,colname,'a1'))
         elif (colname == 'sinb') or (colname == 'blcb'):
             if working_node_alerts.count('a0') > 0:
                 t.write (colname + ":" + 'a0' + '\n')
                 a0_alert.append(colname)
+                alert_df.append((end,colname,'a0'))
             else:
                 t.write (colname + ":" + 'nd' + '\n')
                 nd_alert.append(colname)
+                alert_df.append((end,colname,'nd'))
         else:
             working_node_alerts_count = Counter(working_node_alerts)  
             t.write (colname + ":" + (working_node_alerts_count.most_common(1)[0][0]) + '\n')
             if (working_node_alerts_count.most_common(1)[0][0] == 'a0'):
                 a0_alert.append(colname)
+                alert_df.append((end,colname,'a0'))
             else:
                 nd_alert.append(colname)
+                alert_df.append((end,colname,'nd'))
 #        
         if len(calert.index)<7:
             print 'Trending alert note: less than 6 data points for ' + colname
@@ -959,3 +970,22 @@ with open(output_file_path + ND7x, 'ab') as ND7x:
 end_time = datetime.now() - start_time
 with open (output_file_path+timer, 'ab') as p:
     p.write (start_time.strftime(fmt) + ": " + str(end_time) + '\n')
+    
+#Printing of JSON format:
+if set_json:
+#create data frame for easy JSON format printing
+    dfa = pd.DataFrame(alert_df,columns = ['timestamp','site','s alert'])
+
+#convert data frame to JSON format
+    dfajson = dfa.to_json(orient="records",date_format='iso')
+#ensuring proper datetime format
+    i = 0
+    while i <= len(dfajson):
+        if dfajson[i:i+9] == 'timestamp':
+            dfajson = dfajson[:i] + dfajson[i:i+36].replace("T"," ").replace("Z","").replace(".000","") + dfajson[i+36:]
+            i += 1
+        else:
+            i += 1
+    print dfajson
+
+
