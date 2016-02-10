@@ -23,9 +23,21 @@ output_file_path = cfg.get('I/O','OutputFilePath')
 #file names
 eqsummary = cfg.get('I/O', 'eqsummary')
 
+#Set True for JSON printing
+set_json = True
+
+
 dataset =[None]*6
 end = datetime.now().replace(microsecond=0)
 end
+
+#Get the sensor list and initialize the JSON df container
+alert_df = {}
+sensorlist = q.GetSensorList()
+for s in sensorlist:
+    alert_df.update({s.name:'e0'})
+
+
 try:
     #url = 'not a url'    
     url = 'http://www.phivolcs.dost.gov.ph/html/update_SOEPD/EQLatest.html'
@@ -113,6 +125,7 @@ try:
                                       
                        if d <= critdist:
                            z.write( colname + "(" + str(d) + ' km away)' + '\n')
+                           alert_df.update({colname:'e1'})
                            cnt+=1
                            
                     if cnt==0: 
@@ -132,4 +145,27 @@ except IOError:
         z.write('SOEPD site: http://www.phivolcs.dost.gov.ph/html/update_SOEPD/EQLatest.html')
         
 print 'eqsummary done'
+
+#Printinf of JSON Format
+if set_json:
+    #create data frame as for easy conversion to JSON format
+    alert_df = sorted(alert_df.items())
+    for i in range(len(alert_df)): alert_df[i] = (end,) + alert_df[i]
+    
+    dfa = pd.DataFrame(alert_df,columns = ['timestamp','site','eq alert'])
+    
+    #converting the data frame to JSON format
+    dfajson = dfa.to_json(orient="records",date_format='iso')
+    
+    #ensuring proper datetime format
+    i = 0
+    while i <= len(dfajson):
+        if dfajson[i:i+9] == 'timestamp':
+            dfajson = dfajson[:i] + dfajson[i:i+36].replace("T"," ").replace("Z","").replace(".000","") + dfajson[i+36:]
+            i += 1
+        else:
+            i += 1
+    print dfajson
+
+
     
