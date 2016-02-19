@@ -124,18 +124,19 @@ try:
                        d= 6371 * c
                                       
                        if d <= critdist:
-                           z.write( colname + "(" + str(d) + ' km away)' + '\n')
+                           z.write( colname + ': E1' + '\n')
                            alert_df.update({colname:'e1'})
                            cnt+=1
                            
                     if cnt==0: 
-                        z.write( '-no sites affected' + '\n')
+                        z.write( 'all sites E0' + '\n')
                 
             elif mag<4:
-                z.write('-no significant (magnitude > 4) earthquake detected.')
+                z.write('all sites E0')
                     
         else:
-           z.write('-last earthquake out of time range. last earthquake was at ' + str(ts)+', ' + rel)
+           z.write('all sites E0')
+#           z.write('-last earthquake out of time range. last earthquake was at ' + str(ts)+', ' + rel)
            
 except IOError:
     end = datetime.now().replace(microsecond=0)

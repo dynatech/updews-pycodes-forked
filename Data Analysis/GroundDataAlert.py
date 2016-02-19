@@ -18,6 +18,7 @@ import alertEvaluation as alert
 
 #Step 0: Specify mode of output, mode = 1: txt1; mode = 2 txt 2; mode = 3 json
 mode = 1
+output_file_path = cfg.get('I/O','OutputFilePath')
 
 #Set the date of the report as the current date rounded to HH:30 or HH:00
 end=datetime.now()
@@ -153,14 +154,17 @@ for cur_site in sitelist:
         site_eval.append(feature_alert)
         
     #Evaluate site alert based on crack alerts
-    if 'L2' in site_eval:
-        ground_data_alert.update({cur_site:'L2'})
-    elif 'L1' in site_eval:
-        ground_data_alert.update({cur_site:'L1'})
-    elif 'L0p' in site_eval:
-        ground_data_alert.update({cur_site:'L0p'})
+    if end - last_data_time > np.timedelta64(4, 'h'):
+        ground_data_alert.update({cur_site:'ND'})
     else:
-        ground_data_alert.update({cur_site:'L0'})
+        if 'L2' in site_eval:
+            ground_data_alert.update({cur_site:'L2'})
+        elif 'L1' in site_eval:
+            ground_data_alert.update({cur_site:'L1'})
+        elif 'L0p' in site_eval:
+            ground_data_alert.update({cur_site:'L0p'})
+        else:
+            ground_data_alert.update({cur_site:'L0'})
     
     #change dict format to tuple for more easy output writing
     ground_alert_release = sorted(ground_data_alert.items())
@@ -172,6 +176,13 @@ if mode == 1:
     for site, galert in ground_alert_release:
         print "{:5}: {:5}; {}".format(site,galert,measurement_dates[i])
         i += 1
+    with open (output_file_path+'groundalert.txt', 'wb') as t:
+        i = 0
+        t.write("Ground measurement report as of {}".format(end)+'\n')
+        for site, galert in ground_alert_release:
+            t.write ("{:5}: {:5}; {}".format(site,galert,measurement_dates[i])+'\n')
+            i += 1
+
 #if mode == 2:
 #    print "As of {}".format(end)
 #    ground_data_alert2 = {}
