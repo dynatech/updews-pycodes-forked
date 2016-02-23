@@ -47,6 +47,22 @@ def PrintOut(line):
     if printtostdout:
         print line
 
+#Check if table exists
+#   Returns true if table exists
+def DoesTableExist(table_name):
+    db, cur = SenslopeDBConnect(Namedb)
+    cur.execute("use "+ Namedb)
+    cur.execute("SHOW TABLES LIKE '%s'" %table_name)
+
+    if cur.rowcount > 0:
+        db.close()
+        return True
+    else:
+        db.close()
+        return False
+
+    
+
 def GetLatestTimestamp(nameDb, table):
     db = MySQLdb.connect(host = Hostdb, user = Userdb, passwd = Passdb)
     cur = db.cursor()
@@ -55,6 +71,22 @@ def GetLatestTimestamp(nameDb, table):
         cur.execute("select max(timestamp) from %s.%s" %(nameDb,table))
     except:
         print "Error in getting maximum timstamp"
+
+    a = cur.fetchall()
+    if a:
+        return a[0][0]
+    else: 
+        return ''
+        
+def GetLatestTimestamp2(table_name):
+    db, cur = SenslopeDBConnect(Namedb)
+    cur.execute("use "+ Namedb)
+    cur.execute("SHOW TABLES LIKE '%s'" %table_name)    
+
+    try:
+        cur.execute("SELECT max(timestamp) FROM %s" %(table_name))
+    except:
+        print "Error in getting maximum timestamp"
 
     a = cur.fetchall()
     if a:
@@ -101,6 +133,11 @@ def GetDBResultset(query):
     else:
         return ""
         
+#execute query without expecting a return
+#used different name
+def ExecuteQuery(query):
+    GetDBResultset(query)
+        
 #GetDBDataFrame(query): queries a specific sensor data table and returns it as
 #    a python dataframe format
 #    Parameters:
@@ -110,7 +147,6 @@ def GetDBResultset(query):
 #        df: dataframe object
 #            dataframe object of the result set
 def GetDBDataFrame(query):
-    a = ''
     try:
         db, cur = SenslopeDBConnect(Namedb)
         df = psql.read_sql(query, db)
@@ -123,6 +159,14 @@ def GetDBDataFrame(query):
     except KeyboardInterrupt:
         PrintOut("Exception detected in accessing database")
         
+#Push a dataframe object into a table
+def PushDBDataFrame(df,table_name):     
+    db, cur = SenslopeDBConnect(Namedb)
+    #con = MySQLdb.connect(host = Hostdb, user = Userdb, passwd = Passdb, db=Namedb)
+    
+    df.to_sql(con=db, name=table_name, if_exists='append', flavor='mysql')
+    db.commit()
+    db.close()
 
 #GetRawAccelData(siteid = "", fromTime = "", maxnode = 40): 
 #    retrieves raw data from the database table specified by parameters
@@ -311,6 +355,35 @@ def GetRainList():
             sensors.append(s)
             
         return sensors
+    except:
+        raise ValueError('Could not get sensor list from database')
+
+#GetRainNOAHList():
+#    returns an array of NOAH rain gauge IDs from the database tables
+def GetRainNOAHList():
+    try:
+        db, cur = SenslopeDBConnect(Namedb)
+        cur.execute("use "+ Namedb)
+        
+        query = 'SELECT DISTINCT LEFT(name,3) as name, rain_noah, rain_noah2, rain_noah3 FROM site_rain_props'
+        
+        df = psql.read_sql(query, db)
+
+        noahlist = []
+        for idx in df.index:
+            noah1 = df.ix[idx]['rain_noah']
+            noah2 = df.ix[idx]['rain_noah2']
+            noah3 = df.ix[idx]['rain_noah3']
+            
+            if np.isnan(noah1) == False:
+                noahlist.append(int(noah1))
+            if np.isnan(noah2) == False:
+                noahlist.append(int(noah2))
+            if np.isnan(noah3) == False:
+                noahlist.append(int(noah3))        
+        
+        return noahlist
+
     except:
         raise ValueError('Could not get sensor list from database')
 
