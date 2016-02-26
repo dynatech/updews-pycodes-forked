@@ -156,6 +156,7 @@ def summary_writer(s,r,datasource,twoyrmax,halfmax,summary,alert,alert_df):
             alert[2].append(r+' ('+str(three)+')')
             alert_df.append((r,'r1b'))
     elif one==None or math.isnan(one):
+#        datasource="No Alert! No ASTI/SENSLOPE Data"
         ralert='nd'
         advisory='---'
         alert[3].append(r)
@@ -209,6 +210,8 @@ T_velA2 = cfg.getfloat('I/O','T_velA2')  #m/day
 k_ac_ax = cfg.getfloat('I/O','k_ac_ax')
 num_nodes_to_check = cfg.getint('I/O','num_nodes_to_check')
 
+PrintPlot = cfg.get('I/O','PrintPlot')
+
 
 
 #1. setting monitoring window
@@ -251,7 +254,7 @@ for s in range(len(rainprops)):
     halfmax=twoyrmax/2
     print r
     
-#    if r != 'cudtaw': continue    
+#    if r != 'baytcw': continue    
     
     try:
         print "Generating Rainfall plots for "+r+" from rain gauge data"
@@ -270,6 +273,7 @@ for s in range(len(rainprops)):
         print rainfall
         
         rain_timecheck=rainfall[(rainfall.index>=end-timedelta(days=1))]
+        
         if len(rain_timecheck.dropna())<1:
             print "No data within desired window"
             print "Generating Rainfall ASTI plots for "+r+" due to lack of rain gauge data within desired window"
@@ -285,44 +289,45 @@ for s in range(len(rainprops)):
                     if end - latest_ts < timedelta(hours=0.5):
                         break
                 
-                            
-            ASTIplot(r,offsetstart,end,tsn)
+            if PrintPlot:                
+                ASTIplot(r,offsetstart,end,tsn)
             datasource="ASTI" + str(n) + " (Empty Rain Gauge Data)"
             summary_writer(s,r,datasource,twoyrmax,halfmax,summary,alert,alert_df)
                     
         else:
-            plt.xticks(rotation=70, size=5)       
-            
-            #getting the rolling sum for the last24 hours
-            rainfall2=pd.rolling_sum(rainfall,96,min_periods=1)
-            rainfall2=np.round(rainfall2,4)
-            rainfall2.to_csv(CumSum_file_path+r+' 1d'+CSVFormat,sep=',',mode='w')
-            
-            #getting the rolling sum for the last 3 days
-            rainfall3=pd.rolling_sum(rainfall,288,min_periods=1)
-            rainfall3=np.round(rainfall3,4)
-            rainfall3.to_csv(CumSum_file_path+r+' 3d'+CSVFormat,sep=',',mode='w')
-            
-            #assigning the thresholds to their own columns for plotting 
-            sub=base
-            sub['maxhalf'] = halfmax  
-            sub['max'] = twoyrmax
-    
-            #assigning df to plot variables (to avoid caveats ? expressed from Spyder)
-            plot1=rainfall              # instantaneous rainfall data
-            plot2=rainfall2             # 24-hr cumulative rainfall
-            plot3=rainfall3             # 72-hr cumulative rainfall
-            plot4=sub['maxhalf']        # half of 2-yr max rainfall
-            plot5=sub['max']            # 2-yr max rainfall
-    
-            plt.plot(plot1.index,plot1,color='#db4429') # instantaneous rainfall data
-            plt.plot(plot2.index,plot2,color='#5ac126') # 24-hr cumulative rainfall
-            plt.plot(plot3.index,plot3,color="#0d90d0") # 72-hr cumulative rainfall
-            plt.plot(plot4.index,plot4,color="#fbb714") # half of 2-yr max rainfall
-            plt.plot(plot5.index,plot5,color="#963bd6")  # 2-yr max rainfall
-            plt.savefig(RainfallPlotsPath+tsn+" "+r, dpi=320, 
-                facecolor='w', edgecolor='w',orientation='landscape',mode='w')
-            plt.close()
+            if PrintPlot:
+                plt.xticks(rotation=70, size=5)       
+                
+                #getting the rolling sum for the last24 hours
+                rainfall2=pd.rolling_sum(rainfall,96,min_periods=1)
+                rainfall2=np.round(rainfall2,4)
+                rainfall2.to_csv(CumSum_file_path+r+' 1d'+CSVFormat,sep=',',mode='w')
+                
+                #getting the rolling sum for the last 3 days
+                rainfall3=pd.rolling_sum(rainfall,288,min_periods=1)
+                rainfall3=np.round(rainfall3,4)
+                rainfall3.to_csv(CumSum_file_path+r+' 3d'+CSVFormat,sep=',',mode='w')
+                
+                #assigning the thresholds to their own columns for plotting 
+                sub=base
+                sub['maxhalf'] = halfmax  
+                sub['max'] = twoyrmax
+        
+                #assigning df to plot variables (to avoid caveats ? expressed from Spyder)
+                plot1=rainfall              # instantaneous rainfall data
+                plot2=rainfall2             # 24-hr cumulative rainfall
+                plot3=rainfall3             # 72-hr cumulative rainfall
+                plot4=sub['maxhalf']        # half of 2-yr max rainfall
+                plot5=sub['max']            # 2-yr max rainfall
+        
+                plt.plot(plot1.index,plot1,color='#db4429') # instantaneous rainfall data
+                plt.plot(plot2.index,plot2,color='#5ac126') # 24-hr cumulative rainfall
+                plt.plot(plot3.index,plot3,color="#0d90d0") # 72-hr cumulative rainfall
+                plt.plot(plot4.index,plot4,color="#fbb714") # half of 2-yr max rainfall
+                plt.plot(plot5.index,plot5,color="#963bd6")  # 2-yr max rainfall
+                plt.savefig(RainfallPlotsPath+tsn+" "+r, dpi=320, 
+                    facecolor='w', edgecolor='w',orientation='landscape',mode='w')
+                plt.close()
             print rainfall[-1:]           
             datasource="SENSLOPE Rain Gauge"
             summary_writer(s,r,datasource,twoyrmax,halfmax,summary,alert,alert_df)
@@ -343,7 +348,8 @@ for s in range(len(rainprops)):
                     if end - latest_ts < timedelta(hours=0.5):
                         break
             
-            ASTIplot(r,offsetstart,end,tsn)
+            if PrintPlot:            
+                ASTIplot(r,offsetstart,end,tsn)
             datasource="ASTI" + str(n) + " (No Rain Gauge Data)"
             summary_writer(s,r,datasource,twoyrmax,halfmax,summary,alert,alert_df)
             

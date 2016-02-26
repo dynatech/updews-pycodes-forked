@@ -33,4 +33,5 @@ rt_window_length=10.		;length of real-time monitoring window, in days
 roll_window_length=3.		;length of rolling/moving window operations in hours
 num_roll_window_ops=2		;number of rolling window operations in the whole monitoring analysis
 col_pos_interval='1D'    	; string expression indicating interval between two adjacent column position dates ex: '1D'= 1 day
-num_col_pos=20	         	; number of column position dates to plot 
+num_col_pos=20	         	; number of column position dates to plot
+PrintPlot = True

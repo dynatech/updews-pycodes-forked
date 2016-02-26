@@ -14,7 +14,7 @@ ASTIpath = cfg.get('I/O', 'ASTIpath')
 CSVFormat = cfg.get('I/O', 'CSVFormat')
 
 ## This will download CSV files that contain 14 days worth of data
-#def getrain(site, gauge_num, rain_noah):
+#def getrain(site, gauge_num, rain_noah, offsetstart):
 #    
 #    if not math.isnan(rain_noah):
 #        rain_noah = int(rain_noah)
