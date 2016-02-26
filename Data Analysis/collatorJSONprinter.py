@@ -79,7 +79,10 @@ with open (output_file_path+rainfallalert) as rainalert:
     alerts['Lpa'] = alerts.pop('Lpt')
     alerts['Messb'] = alerts['Nin']
     alerts['Mesta'] = alerts['Nin']
-    del alerts['']
+    try:
+        del alerts['']
+    except:
+        pass
         
 #Step 2: Collect eq alerts
 with open (output_file_path+eqsummary) as eqalert:
