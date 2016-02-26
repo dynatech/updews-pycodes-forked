@@ -32,7 +32,7 @@ def getrain(site, gauge_num, rain_noah, offsetstart):
 
     db, cur = SenslopeDBConnect(Namedb)
     
-    query = "select timestamp,cumm from senslopedb.rain_noah_%s" % str(rain_noah)
+    query = "select timestamp,rval from senslopedb.rain_noah_%s" % str(rain_noah)
     query = query + " where timestamp >= timestamp('%s')" % offsetstart
     query = query + " order by timestamp desc"
     df =  GetDBDataFrame(query)
