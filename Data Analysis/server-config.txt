@@ -62,6 +62,7 @@ webtrends = webtrends.csv
 textalert = textalert.txt
 textalert2 = textalert2.txt
 rainfallalert = rainfallalert.txt
+groundalert = groundalert.txt
 allalerts = all_alerts.txt
 timer = timer.txt
 NDlog = NDlog.csv
