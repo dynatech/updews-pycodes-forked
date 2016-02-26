@@ -214,6 +214,8 @@ num_nodes_to_check = cfg.getint('I/O','num_nodes_to_check')
 #1. setting monitoring window
 roll_window_numpts, end, start, offsetstart, monwin = set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_window_ops)
 
+#offsetstart = offsetstart - timedelta(100)
+
 start_time = end - timedelta(days=3)
 
 index = pd.date_range(end-timedelta(10), periods=11, freq='D')
@@ -249,7 +251,7 @@ for s in range(len(rainprops)):
     halfmax=twoyrmax/2
     print r
     
-#    if r != 'agbtaw': continue    
+#    if r != 'cudtaw': continue    
     
     try:
         print "Generating Rainfall plots for "+r+" from rain gauge data"
@@ -276,12 +278,13 @@ for s in range(len(rainprops)):
                     rain_noah = rainprops['rain_noah'].values[s]
                 else:
                     rain_noah = rainprops['rain_noah'+str(n)].values[s]
-                rd.getrain(r, n, rain_noah)
+                rd.getrain(r, n, rain_noah, offsetstart)
                 if os.stat(ASTIpath+r+CSVFormat).st_size != 0:
                     a = pd.read_csv(ASTIpath+r+CSVFormat,parse_dates='timestamp', names=['timestamp','rain'])
                     latest_ts = pd.to_datetime(a[0:1]['timestamp'].values[0])
                     if end - latest_ts < timedelta(hours=0.5):
                         break
+                
                             
             ASTIplot(r,offsetstart,end,tsn)
             datasource="ASTI" + str(n) + " (Empty Rain Gauge Data)"
@@ -333,7 +336,7 @@ for s in range(len(rainprops)):
                     rain_noah = rainprops['rain_noah'].values[s]
                 else:
                     rain_noah = rainprops['rain_noah'+str(n)].values[s]
-                rd.getrain(r, n, rain_noah)
+                rd.getrain(r, n, rain_noah, offsetstart)
                 if os.stat(ASTIpath+r+CSVFormat).st_size != 0:
                     a = pd.read_csv(ASTIpath+r+CSVFormat,parse_dates='timestamp', names=['timestamp','rain'])
                     latest_ts = pd.to_datetime(a[0:1]['timestamp'].values[0])
