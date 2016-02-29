@@ -22,7 +22,11 @@ import querySenslopeDb as qs
     
 #download the NOAH Rainfall data directly from ASTI
 def downloadRainfallNOAH(rsite, fdate, tdate):   
-    url = "http://weather.asti.dost.gov.ph/home/index.php/api/data/%s/from/%s/to/%s" % (rsite,fdate,tdate)
+    #Reduce latestTS by 1 day as a work around for NOAH's API of returning data
+    #   that starts from 8am
+    fdateMinus = (pd.to_datetime(fdate) - td(1)).strftime("%Y-%m-%d")
+    
+    url = "http://weather.asti.dost.gov.ph/home/index.php/api/data/%s/from/%s/to/%s" % (rsite,fdateMinus,tdate)
     r = requests.get(url)
 
     try:
@@ -41,8 +45,15 @@ def downloadRainfallNOAH(rsite, fdate, tdate):
         dfa = dfa.fillna(0)
         dfa = dfa[96:]
         
+        #drop the dataframe duplicates
+        dfa = dfa.drop_duplicates()        
+        
+        #remove the entries that are less than or equal to fdate
+        dfa = dfa[dfa.index > fdate]            
+        
         #rename the "index" into "timestamp"
         dfa.index.names = ["timestamp"]
+        
         return dfa
         
     except:
@@ -75,14 +86,17 @@ def updateRainfallNOAHTableData(rsite, fdate, tdate):
         #The table is already up to date
         if tdate > curTS:
             return 
-        
-        #Insert an entry with values: [timestamp,-1,-1] as a marker
-        #   for the next time it is used
-        #   note: values with -1 should not be included in values used for computation
-        placeHolderData = pd.DataFrame({"timestamp": tdate+" 00:00:00","cumm":-1,"rval":-1}, index=[0])
-        placeHolderData = placeHolderData.set_index(['timestamp'])
-        #print placeHolderData
-        qs.PushDBDataFrame(placeHolderData, table_name) 
+        else:
+            #Insert an entry with values: [timestamp,-1,-1] as a marker
+            #   for the next time it is used
+            #   note: values with -1 should not be included in values used for computation
+            placeHolderData = pd.DataFrame({"timestamp": tdate+" 00:00:00","cumm":-1,"rval":-1}, index=[0])
+            placeHolderData = placeHolderData.set_index(['timestamp'])
+            #print placeHolderData
+            qs.PushDBDataFrame(placeHolderData, table_name) 
+            
+            #call this function again until the maximum recent timestamp is hit        
+            updateNOAHSingleTable(rsite)
 
     else:        
         #Insert the new data on the noahid table
@@ -150,13 +164,13 @@ def updateNOAHSingleTable(noahid):
     
     if (latestTS == '') or (latestTS == None):
         #assign a starting date if table is currently empty
-        latestTS = "2014-01-01"
+        latestTS = "2014-01-01 00:00:00"
     else:
-        latestTS = latestTS.strftime("%Y-%m-%d")
+        latestTS = latestTS.strftime("%Y-%m-%d %H:%M:%S")
     
     print "    Start timestamp: " + latestTS
     
-    #Generate start end time    
+    #Generate end time    
     endTS = (pd.to_datetime(latestTS) + td(50)).strftime("%Y-%m-%d")
     print "    End timestamp: %s" % (endTS)
     
@@ -172,3 +186,4 @@ def updateNOAHTables():
         updateNOAHSingleTable(noahid)
 
 #updateNOAHTables()
+#updateNOAHSingleTable(813)

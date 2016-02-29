@@ -162,11 +162,14 @@ def GetDBDataFrame(query):
 #Push a dataframe object into a table
 def PushDBDataFrame(df,table_name):     
     db, cur = SenslopeDBConnect(Namedb)
-    #con = MySQLdb.connect(host = Hostdb, user = Userdb, passwd = Passdb, db=Namedb)
     
+    #drop the dataframe duplicates
+    df = df.drop_duplicates()
+
     df.to_sql(con=db, name=table_name, if_exists='append', flavor='mysql')
     db.commit()
     db.close()
+
 
 #GetRawAccelData(siteid = "", fromTime = "", maxnode = 40): 
 #    retrieves raw data from the database table specified by parameters
