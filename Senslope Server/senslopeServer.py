@@ -124,6 +124,12 @@ def ProcTwoAccelColData(msg,sender,txtdatetime):
    
     datastr = msgsplit[2]
     
+    #check for error from marirong sites
+    if len(datastr) == 136:
+        if (datastr[72] == 'A'):
+            datastr = datastr[:71] + datastr[72:]
+            print ">> datastr adjustment"
+    
     ts = msgsplit[3]
   
     if datastr == '':
@@ -544,6 +550,7 @@ def ProcessStats(line,txtdatetime):
     print 'End of Process status data'
     
 def SendAlertEmail(network, serverstate):
+    print "\n\n>> Attemptint to send routine emails.."
     sender = '1234dummymailer@gmail.com'
     sender_password = '1234dummy'
     receiver =['ggilbertluis@gmail.com', 'dynabeta@gmail.com']
@@ -560,6 +567,7 @@ def SendAlertEmail(network, serverstate):
         active_message = '\nGood Day!\n\nYou received this email because ' + network + ' SERVER is now INACTIVE!\\nPlease fix me.\nThanks!\n\n-' + network + ' Server\n'
 	
     emailer.sendmessage(sender,sender_password,receiver,sender,subject,active_message)
+    print ">> Sending email done.."
     
 def SendAlertGsm(network):
     try:
@@ -567,7 +575,7 @@ def SendAlertGsm(network):
             numlist = globenumbers.split(",")
         else:
             numlist = smartnumbers.split(",")
-        f = open("D:\\Server Files\\Consolidated\\DYNA\\all_alerts.txt",'r')
+        f = open(allalertsfile,'r')
         alllines = f.read()
         f.close()
         for n in numlist:
@@ -645,7 +653,7 @@ def RunSenslopeServer(network):
                 if msg.data.find("DUE*") >0:
                    msg.data = PreProcessColumnV1(msg.data)
                    ProcessColumn(msg.data,msg.dt,msg.simnum)
-                elif re.search("(R(((O|0)*U*)|(U*(O|0)*))T*[(I|1|L)E]*N*(E|3)* )|((E|3)(V|B)*(E|3)*(N|M)*(T|\+)* )", msg.data.upper()):
+                elif re.search("(RO*U*TI*N*E )|(EVE*NT )", msg.data.upper()):
                     try:
                         gm,w = getGndMeas(msg.data)
                         RecordGroundMeasurements(gm)
@@ -655,16 +663,16 @@ def RunSenslopeServer(network):
                         print ">> Error in manual ground measurement SMS"
                         sendMsg(str(e), msg.simnum)
                     finally:
-                        f = open(smsgndfile, 'a')
-                        f.write(msg.dt+',')
-                        f.write(msg.simnum+',')
-                        f.write(msg.data+'\n')
-                        f.close()
+                        g = open(smsgndfile, 'a')
+                        g.write(msg.dt+',')
+                        g.write(msg.simnum+',')
+                        g.write(msg.data+'\n')
+                        g.close()
                 elif re.findall('[^A-Zabcyx0-9\*\+\.\/\,\:\#-]',msg.data):
                     print ">> Error: Unexpected characters/s detected in ", msg.data
                     f = open(unexpectedchardir+network+'Nonalphanumeric_errorlog.txt','a')
                     f.write(msg.dt + ',' + msg.simnum + ',' + msg.data+ '\n')
-                    f.close
+                    f.close()
                 elif len(msg.data.split("*")[0]) == 5:
                     try:
                         dlist = ProcTwoAccelColData(msg.data,msg.simnum,msg.dt)
@@ -696,25 +704,25 @@ def RunSenslopeServer(network):
                     print 'NUM: ' , msg.simnum
                     print 'MSG: ' , msg.data
                     
-                msgname = checkNameOfNumber(msg.simnum)
+                msgname = checkNameOfNumber(msg.simnum) 
                 if msgname:
                     updateLastMsgReceivedTable(msg.dt,msgname,msg.simnum,msg.data)
                     
                     if SaveToFile:
-                        dir = inboxdir+msgname
+                        dir = inboxdir+msgname + "\\"
                         if not os.path.exists(dir):
                             os.makedirs(dir)
-                        f = open(dir+'\\'+msgname+'-backup.txt','a')
-                        f.write(msg.dt+',')
-                        f.write(msg.data+'\n')
-                        f.close()
+                        inbox = open(dir+msgname+'-backup.txt','a')
+                        inbox.write(msg.dt+',')
+                        inbox.write(msg.data+'\n')
+                        inbox.close()
                         
                 else:
-                    f = open(unknownsenderfile,'a')
-                    f.write(msg.dt+',')
-                    f.write(msg.simnum+',')
-                    f.write(msg.data+'\n')
-                    f.close()
+                    unk = open(unknownsenderfile,'a')
+                    unk.write(msg.dt+',')
+                    unk.write(msg.simnum+',')
+                    unk.write(msg.data+'\n')
+                    unk.close()
                         
                 if DeleteAfterRead and not FileInput:
                     print 'Deleting message...'

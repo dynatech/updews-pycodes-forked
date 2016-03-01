@@ -24,7 +24,7 @@ def getGndMeas(text):
   sms_time = ""
   records = []
   
-  # check measearement type
+  # check measurement type
   if sms_list[0][0] == 'R':
     meas_type = "ROUTINE"
   else:
@@ -57,7 +57,7 @@ def getGndMeas(text):
     raise ValueError(failtimeen)
   
   # get all the measurement pairs
-  meas_pattern = "[A-Z] \d{1,3}\.*\d{0,2}C*M*"
+  meas_pattern = "[A-Z] \d{1,3}\.*\d{0,2}C*M"
   meas = re.findall(meas_pattern,cleanText)
   # create records list
   if meas:
