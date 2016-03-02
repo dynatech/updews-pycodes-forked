@@ -24,7 +24,8 @@ import querySenslopeDb as qs
 def downloadRainfallNOAH(rsite, fdate, tdate):   
     #Reduce latestTS by 1 day as a work around for NOAH's API of returning data
     #   that starts from 8am
-    fdateMinus = (pd.to_datetime(fdate) - td(1)).strftime("%Y-%m-%d")
+    #Reduce by another 1 day due to the "rolling_sum" function
+    fdateMinus = (pd.to_datetime(fdate) - td(2)).strftime("%Y-%m-%d")
     
     url = "http://weather.asti.dost.gov.ph/home/index.php/api/data/%s/from/%s/to/%s" % (rsite,fdateMinus,tdate)
     r = requests.get(url)
@@ -45,11 +46,11 @@ def downloadRainfallNOAH(rsite, fdate, tdate):
         dfa = dfa.fillna(0)
         dfa = dfa[96:]
         
-        #drop the dataframe duplicates
-        dfa = dfa.drop_duplicates()        
-        
         #remove the entries that are less than or equal to fdate
         dfa = dfa[dfa.index > fdate]            
+        
+        #set "cumm" values to 0 if it is smaller than 0.1
+        dfa.cumm[(dfa.cumm < 0.1) & (dfa.cumm > 0)] = 0
         
         #rename the "index" into "timestamp"
         dfa.index.names = ["timestamp"]
@@ -186,4 +187,4 @@ def updateNOAHTables():
         updateNOAHSingleTable(noahid)
 
 #updateNOAHTables()
-#updateNOAHSingleTable(813)
+#updateNOAHSingleTable(550)

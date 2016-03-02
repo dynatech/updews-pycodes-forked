@@ -162,9 +162,6 @@ def GetDBDataFrame(query):
 #Push a dataframe object into a table
 def PushDBDataFrame(df,table_name):     
     db, cur = SenslopeDBConnect(Namedb)
-    
-    #drop the dataframe duplicates
-    df = df.drop_duplicates()
 
     df.to_sql(con=db, name=table_name, if_exists='append', flavor='mysql')
     db.commit()
