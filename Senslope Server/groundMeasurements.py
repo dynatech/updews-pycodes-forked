@@ -57,7 +57,7 @@ def getGndMeas(text):
     raise ValueError(failtimeen)
   
   # get all the measurement pairs
-  meas_pattern = "[A-Z] \d{1,3}\.*\d{0,2}C*M"
+  meas_pattern = "[A-Z] \d{1,3}\.*\d{0,2}C*M*"
   meas = re.findall(meas_pattern,cleanText)
   # create records list
   if meas:
@@ -82,10 +82,10 @@ def getGndMeas(text):
     crid = m.split(" ")[0]
     cm = m.split(" ")[1]
     try:
-      re.search("\dM",cm).group(0)
-      cm = float(re.search("\d{1,3}\.*\d{0,2}",cm).group(0))*100.0
-    except AttributeError:
+      re.search("\dCM",cm).group(0)
       cm = float(re.search("\d{1,3}\.*\d{0,2}",cm).group(0))
+    except AttributeError:
+      cm = float(re.search("\d{1,3}\.*\d{0,2}",cm).group(0))*100.0
       
     gnd_records = gnd_records + "('"+sms_date+" "+sms_time+"','"+sms_list[0]+"','"+sms_list[1]+"','"+observer_name+"','"+crid+"','"+str(cm)+"'),"
     

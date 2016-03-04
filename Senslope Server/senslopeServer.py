@@ -9,6 +9,8 @@ import emailer
 from senslopedbio import *
 from gsmSerialio import *
 from groundMeasurements import *
+import multiprocessing
+
 #---------------------------------------------------------------------------------------------------------------------------
 
 def updateSimNumTable(name,sim_num,date_activated):
@@ -566,7 +568,10 @@ def SendAlertEmail(network, serverstate):
         subject = dt.today().strftime(network + 'SERVER No Serial Notification  as  of %A, %B %d, %Y, %X')
         active_message = '\nGood Day!\n\nYou received this email because ' + network + ' SERVER is now INACTIVE!\\nPlease fix me.\nThanks!\n\n-' + network + ' Server\n'
 	
-    emailer.sendmessage(sender,sender_password,receiver,sender,subject,active_message)
+    p = multiprocessing.Process(target=emailer.sendmessage, args=(sender,sender_password,receiver,sender,subject,active_message),name="sendingemail")
+    p.start()
+    time.sleep(60)
+    # emailer.sendmessage(sender,sender_password,receiver,sender,subject,active_message)
     print ">> Sending email done.."
     
 def SendAlertGsm(network):
@@ -602,6 +607,40 @@ def RecordManualWeather(mw_text):
     query = "INSERT IGNORE INTO manualweather (timestamp, meas_type, site_id, observer_name, weatherdesc) VALUES " + mw_text
     
     commitToDb(query, 'RecordManualWeather')
+        
+def ProcessCoordinatorMsg(coordsms, num):
+    print ">> Coordinator message received"
+    
+    createTable("coordrssi","coordrssi")
+    
+    datafield = coordsms.split('*')[1]
+    timefield = coordsms.split('*')[2]
+    timestamp = dt.strptime(timefield,"%y%m%d%H%M%S").strftime("%Y-%m-%d %H:%M:%S")
+    
+    smstype = datafield.split(',')[0]
+    # process rssi parameters
+    if smstype == "RSSI":
+        site_name = datafield.split(',')[1]
+        rssi_string = datafield.split(',',2)[2]
+        print rssi_string
+        # format is
+        # <router name>,<rssi value>,...
+        query = "INSERT IGNORE INTO coordrssi (timestamp, site_name, router_name, rssi_val) VALUES ("
+        tuples = re.findall("[A-Z]+,\d+",rssi_string)
+        for item in tuples:
+            query += "'" + timestamp + "',"
+            query += "'" + site_name + "',"
+            query += "'" + item.split(',')[0] + "',"
+            query += item.split(',')[1] + "),("
+        
+        query = query[:-2]
+        
+        print query
+        
+        commitToDb(query, 'ProcessCoordinatorMsg')
+    else:
+        print ">> Processing coordinator weather"
+            
         
 def RunSenslopeServer(network):
     minute_of_last_alert = dt.now().minute
@@ -699,6 +738,8 @@ def RunSenslopeServer(network):
                 #if message is from piezometer
                 elif msg.data[4:7] == "PZ*":
                     ProcessPiezometer(msg.data, msg.simnum)
+                elif msg.data.split('*')[0] == 'COORDINATOR':
+                    ProcessCoordinatorMsg(msg.data, msg.simnum)
                 else:
                     print '>> Unrecognized message format: '
                     print 'NUM: ' , msg.simnum
@@ -724,18 +765,28 @@ def RunSenslopeServer(network):
                     unk.write(msg.data+'\n')
                     unk.close()
                         
-                if DeleteAfterRead and not FileInput:
-                    print 'Deleting message...'
-                    try:
-                        gsmcmd('AT+CMGD='+msg.num).strip()
-                        print 'OK'
-                    except ValueError:
-                        print 'Error deleting message: ', msg.data
+                # if DeleteAfterRead and not FileInput:
+                    # print 'Deleting message...'
+                    # try:
+                        # gsmcmd('AT+CMGD='+msg.num).strip()
+                        # print 'OK'
+                    # except ValueError:
+                        # print 'Error deleting message: ', msg.data
 
+            # delete all read messages
+            print "\n>> Deleting all read messages"
+            try:
+                gsmcmd('AT+CMGD=0,2').strip()
+                print 'OK'
+            except ValueError:
+                print '>> Error deleting messages'
+                
+            
             if FileInput:
                 break
             
             print dt.today().strftime("\nServer active as of %A, %B %d, %Y, %X")
+            time.sleep(10)
             
         elif  m == 0:
             time.sleep(SleepPeriod)
