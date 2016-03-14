@@ -54,12 +54,11 @@ def extractDBToSQL(table):
 
     tsStartParsed = re.sub('[.!,;:]', '', TSstart)
     tsStartParsed = re.sub(' ', '_', tsStartParsed)
-    fileName = 'D:\\dewslandslide\\' + table + '_' + tsStartParsed + '.sql'
+    fileName = 'D:\\dewslandslide\\TESTF\\' + table + '_' + tsStartParsed + '.sql'
 
     print 'filename parsed = ' + fileName + '\n'
 
-    #mysqldump -t -u root -pirc311 senslopedb labb --where="timestamp > '2014-06-19 17:44'" > D:\labb.sql
-    winCmd = 'mysqldump -t -u root -pirc311 senslopedb ' + table + ' --where="timestamp > \'' + TSstart + '\'" > ' + fileName;
+    winCmd = 'mysqldump -t -u ' + Userdb + ' -p' + Passdb + ' senslopedb ' + table + ' --where="timestamp > \'' + TSstart + '\'" > ' + fileName;
 
     print 'winCmd = ' + winCmd + '\n'
 
@@ -107,8 +106,7 @@ def extract_db2():
         db, cur = SenslopeDBConnect()
         print '>> Connected to database'
 
-
-        query = 'select TABLE_NAME from information_schema.tables where TABLE_SCHEMA = "' + Namedb + '"'
+        query = 'SELECT name FROM site_column WHERE installation_status = "Installed" ORDER BY s_id ASC'
         try:
             cur.execute(query)
         except:
@@ -116,27 +114,9 @@ def extract_db2():
         
         data = cur.fetchall()
 
-        #valid_tables = ['blcb','blct','bolb','gamt','gamb','humt','humb','labb','labt','lipb','lipt','mamb','mamt','oslb','oslt','plab','plat','pugb','pugt','sinb','sinu']
-        valid_tables_ver3 = ['dadta','dadtb','lunsa','luntb','luntc','magta', \
-                            'magtb','magtc','magtd','sibta','sibtb', \
-                            'sumta','sumtb','tueta']
-        for tbl3 in valid_tables_ver3:        
-            extractDBToSQL(tbl3)   
+        for table in data:
+            extractDBToSQL(table[0])
 
-        valid_tables = ['blcb','blct','bolb','gamt','gamb','humt','humb','labb', \
-                        'labt','lipb','lipt','mamb','mamt','oslb','oslt','plab', \
-                        'plat','pugb','pugt','sinb','sinu']
-        for tbl in valid_tables:        
-            extractDBToSQL(tbl)
-
-        valid_tables_ver2 = ['agbsb','agbta','baysb','bayta','baytc','blcsa', \
-                            'carsb','carta','cudta','cudtb','mcasb','mcata', \
-                            'mesta','nagsa','nagtb','nurta','nurtb','pepsb', \
-                            'pepta','peptc','sagta','sagtb','tuetb']
-        for tbl2 in valid_tables_ver2:        
-            extractDBToSQL(tbl2) 
-
-        #extractDBToSQL('sinb')     
     except IndexError:
         print '>> Error in writing extracting database data to files..'
 
