@@ -1,7 +1,7 @@
 import ConfigParser, MySQLdb, time
 
 cfg = ConfigParser.ConfigParser()
-cfg.read('senslope-server-config.txt')
+cfg.read("senslope-server-config.txt")
 
 Namedb = cfg.get('LocalDB', 'DBName')
 Hostdb = cfg.get('LocalDB', 'Host')
@@ -42,9 +42,11 @@ def createTable(table_name, type):
     elif type == "runtime":
         cur.execute("CREATE TABLE IF NOT EXISTS %s(timestamp datetime, script_name char(7), status char(10), PRIMARY KEY (timestamp, script_name))" %table_name)
     elif type == "gndmeas":
-        cur.execute("CREATE TABLE IF NOT EXISTS %s(timestamp datetime, meas_type char(10), site_id char (3), observer_name char(20), crack_id char(1), meas float(4,2), PRIMARY KEY (timestamp, meas_type, site_id, crack_id))" %table_name)
+        cur.execute("CREATE TABLE IF NOT EXISTS %s(timestamp datetime, meas_type char(10), site_id char (3), observer_name char(20), crack_id char(1), meas float(6,2), PRIMARY KEY (timestamp, meas_type, site_id, crack_id))" %table_name)
     elif type == "manualweather":
         cur.execute("CREATE TABLE IF NOT EXISTS %s(timestamp datetime, meas_type char(10), site_id char (3), observer_name char(20), weatherdesc char(20), PRIMARY KEY (timestamp, meas_type, site_id))" %table_name)
+    elif type == "coordrssi":
+        cur.execute("CREATE TABLE IF NOT EXISTS %s(timestamp datetime, site_name char(5), router_name char(7), rssi_val smallint(20), PRIMARY KEY (timestamp, site_name, router_name))" %table_name)
    
         
     db.close()

@@ -29,6 +29,7 @@ alertflags = 12
 directory = D:\Dropbox\Senslope Data\Proc\csv
 alertreportinterval = 30
 SMSgndmeasfile = C:\Users\windows user\Desktop\Ground Measurement Backup\smsbackup.txt
+gndmeasfilesdir = C:\Users\windows user\Desktop\Ground Measurement Backup\
 
 [Misc]
 timestampstart = None
@@ -50,5 +51,6 @@ unexpectedchardir = D:\Server Files\Consolidated\
 inboxdir = D:\Server Files\Consolidated\Inbox\
 unknownsenderfile = D:\Server Files\Consolidated\Unknown-sender.txt
 allalertsfile = D:\Server Files\Consolidated\DYNA\all_alerts.txt
+gndmeasfilesdir = C:\Users\windows user\Desktop\Ground Measurement Backup\
 
 

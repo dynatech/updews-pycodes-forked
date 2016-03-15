@@ -9,6 +9,8 @@ import emailer
 from senslopedbio import *
 from gsmSerialio import *
 from groundMeasurements import *
+import multiprocessing
+
 #---------------------------------------------------------------------------------------------------------------------------
 
 def updateSimNumTable(name,sim_num,date_activated):
@@ -123,6 +125,12 @@ def ProcTwoAccelColData(msg,sender,txtdatetime):
     dtype = msgsplit[1].upper()
    
     datastr = msgsplit[2]
+    
+    #check for error from marirong sites
+    if len(datastr) == 136:
+        if (datastr[72] == 'A'):
+            datastr = datastr[:71] + datastr[72:]
+            print ">> datastr adjustment"
     
     ts = msgsplit[3]
   
@@ -544,6 +552,7 @@ def ProcessStats(line,txtdatetime):
     print 'End of Process status data'
     
 def SendAlertEmail(network, serverstate):
+    print "\n\n>> Attemptint to send routine emails.."
     sender = '1234dummymailer@gmail.com'
     sender_password = '1234dummy'
     receiver =['ggilbertluis@gmail.com', 'dynabeta@gmail.com']
@@ -559,7 +568,11 @@ def SendAlertEmail(network, serverstate):
         subject = dt.today().strftime(network + 'SERVER No Serial Notification  as  of %A, %B %d, %Y, %X')
         active_message = '\nGood Day!\n\nYou received this email because ' + network + ' SERVER is now INACTIVE!\\nPlease fix me.\nThanks!\n\n-' + network + ' Server\n'
 	
-    emailer.sendmessage(sender,sender_password,receiver,sender,subject,active_message)
+    p = multiprocessing.Process(target=emailer.sendmessage, args=(sender,sender_password,receiver,sender,subject,active_message),name="sendingemail")
+    p.start()
+    time.sleep(60)
+    # emailer.sendmessage(sender,sender_password,receiver,sender,subject,active_message)
+    print ">> Sending email done.."
     
 def SendAlertGsm(network):
     try:
@@ -567,7 +580,7 @@ def SendAlertGsm(network):
             numlist = globenumbers.split(",")
         else:
             numlist = smartnumbers.split(",")
-        f = open("D:\\Server Files\\Consolidated\\DYNA\\all_alerts.txt",'r')
+        f = open(allalertsfile,'r')
         alllines = f.read()
         f.close()
         for n in numlist:
@@ -594,6 +607,40 @@ def RecordManualWeather(mw_text):
     query = "INSERT IGNORE INTO manualweather (timestamp, meas_type, site_id, observer_name, weatherdesc) VALUES " + mw_text
     
     commitToDb(query, 'RecordManualWeather')
+        
+def ProcessCoordinatorMsg(coordsms, num):
+    print ">> Coordinator message received"
+    
+    createTable("coordrssi","coordrssi")
+    
+    datafield = coordsms.split('*')[1]
+    timefield = coordsms.split('*')[2]
+    timestamp = dt.strptime(timefield,"%y%m%d%H%M%S").strftime("%Y-%m-%d %H:%M:%S")
+    
+    smstype = datafield.split(',')[0]
+    # process rssi parameters
+    if smstype == "RSSI":
+        site_name = datafield.split(',')[1]
+        rssi_string = datafield.split(',',2)[2]
+        print rssi_string
+        # format is
+        # <router name>,<rssi value>,...
+        query = "INSERT IGNORE INTO coordrssi (timestamp, site_name, router_name, rssi_val) VALUES ("
+        tuples = re.findall("[A-Z]+,\d+",rssi_string)
+        for item in tuples:
+            query += "'" + timestamp + "',"
+            query += "'" + site_name + "',"
+            query += "'" + item.split(',')[0] + "',"
+            query += item.split(',')[1] + "),("
+        
+        query = query[:-2]
+        
+        print query
+        
+        commitToDb(query, 'ProcessCoordinatorMsg')
+    else:
+        print ">> Processing coordinator weather"
+            
         
 def RunSenslopeServer(network):
     minute_of_last_alert = dt.now().minute
@@ -645,7 +692,7 @@ def RunSenslopeServer(network):
                 if msg.data.find("DUE*") >0:
                    msg.data = PreProcessColumnV1(msg.data)
                    ProcessColumn(msg.data,msg.dt,msg.simnum)
-                elif re.search("(R(((O|0)*U*)|(U*(O|0)*))T*[(I|1|L)E]*N*(E|3)* )|((E|3)(V|B)*(E|3)*(N|M)*(T|\+)* )", msg.data.upper()):
+                elif re.search("(RO*U*TI*N*E )|(EVE*NT )", msg.data.upper()):
                     try:
                         gm,w = getGndMeas(msg.data)
                         RecordGroundMeasurements(gm)
@@ -655,16 +702,16 @@ def RunSenslopeServer(network):
                         print ">> Error in manual ground measurement SMS"
                         sendMsg(str(e), msg.simnum)
                     finally:
-                        f = open(smsgndfile, 'a')
-                        f.write(msg.dt+',')
-                        f.write(msg.simnum+',')
-                        f.write(msg.data+'\n')
-                        f.close()
+                        g = open(smsgndfile, 'a')
+                        g.write(msg.dt+',')
+                        g.write(msg.simnum+',')
+                        g.write(msg.data+'\n')
+                        g.close()
                 elif re.findall('[^A-Zabcyx0-9\*\+\.\/\,\:\#-]',msg.data):
                     print ">> Error: Unexpected characters/s detected in ", msg.data
                     f = open(unexpectedchardir+network+'Nonalphanumeric_errorlog.txt','a')
                     f.write(msg.dt + ',' + msg.simnum + ',' + msg.data+ '\n')
-                    f.close
+                    f.close()
                 elif len(msg.data.split("*")[0]) == 5:
                     try:
                         dlist = ProcTwoAccelColData(msg.data,msg.simnum,msg.dt)
@@ -691,43 +738,55 @@ def RunSenslopeServer(network):
                 #if message is from piezometer
                 elif msg.data[4:7] == "PZ*":
                     ProcessPiezometer(msg.data, msg.simnum)
+                elif msg.data.split('*')[0] == 'COORDINATOR':
+                    ProcessCoordinatorMsg(msg.data, msg.simnum)
                 else:
                     print '>> Unrecognized message format: '
                     print 'NUM: ' , msg.simnum
                     print 'MSG: ' , msg.data
                     
-                msgname = checkNameOfNumber(msg.simnum)
+                msgname = checkNameOfNumber(msg.simnum) 
                 if msgname:
                     updateLastMsgReceivedTable(msg.dt,msgname,msg.simnum,msg.data)
                     
                     if SaveToFile:
-                        dir = inboxdir+msgname
+                        dir = inboxdir+msgname + "\\"
                         if not os.path.exists(dir):
                             os.makedirs(dir)
-                        f = open(dir+'\\'+msgname+'-backup.txt','a')
-                        f.write(msg.dt+',')
-                        f.write(msg.data+'\n')
-                        f.close()
+                        inbox = open(dir+msgname+'-backup.txt','a')
+                        inbox.write(msg.dt+',')
+                        inbox.write(msg.data+'\n')
+                        inbox.close()
                         
                 else:
-                    f = open(unknownsenderfile,'a')
-                    f.write(msg.dt+',')
-                    f.write(msg.simnum+',')
-                    f.write(msg.data+'\n')
-                    f.close()
+                    unk = open(unknownsenderfile,'a')
+                    unk.write(msg.dt+',')
+                    unk.write(msg.simnum+',')
+                    unk.write(msg.data+'\n')
+                    unk.close()
                         
-                if DeleteAfterRead and not FileInput:
-                    print 'Deleting message...'
-                    try:
-                        gsmcmd('AT+CMGD='+msg.num).strip()
-                        print 'OK'
-                    except ValueError:
-                        print 'Error deleting message: ', msg.data
+                # if DeleteAfterRead and not FileInput:
+                    # print 'Deleting message...'
+                    # try:
+                        # gsmcmd('AT+CMGD='+msg.num).strip()
+                        # print 'OK'
+                    # except ValueError:
+                        # print 'Error deleting message: ', msg.data
 
+            # delete all read messages
+            print "\n>> Deleting all read messages"
+            try:
+                gsmcmd('AT+CMGD=0,2').strip()
+                print 'OK'
+            except ValueError:
+                print '>> Error deleting messages'
+                
+            
             if FileInput:
                 break
             
             print dt.today().strftime("\nServer active as of %A, %B %d, %Y, %X")
+            time.sleep(10)
             
         elif  m == 0:
             time.sleep(SleepPeriod)
