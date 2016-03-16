@@ -1,8 +1,5 @@
-import os,time,serial,re
-import MySQLdb
-import datetime
-import ConfigParser, sys
-from datetime import datetime as dt
+import time
+import sys
 from db_to_csv import *
 
 def main():
