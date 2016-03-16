@@ -5,6 +5,7 @@ import ConfigParser
 import pandas as pd
 import numpy as np
 from datetime import datetime as dt
+from datetime import timedelta as td
 
 #---------------------------------------------------------------------------------------------------------------------------
 
@@ -90,7 +91,46 @@ def createUploadMarkerTable(tableName):
         
         cur.execute(query)
         db.close()
-  
+
+#Get the last timetamp on target sql file to be uploaded
+#Returns a timestamp for valid entries
+def getTimestampEnd(tableName, start):
+    db, cur = SenslopeDBConnect()
+    
+    multiplier = 1
+    tryAgain = True  
+    
+    while tryAgain:
+        dateReso = 10 * multiplier
+        end = (pd.to_datetime(start) + td(dateReso)).strftime("%Y-%m-%d %H:%M:%S")
+        
+        query = "SELECT COUNT(*) AS count from %s " % (tableName)
+        query = query + "WHERE timestamp > '%s' AND timestamp < '%s' " % (start, end)
+        query = query + "ORDER BY timestamp DESC"
+        
+        cur.execute(query)
+        count = cur.fetchall()[0][0]
+        
+        multiplier += 1        
+        
+        #don't try again when count is greater than zero or end timestamp is
+        #   greater than the current timestamp
+        curTS = time.strftime("%Y-%m-%d %H:%M:%S")
+        if (count > 0) or (end >= curTS):
+            tryAgain = False
+            
+            #get max timestamp
+            query = "SELECT MAX(timestamp) as ts from %s " % (tableName)
+            query = query + "WHERE timestamp > '%s' AND timestamp < '%s' " % (start, end)
+            
+            cur.execute(query)
+            maxTS = cur.fetchall()[0][0]
+            
+            return maxTS
+    
+    pass
+    return None
+
     
 """ Global variables"""
 cfg = ConfigParser.ConfigParser()
@@ -105,6 +145,9 @@ SleepPeriod = cfg.getint('Misc','SleepPeriod')
 
 def extractDBToSQL(table):    
     TSstart = 0
+    
+    #initialize config file name
+    ts_site = 'ts_' + table
 
     #Check if the current site column exists in "upload_marker_accel"
     lastUpdate = checkSiteOnMarkerTable(table)
@@ -115,9 +158,6 @@ def extractDBToSQL(table):
         cfg.read('senslope-server-config.txt')
     
         try:
-            ts_site = 'ts_' + table
-            print '>> ts_site = ' + ts_site
-
             #The new time start is the last TimeStampEnd from config file
             TSstart = cfg.get('Misc', ts_site)
         except:
@@ -125,137 +165,48 @@ def extractDBToSQL(table):
             #   if not found on config file
             TSstart = '2010-10-01 00:00:00'
         
-        #TODO: insert the timestamp as lastupdate value on "upload_marker_accel"
+        #Insert the timestamp as lastupdate value on "upload_marker_accel"
         updateSiteOnMarkerTable(table, TSstart)
         
         pass
     else:
         #get last timestamp from DB return value
         TSstart = lastUpdate[1].strftime("%Y-%m-%d %H:%M:%S")
-        print '>> lastUpdate has a value %s' % (TSstart)
-        pass    
+        #print '>> lastUpdate has a value %s' % (TSstart)  
     
-    print '>> Extracting ' + table + ' purged data from database ..\n'  
+    print '>> Extracting %s data from database.. TS Start: %s' % (table, TSstart)  
 
-    print 'TS Start = ' + TSstart + '\n'
+    TSend = getTimestampEnd(table, TSstart)
+    
+    #Return if there is no new data
+    if TSend == None:
+        print '>> Current lastupdate is latest data or site has no new data'
+        return
+    else:
+        TSend = TSend.strftime("%Y-%m-%d %H:%M:%S")
 
     tsStartParsed = re.sub('[.!,;:]', '', TSstart)
     tsStartParsed = re.sub(' ', '_', tsStartParsed)
-    fileName = 'D:\\dewslandslide\\TESTF\\' + table + '_' + tsStartParsed + '.sql'
+    
+    fileName = 'D:\\dewslandslide\\' + table + '_' + tsStartParsed + '.sql'
+    #print 'filename parsed = ' + fileName + '\n'
 
-    print 'filename parsed = ' + fileName + '\n'
-
-    winCmd = 'mysqldump -t -u ' + Userdb + ' -p' + Passdb + ' senslopedb ' + table
-    winCmd = winCmd + ' --where="timestamp > \'' + TSstart + '\'" > ' + fileName;
+    winCmd = 'mysqldump -t -u %s -p%s senslopedb %s' % (Userdb, Passdb, table)
+    winCmd = winCmd + ' --where="timestamp > \'%s\' and timestamp <= \'%s\'" > ' % (TSstart, TSend) 
+    winCmd = winCmd + fileName;
 
     print 'winCmd = ' + winCmd + '\n'
-
-    db, cur = SenslopeDBConnect()
-    query_tstamp = 'select max(timestamp) from (SELECT timestamp FROM ' + table
-    query_tstamp = query_tstamp + ' where xvalue > 0 and zvalue > -500 '
-    query_tstamp = query_tstamp + 'and id > 0 and id < 41 and timestamp > "'
-    query_tstamp = query_tstamp + TSstart + '" limit 10000) test'
-
-    print 'Query = ' + query_tstamp + '\n'
     
-    #get max timestamp
     try:
-        cur.execute(query_tstamp)
-    except:
-        print '>> Error parsing timestamp database'
+        os.system(winCmd)
         
-    data = cur.fetchall()
+        #Update the timestamp as lastupdate value on "upload_marker_accel"
+        updateSiteOnMarkerTable(table, TSend)
+    except:
+        print ">> Error on executing on command line"
 
-    print 'After Timestamp Query... 1'
-
-    for row in data:
-        TSend = row[0]
-
-        if TSend != None:
-            cfg = ConfigParser.ConfigParser()
-            cfg.read('senslope-server-config.txt')
-            #cfg.set('Misc', 'TimeStampEnd', TSend)
-            cfg.set('Misc', ts_site, TSend)
-            with open('senslope-server-config.txt', 'wb') as configfile:
-                cfg.write(configfile)
-
-            os.system(winCmd)
-        else:
-            print '>> Current TimeStampEnd is latest data or it is currently set to None'
-
-        time.sleep(3)
-
-    time.sleep(10)
-    db.close()
+    time.sleep(3)
     print 'done'
-
-
-#def extractDBToSQL(table):
-#    cfg = ConfigParser.ConfigParser()
-#    cfg.read('senslope-server-config.txt')
-#
-#    ts_site = 'ts_' + table
-#    print '>> ts_site = ' + ts_site
-#	
-#    # The new time start is the last TimeStampEnd
-#    #TSstart = cfg.get('Misc', 'TimeStampEnd')
-#    TSstart = cfg.get('Misc', ts_site)
-#    
-#    #table = 'labb'
-#    tbase = dt.strptime('"2010-10-1 00:00:00"', '"%Y-%m-%d %H:%M:%S"')
-#    print '>> Extracting ' + table + ' purged data from database ..\n'  
-#
-#    print 'TS Start = ' + TSstart + '\n'
-#
-#    tsStartParsed = re.sub('[.!,;:]', '', TSstart)
-#    tsStartParsed = re.sub(' ', '_', tsStartParsed)
-#    fileName = 'D:\\dewslandslide\\TESTF\\' + table + '_' + tsStartParsed + '.sql'
-#
-#    print 'filename parsed = ' + fileName + '\n'
-#
-#    winCmd = 'mysqldump -t -u ' + Userdb + ' -p' + Passdb + ' senslopedb ' + table
-#    winCmd = winCmd + ' --where="timestamp > \'' + TSstart + '\'" > ' + fileName;
-#
-#    print 'winCmd = ' + winCmd + '\n'
-#
-#    db, cur = SenslopeDBConnect()
-#    query_tstamp = 'select max(timestamp) from (SELECT timestamp FROM ' + table
-#    query_tstamp = query_tstamp + ' where xvalue > 0 and zvalue > -500 '
-#    query_tstamp = query_tstamp + 'and id > 0 and id < 41 and timestamp > "'
-#    query_tstamp = query_tstamp + TSstart + '" limit 10000) test'
-#
-#    print 'Query = ' + query_tstamp + '\n'
-#    
-#    #get max timestamp
-#    try:
-#        cur.execute(query_tstamp)
-#    except:
-#        print '>> Error parsing timestamp database'
-#        
-#    data = cur.fetchall()
-#
-#    print 'After Timestamp Query... 1'
-#
-#    for row in data:
-#        TSend = row[0]
-#
-#        if TSend != None:
-#            cfg = ConfigParser.ConfigParser()
-#            cfg.read('senslope-server-config.txt')
-#            #cfg.set('Misc', 'TimeStampEnd', TSend)
-#            cfg.set('Misc', ts_site, TSend)
-#            with open('senslope-server-config.txt', 'wb') as configfile:
-#                cfg.write(configfile)
-#
-#            os.system(winCmd)
-#        else:
-#            print '>> Current TimeStampEnd is latest data or it is currently set to None'
-#
-#        time.sleep(3)
-#
-#    time.sleep(10)
-#    db.close()
-#    print 'done'
 
 
 def extract_db2():
