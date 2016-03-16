@@ -106,6 +106,7 @@ def getTimestampEnd(tableName, start):
         
         query = "SELECT COUNT(*) AS count from %s " % (tableName)
         query = query + "WHERE timestamp > '%s' AND timestamp < '%s' " % (start, end)
+        query = query + "AND id > 0 and id < 51 "    
         query = query + "ORDER BY timestamp DESC"
         
         cur.execute(query)
@@ -122,6 +123,7 @@ def getTimestampEnd(tableName, start):
             #get max timestamp
             query = "SELECT MAX(timestamp) as ts from %s " % (tableName)
             query = query + "WHERE timestamp > '%s' AND timestamp < '%s' " % (start, end)
+            query = query + "AND id > 0 and id < 51 "            
             
             cur.execute(query)
             maxTS = cur.fetchall()[0][0]
