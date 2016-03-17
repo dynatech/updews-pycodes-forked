@@ -4,10 +4,10 @@
 ############################
 ###   LOCAL FILE PATH    ###
 ############################
-OutputFilePath = C:\Users\Dynaslope\Desktop\Monitoring Output\
-CumSumFilePath = C:\Users\Dynaslope\Desktop\Monitoring Output\CumSum Rainfall\
-ASTIpath = C:\Users\Dynaslope\Desktop\Monitoring Output\ASTI\
-RainfallPlotsPath = C:\Users\Dynaslope\Desktop\Monitoring Output\Rainfall Plots\
+OutputFilePath = D:\Documents\DYNA\Monitoring Output\
+CumSumFilePath = D:\Documents\DYNA\Monitoring Output\CumSum Rainfall\
+ASTIpath = D:\Documents\DYNA\Monitoring Output\ASTI\
+RainfallPlotsPath = D:\Documents\DYNA\Monitoring Output\Rainfall Plots\
 
 ############################
 ###      FILE NAMES      ###
@@ -34,4 +34,9 @@ roll_window_length=3.		;length of rolling/moving window operations in hours
 num_roll_window_ops=2		;number of rolling window operations in the whole monitoring analysis
 col_pos_interval='1D'    	; string expression indicating interval between two adjacent column position dates ex: '1D'= 1 day
 num_col_pos=20	         	; number of column position dates to plot
-PrintPlot = True
+
+PrintPlot = False
+PrintASTIdata = False
+PrintSummaryAlert = False
+PrintCumSum = False
+PrintRAlert = True

@@ -165,14 +165,14 @@ def updateNOAHSingleTable(noahid):
     
     if (latestTS == '') or (latestTS == None):
         #assign a starting date if table is currently empty
-        latestTS = "2014-01-01 00:00:00"
+        latestTS = str(pd.to_datetime(dt.now().strftime('%Y-%m-%d %H:%M:%S')) - td(15))
     else:
         latestTS = latestTS.strftime("%Y-%m-%d %H:%M:%S")
     
     print "    Start timestamp: " + latestTS
     
     #Generate end time    
-    endTS = (pd.to_datetime(latestTS) + td(50)).strftime("%Y-%m-%d")
+    endTS = (pd.to_datetime(latestTS) + td(15)).strftime("%Y-%m-%d")
     print "    End timestamp: %s" % (endTS)
     
     #Download data for noahid
@@ -186,5 +186,19 @@ def updateNOAHTables():
     for noahid in dfRain:
         updateNOAHSingleTable(noahid)
 
-#updateNOAHTables()
-#updateNOAHSingleTable(550)
+def DeleteOldNOAHdata():
+    #deletes data older than 15days    
+    
+    dfRain = qs.GetRainNOAHList()
+    
+    db, cur = qs.SenslopeDBConnect(qs.Namedb)
+    cur.execute("use "+ qs.Namedb)
+    
+    for noahid in dfRain:
+        print 'deleting old noah data for rain_noah_', noahid
+        oldestTSneeded = str(pd.to_datetime(dt.now().strftime('%Y-%m-%d %H:%M:%S')) - td(15))
+        query = """DELETE FROM rain_noah_%s WHERE timestamp < TIMESTAMP('%s')""" % (noahid, oldestTSneeded)
+        cur.execute(query)
+        db.commit()        
+        
+    db.close()
