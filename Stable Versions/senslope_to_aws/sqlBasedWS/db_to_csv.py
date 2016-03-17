@@ -2,7 +2,10 @@ import os,time,serial,re
 import MySQLdb
 import datetime
 import ConfigParser
+import pandas as pd
+import numpy as np
 from datetime import datetime as dt
+from datetime import timedelta as td
 
 #---------------------------------------------------------------------------------------------------------------------------
 
@@ -24,6 +27,149 @@ def InitLocalDB():
     cur.execute("USE %s"%Namedb)
     db.close()
     
+def checkTableExistence(table):
+    db, cur = SenslopeDBConnect()
+    query = "SHOW TABLES LIKE '%s'" % table
+    #print query
+    ret = 0
+    try:
+        cur.execute(query)
+        ret = cur.fetchall()[0][0]
+    except TypeError:
+        print "checkTableExistence: Error"
+        ret = 0
+    finally:
+        db.close()
+        return ret    
+    
+def checkSiteOnMarkerTable(siteName):
+    db, cur = SenslopeDBConnect()
+    query = "SELECT * FROM upload_marker_raingauge WHERE name = '%s'" % siteName
+    #print query
+    ret = 0
+    try:
+        cur.execute(query)
+        ret = cur.fetchone()
+    except TypeError:
+        print "checkSiteOnMarkerTable: Error"
+        ret = 0
+    finally:
+        db.close()
+        return ret 
+
+def updateSiteOnMarkerTable(siteName, lastUpdate):
+    db, cur = SenslopeDBConnect()
+    query = "INSERT INTO upload_marker_raingauge (name,lastupdate) "
+    query = query + "VALUES ('%s','%s') " % (siteName, lastUpdate)
+    query = query + "ON DUPLICATE KEY "
+    query = query + "UPDATE lastupdate = '%s'" % (lastUpdate)
+
+    try:
+        cur.execute(query)
+        db.commit()
+    except TypeError:
+        print "updateSiteOnMarkerTable: Error"
+
+    finally:
+        db.close()
+    
+def createUploadMarkerTable(tableName):
+    #Create the upload marker table if it doesn't exist yet
+    doesTableExist = checkTableExistence(tableName)          
+
+    if doesTableExist == 0:
+        #create table before adding data
+        print "creating upload marker table tableName!"     
+    
+        db, cur = SenslopeDBConnect()
+        
+        query = "CREATE TABLE `senslopedb`.`"+tableName+"` ("
+        query = query + "`name` VARCHAR(8) NOT NULL, "
+        query = query + "`lastupdate` DATETIME NOT NULL, "
+        query = query + "PRIMARY KEY (`name`));"
+        
+        cur.execute(query)
+        db.close()
+
+#Create aws table if it doesn't exist yet
+def createAwsTable(tableName, awsType = 'senslope'):
+    #Create aws table if it doesn't exist yet
+    doesTableExist = checkTableExistence(tableName)  
+    
+    if doesTableExist == 0:
+        db, cur = SenslopeDBConnect()
+        query = "CREATE TABLE `senslopedb`.`"+tableName+"` ("
+        
+        if (awsType == "senslope") or (awsType == 0):
+            #TODO: createAwsTable if type is rain_senslope
+            print ">>> TODO: createAwsTable if type is rain_senslope"
+        elif (awsType == "arq") or (awsType == 1):
+            query += "`timestamp` DATETIME NOT NULL DEFAULT '0000-00-00 00:00:00',"
+            query += "`name` VARCHAR(6) NOT NULL DEFAULT '',"
+            query += "`r15m` DOUBLE NULL,"
+            query += "`r24h` DOUBLE NULL,"
+            query += "`batv1` DOUBLE NULL,"
+            query += "`batv2` DOUBLE NULL,"
+            query += "`cur` DOUBLE NULL,"
+            query += "`boostv1` DOUBLE NULL,"
+            query += "`boostv2` DOUBLE NULL,"
+            query += "`charge` INT(11) NULL,"
+            query += "`csq` INT(11) NULL,"
+            query += "`temp` DOUBLE NULL,"
+            query += "`hum` DOUBLE NULL,"
+            query += "`flashp` INT(11) NULL,"
+            query += "PRIMARY KEY (`timestamp`, `name`));"
+
+            #TODO: move to same level as if statements once create table query for
+            #   rain_senslope has been established
+            cur.execute(query)
+            
+        db.close()
+
+
+#Get the last timetamp on target sql file to be uploaded
+#Returns a timestamp for valid entries
+def getTimestampEnd(tableName, start, awsType = 'senslope'):
+    db, cur = SenslopeDBConnect()
+    
+    #Create aws table if it doesn't exist yet
+    createAwsTable(tableName, awsType)
+    
+    multiplier = 1
+    tryAgain = True  
+    
+    while tryAgain:
+        dateReso = 10 * multiplier
+        end = (pd.to_datetime(start) + td(dateReso)).strftime("%Y-%m-%d %H:%M:%S")
+        
+        query = "SELECT COUNT(*) AS count from %s " % (tableName)
+        query = query + "WHERE timestamp > '%s' AND timestamp < '%s' " % (start, end)
+        query = query + "ORDER BY timestamp DESC"
+        
+        cur.execute(query)
+        count = cur.fetchall()[0][0]
+        
+        multiplier += 1        
+        
+        #don't try again when count is greater than zero or end timestamp is
+        #   greater than the current timestamp
+        curTS = time.strftime("%Y-%m-%d %H:%M:%S")
+        if (count > 0) or (end >= curTS):
+            tryAgain = False
+            
+            #get max timestamp
+            query = "SELECT MAX(timestamp) as ts from %s " % (tableName)
+            query = query + "WHERE timestamp > '%s' AND timestamp < '%s' " % (start, end)          
+            
+            cur.execute(query)
+            maxTS = cur.fetchall()[0][0]
+            
+            return maxTS
+    
+    pass
+    return None
+
+    
 """ Global variables"""
 cfg = ConfigParser.ConfigParser()
 cfg.read('senslope-server-config.txt')
@@ -34,98 +180,110 @@ Userdb = cfg.get('LocalDB', 'Username')
 Passdb = cfg.get('LocalDB', 'Password')
 SleepPeriod = cfg.getint('Misc','SleepPeriod')
 
-#def extractDBToSQL():
-def extractDBToSQL(table):
-    cfg = ConfigParser.ConfigParser()
-    cfg.read('senslope-server-config.txt')
 
-    ts_site = 'ts_' + table
-    print '>> ts_site = ' + ts_site
-	
-    # The new time start is the last TimeStampEnd
-    #TSstart = cfg.get('Misc', 'TimeStampEnd')
-    TSstart = cfg.get('Misc', ts_site)
+def extractDBToSQL(table, awsType = 'senslope'):    
+    TSstart = 0
     
-    #table = 'labb'
-    tbase = dt.strptime('"2010-10-1 00:00:00"', '"%Y-%m-%d %H:%M:%S"')
-    print '>> Extracting ' + table + ' purged data from database ..\n'  
+    #initialize config file name
+    ts_site = 'ts_' + table
+    print ts_site
 
-    print 'TS Start = ' + TSstart + '\n'
+    #Check if the current site column exists in "upload_marker_raingauge"
+    lastUpdate = checkSiteOnMarkerTable(table)
+
+    if lastUpdate == None:
+        #Get input from config file if it doesn't exist yet
+        cfg = ConfigParser.ConfigParser()
+        cfg.read('senslope-server-config.txt')
+    
+        try:
+            #The new time start is the last TimeStampEnd from config file
+            TSstart = cfg.get('Misc', ts_site)
+        except:
+            #Create default value of 2010-10-01 00:00:00
+            #   if not found on config file
+            TSstart = '2010-10-01 00:00:00'
+        
+        #Insert the timestamp as lastupdate value on "upload_marker_raingauge"
+        updateSiteOnMarkerTable(table, TSstart)
+        
+        pass
+    else:
+        #get last timestamp from DB return value
+        TSstart = lastUpdate[1].strftime("%Y-%m-%d %H:%M:%S")
+        #print '>> lastUpdate has a value %s' % (TSstart)  
+    
+    print '>> Extracting %s data from database.. TS Start: %s' % (table, TSstart)  
+
+    TSend = getTimestampEnd(table, TSstart, awsType)
+    
+    #Return if there is no new data
+    if TSend == None:
+        print '>> Current lastupdate is latest data or site has no new data'
+        return
+    else:
+        TSend = TSend.strftime("%Y-%m-%d %H:%M:%S")
 
     tsStartParsed = re.sub('[.!,;:]', '', TSstart)
     tsStartParsed = re.sub(' ', '_', tsStartParsed)
-    fileName = 'D:\\dewslandslide\\' + table + '_' + tsStartParsed + '.sql'
+    
+    #TODO: remove TESTF after the development
+    fileName = 'D:\\dewslandslide\\TESTF\\' + table + '_' + tsStartParsed + '.sql'
+    #print 'filename parsed = ' + fileName + '\n'
 
-    print 'filename parsed = ' + fileName + '\n'
-
-    #mysqldump -t -u root -pirc311 senslopedb labb --where="timestamp > '2014-06-19 17:44'" > D:\labb.sql
-    winCmd = 'mysqldump -t -u root -pirc311 senslopedb ' + table + ' --where="timestamp > \'' + TSstart + '\'" > ' + fileName;
+    winCmd = 'mysqldump -t -u %s -p%s senslopedb %s' % (Userdb, Passdb, table)
+    winCmd = winCmd + ' --where="timestamp > \'%s\' and timestamp <= \'%s\'" > ' % (TSstart, TSend) 
+    winCmd = winCmd + fileName;
 
     print 'winCmd = ' + winCmd + '\n'
-
-    db, cur = SenslopeDBConnect()
-    query_tstamp = 'select max(timestamp) from (SELECT timestamp FROM ' + table + ' where timestamp > "' + TSstart + '" limit 10000) test'
-
-    print 'Query = ' + query_tstamp + '\n'
     
-    #get max timestamp
     try:
-        cur.execute(query_tstamp)
-    except:
-        print '>> Error parsing timestamp database'
+        os.system(winCmd)
         
-    data = cur.fetchall()
+        #Update the timestamp as lastupdate value on "upload_marker_raingauge"
+        updateSiteOnMarkerTable(table, TSend)
+    except:
+        print ">> Error on executing on command line"
 
-    print 'After Timestamp Query... 1'
-
-    for row in data:
-        TSend = row[0]
-
-        if TSend != None:
-            cfg = ConfigParser.ConfigParser()
-            cfg.read('senslope-server-config.txt')
-            #cfg.set('Misc', 'TimeStampEnd', TSend)
-            cfg.set('Misc', ts_site, TSend)
-            with open('senslope-server-config.txt', 'wb') as configfile:
-                cfg.write(configfile)
-
-            os.system(winCmd)
-        else:
-            print '>> Current TimeStampEnd is latest data or it is currently set to None'
-
-        time.sleep(3)
-
-    time.sleep(10)
-    db.close()
+    time.sleep(3)
     print 'done'
 
 
 def extract_db2():
+    createUploadMarkerTable("upload_marker_raingauge")
     
     try:
         db, cur = SenslopeDBConnect()
         print '>> Connected to database'
 
-
-        query = 'select TABLE_NAME from information_schema.tables where TABLE_SCHEMA = "' + Namedb + '"'
+        #get rain_senslope items
+        queryAwsOld = 'SELECT DISTINCT rain_senslope FROM site_rain_props WHERE '
+        queryAwsOld = queryAwsOld + 'rain_senslope IS NOT NULL'
+        
         try:
-            cur.execute(query)
+            cur.execute(queryAwsOld)
         except:
             print '>> Error parsing database'
         
-        data = cur.fetchall()
+        awsOld = cur.fetchall()
 
-        valid_tables = ['blcw','bolw','gamw','humw','labw','lipw','mamw', \
-                        'oslw','plaw','pugw','sinw','stats']
-        for tbl in valid_tables:        
-            extractDBToSQL(tbl)
+        for table in awsOld:
+            extractDBToSQL(table[0], "senslope")
+            
+        #get rain_arq items
+        queryArq = 'SELECT DISTINCT rain_arq FROM site_rain_props WHERE '
+        queryArq = queryArq + 'rain_arq IS NOT NULL'
+        
+        try:
+            cur.execute(queryArq)
+        except:
+            print '>> Error parsing database'
+        
+        awsArq = cur.fetchall()
 
-        valid_arq_tables = ['agbtaw','baytcw','blcsaw','cudtaw','nagtbw',\
-                            'pepsbw','sagtaw','tuetbw']
-        for tbl2 in valid_arq_tables:        
-            extractDBToSQL(tbl2)
+        for table in awsArq:
+            extractDBToSQL(table[0], "arq")
 
-        #extractDBToSQL('sinb')     
     except IndexError:
         print '>> Error in writing extracting database data to files..'
 
