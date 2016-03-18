@@ -59,7 +59,6 @@ def checkSiteOnMarkerTable(siteName):
 
 def updateSiteOnMarkerTable(siteName, lastUpdate):
     db, cur = SenslopeDBConnect()
-    #query = "SELECT * FROM upload_marker_accel WHERE name = '%s'" % siteName
     query = "INSERT INTO upload_marker_accel (name,lastupdate) "
     query = query + "VALUES ('%s','%s') " % (siteName, lastUpdate)
     query = query + "ON DUPLICATE KEY "
@@ -92,10 +91,49 @@ def createUploadMarkerTable(tableName):
         cur.execute(query)
         db.close()
 
+#Create sensor column table if it doesn't exist yet
+def createAccelTable(tableName, version = '3'):
+    #Create sensor column table if it doesn't exist yet
+    doesTableExist = checkTableExistence(tableName)  
+    
+    if doesTableExist == 0:
+        print ">>> Create table %s..." % (tableName)
+        db, cur = SenslopeDBConnect()
+        query = "CREATE TABLE `senslopedb`.`"+tableName+"` ("
+        
+        #version is 1
+        if version == 1:
+            query += "`timestamp` DATETIME NOT NULL DEFAULT '0000-00-00 00:00:00',"
+            query += "`id` INT(11) NOT NULL DEFAULT 0,"
+            query += "`xvalue` INT(11) NULL,"
+            query += "`yvalue` INT(11) NULL,"
+            query += "`zvalue` INT(11) NULL,"
+            query += "`mvalue` INT(11) NULL,"
+            query += "PRIMARY KEY (`timestamp`, `id`));"
+            pass
+            
+        #version is 2 or 3
+        elif (version == 2) or (version == 3):
+            query += "`timestamp` DATETIME NOT NULL DEFAULT '0000-00-00 00:00:00',"
+            query += "`id` INT(11) NOT NULL DEFAULT 0,"
+            query += "`msgid` SMALLINT(6) NOT NULL DEFAULT 0,"
+            query += "`xvalue` INT(11) NULL,"
+            query += "`yvalue` INT(11) NULL,"
+            query += "`zvalue` INT(11) NULL,"
+            query += "`batt` DOUBLE NULL,"
+            query += "PRIMARY KEY (`timestamp`, `id`, `msgid`));"
+
+        cur.execute(query)
+        db.close()
+
+
 #Get the last timetamp on target sql file to be uploaded
 #Returns a timestamp for valid entries
-def getTimestampEnd(tableName, start):
+def getTimestampEnd(tableName, start, version = 'senslope'):
     db, cur = SenslopeDBConnect()
+    
+    #Create sensor column table if it doesn't exist yet
+    createAccelTable(tableName, version)
     
     multiplier = 1
     tryAgain = True  
@@ -145,11 +183,13 @@ Passdb = cfg.get('LocalDB', 'Password')
 SleepPeriod = cfg.getint('Misc','SleepPeriod')
 
 
-def extractDBToSQL(table):    
+def extractDBToSQL(table, version = 3):    
     TSstart = 0
+    isFirstUpload = False
     
     #initialize config file name
     ts_site = 'ts_' + table
+    print ts_site
 
     #Check if the current site column exists in "upload_marker_accel"
     lastUpdate = checkSiteOnMarkerTable(table)
@@ -166,6 +206,10 @@ def extractDBToSQL(table):
             #Create default value of 2010-10-01 00:00:00
             #   if not found on config file
             TSstart = '2010-10-01 00:00:00'
+
+            #This boolean will trigger the creation of sql that is
+            #   capable of creating a table            
+            isFirstUpload = True
         
         #Insert the timestamp as lastupdate value on "upload_marker_accel"
         updateSiteOnMarkerTable(table, TSstart)
@@ -178,7 +222,7 @@ def extractDBToSQL(table):
     
     print '>> Extracting %s data from database.. TS Start: %s' % (table, TSstart)  
 
-    TSend = getTimestampEnd(table, TSstart)
+    TSend = getTimestampEnd(table, TSstart, version)
     
     #Return if there is no new data
     if TSend == None:
@@ -190,12 +234,20 @@ def extractDBToSQL(table):
     tsStartParsed = re.sub('[.!,;:]', '', TSstart)
     tsStartParsed = re.sub(' ', '_', tsStartParsed)
     
-    fileName = 'D:\\dewslandslide\\' + table + '_' + tsStartParsed + '.sql'
-    #print 'filename parsed = ' + fileName + '\n'
+    #TODO: remove TESTF after test
+    fullPath = 'D:\\dewslandslide\\TESTF\\' + table + '_' + tsStartParsed + '.sql'
+    winCmd = None
 
-    winCmd = 'mysqldump -t -u %s -p%s senslopedb %s' % (Userdb, Passdb, table)
+    #SQL creation is different for a site's first time upload of data
+    if isFirstUpload:
+        #Overwrites table if it exists on your database already
+        winCmd = 'mysqldump -u %s -p%s senslopedb %s' % (Userdb, Passdb, table)
+    else:
+        #WILL NOT Overwrite. Good for just updating your DB tables
+        winCmd = 'mysqldump -t -u %s -p%s senslopedb %s' % (Userdb, Passdb, table)
+        
     winCmd = winCmd + ' --where="timestamp > \'%s\' and timestamp <= \'%s\'" > ' % (TSstart, TSend) 
-    winCmd = winCmd + fileName;
+    winCmd = winCmd + fullPath
 
     print 'winCmd = ' + winCmd + '\n'
     
@@ -211,14 +263,14 @@ def extractDBToSQL(table):
     print 'done'
 
 
-def extract_db2():
+def extract_db():
     createUploadMarkerTable("upload_marker_accel")
     
     try:
         db, cur = SenslopeDBConnect()
         print '>> Connected to database'
 
-        query = 'SELECT name FROM site_column WHERE installation_status = "Installed" ORDER BY s_id ASC'
+        query = 'SELECT name, version FROM site_column WHERE installation_status = "Installed" ORDER BY s_id ASC'
         try:
             cur.execute(query)
         except:
@@ -227,7 +279,7 @@ def extract_db2():
         data = cur.fetchall()
 
         for table in data:
-            extractDBToSQL(table[0])
+            extractDBToSQL(table[0], table[1])
 
     except IndexError:
         print '>> Error in writing extracting database data to files..'
