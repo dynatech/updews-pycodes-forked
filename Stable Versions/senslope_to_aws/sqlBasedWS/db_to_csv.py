@@ -97,12 +97,23 @@ def createAwsTable(tableName, awsType = 'senslope'):
     doesTableExist = checkTableExistence(tableName)  
     
     if doesTableExist == 0:
+        print ">>> Create table %s..." % (tableName)
         db, cur = SenslopeDBConnect()
         query = "CREATE TABLE `senslopedb`.`"+tableName+"` ("
         
+        #createAwsTable if type is rain_senslope
         if (awsType == "senslope") or (awsType == 0):
-            #TODO: createAwsTable if type is rain_senslope
-            print ">>> TODO: createAwsTable if type is rain_senslope"
+            query += "`timestamp` DATETIME NOT NULL,"
+            query += "`name` VARCHAR(6) NOT NULL,"
+            query += "`temp` DOUBLE NULL,"
+            query += "`wspd` INT(11) NULL,"
+            query += "`wdir` INT(11) NULL,"
+            query += "`rain` DOUBLE NULL,"
+            query += "`batt` DOUBLE NULL,"
+            query += "`csq` INT(11) NULL,"
+            query += "PRIMARY KEY (`timestamp`, `name`));  "
+            
+        #createAwsTable if type is rain_arq
         elif (awsType == "arq") or (awsType == 1):
             query += "`timestamp` DATETIME NOT NULL DEFAULT '0000-00-00 00:00:00',"
             query += "`name` VARCHAR(6) NOT NULL DEFAULT '',"
@@ -120,10 +131,7 @@ def createAwsTable(tableName, awsType = 'senslope'):
             query += "`flashp` INT(11) NULL,"
             query += "PRIMARY KEY (`timestamp`, `name`));"
 
-            #TODO: move to same level as if statements once create table query for
-            #   rain_senslope has been established
-            cur.execute(query)
-            
+        cur.execute(query)
         db.close()
 
 
@@ -183,6 +191,7 @@ SleepPeriod = cfg.getint('Misc','SleepPeriod')
 
 def extractDBToSQL(table, awsType = 'senslope'):    
     TSstart = 0
+    isFirstUpload = False
     
     #initialize config file name
     ts_site = 'ts_' + table
@@ -203,11 +212,13 @@ def extractDBToSQL(table, awsType = 'senslope'):
             #Create default value of 2010-10-01 00:00:00
             #   if not found on config file
             TSstart = '2010-10-01 00:00:00'
+
+            #This boolean will trigger the creation of sql that is
+            #   capable of creating a table            
+            isFirstUpload = True
         
         #Insert the timestamp as lastupdate value on "upload_marker_raingauge"
         updateSiteOnMarkerTable(table, TSstart)
-        
-        pass
     else:
         #get last timestamp from DB return value
         TSstart = lastUpdate[1].strftime("%Y-%m-%d %H:%M:%S")
@@ -227,13 +238,19 @@ def extractDBToSQL(table, awsType = 'senslope'):
     tsStartParsed = re.sub('[.!,;:]', '', TSstart)
     tsStartParsed = re.sub(' ', '_', tsStartParsed)
     
-    #TODO: remove TESTF after the development
-    fileName = 'D:\\dewslandslide\\TESTF\\' + table + '_' + tsStartParsed + '.sql'
-    #print 'filename parsed = ' + fileName + '\n'
+    fullPath = 'D:\\dewslandslide\\' + table + '_' + tsStartParsed + '.sql'
+    winCmd = None
 
-    winCmd = 'mysqldump -t -u %s -p%s senslopedb %s' % (Userdb, Passdb, table)
+    #SQL creation is different for a site's first time upload of data
+    if isFirstUpload:
+        #Overwrites table if it exists on your database already
+        winCmd = 'mysqldump -u %s -p%s senslopedb %s' % (Userdb, Passdb, table)
+    else:
+        #WILL NOT Overwrite. Good for just updating your DB tables
+        winCmd = 'mysqldump -t -u %s -p%s senslopedb %s' % (Userdb, Passdb, table)
+        
     winCmd = winCmd + ' --where="timestamp > \'%s\' and timestamp <= \'%s\'" > ' % (TSstart, TSend) 
-    winCmd = winCmd + fileName;
+    winCmd = winCmd + fullPath
 
     print 'winCmd = ' + winCmd + '\n'
     
@@ -249,7 +266,7 @@ def extractDBToSQL(table, awsType = 'senslope'):
     print 'done'
 
 
-def extract_db2():
+def extract_db():
     createUploadMarkerTable("upload_marker_raingauge")
     
     try:
@@ -283,6 +300,8 @@ def extract_db2():
 
         for table in awsArq:
             extractDBToSQL(table[0], "arq")
+            
+        pass
 
     except IndexError:
         print '>> Error in writing extracting database data to files..'

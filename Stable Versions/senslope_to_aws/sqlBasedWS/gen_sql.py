@@ -5,7 +5,7 @@ from db_to_csv import *
 def main():
 
     print time.asctime()
-    extract_db2()
+    extract_db()
 
     print "Sleep.."
     time.sleep(600)
