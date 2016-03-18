@@ -234,8 +234,7 @@ def extractDBToSQL(table, version = 3):
     tsStartParsed = re.sub('[.!,;:]', '', TSstart)
     tsStartParsed = re.sub(' ', '_', tsStartParsed)
     
-    #TODO: remove TESTF after test
-    fullPath = 'D:\\dewslandslide\\TESTF\\' + table + '_' + tsStartParsed + '.sql'
+    fullPath = 'D:\\dewslandslide\\' + table + '_' + tsStartParsed + '.sql'
     winCmd = None
 
     #SQL creation is different for a site's first time upload of data
