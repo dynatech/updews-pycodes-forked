@@ -127,7 +127,7 @@ def getTimestampEnd(tableName, start):
         end = (pd.to_datetime(start) + td(dateReso)).strftime("%Y-%m-%d %H:%M:%S")
         
         query = "SELECT COUNT(*) AS count from %s " % (tableName)
-        query = query + "WHERE timestamp > '%s' AND timestamp < '%s' " % (start, end)
+        query = query + "WHERE timestamp > '%s' AND timestamp <= '%s' " % (start, end)
         query = query + "AND id > 0 and id < 51 "    
         query = query + "ORDER BY timestamp DESC"
         
@@ -144,7 +144,7 @@ def getTimestampEnd(tableName, start):
             
             #get max timestamp
             query = "SELECT MAX(timestamp) as ts from %s " % (tableName)
-            query = query + "WHERE timestamp > '%s' AND timestamp < '%s' " % (start, end)
+            query = query + "WHERE timestamp > '%s' AND timestamp <= '%s' " % (start, end)
             query = query + "AND id > 0 and id < 51 "            
             
             cur.execute(query)
