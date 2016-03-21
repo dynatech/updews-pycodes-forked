@@ -45,7 +45,7 @@ def getsomsrawdata(column="", gid=0, fdate="", tdate=""):
             df.sraw =(((8000000/(soms.mval1[(soms.msgid==21)]))-(8000000/(soms.mval2[(soms.msgid==21)])))*4)/10
             df.scal=soms.mval1[(soms.msgid==26)]
         else:
-            df.sraw =(((20000000/(soms.mval1[(soms.msgid==21)]))-(20000000/(soms.mval2[(soms.msgid==21)])))*4)/10
+            df.sraw =(((20000000/(soms.mval1[(soms.msgid==111)]))-(20000000/(soms.mval2[(soms.msgid==111)])))*4)/10
             df.scal=soms.mval1[(soms.msgid==112)]
         
     else: # if version 3
