@@ -218,7 +218,7 @@ def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid
     
     return df
 
-#TODO: This code should have the GID as input and part of the query to make
+#TODO: This code should have the GID as input and part of the query to make -> used targetnode and edited ConvertSomsRaw.py
 #   the processing time faster
 def GetSomsData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid=0, targetnode = -1):
 
