@@ -6,6 +6,15 @@ Created on Wed Jan 20 18:10:45 2016
 """
 
 import pandas as pd
+import os
+import sys
+
+#include the path of "Data Analysis" folder for the python scripts searching
+path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+if not path in sys.path:
+    sys.path.insert(1,path)
+del path   
+
 import querySenslopeDb as qDb
 
 
