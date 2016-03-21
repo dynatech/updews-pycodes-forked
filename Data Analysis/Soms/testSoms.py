@@ -39,7 +39,7 @@ try:
         columnName = column[0]
         if len(columnName) <= 6:
             #Get list of nodes for column
-            queryNodes = 'SELECT DISTINCT id FROM %s WHERE id > 0 AND id < 60 ORDER BY id' % (columnName)
+            queryNodes = 'SELECT DISTINCT id FROM %s WHERE id > 0 AND id < 40 ORDER BY id' % (columnName)
             cur.execute(queryNodes)
             
             nodes = cur.fetchall()

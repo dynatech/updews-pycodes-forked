@@ -33,7 +33,7 @@ def getsomsrawdata(column="", gid=0, fdate="", tdate=""):
     df = pd.DataFrame(columns=['sraw', 'scal'])
     
     try:
-        soms = qs.GetSomsData(siteid=column, fromTime=fdate, toTime=tdate)
+        soms = qs.GetSomsData(siteid=column, fromTime=fdate, toTime=tdate, targetnode=gid)
     except:
         print 'No data available for ' + column.upper()
         return df
@@ -42,15 +42,15 @@ def getsomsrawdata(column="", gid=0, fdate="", tdate=""):
 
     if column.upper() in v2:
         if column.upper()=='NAGSAM':
-            df.sraw =(((8000000/(soms.mval1[(soms.msgid==21) & (soms.id==gid)]))-(8000000/(soms.mval2[(soms.msgid==21) & (soms.id==gid)])))*4)/10
-            df.scal=soms.mval1[(soms.msgid==26) & (soms.id==gid)]
+            df.sraw =(((8000000/(soms.mval1[(soms.msgid==21)]))-(8000000/(soms.mval2[(soms.msgid==21)])))*4)/10
+            df.scal=soms.mval1[(soms.msgid==26)]
         else:
-            df.sraw =(((20000000/(soms.mval1[(soms.msgid==21) & (soms.id==gid)]))-(20000000/(soms.mval2[(soms.msgid==21) & (soms.id==gid)])))*4)/10
-            df.scal=soms.mval1[(soms.msgid==112) & (soms.id==gid)]
+            df.sraw =(((20000000/(soms.mval1[(soms.msgid==21)]))-(20000000/(soms.mval2[(soms.msgid==21)])))*4)/10
+            df.scal=soms.mval1[(soms.msgid==112)]
         
     else: # if version 3
-        df.sraw=soms.mval1[(soms.msgid==110) & (soms.id==gid)]
-        df.scal=soms.mval1[(soms.msgid==113) & (soms.id==gid)]
+        df.sraw=soms.mval1[(soms.msgid==110)]
+        df.scal=soms.mval1[(soms.msgid==113)]
         
     return df
 
