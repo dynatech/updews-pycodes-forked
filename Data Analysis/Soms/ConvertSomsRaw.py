@@ -15,14 +15,12 @@ if not path in sys.path:
     sys.path.insert(1,path)
 del path   
 
-import querySenslopeDb as qDb
+import querySenslopeDb as qs
 
+#column = raw_input('Enter column name: ')
+#gid = int(raw_input('Enter id: '))
 
-
-column = raw_input('Enter column name: ')
-gid = int(raw_input('Enter id: '))
-
-def getsomsrawdata(column="", gid=0):
+def getsomsrawdata(column="", gid=0, fdate="", tdate=""):
     ''' 
         only for landslide sensors v2 and v3
         output:  df = unfiltered SOMS data (calibrated and raw) of a specific node of the defined column 
@@ -31,11 +29,11 @@ def getsomsrawdata(column="", gid=0):
             gid = geographic id of node [1-40]
     '''
     
-    v2=['NAGSA', 'BAYSB', 'AGBSB', 'MCASB', 'CARSB', 'PEPSB','BLCSA']
+    v2=['NAGSAM', 'BAYSBM', 'AGBSBM', 'MCASBM', 'CARSBM', 'PEPSBM','BLCSAM']
     df = pd.DataFrame(columns=['sraw', 'scal'])
     
     try:
-        soms = qDb.GetSomsData(siteid=column)
+        soms = qs.GetSomsData(siteid=column, fromTime=fdate, toTime=tdate)
     except:
         print 'No data available for ' + column.upper()
         return df
@@ -43,7 +41,7 @@ def getsomsrawdata(column="", gid=0):
     soms.index = soms.ts
 
     if column.upper() in v2:
-        if column.upper()=='NAGSA':
+        if column.upper()=='NAGSAM':
             df.sraw =(((8000000/(soms.mval1[(soms.msgid==21) & (soms.id==gid)]))-(8000000/(soms.mval2[(soms.msgid==21) & (soms.id==gid)])))*4)/10
             df.scal=soms.mval1[(soms.msgid==26) & (soms.id==gid)]
         else:
@@ -56,3 +54,5 @@ def getsomsrawdata(column="", gid=0):
         
     return df
 
+#test = soms.getsomsrawdata(column, gid, fdate, tdate)
+#print test

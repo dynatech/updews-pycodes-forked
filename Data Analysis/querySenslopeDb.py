@@ -218,6 +218,8 @@ def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid
     
     return df
 
+#TODO: This code should have the GID as input and part of the query to make
+#   the processing time faster
 def GetSomsData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid=0, targetnode = -1):
 
     if not siteid:
@@ -226,7 +228,7 @@ def GetSomsData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid=0, 
     if printtostdout:
         PrintOut('Querying database ...')
 
-    query = "select timestamp,id,msgid,mval1,mval2 from senslopedb.%s " % (siteid+"m")        
+    query = "select timestamp,id,msgid,mval1,mval2 from senslopedb.%s " % (siteid)        
 
     if not fromTime:
         fromTime = "2010-01-01"
