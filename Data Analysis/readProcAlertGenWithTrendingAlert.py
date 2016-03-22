@@ -561,9 +561,9 @@ CSVFormat = cfg.get('I/O','CSVFormat')
 webtrends = cfg.get('I/O','webtrends')
 textalert = cfg.get('I/O','textalert')
 textalert2 = cfg.get('I/O','textalert2')
-rainfallalert = cfg.get('I/O','rainfallalert')
-allalerts = cfg.get('I/O','allalerts')
-eqsummary = cfg.get('I/O','eqsummary')
+rainfall_alert = cfg.get('I/O','rainfallalert')
+all_alerts = cfg.get('I/O','allalerts')
+eq_summary = cfg.get('I/O','eqsummary')
 timer = cfg.get('I/O','timer')
 NDlog = cfg.get('I/O','NDlog')
 ND7x = cfg.get('I/O','ND7x')
@@ -593,6 +593,7 @@ PrintWAlert = cfg.getboolean('I/O','PrintWAlert')
 PrintND = cfg.getboolean('I/O','PrintND')
 PrintTimer = cfg.getboolean('I/O','PrintTimer')
 PrintAAlert = cfg.getboolean('I/O','PrintAAlert')
+PrintGSMAlert = cfg.getboolean('I/O', 'PrintGSMAlert')
 
 if PrintColPos or PrintTrendAlerts:
     import matplotlib.pyplot as plt
@@ -871,24 +872,61 @@ if PrintTAlert2:
 
 #Prints rainfall alerts, text alert and eq summary in one file
 if PrintAAlert:
-    with open (output_file_path+allalerts, 'wb') as allalerts:
-        with open (output_file_path+textalert2) as txtalert:
-            n = 0
-            for line in txtalert:
-                if n == 0 or n == 3 or n == 4:
+    with open(output_file_path+all_alerts, 'wb') as allalerts:
+        if PrintGSMAlert:
+            if len(a2_alert) != 0:
+                allalerts.write('a2: ' + ','.join(sorted(a2_alert)) + '\n')
+            if len(a1_alert) != 0:
+                allalerts.write('a1: ' + ','.join(sorted(a1_alert)) + '\n')
+        else:
+            allalerts.write('a2: ' + ','.join(sorted(a2_alert)) + '\n')
+            allalerts.write('a1: ' + ','.join(sorted(a1_alert)) + '\n')
+            allalerts.write('\n')
+        with open(output_file_path+rainfall_alert) as rainfallalert:
+            if PrintGSMAlert:
+                n = 0
+                for line in rainfallalert:
+                    if n == 3 or n == 4:
+                        if len(line) > 6:
+                            allalerts.write(line)
+                    n += 1
+            else:
+                n = 0
+                for line in rainfallalert:
+                    if n == 0 or n == 3 or n == 4:
+                        allalerts.write(line)
+                    n += 1
+                allalerts.write('\n')
+        with open(output_file_path+eq_summary) as eqsummary:
+            if PrintGSMAlert:            
+                n = 0            
+                for line in eqsummary:
+                    if n == 0:
+                        eqalert = line[6:25]
+                        if end - pd.to_datetime(eqalert) > timedelta(hours = 0.5):
+                            break
+                    else:
+                        allalerts.write(line)
+                    n += 1
+            else:
+                for line in eqsummary:
                     allalerts.write(line)
-                n += 1
-        allalerts.write('\n')
-        with open (output_file_path+rainfallalert) as rainfallalert:
-            n = 0
-            for line in rainfallalert:
-                if n == 0 or n == 3 or n == 4:
-                    allalerts.write(line)
-                n += 1
-        allalerts.write('\n')
-        with open (output_file_path+eqsummary) as eqsummary:
-            for line in eqsummary:
-                allalerts.write(line)
+
+                             
+f = open(output_file_path+all_alerts)
+text = f.read()
+f.close()
+if PrintGSMAlert:
+    if os.stat(output_file_path+all_alerts).st_size != 0:
+        f = open(output_file_path+all_alerts, 'w')
+        f.write('As of ' + end.strftime(fmt) + ':\n')
+        f.write(text)
+        f.close()
+else:
+    f = open(output_file_path+all_alerts, 'w')
+    f.write('As of ' + end.strftime(fmt) + ':\n')
+    f.write(text)
+    f.close()
 
 name = []
 nos = []

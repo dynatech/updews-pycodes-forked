@@ -26,6 +26,8 @@ eqsummary = cfg.get('I/O', 'eqsummary')
 #Set True for JSON printing
 set_json = True
 
+#To output file
+PrintGSMAlert = cfg.getboolean('I/O', 'PrintGSMAlert')
 
 dataset =[None]*6
 end = datetime.now().replace(microsecond=0)
@@ -99,9 +101,12 @@ try:
             
             if mag>=4:
                     critdist= (29.027 * (mag**2)) - (251.89*mag) + 547.97
-                    z.write( 'magnitude ' + str(mag) + ' earthquake at ' + str(lat) + 'N ' + str(lon) + 'E' + ' on ' + str(ts) + '\n')
-                    z.write('critical distance at ' + str(critdist) + ' km' + '\n')
-                    z.write("start monitoring for ff sites:" + '\n')
+                    if PrintGSMAlert:
+                        z.write( 'magnitude ' + str(mag) + 'EQ: ' )
+                    else:
+                        z.write( 'magnitude ' + str(mag) + ' earthquake at ' + str(lat) + 'N ' + str(lon) + 'E' + ' on ' + str(ts) + '\n')
+                        z.write('critical distance at ' + str(critdist) + ' km' + '\n')
+                        z.write("start monitoring for ff sites:" + '\n')
                     cnt = 0
                     
                     sensors = q.GetCoordsList()                    
@@ -124,26 +129,33 @@ try:
                        d= 6371 * c
                                       
                        if d <= critdist:
-                           z.write( colname + ': E1' + '\n')
-                           alert_df.update({colname:'e1'})
-                           cnt+=1
+                           if PrintGSMAlert:
+                               z.write(colname + ',')
+                           else:
+                               z.write( colname + ': E1' + '\n')
+                               alert_df.update({colname:'e1'})
+                               cnt+=1
                            
                     if cnt==0: 
-                        z.write( 'all sites E0' + '\n')
+                        if not PrintGSMAlert:
+                            z.write( 'all sites E0' + '\n')
                 
             elif mag<4:
-                z.write('all sites E0')
+                if not PrintGSMAlert:
+                    z.write('all sites E0')
                     
         else:
-           z.write('all sites E0')
+            if not PrintGSMAlert:
+                z.write('all sites E0')
 #           z.write('-last earthquake out of time range. last earthquake was at ' + str(ts)+', ' + rel)
            
-except IOError:
-    end = datetime.now().replace(microsecond=0)
-    with open (output_file_path+eqsummary, 'w') as z:
-        z.write (('as of ') + str(end) + ':\n')
-        z.write('Error. Please check if SOEPD site is down or your internet connection. \n')
-        z.write('SOEPD site: http://www.phivolcs.dost.gov.ph/html/update_SOEPD/EQLatest.html')
+except:
+    if not PrintGSMAlert:
+        end = datetime.now().replace(microsecond=0)
+        with open (output_file_path+eqsummary, 'w') as z:
+            z.write (('as of ') + str(end) + ':\n')
+            z.write('Error. Please check if SOEPD site is down or your internet connection. \n')
+            z.write('SOEPD site: http://www.phivolcs.dost.gov.ph/html/update_SOEPD/EQLatest.html')
         
 print 'eqsummary done'
 

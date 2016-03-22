@@ -110,4 +110,5 @@ PrintWAlert = True
 PrintND = False
 PrintTimer = False
 PrintAAlert = True
-PrintColProps = True
+PrintColProps = False
+PrintGSMAlert = True
