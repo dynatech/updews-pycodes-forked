@@ -22,6 +22,7 @@ output_file_path = cfg.get('I/O','OutputFilePath')
 
 #file names
 eqsummary = cfg.get('I/O', 'eqsummary')
+eq_summaryGSM = cfg.get('I/O','eqsummaryGSM')
 
 #Set True for JSON printing
 set_json = True
@@ -31,7 +32,6 @@ PrintGSMAlert = cfg.getboolean('I/O', 'PrintGSMAlert')
 
 dataset =[None]*6
 end = datetime.now().replace(microsecond=0)
-end
 
 #Get the sensor list and initialize the JSON df container
 alert_df = {}
@@ -93,8 +93,9 @@ try:
 #    lon= 125.54
 #    ts = end-timedelta(minutes=15)
     
-    with open (output_file_path+eqsummary, 'w') as z:
+    with open(output_file_path+eqsummary, 'w') as z, open(output_file_path+eq_summaryGSM, 'w') as g:
         z.write (('as of ') + str(end) + ':\n')
+        g.write('')
         
     #checks if quake is within last 30mins   
         if ts > (end-timedelta(minutes=30)):
@@ -102,7 +103,7 @@ try:
             if mag>=4:
                     critdist= (29.027 * (mag**2)) - (251.89*mag) + 547.97
                     if PrintGSMAlert:
-                        z.write( 'magnitude ' + str(mag) + 'EQ: ' )
+                        g.write( 'magnitude ' + str(mag) + 'EQ: ' )
                     else:
                         z.write( 'magnitude ' + str(mag) + ' earthquake at ' + str(lat) + 'N ' + str(lon) + 'E' + ' on ' + str(ts) + '\n')
                         z.write('critical distance at ' + str(critdist) + ' km' + '\n')
@@ -130,7 +131,7 @@ try:
                                       
                        if d <= critdist:
                            if PrintGSMAlert:
-                               z.write(colname + ',')
+                               g.write(colname + ',')
                            else:
                                z.write( colname + ': E1' + '\n')
                                alert_df.update({colname:'e1'})
@@ -150,12 +151,11 @@ try:
 #           z.write('-last earthquake out of time range. last earthquake was at ' + str(ts)+', ' + rel)
            
 except:
-    if not PrintGSMAlert:
-        end = datetime.now().replace(microsecond=0)
-        with open (output_file_path+eqsummary, 'w') as z:
-            z.write (('as of ') + str(end) + ':\n')
-            z.write('Error. Please check if SOEPD site is down or your internet connection. \n')
-            z.write('SOEPD site: http://www.phivolcs.dost.gov.ph/html/update_SOEPD/EQLatest.html')
+    end = datetime.now().replace(microsecond=0)
+    with open (output_file_path+eqsummary, 'w') as z:
+        z.write (('as of ') + str(end) + ':\n')
+        z.write('Error. Please check if SOEPD site is down or your internet connection. \n')
+        z.write('SOEPD site: http://www.phivolcs.dost.gov.ph/html/update_SOEPD/EQLatest.html')
         
 print 'eqsummary done'
 
