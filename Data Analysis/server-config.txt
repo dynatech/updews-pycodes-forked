@@ -57,12 +57,14 @@ TrendAlertsFilePath = D:\Documents\DYNA\Monitoring Output\trend alerts\
 ############################
 CSVFormat = .csv
 eqsummary = eqsummary.txt
+eqsummaryGSM = eqsummary_GSM.txt
 webtrends = webtrends.csv
 textalert = textalert.txt
 textalert2 = textalert2.txt
 rainfallalert = rainfallalert.txt
 groundalert = groundalert.txt
-allalerts = all_alerts.txt
+allalerts = allalerts.txt
+gsmalert = all_alerts.txt
 timer = timer.txt
 NDlog = NDlog.csv
 ND7x = ND7x.csv
