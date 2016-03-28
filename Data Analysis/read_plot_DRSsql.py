@@ -156,12 +156,12 @@ def plot_cracks(which_site,zeroed=True):
     
     fig.tight_layout(pad = 2)
     for i in range(len(all_sites)):
-        print "\nSite: {}".format(all_sites[i])
-        for k in range(all_max_feature_name[i]+39):
+        print "\nSite: {}".format(all_sites[i].title())
+        for k in range(all_max_feature_name[i]+41):
             sys.stdout.write('#')
         print ""
-        print "# {:<{}s}     #   p value  #      Result     #".format('Feature',all_max_feature_name[i])
-        for k in range(all_max_feature_name[i]+39):
+        print "# {:<{}s} #   p value  #      Result     #".format('Feature',all_max_feature_name[i])
+        for k in range(all_max_feature_name[i]+41):
             sys.stdout.write('-')
         print ""
         for j in range(len(p_value[i])):
@@ -170,8 +170,8 @@ def plot_cracks(which_site,zeroed=True):
                 result = 'Significant'
             else:
                 result = 'Not Significant'
-            print "# {:<{}s}     #   ".format(str(all_features[i][j]),all_max_feature_name[i]) + "{:<6}   # ".format(str(format(round(p_value[i][j],4),'.4f'))) + "{:<15} # ".format(result)
-        for k in range(all_max_feature_name[i]+39):
+            print "#   {:<5} #   ".format(str(all_features[i][j]),all_max_feature_name[i]) + "{:<6}   # ".format(str(format(round(p_value[i][j],4),'.4f'))) + "{:<15} # ".format(result)
+        for k in range(all_max_feature_name[i]+41):
             sys.stdout.write('#')
         print ""
     

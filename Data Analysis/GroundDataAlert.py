@@ -49,24 +49,24 @@ cur = db.cursor()
 cur.execute("USE %s"%Namedb)
 
 #get all the ground data from local database
-query = "SELECT * FROM ground_measurement g;"
+query = "SELECT * FROM gndmeas g;"
 df =  GetDBDataFrame(query)
 
 #reindexing using timestamp
 df.timestamp = pd.to_datetime(df.timestamp)
 #df = df.reindex(index = index)
 df = df.set_index(['timestamp'])
-df = df[['site','feature','measure']]
+df = df[['site_id','crack_id','meas']]
 
 #Step 2: Evaluate the ground measurement per site
-sitelist = np.unique(df['site'].values)
+sitelist = np.unique(df['site_id'].values)
 
 for cur_site in sitelist:
     
 #    if cur_site != 'Nin':
 #        continue
     
-    df_cur_site = df[df['site']==cur_site]
+    df_cur_site = df[df['site_id']==cur_site]
     df_cur_site.sort(inplace = True)    
     
     #get the latest timestamp as reference for the latest data record it on the date of measurement container
@@ -79,15 +79,15 @@ for cur_site in sitelist:
     site_eval = []
     to_p_value = False
     
-    featurelist = np.unique(df_cur_site['feature'].values)
+    featurelist = np.unique(df_cur_site['crack_id'].values)
     for cur_feature in featurelist:
-        df_cur_feature = df_cur_site[df_cur_site['feature']==cur_feature]
+        df_cur_feature = df_cur_site[df_cur_site['crack_id']==cur_feature]
         
         #disregard the current feature if the time of latest measurement is not the most recent
         if df_cur_feature.index[-1] != last_data_time:
             continue
         
-        feature_measure = df_cur_feature['measure'].values
+        feature_measure = df_cur_feature['meas'].values
            
         
         #get the time delta of the last two values
@@ -141,7 +141,7 @@ for cur_site in sitelist:
                 #get the last 4 data values for the current feature
             
                 df_last_cur_feature = df_cur_feature.tail(4)
-                last_cur_feature_measure = df_last_cur_feature['measure'].values
+                last_cur_feature_measure = df_last_cur_feature['meas'].values
                 last_cur_feature_time = (df_last_cur_feature.index - df_last_cur_feature.index[0])/np.timedelta64(1,'D')
 
                 #perform linear regression to get p value
@@ -198,7 +198,7 @@ if mode == 3:
     #create data frame as for easy conversion to JSON format
     
     for i in range(len(ground_alert_release)): ground_alert_release[i] = (measurement_dates[i],) + ground_alert_release[i]
-    dfa = pd.DataFrame(ground_alert_release,columns = ['timestamp','site','g alert'])
+    dfa = pd.DataFrame(ground_alert_release,columns = ['timestamp','site_id','g alert'])
     
     #converting the data frame to JSON format
     dfajson = dfa.to_json(orient="records",date_format='iso')
