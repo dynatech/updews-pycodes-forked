@@ -10,7 +10,7 @@ from senslopedbio import *
 from gsmSerialio import *
 from groundMeasurements import *
 import multiprocessing
-
+import SomsServerParser as SSP
 #---------------------------------------------------------------------------------------------------------------------------
 
 def updateSimNumTable(name,sim_num,date_activated):
@@ -108,6 +108,7 @@ def twoscomp(hexstr):
         return num
 
 def ProcTwoAccelColData(msg,sender,txtdatetime):
+    outl = []
     msgsplit = msg.split('*')
     colid = msgsplit[0] # column id
     
@@ -126,11 +127,8 @@ def ProcTwoAccelColData(msg,sender,txtdatetime):
    
     datastr = msgsplit[2]
     
-    #check for error from marirong sites
     if len(datastr) == 136:
-        if (datastr[72] == 'A'):
-            datastr = datastr[:71] + datastr[72:]
-            print ">> datastr adjustment"
+        datastr = datastr[0:72] + datastr[73:]
     
     ts = msgsplit[3]
   
@@ -151,26 +149,28 @@ def ProcTwoAccelColData(msg,sender,txtdatetime):
         timestamp = dt.strptime(ts,'%y%m%d%H%M%S').strftime('%Y-%m-%d %H:%M:00')
     except ValueError:
         print "Error: wrong timestamp format", ts
-
+ 
+ # PARTITION the message into n characters
     if dtype == 'Y' or dtype == 'X':
        n = 15
+       # PARTITION the message into n characters
+       sd = [datastr[i:i+n] for i in range(0,len(datastr),n)]
     elif dtype == 'B':
-        n = 10
-        ### change from 12 to 10 01/25/16 by anna
-        colid =  colid + 'M'
+        # do parsing for datatype 'B' (SOMS RAW)
+        outl = SSP.somsparser(msg,1,10,0)       
+        for piece in outl:
+            print piece
     elif dtype == 'C':
-        n = 7
-        colid =  colid + 'M'
+        # do parsing for datatype 'C' (SOMS CALIB/NORMALIZED)
+        outl = SSP.somsparser(msg,2,7,0)
+        for piece in outl:
+            print piece
     else:
         raise IndexError("Undefined data format " + dtype )
     
-    outl = []
- 
-    # PARTITION hte message into n characters
-    sd = [datastr[i:i+n] for i in range(0,len(datastr),n)]
-    
-    # do parsing for different data types
+    # do parsing for datatype 'X' or 'Y' (accel data)
     if dtype.upper() == 'X' or dtype.upper() =='Y':
+        outl = []
         for piece in sd:
             try:
                 # print piece
@@ -186,25 +186,6 @@ def ProcTwoAccelColData(msg,sender,txtdatetime):
             except ValueError:
                 print ">> Value Error detected.", piece,
                 print "Piece of data to be ignored"
-    elif dtype.upper() == 'B' or dtype.upper() == 'C':
-        for piece in sd:
-            try:
-                # print piece
-                ID = int(piece[0:2],16)
-                msgID = int(piece[2:4],16)
-                m1 = twoscomp(piece[4:7])
-                try:
-                    m2 = twoscomp(piece[7:10])
-                except:
-                    # for soms 'c' data
-                    m2 = 'NULL'
-                line = [colid,timestamp,ID,msgID,m1,m2]
-                print line
-                outl.append(line)
-            except ValueError:
-                print ">> Value Error detected.", piece,
-                print "Piece of data to be ignored"
-    
                     
     return outl
 
@@ -593,7 +574,7 @@ def RecordGroundMeasurements(gnd_meas):
     
     createTable("gndmeas","gndmeas")
     
-    query = "INSERT IGNORE INTO gndmeas (timestamp, meas_type, site_id, observer_name, crack_id, meas) VALUES " + gnd_meas
+    query = "INSERT IGNORE INTO gndmeas (timestamp, meas_type, site_id, observer_name, crack_id, meas, weather) VALUES " + gnd_meas
     
     # print query
     
@@ -613,34 +594,40 @@ def ProcessCoordinatorMsg(coordsms, num):
     
     createTable("coordrssi","coordrssi")
     
-    datafield = coordsms.split('*')[1]
-    timefield = coordsms.split('*')[2]
-    timestamp = dt.strptime(timefield,"%y%m%d%H%M%S").strftime("%Y-%m-%d %H:%M:%S")
-    
-    smstype = datafield.split(',')[0]
-    # process rssi parameters
-    if smstype == "RSSI":
-        site_name = datafield.split(',')[1]
-        rssi_string = datafield.split(',',2)[2]
-        print rssi_string
-        # format is
-        # <router name>,<rssi value>,...
-        query = "INSERT IGNORE INTO coordrssi (timestamp, site_name, router_name, rssi_val) VALUES ("
-        tuples = re.findall("[A-Z]+,\d+",rssi_string)
-        for item in tuples:
-            query += "'" + timestamp + "',"
-            query += "'" + site_name + "',"
-            query += "'" + item.split(',')[0] + "',"
-            query += item.split(',')[1] + "),("
+    try:
+        datafield = coordsms.split('*')[1]
+        timefield = coordsms.split('*')[2]
+        timestamp = dt.strptime(timefield,"%y%m%d%H%M%S").strftime("%Y-%m-%d %H:%M:%S")
         
-        query = query[:-2]
-        
-        print query
-        
-        commitToDb(query, 'ProcessCoordinatorMsg')
-    else:
-        print ">> Processing coordinator weather"
+        smstype = datafield.split(',')[0]
+        # process rssi parameters
+        if smstype == "RSSI":
+            site_name = datafield.split(',')[1]
+            rssi_string = datafield.split(',',2)[2]
+            print rssi_string
+            # format is
+            # <router name>,<rssi value>,...
+            query = "INSERT IGNORE INTO coordrssi (timestamp, site_name, router_name, rssi_val) VALUES ("
+            tuples = re.findall("[A-Z]+,\d+",rssi_string)
+            for item in tuples:
+                query += "'" + timestamp + "',"
+                query += "'" + site_name + "',"
+                query += "'" + item.split(',')[0] + "',"
+                query += item.split(',')[1] + "),("
             
+            query = query[:-2]
+            
+            commitToDb(query, 'ProcessCoordinatorMsg')
+        else:
+            print ">> Processing coordinator weather"
+    except IndexError:
+        print "IndexError: list index out of range"
+         
+def UnexpectedCharactersLog(msg, network):
+    print ">> Error: Unexpected characters/s detected in ", msg.data
+    f = open(unexpectedchardir+network+'Nonalphanumeric_errorlog.txt','a')
+    f.write(msg.dt + ',' + msg.simnum + ',' + msg.data+ '\n')
+    f.close()
         
 def RunSenslopeServer(network):
     minute_of_last_alert = dt.now().minute
@@ -694,12 +681,14 @@ def RunSenslopeServer(network):
                    ProcessColumn(msg.data,msg.dt,msg.simnum)
                 elif re.search("(RO*U*TI*N*E )|(EVE*NT )", msg.data.upper()):
                     try:
-                        gm,w = getGndMeas(msg.data)
+                        gm = getGndMeas(msg.data)
                         RecordGroundMeasurements(gm)
-                        RecordManualWeather(w)
                         a = sendMsg(successen, msg.simnum)
                     except ValueError as e:
                         print ">> Error in manual ground measurement SMS"
+                        f = open(gndmeasfilesdir + "gnd_measuremenst_w_errors.txt","a")
+                        f.write(m)
+                        f.close()
                         sendMsg(str(e), msg.simnum)
                     finally:
                         g = open(smsgndfile, 'a')
@@ -709,18 +698,19 @@ def RunSenslopeServer(network):
                         g.close()
                 elif re.findall('[^A-Zabcyx0-9\*\+\.\/\,\:\#-]',msg.data):
                     print ">> Error: Unexpected characters/s detected in ", msg.data
-                    f = open(unexpectedchardir+network+'Nonalphanumeric_errorlog.txt','a')
-                    f.write(msg.dt + ',' + msg.simnum + ',' + msg.data+ '\n')
-                    f.close()
+                    UnexpectedCharactersLog(msg, network)
                 elif len(msg.data.split("*")[0]) == 5:
                     try:
-                        dlist = ProcTwoAccelColData(msg.data,msg.simnum,msg.dt)
-                        #print dlist
-                        if dlist:
-                            if len(dlist[0][0]) == 6:
-                                WriteSomsDataToDb(dlist,msg.dt)
-                            else:
-                                WriteTwoAccelDataToDb(dlist,msg.dt)
+                        if re.findall('[^A-Z]', msg.data.split("*")[0]):
+                            UnexpectedCharactersLog(msg, network)
+                        else:    
+                            dlist = ProcTwoAccelColData(msg.data,msg.simnum,msg.dt)
+                            #print dlist
+                            if dlist:
+                                if len(dlist[0][0]) == 6:
+                                    WriteSomsDataToDb(dlist,msg.dt)
+                                else:
+                                    WriteTwoAccelDataToDb(dlist,msg.dt)
                     except IndexError:
                         print "\n\n>> Error: Possible data type error"
                         print msg.data
@@ -738,7 +728,7 @@ def RunSenslopeServer(network):
                 #if message is from piezometer
                 elif msg.data[4:7] == "PZ*":
                     ProcessPiezometer(msg.data, msg.simnum)
-                elif msg.data.split('*')[0] == 'COORDINATOR':
+                elif msg.data.split('*')[0] == 'COORDINATOR' or msg.data.split('*')[0] == 'GATEWAY':
                     ProcessCoordinatorMsg(msg.data, msg.simnum)
                 else:
                     print '>> Unrecognized message format: '
@@ -765,14 +755,6 @@ def RunSenslopeServer(network):
                     unk.write(msg.data+'\n')
                     unk.close()
                         
-                # if DeleteAfterRead and not FileInput:
-                    # print 'Deleting message...'
-                    # try:
-                        # gsmcmd('AT+CMGD='+msg.num).strip()
-                        # print 'OK'
-                    # except ValueError:
-                        # print 'Error deleting message: ', msg.data
-
             # delete all read messages
             print "\n>> Deleting all read messages"
             try:
@@ -878,6 +860,7 @@ CSVInputFile = cfg.get('SMSAlert','CSVInputFile')
 AlertFlags = cfg.get('SMSAlert','AlertFlags')
 AlertReportInterval = cfg.getint('SMSAlert','AlertReportInterval')
 smsgndfile = cfg.get('SMSAlert','SMSgndmeasfile')
+gndmeasfilesdir= cfg.get('SMSAlert','gndmeasfilesdir')
 
 ##SMS alert numbers
 smartnumbers = cfg.get('SMSAlert', 'smartnumbers')

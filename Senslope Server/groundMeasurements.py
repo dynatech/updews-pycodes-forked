@@ -2,6 +2,73 @@ import re
 from datetime import datetime as dt
 import ConfigParser
 
+cfg = ConfigParser.ConfigParser()
+cfg.read('senslope-server-config.txt')
+
+# print '\n\n*******************************************************'  
+faildateen = cfg.get('ReplyMessages','FailDateEN')
+failtimeen = cfg.get('ReplyMessages','FailTimeEN')
+failmeasen = cfg.get('ReplyMessages','FailMeasEN')
+failweaen = cfg.get('ReplyMessages','FailWeaEN')
+failobven = cfg.get('ReplyMessages','FailObvEN')
+
+
+def getTimeFromSms(text):
+  # timetxt = ""
+  hm = "\d{1,2}"
+  sep = ":+ *"
+  day = " *[AP]\.*M\.*"
+  
+  time_format_dict = {
+      hm + sep + hm + day : "%I:%M%p",
+      hm + day : "%I%p",
+      hm + sep + hm + " *N\.*N\.*" : "%H:%M",
+      hm + sep + hm + " +" : "%H:%M"
+  }
+
+  time_str = ''
+  for fmt in time_format_dict:
+    time_str_search = re.search(fmt,text)
+    if time_str_search:
+      time_str = time_str_search.group(0)
+      time_str = re.sub("[^APM0-9:]","",time_str)
+      time_str = dt.strptime(time_str,time_format_dict[fmt]).strftime("%H:%M:%S")
+      break
+  
+  return time_str
+
+    
+def getDateFromSms(text):
+  # timetxt = ""
+  mon_re1 = "[JFMASOND][AEPUCO][NBRYLGTVC]"
+  mon_re2 = "[A-Z]{4,9}"
+  day_re1 = "\d{1,2}"
+  year_re1 = "(201[678]){0,1}"
+
+  cur_year = str(dt.today().year)
+
+  separator = "[\. ]{0,1}"
+
+  date_format_dict = {
+      mon_re1 + separator + day_re1 + separator + year_re1 : "%b%d%Y",
+      day_re1 + separator + mon_re1 + separator + year_re1 : "%d%b%Y",
+      mon_re2 + separator + day_re1 + separator + year_re1 : "%B%d%Y",
+      day_re1 + separator + mon_re2 + separator + year_re1 : "%d%B%Y"
+  }
+
+  date_str = ''
+  for fmt in date_format_dict:
+    date_str_search = re.search("^" + fmt,text)
+    if date_str_search:
+      date_str = date_str_search.group(0)
+      date_str = re.sub("[^A-Z0-9]","",date_str)
+      if len(date_str) < 6:
+        date_str = date_str + cur_year 
+      date_str = dt.strptime(date_str,date_format_dict[fmt]).strftime("%Y-%m-%d")
+      break
+      
+  return date_str
+
 def getGndMeas(text):
 
   cfg = ConfigParser.ConfigParser()
@@ -18,6 +85,7 @@ def getGndMeas(text):
   
   # clean the message
   cleanText = re.sub(" +"," ",text.upper())
+  cleanText = re.sub("\.+",".",cleanText)
   sms_list = re.split(" ",re.sub("\W"," ",cleanText))
   
   sms_date = ""
@@ -29,50 +97,41 @@ def getGndMeas(text):
     meas_type = "ROUTINE"
   else:
     meas_type = "EVENT"
+    
+  data_field = re.split(" ",cleanText,maxsplit=2)[2]
   
-  # check date
-  date_search = re.search("[JFMASOND][A-Z]{2} *\d{1,2} *(201[67]){0,1}",cleanText)
-  if date_search:
-    date_str = date_search.group(0).replace(" ","")
-    if len(date_str) < 6:
-        date_str = date_str + "2016"        
-    print date_str
-    try:
-        sms_date = dt.strptime(date_str,"%b%d%Y").strftime("%Y-%m-%d")
-    except ValueError:
-        raise ValueError(faildateen)
-  else:
-    raise ValueError(faildateen)
+  date_str = getDateFromSms(data_field)
+  print "Date: " + date_str
   
-  # check time
-  # if 
-  sms_time_search = re.search("\d{1,2}\:{0,1}\d{0,2}[AP]M", cleanText)
-  if sms_time_search:
-    sms_time_str = sms_time_search.group(0)
-    if sms_time_str.find(':') > 0:
-      sms_time = dt.strptime(sms_time_str,"%I:%M%p").strftime("%H:%M:00")
-    else:
-      sms_time = dt.strptime(sms_time_str,"%I%p").strftime("%H:%M:00")
-  else:
-    raise ValueError(failtimeen)
+  time_str = getTimeFromSms(data_field)
+  print "Time: " + time_str
   
   # get all the measurement pairs
-  meas_pattern = "[A-Z] \d{1,3}\.*\d{0,2}C*M*"
-  meas = re.findall(meas_pattern,cleanText)
+  meas_pattern = "(?<= )[A-Z] \d{1,3}\.*\d{0,2} *C*M"
+  meas = re.findall(meas_pattern,data_field)
   # create records list
   if meas:
     pass
   else:
     raise ValueError(failmeasen)
   
+  # get all the weather information
   try:
-    wrecord = re.search("(?<="+meas[-1]+" )\w+(?= )",cleanText).group(0)
-    print wrecord
+    wrecord = re.search("(?<="+meas[-1]+" )\w+(?= )",data_field).group(0)
+    recisvalid = False
+    for keyword in ["ARAW","ULAN","BAGYO","LIMLIM","AMBON","ULAP"]:
+        if keyword in wrecord:
+            recisvalid = True
+            print "valid"
+            break
+    if not recisvalid:
+        raise AttributeError  
   except AttributeError:
     raise ValueError(failweaen)
-    
+  
+  # get all the name of reporter/s  
   try:
-    observer_name = re.search("(?<="+wrecord+" ).+$",cleanText).group(0)
+    observer_name = re.search("(?<="+wrecord+" ).+$",data_field).group(0)
     print observer_name
   except AttributeError:
     raise ValueError(failobven)
@@ -87,13 +146,11 @@ def getGndMeas(text):
     except AttributeError:
       cm = float(re.search("\d{1,3}\.*\d{0,2}",cm).group(0))*100.0
       
-    gnd_records = gnd_records + "('"+sms_date+" "+sms_time+"','"+sms_list[0]+"','"+sms_list[1]+"','"+observer_name+"','"+crid+"','"+str(cm)+"'),"
+    gnd_records = gnd_records + "('"+date_str+" "+time_str+"','"+sms_list[0]+"','"+sms_list[1]+"','"+observer_name+"','"+crid+"','"+str(cm)+"','"+wrecord+"'),"
     
   gnd_records = gnd_records[:-1]
   
-  wea_desc = "('"+sms_date+" "+sms_time+"','"+meas_type+"','"+sms_list[1]+"','"+observer_name+"','"+wrecord+"')"
-  
-  return gnd_records, wea_desc
+  return gnd_records
   
 
   
