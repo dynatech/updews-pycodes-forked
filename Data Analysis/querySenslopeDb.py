@@ -218,6 +218,45 @@ def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid
     
     return df
 
+#TODO: This code should have the GID as input and part of the query to make -> used targetnode and edited ConvertSomsRaw.py
+#   the processing time faster
+def GetSomsData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid=0, targetnode = -1):
+
+    if not siteid:
+        raise ValueError('no site id entered')
+    
+    if printtostdout:
+        PrintOut('Querying database ...')
+
+    query = "select timestamp,id,msgid,mval1,mval2 from senslopedb.%s " % (siteid)        
+
+    if not fromTime:
+        fromTime = "2010-01-01"
+        
+    query = query + " where timestamp > '%s'" % fromTime
+    
+    if toTime:
+        query = query + " and timestamp < '%s'" % toTime
+
+#    if len(siteid) == 5:
+#        query = query + " and (msgid & 1) = (%s & 1)" % (msgid);
+    if msgid!=0:
+        query = query + " and msgid = '%s'" % msgid
+        
+    if targetnode <= 0:
+        query = query + " and id >= 1 and id <= %s ;" % (str(maxnode))
+    else:
+        query = query + " and id = %s;" % (targetnode)
+    
+    PrintOut(query)
+    df =  GetDBDataFrame(query)
+    
+    df.columns = ['ts','id','msgid','mval1','mval2']
+    # change ts column to datetime
+    df.ts = pd.to_datetime(df.ts)
+    
+    return df
+    
 #GetRawRainData(siteid = "", fromTime = "", maxnode = 40): 
 #    retrieves raw data from the database table specified by parameters
 #    
@@ -306,7 +345,8 @@ def GetSensorList():
         query = 'SELECT name, num_nodes, seg_length, col_length FROM site_column_props'
         
         df = psql.read_sql(query, db)
-        df.to_csv("column_properties.csv",index=False,header=False);
+        if PrintColProps:
+            df.to_csv("column_properties.csv",index=False,header=False);
         
         # make a sensor list of columnArray class functions
         sensors = []
@@ -554,6 +594,8 @@ try:
     mlowlim = cfg.get(valueSect,'mlowlim')
     muplim = cfg.get(valueSect,'muplim')
     islimval = cfg.getboolean(valueSect,'LimitValues')
+    
+    PrintColProps = cfg.get('I/O', 'PrintColProps')
 except:
     #default values are used for missing configuration files or for cases when
     #sensitive info like db access credentials must not be viewed using a browser

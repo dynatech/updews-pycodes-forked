@@ -22,14 +22,16 @@ output_file_path = cfg.get('I/O','OutputFilePath')
 
 #file names
 eqsummary = cfg.get('I/O', 'eqsummary')
+eq_summaryGSM = cfg.get('I/O','eqsummaryGSM')
 
 #Set True for JSON printing
 set_json = True
 
+#To output file
+PrintGSMAlert = cfg.getboolean('I/O', 'PrintGSMAlert')
 
 dataset =[None]*6
 end = datetime.now().replace(microsecond=0)
-end
 
 #Get the sensor list and initialize the JSON df container
 alert_df = {}
@@ -91,17 +93,21 @@ try:
 #    lon= 125.54
 #    ts = end-timedelta(minutes=15)
     
-    with open (output_file_path+eqsummary, 'w') as z:
+    with open(output_file_path+eqsummary, 'w') as z, open(output_file_path+eq_summaryGSM, 'w') as g:
         z.write (('as of ') + str(end) + ':\n')
+        g.write('')
         
     #checks if quake is within last 30mins   
         if ts > (end-timedelta(minutes=30)):
             
             if mag>=4:
                     critdist= (29.027 * (mag**2)) - (251.89*mag) + 547.97
-                    z.write( 'magnitude ' + str(mag) + ' earthquake at ' + str(lat) + 'N ' + str(lon) + 'E' + ' on ' + str(ts) + '\n')
-                    z.write('critical distance at ' + str(critdist) + ' km' + '\n')
-                    z.write("start monitoring for ff sites:" + '\n')
+                    if PrintGSMAlert:
+                        g.write( 'magnitude ' + str(mag) + 'EQ: ' )
+                    else:
+                        z.write( 'magnitude ' + str(mag) + ' earthquake at ' + str(lat) + 'N ' + str(lon) + 'E' + ' on ' + str(ts) + '\n')
+                        z.write('critical distance at ' + str(critdist) + ' km' + '\n')
+                        z.write("start monitoring for ff sites:" + '\n')
                     cnt = 0
                     
                     sensors = q.GetCoordsList()                    
@@ -124,21 +130,27 @@ try:
                        d= 6371 * c
                                       
                        if d <= critdist:
-                           z.write( colname + ': E1' + '\n')
-                           alert_df.update({colname:'e1'})
-                           cnt+=1
+                           if PrintGSMAlert:
+                               g.write(colname + ',')
+                           else:
+                               z.write( colname + ': E1' + '\n')
+                               alert_df.update({colname:'e1'})
+                               cnt+=1
                            
                     if cnt==0: 
-                        z.write( 'all sites E0' + '\n')
+                        if not PrintGSMAlert:
+                            z.write( 'all sites E0' + '\n')
                 
             elif mag<4:
-                z.write('all sites E0')
+                if not PrintGSMAlert:
+                    z.write('all sites E0')
                     
         else:
-           z.write('all sites E0')
+            if not PrintGSMAlert:
+                z.write('all sites E0')
 #           z.write('-last earthquake out of time range. last earthquake was at ' + str(ts)+', ' + rel)
            
-except IOError:
+except:
     end = datetime.now().replace(microsecond=0)
     with open (output_file_path+eqsummary, 'w') as z:
         z.write (('as of ') + str(end) + ':\n')
