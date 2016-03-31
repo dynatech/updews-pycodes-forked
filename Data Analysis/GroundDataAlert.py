@@ -31,7 +31,7 @@ if end_minute<30:end_minute=0
 else:end_minute=30
 
 end=datetime.combine(date(end_Year,end_month,end_day),time(end_hour,end_minute,0))
-
+#end = datetime(2016,03,10,12,00,00)
 #Set the container of the date of measurements
 measurement_dates = []
 
@@ -171,12 +171,12 @@ for cur_site in sitelist:
     
 if mode == 1:
     print "Ground measurement report as of {}".format(end)
-    print "{:5}: {:5}; Date of Measurement".format('Site','Alert')
+    print "{:5}: {:5}; Last Date of Measurement".format('Site','Alert')
     i = 0
     for site, galert in ground_alert_release:
         print "{:5}: {:5}; {}".format(site,galert,measurement_dates[i])
         i += 1
-    with open (output_file_path+'groundalert.txt', 'wb') as t:
+    with open (output_file_path+'groundalert.txt', 'w') as t:
         i = 0
         t.write("Ground measurement report as of {}".format(end)+'\n')
         for site, galert in ground_alert_release:
