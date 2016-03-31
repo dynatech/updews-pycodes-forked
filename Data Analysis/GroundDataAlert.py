@@ -9,7 +9,7 @@ from scipy import stats
 
 #Step 0: Specify mode of output, mode = 1: txt1; mode = 2 txt 2; mode = 3 json
 mode = 3
-if mode == 1 or mode == 3:
+if mode == 1 or mode == 2:
     output_file_path = cfg.get('I/O','OutputFilePath')
 
 #Set the date of the report as the current date rounded to HH:30 or HH:00
