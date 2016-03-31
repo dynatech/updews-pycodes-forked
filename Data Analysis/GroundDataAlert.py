@@ -8,8 +8,8 @@ from scipy import stats
 
 
 #Step 0: Specify mode of output, mode = 1: txt1; mode = 2 txt 2; mode = 3 json
-mode = 3
-if mode == 1 or mode == 2:
+mode = 2
+if mode == 1:
     output_file_path = cfg.get('I/O','OutputFilePath')
 
 #Set the date of the report as the current date rounded to HH:30 or HH:00
@@ -96,7 +96,7 @@ for cur_site in sitelist:
                 to_p_value = True
             
         except IndexError:
-            print "Site: '{}' Feature: '{}' has {} measurement".format(cur_site,cur_feature,len(df_cur_feature))
+            PrintOut( "Site: '{}' Feature: '{}' has {} measurement".format(cur_site,cur_feature,len(df_cur_feature)))
             continue
         
         #Evaluating the Alert of the specific crack base on look up table
@@ -157,8 +157,10 @@ for cur_site in sitelist:
             ground_data_alert.update({cur_site:'L1'})
         elif 'L0p' in site_eval:
             ground_data_alert.update({cur_site:'L0p'})
-        else:
+        elif 'L0' in site_eval:
             ground_data_alert.update({cur_site:'L0'})
+        else:
+            ground_data_alert.update({cur_site:'ND'})
     
     #change dict format to tuple for more easy output writing
     ground_alert_release = sorted(ground_data_alert.items())
@@ -177,18 +179,7 @@ if mode == 1:
             t.write ("{:5}: {:5}; {}".format(site,galert,measurement_dates[i])+'\n')
             i += 1
 
-#if mode == 2:
-#    print "As of {}".format(end)
-#    ground_data_alert2 = {}
-#    for site, galert in ground_data_alert.iteritems():
-#        ground_data_alert2.setdefault(galert, []).append(site)
-#    ground_alert_release2 = sorted(ground_data_alert2.items())
-#    i = 0
-#    for galert, site in ground_alert_release2:
-#        print "{:3}: {}; {}".format(galert, ','.join(sorted(site)), measurement_dates[i])
-#        i += 1
-
-if mode == 3:
+if mode == 2:
     #create data frame as for easy conversion to JSON format
     
     for i in range(len(ground_alert_release)): ground_alert_release[i] = (measurement_dates[i],) + ground_alert_release[i]
