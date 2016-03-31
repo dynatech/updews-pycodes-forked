@@ -1,24 +1,16 @@
 
-import os
 from datetime import datetime, date, time, timedelta
 import pandas as pd
-from pandas.stats.api import ols
 import numpy as np
-import matplotlib.pyplot as plt
 import ConfigParser
-from collections import Counter
-import csv
-import fileinput
 from querySenslopeDb import *
 from scipy import stats
 
-import generic_functions as gf
-import generateProcMonitoring as genproc
-import alertEvaluation as alert
 
 #Step 0: Specify mode of output, mode = 1: txt1; mode = 2 txt 2; mode = 3 json
-mode = 1
-output_file_path = cfg.get('I/O','OutputFilePath')
+mode = 3
+if mode == 1 or mode == 3:
+    output_file_path = cfg.get('I/O','OutputFilePath')
 
 #Set the date of the report as the current date rounded to HH:30 or HH:00
 end=datetime.now()
@@ -73,7 +65,7 @@ for cur_site in sitelist:
     last_data_time = df_cur_site.index[-1]
     measurement_dates.append(last_data_time)
     
-    print df_cur_site
+    PrintOut(df_cur_site)
     
     #Evaluate ground measurement per crack
     site_eval = []
@@ -95,7 +87,9 @@ for cur_site in sitelist:
             time_delta_last = (df_cur_feature.index[-1] - df_cur_feature.index[-2])/np.timedelta64(1,'D')
             feature_displacement = abs(feature_measure[-1] - feature_measure[-2])
              
-            print df_cur_feature, time_delta_last, feature_displacement
+            PrintOut(df_cur_feature)
+            PrintOut(time_delta_last)
+            PrintOut(feature_displacement)
                 
             #Check if p value computation is needed
             if feature_displacement <= 1:
