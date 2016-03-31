@@ -13,7 +13,6 @@ from sqlalchemy import *
 from sqlalchemy import create_engine, exc
 from sqlalchemy.engine.url import make_url, URL
 from sqlalchemy import Table, MetaData, orm
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, mapper
 
 import requests
@@ -60,6 +59,32 @@ def getRainfallARQTables(conn, meta):
     
     #print arq_array
     return arq_array
+
+
+def createTableIfDoesNotExist(arq_table, meta):
+    """
+    Checks if a rainfall table exists and creates a table
+    if it does not exists
+    
+    """
+    table = Table(arq_table, meta, 
+                Column('timestamp', DATETIME(), primary_key=True, nullable=False), 
+                Column('name', CHAR(length=6), primary_key=True, nullable=False), 
+                Column('r15m', DOUBLE(asdecimal=True)), 
+                Column('r24h', DOUBLE(asdecimal=True)), 
+                Column('batv1', DOUBLE(asdecimal=True)), 
+                Column('batv2', DOUBLE(asdecimal=True)), 
+                Column('cur', DOUBLE(asdecimal=True)), 
+                Column('boostv1', DOUBLE(asdecimal=True)), 
+                Column('boostv2', DOUBLE(asdecimal=True)), 
+                Column('charge', INTEGER(display_width=11)), 
+                Column('csq', INTEGER(display_width=11)), 
+                Column('temp', DOUBLE(asdecimal=True)), 
+                Column('hum', DOUBLE(asdecimal=True)), 
+                Column('flashp', INTEGER(display_width=11)), 
+                schema=None, autoload=True)
+    
+    return table
     
     
 def getLastTimestamp(meta, arq_table):
@@ -70,12 +95,21 @@ def getLastTimestamp(meta, arq_table):
     
     """    
     session = createSession()
-    table = Table(arq_table, meta, autoload=True)
-    result = (
-        session.query(table.c.timestamp)
-        .order_by(table.c.timestamp.desc())
-        .first()
-    )
+    
+    # Check if the rainfall table exists
+    if not db.has_table(arq_table):
+        print "Database does not have table {0}.".format(arq_table)
+        print "Creating table {0}".format(arq_table)
+        table = createTableIfDoesNotExist(arq_table, meta)
+        result[0] = "2010-01-01 00:00:00"
+    else:
+        table = Table(arq_table, meta, autoload=True)
+        result = (
+            session.query(table.c.timestamp)
+            .order_by(table.c.timestamp.desc())
+            .first()
+        )
+        
     session.close()
     
     #print result[0]
@@ -161,7 +195,7 @@ for row in arq_tables:
     while downloadMore is True:
         # Get the latest timestamp
         last_timestamp = getLastTimestamp(meta, row[1])
-        #print "Last timestamp: ", last_timestamp    
+        #print "Last timestamp: ", last_timestamp
         
         # Get data from DEWS API
         data = getDataFromDEWSapi(row[0], last_timestamp)
