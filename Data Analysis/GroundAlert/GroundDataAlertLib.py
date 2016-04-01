@@ -32,7 +32,7 @@ def GenerateGroundDataAlert():
     else:end_minute=30
     
     end=datetime.combine(date(end_Year,end_month,end_day),time(end_hour,end_minute,0))
-    #end = datetime(2016,03,10,12,00,00)
+#    end = datetime(2016,03,30,12,00,00)
     #Set the container of the date of measurements
     measurement_dates = []
     
@@ -155,19 +155,22 @@ def GenerateGroundDataAlert():
             site_eval.append(feature_alert)
             
         #Evaluate site alert based on crack alerts
-        if end - last_data_time > np.timedelta64(4, 'h'):
-            ground_data_alert.update({cur_site:'ND'})
-        else:
-            if 'L2' in site_eval:
-                ground_data_alert.update({cur_site:'L2'})
-            elif 'L1' in site_eval:
-                ground_data_alert.update({cur_site:'L1'})
-            elif 'L0p' in site_eval:
-                ground_data_alert.update({cur_site:'L0p'})
-            elif 'L0' in site_eval:
-                ground_data_alert.update({cur_site:'L0'})
-            else:
+        try:
+            if end - last_data_time > np.timedelta64(4, 'h'):
                 ground_data_alert.update({cur_site:'ND'})
+            else:
+                if 'L2' in site_eval:
+                    ground_data_alert.update({cur_site:'L2'})
+                elif 'L1' in site_eval:
+                    ground_data_alert.update({cur_site:'L1'})
+                elif 'L0p' in site_eval:
+                    ground_data_alert.update({cur_site:'L0p'})
+                elif 'L0' in site_eval:
+                    ground_data_alert.update({cur_site:'L0'})
+                else:
+                    ground_data_alert.update({cur_site:'ND'})
+        except TypeError:
+            print 'Type Error'
         
         #change dict format to tuple for more easy output writing
         ground_alert_release = sorted(ground_data_alert.items())
