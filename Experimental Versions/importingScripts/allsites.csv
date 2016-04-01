@@ -1,4 +1,4 @@
-Timestamp,Site,Feature,N,Measurement (cm),reliable,feat desc,weather,measured by
+timestamp,site,feature,N,measure,reliable,featdesc,weather,observer
 2014-01-09 14:00,Mag,Crack A,,138.5,Y,Sa gilid ng multi-purpose hall,NS,Felix Bragat
 2014-01-09 14:00,Mag,Crack B,,74.2,Y,Gilid ng bahay ni Baldisco,NS,?
 2014-01-09 14:00,Mag,Crack C,,78.6,Y,Corn farm ni Baldisco,NS,Dodong Laogenas
