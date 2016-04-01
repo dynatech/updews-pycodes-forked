@@ -23,36 +23,71 @@ import querySenslopeDb as qs
 def getsomsrawdata(column="", gid=0, fdate="", tdate=""):
     ''' 
         only for landslide sensors v2 and v3
-        output:  df = unfiltered SOMS data (calibrated and raw) of a specific node of the defined column 
+        output:  sraw = series of unfiltered SOMS data (raw) of a specific node of the defined column 
+        param:
+            column = column name (ex. laysam)
+            gid = geographic id of node [1-40]
+    '''
+    
+    v2=['NAGSAM', 'BAYSBM', 'AGBSBM', 'MCASBM', 'CARSBM', 'PEPSBM','BLCSAM']
+    v3=[ 'lpasam','lpasbm','laysam','laysbm','imesbm','barscm',
+         'mngsam','gaasam','gaasbm','hinsam','hinsbm','talsam' ]
+    df = pd.DataFrame(columns=['sraw', 'scal'])
+    print 'getsomsdata: ' + column + ',' + str(gid)
+    try:
+        df = qs.GetSomsData(siteid=column, fromTime=fdate, toTime=tdate, targetnode=gid)
+    except:
+        print 'No data available for ' + column.upper()
+        return df
+        
+    df.index = df.ts
+
+    if column.upper() in v2:
+        if column.upper()=='NAGSAM':
+            sraw =(((8000000/(df.mval1[(df.msgid==21)]))-(8000000/(df.mval2[(df.msgid==21)])))*4)/10
+        else:
+            sraw =(((20000000/(df.mval1[(df.msgid==111)]))-(20000000/(df.mval2[(df.msgid==111)])))*4)/10           
+
+    elif column.lower() in v3: # if version 3
+        sraw=df.mval1[(df.msgid==110)]
+    else:
+        sraw=pd.Series()
+        pass
+    
+    return sraw
+
+def getsomscaldata(column="", gid=0, fdate="", tdate=""):
+    ''' 
+        only for landslide sensors v2 and v3
+        output:  df = series of unfiltered SOMS data (calibrated/normalized) of a specific node of the defined column 
         param:
             column = column name (ex. laysa)
             gid = geographic id of node [1-40]
     '''
     
     v2=['NAGSAM', 'BAYSBM', 'AGBSBM', 'MCASBM', 'CARSBM', 'PEPSBM','BLCSAM']
-    df = pd.DataFrame(columns=['sraw', 'scal'])
-    
-    try:
-        soms = qs.GetSomsData(siteid=column, fromTime=fdate, toTime=tdate, targetnode=gid)
-    except:
-        print 'No data available for ' + column.upper()
-        return df
-        
-    soms.index = soms.ts
+    v3=[ 'lpasam','lpasbm','laysam','laysbm','imesbm','barscm',
+         'mngsam','gaasam','gaasbm','hinsam','hinsbm','talsam' ]
+    df = pd.DataFrame()
 
     if column.upper() in v2:
         if column.upper()=='NAGSAM':
-            df.sraw =(((8000000/(soms.mval1[(soms.msgid==21)]))-(8000000/(soms.mval2[(soms.msgid==21)])))*4)/10
-            df.scal=soms.mval1[(soms.msgid==26)]
+            msgid = 26
         else:
-            df.sraw =(((20000000/(soms.mval1[(soms.msgid==111)]))-(20000000/(soms.mval2[(soms.msgid==111)])))*4)/10
-            df.scal=soms.mval1[(soms.msgid==112)]
+            msgid = 112
+    elif column.lower() in v3: # if version 3
+            msgid= 113
+    else:
+        print 'No data available for ' + column.upper()
+        return df  
         
-    else: # if version 3
-        df.sraw=soms.mval1[(soms.msgid==110)]
-        df.scal=soms.mval1[(soms.msgid==113)]
-        
-    return df
+    try:
+        df = qs.GetSomsData(siteid=column, fromTime=fdate, toTime=tdate, targetnode=gid, msgid=msgid)
+        df.index=df.ts
+        df= df.mval1
 
-#test = soms.getsomsrawdata(column, gid, fdate, tdate)
-#print test
+    except:
+        print 'No data available for ' + column.upper()
+        return df  
+
+    return df

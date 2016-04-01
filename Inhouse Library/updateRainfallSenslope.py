@@ -13,7 +13,6 @@ from sqlalchemy import *
 from sqlalchemy import create_engine, exc
 from sqlalchemy.engine.url import make_url, URL
 from sqlalchemy import Table, MetaData, orm
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, mapper
 
 import requests
@@ -21,7 +20,7 @@ import requests
 # Database credentials
 host = 'localhost'
 user = 'root'
-password = 'senslope'
+password = 'dyn4m1ght'
 database = 'senslopedb'
 
 # Number of row to be retrieved from API per call
@@ -60,6 +59,26 @@ def getRainfallSenslopeTables(conn, meta):
     
     #print arq_array
     return rainsenslope_array
+
+
+def createTableIfDoesNotExist(senslope_table, meta):
+    """
+    Checks if a rainfall table exists and creates a table
+    if it does not exists
+    
+    """
+    table = Table(senslope_table, meta, 
+                Column('timestamp', DATETIME(), primary_key=True, nullable=False), 
+                Column('name', CHAR(length=4), primary_key=True, nullable=False), 
+                Column('temp', DOUBLE(asdecimal=True)), 
+                Column('wspd', INTEGER(display_width=11)), 
+                Column('wdir', INTEGER(display_width=11)), 
+                Column('rain', DOUBLE(asdecimal=True)), 
+                Column('batt', DOUBLE(asdecimal=True)), 
+                Column('csq', INTEGER(display_width=11)), 
+                schema=None, autoload=True)
+    
+    return table
     
     
 def getLastTimestamp(meta, senslope_table):
@@ -70,12 +89,21 @@ def getLastTimestamp(meta, senslope_table):
     
     """    
     session = createSession()
-    table = Table(senslope_table, meta, autoload=True)
-    result = (
-        session.query(table.c.timestamp)
-        .order_by(table.c.timestamp.desc())
-        .first()
-    )
+    
+    # Check if the rainfall table exists
+    if not db.has_table(senslope_table):
+        print "Database does not have table {0}.".format(senslope_table)
+        print "Creating table {0}".format(senslope_table)
+        table = createTableIfDoesNotExist(senslope_table, meta)
+        result[0] = "2010-01-01 00:00:00"
+    else:
+        table = Table(senslope_table, meta, autoload=True)    
+        result = (
+            session.query(table.c.timestamp)
+            .order_by(table.c.timestamp.desc())
+            .first()
+        )
+        
     session.close()
     
     #print result[0]
