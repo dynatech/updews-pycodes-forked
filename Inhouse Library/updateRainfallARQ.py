@@ -20,7 +20,7 @@ import requests
 # Database credentials
 host = 'localhost'
 user = 'root'
-password = 'dyn4m1ght'
+password = 'senslope'
 database = 'senslopedb'
 
 # Number of row to be retrieved from API per call
@@ -122,7 +122,7 @@ def getDataFromDEWSapi(site, date):
     
     """
     url = ('http://www.dewslandslide.com/ajax/getSenslopeData.php/?rainarq&site={0}&start_date={1}&limit={2}').format(site, date, entryLimit)
-    print("Fetching URL... {0} Done.").format(url)
+    #print("Fetching URL... {0} Done.").format(url)
     
     response = requests.get(url)
 
