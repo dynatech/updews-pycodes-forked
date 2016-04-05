@@ -1,0 +1,100 @@
+
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<script type="text/javascript"  src="dygraph-combined-dev.js"></script>
+<script type="text/javascript"  src="dygraph-tickers.js"></script>
+<STYLE TYPE="text/css">
+
+BODY	{
+    font-family:sans-serif;
+}
+	</STYLE>
+<style type="text/css">
+    .dygraph-title {
+  color: navy;
+  font-weight: bold;
+}
+.dygraph-axis-label {
+  font-size: 10px;
+}
+</style>
+<table style="width:100%">
+<tr>
+<td width="10%" valign="top">
+    <FORM NAME="test">
+        Node:<br> <input type="text" id="colname" name="dateinput" "/><br>
+        CMD1:<br><input type="number" min="1" max="40" name="node1" value="11"/><br>
+		CMD2:<br><input type="number" min="1" max="40" name="node2" value="12"/><br>
+		CMD3:<br><input type="number" min="1" max="40" name="node3" value="22"/><br>
+		CMD3:<br><input type="number" min="1" max="40" name="node4" value="23"/><br>
+		Input:<br><input type="text" name="file" value="mag_diff"/><br>
+        <input type="button" value="go" onclick="showData(this.form)"><br>
+    </form>
+</td>
+<td  width="90%">    
+<div id="gdiv0" style="width:100%; height:130px;"></div><hr>
+<div id="gdiv1" style="width:100%; height:130px;"></div><hr>
+<div id="gdiv2" style="width:100%; height:130px;"></div><hr>
+<div id="gdiv3" style="width:100%; height:130px;"></div><hr>
+</td>
+</tr>
+</head>
+
+<body>
+<script type="text/javascript">
+    function showData(frm){
+		
+		//for (var a = 0; i<4; i++){
+		  var gdiv = document.getElementById('gdiv0');
+		  var div = document.createElement('div');
+		  div.className = frm;
+		  div.style.display = 'inline-block';
+		  div.style.margin = '4px';
+		  gdiv.appendChild(div);
+			
+		labels = ['MinMax A1','A2','MatrixA1','A2'];
+		xlabel = ['Data Point']
+        var files = [
+
+		    frm.colname.value+'_'+frm.node1.value+'_' + frm.file.value + '.csv',
+			frm.colname.value+'_'+frm.node2.value+'_' + frm.file.value + '.csv',
+			frm.colname.value+'_'+frm.node3.value+'_' + frm.file.value + '.csv',
+			frm.colname.value+'_'+frm.node4.value+'_' + frm.file.value + '.csv'
+        ];
+		gs = [];
+		for (var i = 0; i < 4; i++)
+		{
+			gs.push(new Dygraph( document.getElementById('gdiv' + i), files[i],
+			{width: 480,height: 320,
+			//labels: labels.slice(),
+			stackedGraph: false, highlightCircleSize: 10, 
+			strokeWidth: 0.1,
+			drawPoints: true,
+			pointSize: 4,
+			strokeBorderWidth: false ? null : 1,        
+			highlightSeriesOpts: {strokeWidth: 0,strokeBorderWidth: 1,highlightCircleSize: 6},
+			ylabel: labels[i],
+			}));
+		}
+		
+		var onclick = function(ev) {
+			if (gs.isSeriesLocked()) 
+			{
+				  gs.clearSelection();
+			} else {
+				  gs.setSelection(gs.getSelection(), gs.getHighlightSeries(), true);
+			}
+		};
+		gs.updateOptions({clickCallback: onclick}, true);
+		gs.setSelection(false, 's005');
+		
+
+		
+	}
+</script>
+
+
+</body>
+</html>
