@@ -41,8 +41,6 @@ proc_monitoring_file_headers = cfg.get('I/O','proc_monitoring_file_headers').spl
 PrintProc = cfg.getboolean('I/O','PrintProc')
 
 def generate_proc(site):
-
-    print rt_window_length
     
     #1. setting date boundaries for real-time monitoring window
     roll_window_numpts=int(1+roll_window_length/data_dt)
@@ -62,11 +60,12 @@ def generate_proc(site):
             print seg_len
                 
             #3. getting accelerometer data for site 'colname'
-            monitoring=GetRawAccelData(colname,offsetstart)
+            monitoring=GetFilledAccelData(colname,offsetstart)
     
             #4. evaluating which data needs to be filtered
             try:
                 monitoring=applyFilters(monitoring)
+                print 'applyFilters done'
                 LastGoodData=GetLastGoodData(monitoring,num_nodes)
                 PushLastGoodData(LastGoodData,colname)
                 LastGoodData = GetLastGoodDataFromDb(colname)
@@ -74,6 +73,7 @@ def generate_proc(site):
             except:
                 LastGoodData = GetLastGoodDataFromDb(colname)
                 print 'error'
+
             if len(LastGoodData)<num_nodes: print colname, " Missing nodes in LastGoodData"
     
             #5. extracting last data outside monitoring window

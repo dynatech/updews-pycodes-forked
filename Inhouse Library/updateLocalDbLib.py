@@ -20,7 +20,7 @@ from pandas.io.json import json_normalize
 dbname = "senslopedb"
 dbhost = "127.0.0.1"
 dbuser = "root"
-dbpwd = "dyn4m1ght"
+dbpwd = "senslope"
 #dbuser = "updews"
 #dbpwd = "october50sites"
 entryLimit = 600

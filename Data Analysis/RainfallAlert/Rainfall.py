@@ -5,8 +5,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import ConfigParser
 import math
+import sys
 
-import generic_functions as gf
 import rainDownload as rd
 
 #include the path of "Data Analysis" folder for the python scripts searching
@@ -16,6 +16,7 @@ if not path in sys.path:
 del path   
 
 from querySenslopeDb import *
+import generic_functions as gf
 
 
 plt.ioff()
@@ -54,6 +55,7 @@ def ASTIplot(r,offsetstart,end,tsn, data):
     ##tsn; string; datetime format allowed in savefig
 
     rainfall = data
+    rainfall = rainfall.loc[rainfall['rain']>=0]
     rainfall = rainfall[(rainfall.index>=offsetstart)]
     rainfall = rainfall[(rainfall.index<=end)]
     rainfall = rainfall.resample('15min',how='sum')
@@ -267,7 +269,8 @@ for s in range(len(rainprops)):
     
         rainfall = GetRawRainData(r, start)
         rainfall = rainfall.set_index('ts')
-    
+        rainfall = rainfall.loc[rainfall['rain']>=0]
+           
         if rainfall.index[-1:]<end:
             blankdf_time=pd.date_range(start=start, end=end, freq='15Min',name='timestamp', closed=None)
             blankdf=pd.DataFrame(data=np.nan*np.ones(len(blankdf_time)), index=blankdf_time,columns=['rain'])
