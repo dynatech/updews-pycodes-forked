@@ -70,7 +70,7 @@ def GetLatestTimestamp(nameDb, table):
     try:
         cur.execute("select max(timestamp) from %s.%s" %(nameDb,table))
     except:
-        print "Error in getting maximum timstamp"
+        print "Error in getting maximum timestamp"
 
     a = cur.fetchall()
     if a:

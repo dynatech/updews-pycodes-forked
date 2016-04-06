@@ -62,7 +62,7 @@ def generate_proc(site):
             print seg_len
                 
             #3. getting accelerometer data for site 'colname'
-            monitoring=GetRawAccelData(colname,offsetstart)
+            monitoring=GetFilledAccelData(colname,offsetstart)
     
             #4. evaluating which data needs to be filtered
             try:

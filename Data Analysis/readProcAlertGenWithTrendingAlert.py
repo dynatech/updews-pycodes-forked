@@ -8,6 +8,7 @@ from collections import Counter
 import csv
 import fileinput
 from querySenslopeDb import *
+from filterSensorData import *
 
 import generic_functions as gf
 import generateProcMonitoring as genproc
@@ -959,7 +960,7 @@ if PrintND:
                     filtered = filtered[(filtered.index>=end)]
                     print 'filtered'            
                     print filtered
-                    raw = GetRawAccelData(colname, end - timedelta(hours=0.5))
+                    raw = GetFilledAccelData(colname, end - timedelta(hours=0.5))
                     raw = raw.set_index('ts')
                     raw = raw[(raw.index>=end)]
                     print 'raw'            
