@@ -20,7 +20,7 @@ import requests
 # Database credentials
 host = 'localhost'
 user = 'root'
-password = 'dyn4m1ght'
+password = 'senslope'
 database = 'senslopedb'
 
 # Number of row to be retrieved from API per call
