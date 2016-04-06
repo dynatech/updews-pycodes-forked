@@ -211,7 +211,10 @@ def GetFilledAccelData(siteid = "", fromTime = "", toTime = "", drop_msgid = 1 ,
  
     df =  GetDBDataFrame(query)
     df = fill_axel_data(df, drop_msgid)
-    df.columns = ['ts','id','x','y','z']
+    if drop_msgid:
+        df.columns = ['ts','id','x','y','z']
+    elif drop_msgid == 0:
+        df.columns = ['ts','id','msgid','x','y','z']
     # change ts column to datetime
     df.ts = pd.to_datetime(df.ts)
     
