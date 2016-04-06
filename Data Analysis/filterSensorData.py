@@ -184,7 +184,7 @@ def applyFilters(dfl, orthof=True, rangef=True, outlierf=True):
 #        dfm: dataframe object 
 #            dataframe object of the result set 
     
-def GetFilledAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, targetnode = -1):
+def GetFilledAccelData(siteid = "", fromTime = "", toTime = "", drop_msgid = 1 ,maxnode = 40, targetnode = -1):
 
     if not siteid:
         raise ValueError('no site id entered')
@@ -210,7 +210,7 @@ def GetFilledAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, ta
     PrintOut(query)
  
     df =  GetDBDataFrame(query)
-    df = fill_axel_data(df)
+    df = fill_axel_data(df, drop_msgid)
     df.columns = ['ts','id','x','y','z']
     # change ts column to datetime
     df.ts = pd.to_datetime(df.ts)
@@ -229,7 +229,7 @@ def GetFilledAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, ta
 #        Example:
 #            df = df.groupby([df['id']]).apply(fill_axel_data)
 
-def fill_axel_data(df):
+def fill_axel_data(df, drop_msgid = 1):
     #let's clean up the data a bit
     df = condition_df(df,resample=0)
     
@@ -264,7 +264,10 @@ def fill_axel_data(df):
     dfm = dfm[numpy.isfinite(dfm.id)] #removes all rows with NaNs in id
     # rows removed this way are rows with no data from either axel 1 or axel 2
     dfm = dfm.reset_index(level = 1)   
-    dfm = dfm[['ts','id','x','y','z']]
+    if drop_msgid:
+        dfm = dfm[['ts','id','x','y','z']]
+    elif drop_msgid == 0:
+        dfm = dfm[['ts','id','msgid','x','y','z']]
     return dfm
     
 #condition_df()
