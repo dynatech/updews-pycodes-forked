@@ -79,7 +79,7 @@ def checkAccelDrift(df):
         
 def outlierFilter(df):
 
-    df = df.resample('30Min', how='first', fill_method = 'pad')
+    df = df.resample('30Min', how='first', fill_method = 'ffill')
     
     dfmean = pd.stats.moments.rolling_mean(df,48, min_periods=1, freq=None, center=False)
     dfsd = pd.stats.moments.rolling_std(df,48, min_periods=1, freq=None, center=False)

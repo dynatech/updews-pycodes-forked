@@ -641,12 +641,15 @@ with open(output_file_path+webtrends, 'ab') as w, open (output_file_path+textale
     t2.write('As of ' + end.strftime(fmt) + ':\n')
     w.write(end.strftime(fmt) + ',')
 
+
+CreateColAlertsTable('col_alerts', Namedb)
+
 # getting list of sensors
 sensorlist = GetSensorList()
 
 for s in sensorlist:
 
-    if s.name == 'cudta' or s.name == 'peptc':
+    if s.name == 'magta' or s.name == 'cudta' or s.name == 'peptc':
         continue
 
     last_col=sensorlist[-1:]

@@ -351,7 +351,7 @@ def condition_df(df, resample=1):
 def resample_df(df):
     df.ts = pd.to_datetime(df['ts'], unit = 's')
     df = df.set_index('ts')
-    df = df.resample('30min',how='first',fill_method='pad') 
+    df = df.resample('30min',how='first',fill_method='ffill') 
     return df
     
 #filter_magnitude()
