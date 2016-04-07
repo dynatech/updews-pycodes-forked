@@ -301,7 +301,7 @@ def fill_axel_data(df, drop_msgid = 1):
     # create a dataframe with all timestamps present in df1 and df2
     dfts = pd.merge(df1,df2, how='outer')
     
-    dfts = resample_df(df)    
+    dfts = resample_df(dfts)    
     # at this point, dfts has all the timestamps available on both df1 and df2
     
     dfts = dfts.reset_index(level = 1)
@@ -324,6 +324,7 @@ def fill_axel_data(df, drop_msgid = 1):
         dfm = dfm[['ts','id','x','y','z']]
     elif drop_msgid == 0:
         dfm = dfm[['ts','id','msgid','x','y','z']]
+    dfm = dfm.sort('ts')
     return dfm
     
 #condition_df()

@@ -649,8 +649,8 @@ sensorlist = GetSensorList()
 
 for s in sensorlist:
 
-    if s.name == 'magta' or s.name == 'cudta' or s.name == 'peptc':
-        continue
+#    if s.name == 'magta' or s.name == 'cudta' or s.name == 'peptc':
+#        continue
 
     last_col=sensorlist[-1:]
     last_col=last_col[0]
