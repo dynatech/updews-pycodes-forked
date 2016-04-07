@@ -17,6 +17,10 @@ from querySenslopeDb import *
 
 def GenerateGroundDataAlert():
     #Step 0: Specify mode of output, mode = 1: txt1; mode = 2 txt 2; mode = 3 json
+
+    cfg = ConfigParser.ConfigParser()
+    cfg.read('server-config.txt')     
+    
     mode = 2
     if mode == 1:
         output_file_path = cfg.get('I/O','OutputFilePath')
