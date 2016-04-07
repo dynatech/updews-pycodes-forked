@@ -8,6 +8,7 @@ from collections import Counter
 import csv
 import fileinput
 from querySenslopeDb import *
+from filterSensorData import *
 
 import generic_functions as gf
 import generateProcMonitoring as genproc
@@ -645,8 +646,8 @@ sensorlist = GetSensorList()
 
 for s in sensorlist:
 
-#    if s.name != 'pugt':
-#        continue
+    if s.name == 'cudta' or s.name == 'peptc':
+        continue
 
     last_col=sensorlist[-1:]
     last_col=last_col[0]
@@ -892,6 +893,7 @@ if PrintAAlert:
         with open(output_file_path+eq_summary) as eqsummary:
             for line in eqsummary:
                 allalerts.write(line)
+
 if PrintGSMAlert:
     with open(output_file_path+gsm_alert, 'wb') as gsmalert:
         if len(a2_alert) != 0:
@@ -943,88 +945,89 @@ with open('working_sites.txt', 'r') as SQLsites:
         working_sites += [line.split('\n')[0]]
         
 
-# creates list of sites with no data and classifies whether its raw or filtered
-if PrintND:
-    with open(output_file_path+NDlog, 'ab') as ND:
-        if len(a0_alert) == 0 and len(a1_alert) == 0 and len(a2_alert) == 0:
-            ND.write(end.strftime(fmt) + ',D,')
-            ND.write("ND on all sites,")
-            ND.write(',\n')
-    if len(a0_alert) != 0 or len(a1_alert) != 0 or len(a2_alert) != 0:
-        with open(output_file_path+NDlog, 'ab') as ND:
-            try:
-                ND.write(end.strftime(fmt) + ',D,')
-                for colname in nd_alert:
-                    filtered = pd.read_csv(proc_file_path+colname+"\\"+colname+" "+"alert"+CSVFormat, names=alert_headers,parse_dates='ts',index_col='ts')
-                    filtered = filtered[(filtered.index>=end)]
-                    print 'filtered'            
-                    print filtered
-                    raw = GetRawAccelData(colname, end - timedelta(hours=0.5))
-                    raw = raw.set_index('ts')
-                    raw = raw[(raw.index>=end)]
-                    print 'raw'            
-                    print raw
-                    filteredND = []
-                    rawND = []
-                    for i in filtered.loc[filtered['node_alert']=='nd', ['id']].values:
-                        if i[0] in raw['id'].values:
-                            filteredND += [str(i[0])]
-                        else:
-                            rawND += [str(i[0])]
-                    print 'filtered nodes'
-                    print filteredND
-                    print 'raw nodes'            
-                    print rawND
-                    num_nodes = str(sensors.loc[sensors.index==colname, ['nos']].values[0][0])
-                    print num_nodes
-                    if len(filteredND) != 0 and colname in working_sites:
-                        ND.write(colname + '(f-' + str(len(filteredND)) + '/' + num_nodes + ');')
-                    if len(rawND) != 0 and colname in working_sites:
-                        ND.write(colname + '(r-' + str(len(rawND)) + '/' + num_nodes + ');')
-                ND.write(',\n')
-            except:
-                pass
-
-# creates list of site with no data for 7 consecutive times
-    with open(output_file_path + ND7x, 'ab') as ND7x:
-        try:
-            NDlog = pd.read_csv(output_file_path + NDlog, names = ['ts', 'R or A or D', 'description', 'responder'], parse_dates = 'ts', index_col = 'ts')
-            NDlog = NDlog[(NDlog.index>=end-timedelta(hours=3))]
-            if len(NDlog.loc[NDlog['R or A or D']=='R']) != 0 and len(NDlog.loc[NDlog['R or A or D']=='D']) < 7:
-                ND7x.write('')
-            else:    
-                NDlog = NDlog.loc[NDlog['R or A or D']=='D']
-                NDcolumns = NDlog['description'].values
-                for s in range(len(NDcolumns)):
-                    NDcolumns[s] = NDcolumns[s].split(';')
-                    NDs = []
-                    for n in NDcolumns[s]:
-                        ND = ''
-                        for i in n:
-                            if i != '(':
-                                ND += i
-                            else:
-                                NDs += [ND]
-                    NDcolumns[s] = NDs
-                NDlog['description'] = NDcolumns
-            ND7 = []
-            for n in NDlog['description'].values[-1]:
-                if n in NDlog['description'].values[0] and NDlog['description'].values[1] and \
-                NDlog['description'].values[2] and NDlog['description'].values[3] and NDlog['description'].values[4] \
-                and NDlog['description'].values[5]:
-                    ND7 += [n]
-            if len(ND7) != 0:
-                ND7x.write(end.strftime(fmt) + ',')
-                ND7x.write(';'.join(ND7))
-                ND7x.write('\n')
-        except:
-            pass
+## creates list of sites with no data and classifies whether its raw or filtered
+#if PrintND:
+#    with open(output_file_path+NDlog, 'ab') as ND:
+#        if len(a0_alert) == 0 and len(a1_alert) == 0 and len(a2_alert) == 0:
+#            ND.write(end.strftime(fmt) + ',D,')
+#            ND.write("ND on all sites,")
+#            ND.write(',\n')
+#    if len(a0_alert) != 0 or len(a1_alert) != 0 or len(a2_alert) != 0:
+#        with open(output_file_path+NDlog, 'ab') as ND:
+#            try:
+#                ND.write(end.strftime(fmt) + ',D,')
+#                for colname in nd_alert:
+#                    filtered = pd.read_csv(proc_file_path+colname+"\\"+colname+" "+"alert"+CSVFormat, names=alert_headers,parse_dates='ts',index_col='ts')
+#                    filtered = filtered[(filtered.index>=end)]
+#                    print 'filtered'            
+#                    print filtered
+#                    raw = GetFilledAccelData(colname, end - timedelta(hours=0.5))
+#                    raw = raw.set_index('ts')
+#                    raw = raw[(raw.index>=end)]
+#                    print 'raw'            
+#                    print raw
+#                    filteredND = []
+#                    rawND = []
+#                    for i in filtered.loc[filtered['node_alert']=='nd', ['id']].values:
+#                        if i[0] in raw['id'].values:
+#                            filteredND += [str(i[0])]
+#                        else:
+#                            rawND += [str(i[0])]
+#                    print 'filtered nodes'
+#                    print filteredND
+#                    print 'raw nodes'            
+#                    print rawND
+#                    num_nodes = str(sensors.loc[sensors.index==colname, ['nos']].values[0][0])
+#                    print num_nodes
+#                    if len(filteredND) != 0 and colname in working_sites:
+#                        ND.write(colname + '(f-' + str(len(filteredND)) + '/' + num_nodes + ');')
+#                    if len(rawND) != 0 and colname in working_sites:
+#                        ND.write(colname + '(r-' + str(len(rawND)) + '/' + num_nodes + ');')
+#                ND.write(',\n')
+#            except:
+#                pass
+#
+## creates list of site with no data for 7 consecutive times
+#    with open(output_file_path + ND7x, 'ab') as ND7x:
+#        try:
+#            NDlog = pd.read_csv(output_file_path + NDlog, names = ['ts', 'R or A or D', 'description', 'responder'], parse_dates = 'ts', index_col = 'ts')
+#            NDlog = NDlog[(NDlog.index>=end-timedelta(hours=3))]
+#            if len(NDlog.loc[NDlog['R or A or D']=='R']) != 0 and len(NDlog.loc[NDlog['R or A or D']=='D']) < 7:
+#                ND7x.write('')
+#            else:    
+#                NDlog = NDlog.loc[NDlog['R or A or D']=='D']
+#                NDcolumns = NDlog['description'].values
+#                for s in range(len(NDcolumns)):
+#                    NDcolumns[s] = NDcolumns[s].split(';')
+#                    NDs = []
+#                    for n in NDcolumns[s]:
+#                        ND = ''
+#                        for i in n:
+#                            if i != '(':
+#                                ND += i
+#                            else:
+#                                NDs += [ND]
+#                    NDcolumns[s] = NDs
+#                NDlog['description'] = NDcolumns
+#            ND7 = []
+#            for n in NDlog['description'].values[-1]:
+#                if n in NDlog['description'].values[0] and NDlog['description'].values[1] and \
+#                NDlog['description'].values[2] and NDlog['description'].values[3] and NDlog['description'].values[4] \
+#                and NDlog['description'].values[5]:
+#                    ND7 += [n]
+#            if len(ND7) != 0:
+#                ND7x.write(end.strftime(fmt) + ',')
+#                ND7x.write(';'.join(ND7))
+#                ND7x.write('\n')
+#        except:
+#            pass
 
 # records the number of minutes the code runs
 if PrintTimer:
     end_time = datetime.now() - start_time
     with open (output_file_path+timer, 'ab') as p:
         p.write (start_time.strftime(fmt) + ": " + str(end_time) + '\n')
+        print 'run time =', end_time
     
 #Printing of JSON format:
 if set_json:

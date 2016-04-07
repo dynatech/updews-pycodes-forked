@@ -108,13 +108,35 @@ def twoscomp(hexstr):
         return num
 
 def ProcTwoAccelColData(msg,sender,txtdatetime):
+    
+    if len(msg.split(",")) == 3:
+        print ">> Editing old data format"
+        datafield = msg.split(",")[1]
+        dtype = datafield[2:4].upper()
+        if dtype == "20" or dtype == "0B":
+            dtypestr = "x"
+        elif dtype == "21" or dtype == "0C":
+            dtypestr = "y"
+        elif dtype == "6F" or dtype == "15":
+            dtypestr = "b"
+        elif dtype == "70" or dtype == "1A":
+            dtypestr = "c"
+        else:
+            raise ValueError(">> Data type" + dtype + "not recognized")
+            
+        
+        i = msg.find(",")
+        msg = msg[:i] + "*" + dtypestr + "*" + msg[i+1:]
+        msg = msg.replace(",","*").replace("/","")
+        
     outl = []
     msgsplit = msg.split('*')
     colid = msgsplit[0] # column id
+        
     
     if len(msgsplit) != 4:
         print 'wrong data format'
-        print msg
+        # print msg
         return
 
     if len(colid) != 5:
@@ -130,7 +152,7 @@ def ProcTwoAccelColData(msg,sender,txtdatetime):
     if len(datastr) == 136:
         datastr = datastr[0:72] + datastr[73:]
     
-    ts = msgsplit[3]
+    ts = msgsplit[3].strip()
   
     if datastr == '':
         datastr = '000000000000000'
@@ -140,16 +162,23 @@ def ProcTwoAccelColData(msg,sender,txtdatetime):
     if len(ts) < 10:
        print '>> Error in time value format: '
        return
-       
-    timestamp = "20"+ts[0:2]+"-"+ts[2:4]+"-"+ts[4:6]+" "+ts[6:8]+":"+ts[8:10]+":00"
-        #print '>>',
+    
+    ts_patterns = ['%y%m%d%H%M%S', '%Y-%m-%d %H:%M:%S']
+    # timestamp = "20"+ts[0:2]+"-"+ts[2:4]+"-"+ts[4:6]+" "+ts[6:8]+":"+ts[8:10]+":00"
+    #print '>>',
     #print timestamp
     #timestamp = dt.strptime(txtdatetime,'%y%m%d%H%M').strftime('%Y-%m-%d %H:%M:00')
-    try:
-        timestamp = dt.strptime(ts,'%y%m%d%H%M%S').strftime('%Y-%m-%d %H:%M:00')
-    except ValueError:
-        print "Error: wrong timestamp format", ts
+    timestamp = ''
+    ts = re.sub("[^0-9]","",ts)
+    for pattern in ts_patterns:
+        try:
+            timestamp = dt.strptime(ts,pattern).strftime('%Y-%m-%d %H:%M:00')
+            break
+        except ValueError:
+            print "Error: wrong timestamp format", ts, "for pattern", pattern
  
+    if timestamp == '':
+        raise ValueError(">> Error: Unrecognized timestamp pattern " + ts)
  # PARTITION the message into n characters
     if dtype == 'Y' or dtype == 'X':
        n = 15
@@ -191,25 +220,30 @@ def ProcTwoAccelColData(msg,sender,txtdatetime):
 
 def WriteTwoAccelDataToDb(dlist,msgtime):
     query = """INSERT IGNORE INTO %s (timestamp,id,msgid,xvalue,yvalue,zvalue,batt) VALUES """ % str(dlist[0][0])
+    
     if WriteToDB:
+        createTable(dlist[0][0], "sensor v2")
         for item in dlist:
-            createTable(item[0], "sensor v2")
             timetowrite = str(item[1])
             query = query + """('%s',%s,%s,%s,%s,%s,%s),""" % (timetowrite,str(item[2]),str(item[3]),str(item[4]),str(item[5]),str(item[6]),str(item[7]))
 
     query = query[:-1]
+    # print len(query)
     
     commitToDb(query, 'WriteTwoAccelDataToDb')
    
 def WriteSomsDataToDb(dlist,msgtime):
     query = """INSERT IGNORE INTO %s (timestamp,id,msgid,mval1,mval2) VALUES """ % str(dlist[0][0])
+    
+    print "site_name", str(dlist[0][0])
     if WriteToDB:
-        for item in dlist:
-            createTable(item[0], "soms")
+        createTable(str(dlist[0][0]), "soms")
+        for item in dlist:            
             timetowrite = str(item[1])
             query = query + """('%s',%s,%s,%s,%s),""" % (timetowrite,str(item[2]),str(item[3]),str(item[4]),str(item[5]))
 
     query = query[:-1]
+    query = query.replace("nan","NULL")
     
     commitToDb(query, 'WriteSomsDataToDb')
     
@@ -331,8 +365,12 @@ def ProcessPiezometer(line,sender):
         msgid = int(('0x'+data[:2]), 16)
         p1 = int(('0x'+data[2:4]), 16)*100
         p2 = int(('0x'+data[4:6]), 16)
-        p3 = int(('0x'+data[6:]), 16)*.01
+        p3 = int(('0x'+data[6:8]), 16)*.01
         piezodata = p1+p2+p3
+        
+        t1 = int(('0x'+data[8:10]), 16)
+        t2 = int(('0x'+data[10:12]), 16)*.01
+        tempdata = t1+t2
         try:
             txtdatetime = dt.strptime(linesplit[2],'%y%m%d%H%M%S').strftime('%Y-%m-%d %H:%M:00')
         except ValueError:
@@ -350,7 +388,7 @@ def ProcessPiezometer(line,sender):
     if WriteToDB:
         createTable(str(msgname), "piezo")
         try:
-          query = """INSERT INTO %s(timestamp, name, msgid, freq ) VALUES ('%s','%s', %s, %s )""" %(msgname,txtdatetime,msgname, str(msgid), str(piezodata))
+          query = """INSERT INTO %s(timestamp, name, msgid, freq, temp ) VALUES ('%s','%s', %s, %s, %s )""" %(msgname,txtdatetime,msgname, str(msgid), str(piezodata), str(tempdata))
             
             # print query
         except ValueError:

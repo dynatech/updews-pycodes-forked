@@ -8,4 +8,3 @@ Created on Tue Feb 23 14:36:23 2016
 import rainfallLib as rf
 
 rf.updateNOAHTables()
-rf.DeleteOldNOAHdata()
