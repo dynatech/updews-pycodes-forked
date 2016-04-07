@@ -237,7 +237,7 @@ def df_to_out(colname,xz,xy,
     ## resized dataframes of cumulative displacements;
     ##zeroed and offset dataframes of cumulative displacements
 
-    ##INPUT:
+    ##INPUT:dfm = dfm.sort('ts')
     ##colname; string; name of site   
     ##xz; dataframe; horizontal linear displacements along the planes defined by xa-za
     ##xy; dataframe; horizontal linear displacements along the planes defined by xa-ya
@@ -261,7 +261,7 @@ def df_to_out(colname,xz,xy,
     cs_xy=cs_xy[(cs_xy.index>=vel_xz.index[0])&(cs_xy.index<=vel_xz.index[-1])]
 
 
-    #creating zeroed and offset dataframes
+    #creating\ zeroed and offset dataframes
     xz_0off=df_add_offset_col(df_zero_initial_row(xz),0.15)
     xy_0off=df_add_offset_col(df_zero_initial_row(xy),0.15)
     vel_xz_0off=df_add_offset_col(df_zero_initial_row(vel_xz),0.015)
@@ -288,9 +288,9 @@ def df_to_out(colname,xz,xy,
         for d in range(len(df_list)):
             df=df_list[d,0]
             fname=df_list[d,1]
-            if not os.path.exists(proc_file_path+colname+"\\"):
-                os.makedirs(proc_file_path+colname+"\\")
-            df.to_csv(proc_file_path+colname+"\\"+colname+" "+fname+CSVFormat,
+            if not os.path.exists(proc_file_path+colname+"/"):
+                os.makedirs(proc_file_path+colname+"/")
+            df.to_csv(proc_file_path+colname+"/"+colname+" "+fname+CSVFormat,
                       sep=',', header=False,mode='w')
 
     return xz,xy,   xz_0off,xy_0off,   vel_xz,vel_xy, vel_xz_0off, vel_xy_0off, cs_x,cs_xz,cs_xy,   cs_xz_0,cs_xy_0
@@ -337,20 +337,20 @@ def alert_generation(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velA1, T_v
 
     #checks if file exist, append latest alert; else, write new file
     if PrintProc:
-        if os.path.exists(proc_file_path+colname+"\\"+colname+" "+"alert"+CSVFormat) and os.stat(proc_file_path+colname+"\\"+colname+" "+"alert"+CSVFormat).st_size != 0:
-            alert_monthly=pd.read_csv(proc_file_path+colname+"\\"+colname+" "+"alert"+CSVFormat,
+        if os.path.exists(proc_file_path+colname+"/"+colname+" "+"alert"+CSVFormat) and os.stat(proc_file_path+colname+"/"+colname+" "+"alert"+CSVFormat).st_size != 0:
+            alert_monthly=pd.read_csv(proc_file_path+colname+"/"+colname+" "+"alert"+CSVFormat,
                                       names=alert_headers,parse_dates='ts',index_col='ts')
             alert_monthly=alert_monthly[(alert_monthly.index>=end-timedelta(days=alert_file_length))]
             alert_monthly=alert_monthly.reset_index()
             alert_monthly=alert_monthly.set_index(['ts','id'])
             alert_monthly=alert_monthly.append(alert_out)
             alert_monthly=alert_monthly[alertgen_headers]
-            alert_monthly.to_csv(proc_file_path+colname+"\\"+colname+" "+"alert"+CSVFormat,
+            alert_monthly.to_csv(proc_file_path+colname+"/"+colname+" "+"alert"+CSVFormat,
                                  sep=',', header=False,mode='w')
         else:
-            if not os.path.exists(proc_file_path+colname+"\\"):
-                os.makedirs(proc_file_path+colname+"\\")
-            alert_out.to_csv(proc_file_path+colname+"\\"+colname+" "+"alert"+CSVFormat,
+            if not os.path.exists(proc_file_path+colname+"/"):
+                os.makedirs(proc_file_path+colname+"/")
+            alert_out.to_csv(proc_file_path+colname+"/"+colname+" "+"alert"+CSVFormat,
                              sep=',', header=False,mode='w')
 
     
@@ -550,11 +550,26 @@ col_pos_num= cfg.getfloat('I/O','num_col_pos')
 #INPUT/OUTPUT FILES
 
 #local file paths
-nd_path = cfg.get('I/O', 'NDFilePath')
-output_file_path = cfg.get('I/O','OutputFilePath')
-proc_file_path = cfg.get('I/O','ProcFilePath')
-ColAlerts_file_path = cfg.get('I/O','ColAlertsFilePath')
-TrendAlerts_file_path = cfg.get('I/O','TrendAlertsFilePath')
+def up_one(p):
+    out = os.path.abspath(os.path.join(p, '..'))
+    return out
+
+output_path = up_one(up_one(os.path.dirname(__file__)))
+
+nd_path = output_path + cfg.get('I/O', 'NDFilePath')
+output_file_path = output_path + cfg.get('I/O','OutputFilePath')
+proc_file_path = output_path + cfg.get('I/O','ProcFilePath')
+ColAlerts_file_path = output_path + cfg.get('I/O','ColAlertsFilePath')
+TrendAlerts_file_path = output_path + cfg.get('I/O','TrendAlertsFilePath')
+
+#Create filepaths if it does not exists
+def create_dir(p):
+    if not os.path.exists(p):
+        os.makedirs(p)
+
+directories = [nd_path,output_file_path,proc_file_path,ColAlerts_file_path,TrendAlerts_file_path]
+for p in directories:
+    create_dir(p)
 
 #file names
 #columnproperties_file = cfg.get('I/O','ColumnProperties')
@@ -570,6 +585,19 @@ eq_summaryGSM = cfg.get('I/O','eqsummaryGSM')
 timer = cfg.get('I/O','timer')
 NDlog = cfg.get('I/O','NDlog')
 ND7x = cfg.get('I/O','ND7x')
+
+#Create webtrends.csv if it does not exists
+
+files = [webtrends,textalert,textalert2,rainfall_alert,all_alerts,gsm_alert,eq_summary,eq_summaryGSM,timer,NDlog,ND7x]
+
+def create_file(f):
+    if not os.path.isfile(f):
+        with open(f,'w') as t:
+            pass
+
+for f in files:
+    create_file(output_file_path + f)
+
 
 #file headers
 proc_monitoring_file_headers = cfg.get('I/O','proc_monitoring_file_headers').split(',')
@@ -636,6 +664,7 @@ print "Generating plots and alerts for:"
 names = ['ts','col_a']
 fmt = '%Y-%m-%d %H:%M'
 hr = end - timedelta(hours=3)
+
 with open(output_file_path+webtrends, 'ab') as w, open (output_file_path+textalert, 'wb') as t, open (output_file_path+textalert2, 'wb') as t2:
     t.write('As of ' + end.strftime(fmt) + ':\n')
     t2.write('As of ' + end.strftime(fmt) + ':\n')
@@ -960,7 +989,7 @@ with open('working_sites.txt', 'r') as SQLsites:
 #            try:
 #                ND.write(end.strftime(fmt) + ',D,')
 #                for colname in nd_alert:
-#                    filtered = pd.read_csv(proc_file_path+colname+"\\"+colname+" "+"alert"+CSVFormat, names=alert_headers,parse_dates='ts',index_col='ts')
+#                    filtered = pd.read_csv(proc_file_path+colname+"/"+colname+" "+"alert"+CSVFormat, names=alert_headers,parse_dates='ts',index_col='ts')
 #                    filtered = filtered[(filtered.index>=end)]
 #                    print 'filtered'            
 #                    print filtered

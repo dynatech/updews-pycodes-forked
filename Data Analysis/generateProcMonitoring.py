@@ -7,9 +7,15 @@ import ConfigParser
 from querySenslopeDb import *
 from filterSensorData import *
 import generic_functions as gf
+import os
 
 cfg = ConfigParser.ConfigParser()
 cfg.read('server-config.txt')
+
+#Function for directory manipulations
+def up_one(p):
+    out = os.path.abspath(os.path.join(p, '..'))
+    return out
 
 ##set/get values from config file
 
@@ -28,7 +34,12 @@ num_roll_window_ops = cfg.getfloat('I/O','num_roll_window_ops')
 #INPUT/OUTPUT FILES
 
 #local file paths
-proc_monitoring_path=cfg.get('I/O','OutputFilePathMonitoring2')
+
+#Retrieve 
+output_path = up_one(up_one(os.path.dirname(__file__)))
+
+
+proc_monitoring_path= output_path + cfg.get('I/O','OutputFilePathMonitoring2')
 
 #file names
 proc_monitoring_file = cfg.get('I/O','CSVFormat')
@@ -39,6 +50,10 @@ proc_monitoring_file_headers = cfg.get('I/O','proc_monitoring_file_headers').spl
 
 #To Output File or not
 PrintProc = cfg.getboolean('I/O','PrintProc')
+
+if PrintProc:
+    if not os.path.exists(proc_monitoring_path):
+        os.makedirs(proc_monitoring_path+'Proc/')
 
 def generate_proc(site):
     
@@ -100,6 +115,6 @@ def generate_proc(site):
             
             #12. saving proc monitoring data
             if PrintProc:
-                monitoring.to_csv(proc_monitoring_path+"Proc\\"+colname+proc_monitoring_file,sep=',', header=False,mode='w')
+                monitoring.to_csv(proc_monitoring_path+"Proc/"+colname+proc_monitoring_file,sep=',', header=False,mode='w')
                 
             return monitoring

@@ -7,7 +7,9 @@ import ConfigParser
 import math
 import sys
 
-import rainDownload as rd
+import rainNOAH as rd
+
+output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
 
 #include the path of "Data Analysis" folder for the python scripts searching
 path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -179,7 +181,7 @@ def summary_writer(s,r,datasource,twoyrmax,halfmax,summary,alert,alert_df,data):
     summary.loc[s]=[r,one,three,datasource,ralert,advisory]
             
 cfg = ConfigParser.ConfigParser()
-cfg.read('IO-config.txt')    
+cfg.read('IO-Config.txt')    
 
 ##set/get values from config file
 
@@ -204,10 +206,10 @@ col_pos_num= cfg.getfloat('I/O','num_col_pos')
 #INPUT/OUTPUT FILES
 
 #local file paths
-output_file_path = cfg.get('I/O', 'OutputFilePath')
-CumSum_file_path = cfg.get('I/O', 'CumSumFilePath')
-ASTIpath = cfg.get('I/O', 'ASTIpath')
-RainfallPlotsPath = cfg.get('I/O', 'RainfallPlotsPath')
+output_file_path = output_path + cfg.get('I/O', 'OutputFilePath')
+CumSum_file_path = output_path + cfg.get('I/O', 'CumSumFilePath')
+ASTIpath = output_path + cfg.get('I/O', 'ASTIpath')
+RainfallPlotsPath = output_path + cfg.get('I/O', 'RainfallPlotsPath')
 
 #file names
 CSVFormat = cfg.get('I/O','CSVFormat')
@@ -225,6 +227,23 @@ PrintPlot = cfg.getboolean('I/O','PrintPlot')
 PrintSummaryAlert = cfg.getboolean('I/O','PrintSummaryAlert')
 PrintCumSum = cfg.getboolean('I/O','PrintCumSum')
 PrintRAlert = cfg.getboolean('I/O','PrintRAlert')
+PrintASTIdata = cfg.getboolean('I/O','PrintASTIdata')
+
+if not os.path.exists(output_file_path):
+    os.makedirs(output_file_path)
+    
+if PrintPlot or PrintSummaryAlert:
+    if not os.path.exists(RainfallPlotsPath):
+        os.makedirs(RainfallPlotsPath)
+
+if PrintCumSum:
+    if not os.path.exists(CumSum_file_path):
+        os.makedirs(CumSum_file_path)
+
+if PrintASTIdata:
+    if not os.path.exists(ASTIpath):
+        os.makedirs(ASTIpath)
+    
 
 #1. setting monitoring window
 roll_window_numpts, end, start, offsetstart, monwin = set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_window_ops)

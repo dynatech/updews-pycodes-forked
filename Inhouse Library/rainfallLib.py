@@ -28,7 +28,12 @@ def downloadRainfallNOAH(rsite, fdate, tdate):
     fdateMinus = (pd.to_datetime(fdate) - td(2)).strftime("%Y-%m-%d")
     
     url = "http://weather.asti.dost.gov.ph/home/index.php/api/data/%s/from/%s/to/%s" % (rsite,fdateMinus,tdate)
-    r = requests.get(url)
+    
+    try:
+        r = requests.get(url)
+    except:
+         print "    Can not get request. Please check if your internet connection is stable"
+        return pd.DataFrame()
 
     try:
         df = pd.DataFrame(r.json()["data"])

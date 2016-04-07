@@ -252,7 +252,7 @@ def GetFilledAccelData(siteid = "", fromTime = "", toTime = "", drop_msgid = 1 ,
     if toTime:
         query = query + " and timestamp < '%s'" % toTime
     
-    if targetnode <= 0:
+    if targetnode <= 0:  
         query = query + " and id >= 1 and id <= %s ;" % (str(maxnode))
     else:
         query = query + " and id = %s;" % (targetnode)
@@ -301,7 +301,7 @@ def fill_axel_data(df, drop_msgid = 1):
     # create a dataframe with all timestamps present in df1 and df2
     dfts = pd.merge(df1,df2, how='outer')
     
-    dfts = resample_df(dfts)    
+    dfts = resample_df(dfts)   
     # at this point, dfts has all the timestamps available on both df1 and df2
     
     dfts = dfts.reset_index(level = 1)

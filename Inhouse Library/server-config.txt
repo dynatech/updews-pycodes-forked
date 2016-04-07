@@ -37,20 +37,20 @@ off_lim = 80
 RangeDefault = 3
 
 [Misc]
-Debug = False
+Debug = True
 DotProductThreshold = 0.09
 
 [I/O]
 ############################
 ###   LOCAL FILE PATH    ###
 ############################
-OutputFilePathMonitoring = C:\Users\Dynaslope\Desktop\Monitoring Output\
-OutputFilePathMonitoring2 = C:\Users\Dynaslope\Desktop\Monitoring Output\
-NDFilePath = C:\Users\Dynaslope\Desktop\Monitoring Output\ND back analysis\
-OutputFilePath = C:\Users\Dynaslope\Desktop\Monitoring Output\
-ProcFilePath = C:\Users\Dynaslope\Desktop\Monitoring Output\Proc\
-ColAlertsFilePath = C:\Users\Dynaslope\Desktop\Monitoring Output\col alerts\
-TrendAlertsFilePath = C:\Users\Dynaslope\Desktop\Monitoring Output\trend alerts\
+OutputFilePathMonitoring = /Monitoring Output/
+OutputFilePathMonitoring2 = /Monitoring Output/
+NDFilePath = /Monitoring Output/ND back analysis/
+OutputFilePath = /Monitoring Output/
+ProcFilePath = /Monitoring Output/Proc/
+ColAlertsFilePath = /Monitoring Output/col alerts/
+TrendAlertsFilePath = /Monitoring Output/trend alerts/
 
 ############################
 ###      FILE NAMES      ###
@@ -112,5 +112,5 @@ PrintWAlert = True
 PrintND = True
 PrintTimer = True
 PrintAAlert = True
-PrintColProps = False
+PrintColProps = True
 PrintGSMAlert = True

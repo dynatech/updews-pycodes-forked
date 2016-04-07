@@ -7,22 +7,34 @@ from scipy import stats
 import os
 import sys
 
+
+#up one level function
+def up_one(p):
+    out = os.path.abspath(os.path.join(p, '..'))
+    return out
+
 #include the path of "Data Analysis" folder for the python scripts searching
 path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 if not path in sys.path:
     sys.path.insert(1,path)
-del path   
+#del path   
 
 from querySenslopeDb import *
 
 def GenerateGroundDataAlert():
     #Step 0: Specify mode of output, mode = 1: txt1; mode = 2 txt 2; mode = 3 json
 
+    #Monitoring output directory
+    path2 = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+    out_path = up_one(up_one(path2))
+    print out_path
+    print path2
+
     cfg = ConfigParser.ConfigParser()
-    cfg.read('server-config.txt')     
+    cfg.read(path2+'/server-config.txt')     
     
     mode = 2
-    if mode == 1:
+    if mode == 1 or True:
         output_file_path = cfg.get('I/O','OutputFilePath')
     
     #Set the date of the report as the current date rounded to HH:30 or HH:00
@@ -180,13 +192,21 @@ def GenerateGroundDataAlert():
         ground_alert_release = sorted(ground_data_alert.items())
         
     if mode == 1:
+        #Creating Monitoring Output directory if it doesn't exist
+        print_out_path = out_path + output_file_path
+        print print_out_path        
+        if not os.path.exists(print_out_path):
+            os.makedirs(print_out_path)
+        
         print "Ground measurement report as of {}".format(end)
         print "{:5}: {:5}; Last Date of Measurement".format('Site','Alert')
         i = 0
         for site, galert in ground_alert_release:
             print "{:5}: {:5}; {}".format(site,galert,measurement_dates[i])
             i += 1
-        with open (output_file_path+'groundalert.txt', 'w') as t:
+        
+
+        with open (print_out_path+'groundalert.txt', 'w') as t:
             i = 0
             t.write("Ground measurement report as of {}".format(end)+'\n')
             for site, galert in ground_alert_release:
