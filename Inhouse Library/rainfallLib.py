@@ -32,7 +32,7 @@ def downloadRainfallNOAH(rsite, fdate, tdate):
     try:
         r = requests.get(url)
     except:
-         print "    Can not get request. Please check if your internet connection is stable"
+        print "    Can not get request. Please check if your internet connection is stable"
         return pd.DataFrame()
 
     try:

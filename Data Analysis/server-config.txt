@@ -102,15 +102,17 @@ col_pos_interval='12H'    	; string expression indicating interval between two a
 num_col_pos=30            	; number of column position dates to plot 
 alert_time_int=30 		;timeframe of alert files to be saved, in days
 
-PrintProc = True
-PrintColPos = True
-PrintDispVel = True
-PrintTrendAlerts = True
+PlotColPos = False
+PlotDispVel = False
+
+PrintProc = False
+PrintTrendAlerts = False
+PrintWAlert = False
+PrintND = False
+PrintColProps = False
+PrintTimer = True
+
 PrintTAlert = True
 PrintTAlert2 = True
-PrintWAlert = True
-PrintND = True
-PrintTimer = True
 PrintAAlert = True
-PrintColProps = True
 PrintGSMAlert = True

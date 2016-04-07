@@ -615,8 +615,8 @@ alert_file_length=cfg.getint('I/O','alert_time_int') # in days
 
 #To Output File or not
 PrintProc = cfg.getboolean('I/O','PrintProc')
-PrintColPos = cfg.getboolean('I/O','PrintColPos')
-PrintDispVel = cfg.getboolean('I/O','PrintDispVel')
+PrintColPos = cfg.getboolean('I/O','PlotColPos')
+PrintDispVel = cfg.getboolean('I/O','PlotDispVel')
 PrintTrendAlerts = cfg.getboolean('I/O','PrintTrendAlerts')
 PrintTAlert = cfg.getboolean('I/O','PrintTAlert')
 PrintTAlert2 = cfg.getboolean('I/O','PrintTAlert2')
