@@ -7,13 +7,20 @@ import ConfigParser
 from collections import Counter
 import csv
 import fileinput
-from querySenslopeDb import *
-from filterSensorData import *
+import sys
 
 import generic_functions as gf
 import generateProcMonitoring as genproc
 import alertEvaluation as alert
 
+#include the path of "Data Analysis" folder for the python scripts searching
+path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+if not path in sys.path:
+    sys.path.insert(1,path)
+del path   
+
+from querySenslopeDb import *
+from filterSensorData import *
 
 def set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_window_ops):
     
@@ -525,8 +532,13 @@ def df_add_offset_col(df,offset):
         
 start_time=datetime.now()
 
+#Function for directory manipulations
+def up_one(p):
+    out = os.path.abspath(os.path.join(p, '..'))
+    return out
+
 cfg = ConfigParser.ConfigParser()
-cfg.read('server-config.txt')    
+cfg.read(up_one(os.path.dirname(__file__))+'/server-config.txt')
 
 ##set/get values from config file
 
@@ -550,11 +562,8 @@ col_pos_num= cfg.getfloat('I/O','num_col_pos')
 #INPUT/OUTPUT FILES
 
 #local file paths
-def up_one(p):
-    out = os.path.abspath(os.path.join(p, '..'))
-    return out
 
-output_path = up_one(up_one(os.path.dirname(__file__)))
+output_path = up_one(up_one(up_one(os.path.dirname(__file__))))
 
 nd_path = output_path + cfg.get('I/O', 'NDFilePath')
 output_file_path = output_path + cfg.get('I/O','OutputFilePath')

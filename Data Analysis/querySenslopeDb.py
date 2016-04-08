@@ -492,8 +492,6 @@ def GetSensorList():
         query = 'SELECT name, num_nodes, seg_length, col_length FROM site_column_props'
         
         df = psql.read_sql(query, db)
-        if PrintColProps:
-            df.to_csv("column_properties.csv",index=False,header=False);
         
         # make a sensor list of columnArray class functions
         sensors = []
@@ -742,7 +740,6 @@ try:
     muplim = cfg.get(valueSect,'muplim')
     islimval = cfg.getboolean(valueSect,'LimitValues')
     
-    PrintColProps = cfg.get('I/O', 'PrintColProps')
 except:
     #default values are used for missing configuration files or for cases when
     #sensitive info like db access credentials must not be viewed using a browser

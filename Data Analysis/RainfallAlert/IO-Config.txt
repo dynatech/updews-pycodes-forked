@@ -4,10 +4,10 @@
 ############################
 ###   LOCAL FILE PATH    ###
 ############################
-OutputFilePath = /Monitoring Output/
-CumSumFilePath = /Monitoring Output/CumSum Rainfall/
-ASTIpath = /Monitoring Output/ASTI/
-RainfallPlotsPath = /Monitoring Output/Rainfall Plots/
+OutputFilePath = /MonitoringOutput/
+CumSumFilePath = /MonitoringOutput/CumSumRainfall/
+ASTIpath = /MonitoringOutput/ASTI/
+RainfallPlotsPath = /MonitoringOutput/RainfallPlots/
 
 ############################
 ###      FILE NAMES      ###

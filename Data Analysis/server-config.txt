@@ -44,13 +44,11 @@ DotProductThreshold = 0.09
 ############################
 ###   LOCAL FILE PATH    ###
 ############################
-OutputFilePathMonitoring = /Monitoring Output/
-OutputFilePathMonitoring2 = /Monitoring Output/
-NDFilePath = /Monitoring Output/ND back analysis/
-OutputFilePath = /Monitoring Output/
-ProcFilePath = /Monitoring Output/Proc/
-ColAlertsFilePath = /Monitoring Output/col alerts/
-TrendAlertsFilePath = /Monitoring Output/trend alerts/
+NDFilePath = /MonitoringOutput/NDBackAnalysis/
+OutputFilePath = /MonitoringOutput/
+ProcFilePath = /MonitoringOutput/Proc/
+ColAlertsFilePath = /MonitoringOutput/ColAlerts/
+TrendAlertsFilePath = /MonitoringOutput/TrendAlerts/
 
 ############################
 ###      FILE NAMES      ###
@@ -98,18 +96,17 @@ data_dt=0.5			;time interval between data points, in hours
 rt_window_length=15.		;length of real-time monitoring window, in days
 roll_window_length=3.		;length of rolling/moving window operations in hours
 num_roll_window_ops=2		;number of rolling window operations in the whole monitoring analysis
-col_pos_interval='12H'    	; string expression indicating interval between two adjacent column position dates ex: '1D'= 1 day
-num_col_pos=30            	; number of column position dates to plot 
+col_pos_interval='4H'    	; string expression indicating interval between two adjacent column position dates ex: '1D'= 1 day
+num_col_pos=7            	; number of column position dates to plot 
 alert_time_int=30 		;timeframe of alert files to be saved, in days
 
-PlotColPos = False
-PlotDispVel = False
+PlotColPos = True
+PlotDispVel = True
 
-PrintProc = False
-PrintTrendAlerts = False
-PrintWAlert = False
+PrintProc = True
+PrintTrendAlerts = True
+PrintWAlert = True
 PrintND = False
-PrintColProps = False
 PrintTimer = True
 
 PrintTAlert = True

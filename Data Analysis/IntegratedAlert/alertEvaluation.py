@@ -6,13 +6,27 @@ from datetime import datetime, date, time, timedelta
 import numpy as np
 import pandas as pd
 import ConfigParser
+import os
+import sys
+
 import generic_functions as gf
+
+#include the path of "Data Analysis" folder for the python scripts searching
+path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+if not path in sys.path:
+    sys.path.insert(1,path)
+del path   
 
 from querySenslopeDb import *
 from filterSensorData import *
 
+#Function for directory manipulations
+def up_one(p):
+    out = os.path.abspath(os.path.join(p, '..'))
+    return out
+
 cfg = ConfigParser.ConfigParser()
-cfg.read('server-config.txt')
+cfg.read(up_one(os.path.dirname(__file__))+'/server-config.txt')
 
 ##set/get values from config file
 

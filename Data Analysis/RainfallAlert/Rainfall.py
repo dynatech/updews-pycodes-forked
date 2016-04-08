@@ -1,5 +1,5 @@
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date, time
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -18,10 +18,46 @@ if not path in sys.path:
 del path   
 
 from querySenslopeDb import *
-import generic_functions as gf
 
 
 plt.ioff()
+
+############################################################
+##      TIME FUNCTIONS                                    ##    
+############################################################
+
+def get_rt_window(rt_window_length,roll_window_size,num_roll_window_ops):
+    
+    ##DESCRIPTION:
+    ##returns the time interval for real-time monitoring
+
+    ##INPUT:
+    ##rt_window_length; float; length of real-time monitoring window in days
+    ##roll_window_size; integer; number of data points to cover in moving window operations
+    
+    ##OUTPUT: 
+    ##end, start, offsetstart; datetimes; dates for the end, start and offset-start of the real-time monitoring window 
+
+    ##set current time as endpoint of the interval
+    end=datetime.now()
+
+    ##round down current time to the nearest HH:00 or HH:30 time value
+    end_Year=end.year
+    end_month=end.month
+    end_day=end.day
+    end_hour=end.hour
+    end_minute=end.minute
+    if end_minute<30:end_minute=0
+    else:end_minute=30
+    end=datetime.combine(date(end_Year,end_month,end_day),time(end_hour,end_minute,0))
+
+    #starting point of the interval
+    start=end-timedelta(days=rt_window_length)
+    
+    #starting point of interval with offset to account for moving window operations 
+    offsetstart=end-timedelta(days=rt_window_length+((num_roll_window_ops*roll_window_size-1)/48.))
+    
+    return end, start, offsetstart
 
 def set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_window_ops):
 
@@ -38,7 +74,7 @@ def set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_w
     ##roll_window_numpts, end, start, offsetstart, monwin
     
     roll_window_numpts=int(1+roll_window_length/data_dt)
-    end, start, offsetstart=gf.get_rt_window(rt_window_length,roll_window_numpts,num_roll_window_ops)
+    end, start, offsetstart=get_rt_window(rt_window_length,roll_window_numpts,num_roll_window_ops)
     monwin_time=pd.date_range(start=start, end=end, freq='30Min',name='ts', closed=None)
     monwin=pd.DataFrame(data=np.nan*np.ones(len(monwin_time)), index=monwin_time)
 
@@ -66,13 +102,13 @@ def ASTIplot(r,offsetstart,end,tsn, data):
         plt.xticks(rotation=70, size=5)
     
     #getting the rolling sum for the last24 hours
-    rainfall2=pd.rolling_sum(rainfall,96,min_periods=1)
+    rainfall2 = rainfall.rolling(min_periods=1,window=96,center=False).sum()
     rainfall2=np.round(rainfall2,4)
     if PrintCumSum:
         rainfall2.to_csv(CumSum_file_path+r+' 1d'+CSVFormat,sep=',',mode='w')
     
     #getting the rolling sum for the last 3 days
-    rainfall3=pd.rolling_sum(rainfall,288,min_periods=1)
+    rainfall3 = rainfall.rolling(min_periods=1,window=288,center=False).sum()
     rainfall3=np.round(rainfall3,4)
     if PrintCumSum:
         rainfall3.to_csv(CumSum_file_path+r+' 3d'+CSVFormat,sep=',',mode='w')
