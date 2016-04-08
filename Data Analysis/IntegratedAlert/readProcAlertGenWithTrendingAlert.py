@@ -687,7 +687,7 @@ sensorlist = GetSensorList()
 
 for s in sensorlist:
 
-#    if s.name == 'magta' or s.name == 'cudta' or s.name == 'peptc':
+#    if s.name != 'barsc':
 #        continue
 
     last_col=sensorlist[-1:]
@@ -773,7 +773,7 @@ for s in sensorlist:
     
     # trending node alert for all nodes
     trending_node_alerts = []
-    for n in range(1,1+num_nodes): # working_nodes.get(colname)
+    for n in range(1,1+num_nodes): 
         calert = df.loc[df['id'] == n]        
         node_trend = pd.Series.tolist(calert.alerts)
         counter = Counter(node_trend)
@@ -897,13 +897,13 @@ for s in sensorlist:
         plot_column_positions(colname,cs_x,cs_xz_0,cs_xy_0)
         plot_column_positions(colname,cs_x,cs_xz,cs_xy)
         plt.savefig(output_file_path+colname+' colpos ',
-                    dpi=320, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
+                    dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
 #
     #12. Plotting displacement and velocity
     if PrintDispVel:
         plot_disp_vel(colname, xz_0off,xy_0off, vel_xz_0off, vel_xy_0off)
         plt.savefig(output_file_path+colname+' disp_vel ',
-                    dpi=320, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
+                    dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
 
     if PrintColPos or PrintDispVel:
         plt.close()
