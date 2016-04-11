@@ -410,7 +410,7 @@ def plot_column_positions(colname,x,xz,xy):
     try:
         fig=plt.figure(1)
         plt.clf()
-        plt.suptitle(colname+" absolute position")
+        plt.suptitle(colname+" absolute position", fontsize = 12)
         ax_xz=fig.add_subplot(121)
         ax_xy=fig.add_subplot(122,sharex=ax_xz,sharey=ax_xz)
 
@@ -428,9 +428,24 @@ def plot_column_positions(colname,x,xz,xy):
             curax.plot(curcolpos_xy[0],curcolpos_x[0],'.-', label=i)
             curax.set_xlabel('xy')
 
+        for tick in ax_xz.xaxis.get_minor_ticks():
+            tick.label.set_rotation('vertical')
+            tick.label.set_fontsize(10)
+            
+        for tick in ax_xy.xaxis.get_minor_ticks():
+            tick.label.set_rotation('vertical')
+            tick.label.set_fontsize(10)
+       
+        for tick in ax_xz.xaxis.get_major_ticks():
+            tick.label.set_rotation('vertical')
+            tick.label.set_fontsize(10)
+            
+        for tick in ax_xy.xaxis.get_major_ticks():
+            tick.label.set_rotation('vertical')
+            tick.label.set_fontsize(10)
+    
         fig.tight_layout()
-        plt.legend(fontsize='x-small')
-        
+        plt.legend(fontsize='x-small')        
     
     except:        
         print colname, "ERROR in plotting column position"
