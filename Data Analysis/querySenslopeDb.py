@@ -260,8 +260,10 @@ def GetFilledAccelData(siteid = "", fromTime = "", toTime = "", drop_msgid = 1 ,
     PrintOut(query)
  
     df =  GetDBDataFrame(query)
+
     if len(df) > 0:
-        df = fill_axel_data(df, drop_msgid)
+        #df = fill_axel_data(df, drop_msgid)
+        df = df.groupby([df['id']]).apply(fill_axel_data)
         if drop_msgid:
             df.columns = ['ts','id','x','y','z']
         elif drop_msgid == 0:
@@ -287,14 +289,13 @@ def fill_axel_data(df, drop_msgid = 1):
     #we need to rename the column 'timestamp' to 'ts'
     df.columns = ['ts','id','msgid','x','y','z']
     #let's clean up the data a bit
-    df = condition_df(df,resample=0)
-    
+    #df = df.groupby([df['id']]).apply(condition_df)
+    #print df
     df1 = df[(df.msgid == 32) | (df.msgid == 11)]
     df2 = df[(df.msgid == 33) | (df.msgid == 12)]
-    
+    #print df1
     df1 = condition_df(df1)
     df2 = condition_df(df2)
-    
     df1 = df1.reset_index(level = 1) 
     df2 = df2.reset_index(level = 1)    
     
@@ -324,8 +325,52 @@ def fill_axel_data(df, drop_msgid = 1):
         dfm = dfm[['ts','id','x','y','z']]
     elif drop_msgid == 0:
         dfm = dfm[['ts','id','msgid','x','y','z']]
+        
     dfm = dfm.sort('ts')
     return dfm
+#    df.columns = ['ts','id','msgid','x','y','z']
+#    #let's clean up the data a bit
+#    df = condition_df(df,resample=0)
+#    
+#    df1 = df[(df.msgid == 32) | (df.msgid == 11)]
+#    df2 = df[(df.msgid == 33) | (df.msgid == 12)]
+#    
+#    df1 = condition_df(df1)
+#    df2 = condition_df(df2)
+#    
+#    df1 = df1.reset_index(level = 1) 
+#    df2 = df2.reset_index(level = 1)    
+#    
+#    # create a dataframe with all timestamps present in df1 and df2
+#    dfts = pd.merge(df1,df2, how='outer')
+#    
+#    dfts = resample_df(dfts)   
+#    # at this point, dfts has all the timestamps available on both df1 and df2
+#    
+#    dfts = dfts.reset_index(level = 1)
+#    
+#    df2 = df2.set_index('ts')
+#    
+#    dfm = pd.merge(dfts,df1, how = 'outer')
+#    
+#    dfm = dfm.set_index('ts')
+#    #start filling id,x,y,z YEY!
+#    dfm.id.fillna(df2.id, inplace=True)
+#    dfm.x.fillna(df2.x, inplace=True)
+#    dfm.y.fillna(df2.y, inplace=True)
+#    dfm.z.fillna(df2.z, inplace=True)
+#    
+#    dfm = dfm[np.isfinite(dfm.id)] #removes all rows with NaNs in id
+#    # rows removed this way are rows with no data from either axel 1 or axel 2
+#    dfm = dfm.reset_index(level = 1)   
+#    if drop_msgid:
+#        dfm = dfm[['ts','id','x','y','z']]
+#    elif drop_msgid == 0:
+#        dfm = dfm[['ts','id','msgid','x','y','z']]
+#        
+#    dfm = dfm.sort('ts')
+#    return dfm
+
     
 #condition_df()
 #    Summary:
@@ -352,7 +397,7 @@ def condition_df(df, resample=1):
 def resample_df(df):
     df.ts = pd.to_datetime(df['ts'], unit = 's')
     df = df.set_index('ts')
-    df = df.resample('30min',how='first',fill_method='ffill') 
+    df = df.resample('30min').first() 
     return df
     
 #filter_magnitude()
