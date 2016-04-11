@@ -344,21 +344,23 @@ def alert_generation(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velA1, T_v
 
     #checks if file exist, append latest alert; else, write new file
     if PrintProc:
-        if os.path.exists(proc_file_path+colname+"/"+colname+" "+"alert"+CSVFormat) and os.stat(proc_file_path+colname+"/"+colname+" "+"alert"+CSVFormat).st_size != 0:
-            alert_monthly=pd.read_csv(proc_file_path+colname+"/"+colname+" "+"alert"+CSVFormat,
-                                      names=alert_headers,parse_dates='ts',index_col='ts')
-            alert_monthly=alert_monthly[(alert_monthly.index>=end-timedelta(days=alert_file_length))]
-            alert_monthly=alert_monthly.reset_index()
-            alert_monthly=alert_monthly.set_index(['ts','id'])
-            alert_monthly=alert_monthly.append(alert_out)
-            alert_monthly=alert_monthly[alertgen_headers]
-            alert_monthly.to_csv(proc_file_path+colname+"/"+colname+" "+"alert"+CSVFormat,
+        try:
+            if os.path.exists(proc_file_path+colname+"/"+colname+" "+"alert"+CSVFormat) and os.stat(proc_file_path+colname+"/"+colname+" "+"alert"+CSVFormat).st_size != 0:
+                alert_monthly=pd.read_csv(proc_file_path+colname+"/"+colname+" "+"alert"+CSVFormat,names=alert_headers,parse_dates='ts',index_col='ts')
+                alert_monthly=alert_monthly[(alert_monthly.index>=end-timedelta(days=alert_file_length))]
+                alert_monthly=alert_monthly.reset_index()
+                alert_monthly=alert_monthly.set_index(['ts','id'])
+                alert_monthly=alert_monthly.append(alert_out)
+                alert_monthly=alert_monthly[alertgen_headers]
+                alert_monthly.to_csv(proc_file_path+colname+"/"+colname+" "+"alert"+CSVFormat,
+                                     sep=',', header=False,mode='w')
+            else:
+                if not os.path.exists(proc_file_path+colname+"/"):
+                    os.makedirs(proc_file_path+colname+"/")
+                alert_out.to_csv(proc_file_path+colname+"/"+colname+" "+"alert"+CSVFormat,
                                  sep=',', header=False,mode='w')
-        else:
-            if not os.path.exists(proc_file_path+colname+"/"):
-                os.makedirs(proc_file_path+colname+"/")
-            alert_out.to_csv(proc_file_path+colname+"/"+colname+" "+"alert"+CSVFormat,
-                             sep=',', header=False,mode='w')
+        except:
+            print "Error in Printing Proc"
 
     
     return alert_out
@@ -686,9 +688,6 @@ CreateColAlertsTable('col_alerts', Namedb)
 sensorlist = GetSensorList()
 
 for s in sensorlist:
-
-#    if s.name != 'barsc':
-#        continue
 
     last_col=sensorlist[-1:]
     last_col=last_col[0]
