@@ -183,15 +183,18 @@ def PushDBDataFrame(df,table_name):
 #    Returns:
 #        df: dataframe object 
 #            dataframe object of the result set 
-def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid = 32, targetnode = -1):
+def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid = 32, targetnode = -1, batt=0):
 
     if not siteid:
         raise ValueError('no site id entered')
     
     if printtostdout:
         PrintOut('Querying database ...')
-
-    query = "select timestamp,id,xvalue,yvalue,zvalue from senslopedb.%s " % (siteid)        
+    # added getting battery data (v2&v3)
+    if batt == 1:
+        query = "select timestamp,id,xvalue,yvalue,zvalue,batt from senslopedb.%s " % (siteid) 
+    else:
+        query = "select timestamp,id,xvalue,yvalue,zvalue from senslopedb.%s " % (siteid) 
 
     if not fromTime:
         fromTime = "2010-01-01"
@@ -210,9 +213,12 @@ def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid
         query = query + " and id = %s;" % (targetnode)
     
     PrintOut(query)
-    df =  GetDBDataFrame(query)
     
-    df.columns = ['ts','id','x','y','z']
+    df =  GetDBDataFrame(query)
+    if batt == 1:
+        df.columns = ['ts','id','x','y','z','v']
+    else:
+        df.columns = ['ts','id','x','y','z']
     # change ts column to datetime
     df.ts = pd.to_datetime(df.ts)
     
@@ -220,15 +226,17 @@ def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid
 
 #TODO: This code should have the GID as input and part of the query to make -> used targetnode and edited ConvertSomsRaw.py
 #   the processing time faster
-def GetSomsData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid=0, targetnode = -1):
-
+def GetSomsData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid=0, targetnode = -1, v=0):
+    ''' added querying v1 soms data'''
     if not siteid:
         raise ValueError('no site id entered')
     
     if printtostdout:
         PrintOut('Querying database ...')
-
-    query = "select timestamp,id,msgid,mval1,mval2 from senslopedb.%s " % (siteid)        
+    if v==1:
+        query = "select timestamp,id,mvalue from senslopedb.%s " % (siteid) 
+    else:    
+        query = "select timestamp,id,msgid,mval1,mval2 from senslopedb.%s " % (siteid)        
 
     if not fromTime:
         fromTime = "2010-01-01"
@@ -250,8 +258,11 @@ def GetSomsData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid=0, 
     
     PrintOut(query)
     df =  GetDBDataFrame(query)
+    if v==1:
+        df.columns = ['ts','id','mval1']
+    else:
+        df.columns = ['ts','id','msgid','mval1','mval2']
     
-    df.columns = ['ts','id','msgid','mval1','mval2']
     # change ts column to datetime
     df.ts = pd.to_datetime(df.ts)
     
