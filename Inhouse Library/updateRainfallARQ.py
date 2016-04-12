@@ -122,7 +122,7 @@ def getDataFromDEWSapi(site, date):
     
     """
     url = ('http://www.dewslandslide.com/ajax/getSenslopeData.php/?rainarq&site={0}&start_date={1}&limit={2}').format(site, date, entryLimit)
-    print("Fetching URL... {0} Done.").format(url)
+    #print("Fetching URL... {0} Done.").format(url)
     
     response = requests.get(url)
 
@@ -200,17 +200,17 @@ for row in arq_tables:
         # Get data from DEWS API
         data = getDataFromDEWSapi(row[0], last_timestamp)
         try:
-            print "Data retrieved: {0}".format(len(data))
+            print "Data retrieved: {0}".format(len(data['rain_arq']))
         except:
             print "Data retrieved: 0"
         
         # If data is NULL, the local database is updated and will exit
-        if data is None:
+        if not data['rain_arq']:
             print "ARQ table '{0}' is up-to-date.\n".format(row[1])
             break
         # Else update table
         else:
-            updateARQTable(row[1], data)
+            updateARQTable(row[1], data['rain_arq'])
             print "Succesfully updated ARQ table '{0}'.\n".format(row[1])
 
 

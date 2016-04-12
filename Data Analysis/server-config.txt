@@ -12,7 +12,7 @@ ColumnPropertiesFile = column_properties.csv
 [DB I/O]
 Hostdb = 127.0.0.1
 Userdb = root
-Passdb = dyn4m1ght
+Passdb = senslope
 Namedb = senslopedb
 NamedbPurged = senslopedb_purged
 Printtostdout = True
@@ -37,20 +37,18 @@ off_lim = 80
 RangeDefault = 3
 
 [Misc]
-Debug = False
+Debug = True
 DotProductThreshold = 0.09
 
 [I/O]
 ############################
 ###   LOCAL FILE PATH    ###
 ############################
-OutputFilePathMonitoring = C:\Users\Dynaslope\Desktop\Monitoring Output\
-OutputFilePathMonitoring2 = C:\Users\Dynaslope\Desktop\Monitoring Output\
-NDFilePath = C:\Users\Dynaslope\Desktop\Monitoring Output\ND back analysis\
-OutputFilePath = C:\Users\Dynaslope\Desktop\Monitoring Output\
-ProcFilePath = C:\Users\Dynaslope\Desktop\Monitoring Output\Proc\
-ColAlertsFilePath = C:\Users\Dynaslope\Desktop\Monitoring Output\col alerts\
-TrendAlertsFilePath = C:\Users\Dynaslope\Desktop\Monitoring Output\trend alerts\
+NDFilePath = /MonitoringOutput/NDBackAnalysis/
+OutputFilePath = /MonitoringOutput/
+ProcFilePath = /MonitoringOutput/Proc/
+ColAlertsFilePath = /MonitoringOutput/ColAlerts/
+TrendAlertsFilePath = /MonitoringOutput/TrendAlerts/
 
 ############################
 ###      FILE NAMES      ###
@@ -73,8 +71,8 @@ ND7x = ND7x.csv
 ###    ALERT CONSTANTS    ###
 #############################
 T_disp=0.05 			;Treshold displacement value for alert 1 (in meters)
-T_velA1=0.005			;Treshold velocity value for alert level 1 (in meters/day)
-T_velA2=0.5 			;Treshold velocity value for alert level 2 (in meters/day)
+T_velL2=0.005			;Treshold velocity value for alert level 1 (in meters/day)
+T_velL3=0.5 			;Treshold velocity value for alert level 2 (in meters/day)
 k_ac_ax=0.1			;minimum value velocity of axis across maximum velocity to consider movement as valid (in percent)
 num_nodes_to_check=5		;number of nodes to check before calling column alert level 1 or 2
 
@@ -98,19 +96,22 @@ data_dt=0.5			;time interval between data points, in hours
 rt_window_length=15.		;length of real-time monitoring window, in days
 roll_window_length=3.		;length of rolling/moving window operations in hours
 num_roll_window_ops=2		;number of rolling window operations in the whole monitoring analysis
-col_pos_interval='12H'    	; string expression indicating interval between two adjacent column position dates ex: '1D'= 1 day
-num_col_pos=30            	; number of column position dates to plot 
+col_pos_interval='4H'    	; string expression indicating interval between two adjacent column position dates ex: '1D'= 1 day
+num_col_pos=7            	; number of column position dates to plot 
 alert_time_int=30 		;timeframe of alert files to be saved, in days
 
+PlotColPos = True
+PlotDispVel = True
+
 PrintProc = True
-PrintColPos = True
-PrintDispVel = True
 PrintTrendAlerts = True
+PrintWAlert = True
+PrintND = False
+PrintTimer = True
+
 PrintTAlert = True
 PrintTAlert2 = True
-PrintWAlert = True
-PrintND = True
-PrintTimer = True
 PrintAAlert = True
-PrintColProps = False
 PrintGSMAlert = True
+PrintJSON = False
+PrintGAlert = False
