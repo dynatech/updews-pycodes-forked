@@ -302,7 +302,7 @@ def df_to_out(colname,xz,xy,
 
     return xz,xy,   xz_0off,xy_0off,   vel_xz,vel_xy, vel_xz_0off, vel_xy_0off, cs_x,cs_xz,cs_xy,   cs_xz_0,cs_xy_0
 
-def alert_generation(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velA1, T_velA2, k_ac_ax,
+def alert_generation(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velL2, T_velL3, k_ac_ax,
                      num_nodes_to_check,end,proc_file_path,CSVFormat):
 
     ##DESCRIPTION:
@@ -316,8 +316,8 @@ def alert_generation(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velA1, T_v
     ##xy_vel; dataframe; velocity along the planes defined by xa-ya
     ##num_nodes; float; number of nodes
     ##T_disp; float; threshold values for displacement
-    ##T_velA1; float; threshold velocities correspoding to alert level A1
-    ##T_velA2; float; threshold velocities correspoding to alert level A2
+    ##T_velL2; float; threshold velocities correspoding to alert level L2
+    ##T_velL3; float; threshold velocities correspoding to alert level L3
     ##k_ac_ax; float; minimum value of (minimum velocity / maximum velocity) required to consider movement as valid
     ##num_nodes_to_check; integer; number of adjacent nodes to check for validating current node alert
     ##end; 
@@ -328,7 +328,7 @@ def alert_generation(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velA1, T_v
     ##alert_out
  
     #processing node-level alerts
-    alert_out=alert.node_alert(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velA1, T_velA2, k_ac_ax)
+    alert_out=alert.node_alert(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velL2, T_velL3, k_ac_ax)
     
     #processing column-level alerts
     alert_out=alert.column_alert(alert_out, num_nodes_to_check, k_ac_ax)
@@ -381,10 +381,10 @@ def alert_summary(alert_out,alert_list):
         nd_alert.append(colname)
         
     else:
-        a2_check=alert_out.loc[(alert_out['node_alert']=='a2')|(alert_out['col_alert']=='a2')]
-        a1_check=alert_out.loc[(alert_out['node_alert']=='a1')|(alert_out['col_alert']=='a1')]
-        a0_check=alert_out.loc[(alert_out['node_alert']=='a0')]
-        checklist=[a2_check,a1_check,a0_check]
+        l3_check=alert_out.loc[(alert_out['node_alert']=='l3')|(alert_out['col_alert']=='l3')]
+        l2_check=alert_out.loc[(alert_out['node_alert']=='l2')|(alert_out['col_alert']=='l2')]
+        l0_check=alert_out.loc[(alert_out['node_alert']=='l0')]
+        checklist=[l3_check,l2_check,l0_check]
         
         for c in range(len(checklist)):
             if len(checklist[c])!=0:
@@ -632,8 +632,8 @@ alertgen_headers = cfg.get('I/O','alertgen_headers').split(',')
 
 #ALERT CONSTANTS
 T_disp = cfg.getfloat('I/O','T_disp')  #m
-T_velA1 = cfg.getfloat('I/O','T_velA1') #m/day
-T_velA2 = cfg.getfloat('I/O','T_velA2')  #m/day
+T_velL2 = cfg.getfloat('I/O','T_velL2') #m/day
+T_velL3 = cfg.getfloat('I/O','T_velL3')  #m/day
 k_ac_ax = cfg.getfloat('I/O','k_ac_ax')
 num_nodes_to_check = cfg.getint('I/O','num_nodes_to_check')
 alert_file_length=cfg.getint('I/O','alert_time_int') # in days
@@ -667,12 +667,12 @@ roll_window_numpts, end, start, offsetstart, monwin = set_monitoring_window(roll
 
 # creating summary of alerts
 nd_alert=[]
-a0_alert=[]
-a1_alert=[]
-a2_alert=[]
+l0_alert=[]
+l2_alert=[]
+l3_alert=[]
 alert_df = []
-alert_list=[a2_alert,a1_alert,a0_alert,nd_alert]
-alert_names=['a2: ','a1: ','a0: ','ND: ']
+alert_list=[l3_alert,l2_alert,l0_alert,nd_alert]
+alert_names=['l3: ','l2: ','l0: ','ND: ']
 
 # creating dictionary of working nodes per site
 wn = open('working_nodes.txt', 'r')
@@ -746,7 +746,7 @@ for s in sensorlist:
     xy=xy[(xy.index>=end-timedelta(days=3))]
     vel_xz=vel_xz[(vel_xz.index>=end-timedelta(days=3))]
     vel_xy=vel_xy[(vel_xy.index>=end-timedelta(days=3))]
-    alert_out=alert_generation(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velA1, T_velA2, k_ac_ax,
+    alert_out=alert_generation(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velL2, T_velL3, k_ac_ax,
                                num_nodes_to_check,end,proc_file_path,CSVFormat)
     print alert_out
 
@@ -793,14 +793,14 @@ for s in sensorlist:
         counter = Counter(node_trend)
         max_count = max(counter.values())
         mode = [k for k,v in counter.items() if v == max_count]
-        if 'a2' in mode:
-            mode = ['a2']
-        elif 'a1' in mode:
-            mode = ['a1']
+        if 'l3' in mode:
+            mode = ['l3']
+        elif 'l2' in mode:
+            mode = ['l2']
         elif 'nd' in mode:
             mode = ['nd']   
-        elif 'a0' in mode:
-            mode = ['a0']
+        elif 'l0' in mode:
+            mode = ['l0']
         else:
             print "No node data for node " + str(n) + " in" + colname
         trending_node_alerts.extend(mode)
@@ -832,25 +832,25 @@ for s in sensorlist:
          print line, # standard output is now redirected to the file
     
     # writes sensor name and sensor alerts alphabetically, one sensor per row, in textalert
-    if working_node_alerts.count('a2') != 0:
+    if working_node_alerts.count('l3') != 0:
         if PrintTAlert:
             with open (output_file_path+textalert, 'ab') as t:
-                t.write (colname + ":" + 'a2' + '\n')
-        a2_alert.append(colname)
-        alert_df.append((end,colname,'a2'))                
-    elif working_node_alerts.count('a1') != 0:
+                t.write (colname + ":" + 'l3' + '\n')
+        l3_alert.append(colname)
+        alert_df.append((end,colname,'l3'))                
+    elif working_node_alerts.count('l2') != 0:
         if PrintTAlert:
             with open (output_file_path+textalert, 'ab') as t:
-                t.write (colname + ":" + 'a1' + '\n')
-        a1_alert.append(colname)
-        alert_df.append((end,colname,'a1'))
+                t.write (colname + ":" + 'l2' + '\n')
+        l2_alert.append(colname)
+        alert_df.append((end,colname,'l2'))
     elif (colname == 'sinb') or (colname == 'blcb'):
-        if working_node_alerts.count('a0') > 0:
+        if working_node_alerts.count('l0') > 0:
             if PrintTAlert:
                 with open (output_file_path+textalert, 'ab') as t:
-                    t.write (colname + ":" + 'a0' + '\n')
-            a0_alert.append(colname)
-            alert_df.append((end,colname,'a0'))
+                    t.write (colname + ":" + 'l0' + '\n')
+            l0_alert.append(colname)
+            alert_df.append((end,colname,'l0'))
         else:
             if PrintTAlert:
                 with open (output_file_path+textalert, 'ab') as t:
@@ -862,9 +862,9 @@ for s in sensorlist:
         if PrintTAlert:
             with open (output_file_path+textalert, 'ab') as t:
                 t.write (colname + ":" + (working_node_alerts_count.most_common(1)[0][0]) + '\n')
-        if (working_node_alerts_count.most_common(1)[0][0] == 'a0'):
-            a0_alert.append(colname)
-            alert_df.append((end,colname,'a0'))
+        if (working_node_alerts_count.most_common(1)[0][0] == 'l0'):
+            l0_alert.append(colname)
+            alert_df.append((end,colname,'l0'))
         else:
             nd_alert.append(colname)
             alert_df.append((end,colname,'nd'))
@@ -875,13 +875,13 @@ for s in sensorlist:
     # writes sensor alerts in one row in webtrends
     if PrintWAlert:
         with open(output_file_path+webtrends, 'ab') as w:
-                if working_node_alerts.count('a2') != 0:
-                    w.write ('a2' + ',')
-                elif working_node_alerts.count('a1') != 0:
-                    w.write ('a1' + ',')
+                if working_node_alerts.count('l3') != 0:
+                    w.write ('l3' + ',')
+                elif working_node_alerts.count('l2') != 0:
+                    w.write ('l2' + ',')
                 elif (colname == 'sinb') or (colname == 'blcb'):
-                    if working_node_alerts.count('a0') > 0:
-                        w.write ('a0' + ',')
+                    if working_node_alerts.count('l0') > 0:
+                        w.write ('l0' + ',')
                     else:
                         w.write ('nd' + ',')       
                 else:
@@ -925,18 +925,18 @@ for s in sensorlist:
 # writes list of site per alert level in textalert2
 if PrintTAlert2:
     with open (output_file_path+textalert2, 'ab') as t:
-        t.write ('a0: ' + ','.join(sorted(a0_alert)) + '\n')
+        t.write ('l0: ' + ','.join(sorted(l0_alert)) + '\n')
         t.write ('nd: ' + ','.join(sorted(nd_alert)) + '\n')
-        t.write ('a1: ' + ','.join(sorted(a1_alert)) + '\n')
-        t.write ('a2: ' + ','.join(sorted(a2_alert)) + '\n')
+        t.write ('l2: ' + ','.join(sorted(l2_alert)) + '\n')
+        t.write ('l3: ' + ','.join(sorted(l3_alert)) + '\n')
 
 
 #Prints rainfall alerts, text alert and eq summary in one file
 if PrintAAlert:
     with open(output_file_path+all_alerts, 'wb') as allalerts:
         allalerts.write('As of ' + end.strftime(fmt) + ':\n')
-        allalerts.write('a2: ' + ','.join(sorted(a2_alert)) + '\n')
-        allalerts.write('a1: ' + ','.join(sorted(a1_alert)) + '\n')
+        allalerts.write('l3: ' + ','.join(sorted(l3_alert)) + '\n')
+        allalerts.write('l2: ' + ','.join(sorted(l2_alert)) + '\n')
         allalerts.write('\n')
         with open(output_file_path+rainfall_alert) as rainfallalert:
             n = 0
@@ -951,10 +951,10 @@ if PrintAAlert:
 
 if PrintGSMAlert:
     with open(output_file_path+gsm_alert, 'wb') as gsmalert:
-        if len(a2_alert) != 0:
-            gsmalert.write('a2: ' + ','.join(sorted(a2_alert)) + '\n')
-        if len(a1_alert) != 0:
-            gsmalert.write('a1: ' + ','.join(sorted(a1_alert)) + '\n')
+        if len(l3_alert) != 0:
+            gsmalert.write('l3: ' + ','.join(sorted(l3_alert)) + '\n')
+        if len(l2_alert) != 0:
+            gsmalert.write('l2: ' + ','.join(sorted(l2_alert)) + '\n')
         with open(output_file_path+rainfall_alert) as rainfallalert:
             n = 0
             for line in rainfallalert:
@@ -1003,11 +1003,11 @@ with open('working_sites.txt', 'r') as SQLsites:
 ## creates list of sites with no data and classifies whether its raw or filtered
 #if PrintND:
 #    with open(output_file_path+NDlog, 'ab') as ND:
-#        if len(a0_alert) == 0 and len(a1_alert) == 0 and len(a2_alert) == 0:
+#        if len(l0_alert) == 0 and len(l2_alert) == 0 and len(l3_alert) == 0:
 #            ND.write(end.strftime(fmt) + ',D,')
 #            ND.write("ND on all sites,")
 #            ND.write(',\n')
-#    if len(a0_alert) != 0 or len(a1_alert) != 0 or len(a2_alert) != 0:
+#    if len(l0_alert) != 0 or len(l2_alert) != 0 or len(l3_alert) != 0:
 #        with open(output_file_path+NDlog, 'ab') as ND:
 #            try:
 #                ND.write(end.strftime(fmt) + ',D,')

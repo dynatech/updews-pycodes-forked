@@ -198,7 +198,7 @@ def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid
         
     query = query + " where timestamp > '%s'" % fromTime
     
-    if toTime:
+    if toTime != '':
         query = query + " and timestamp < '%s'" % toTime
 
     if len(siteid) == 5:
@@ -648,6 +648,9 @@ def GetRainProps():
 #        dflgd: dataframe object
 #            dataframe object of the resulting last good data
 def GetLastGoodData(df, nos, fillMissing=False):
+    if df.empty:
+        print "Error: Empty dataframe inputted"
+        return
     # groupby id first
     dfa = df.groupby('id')
     # extract the latest timestamp per id, drop the index
@@ -751,14 +754,16 @@ def GenerateLastGoodData():
     for s in slist:
         print s.name, s.nos
         
-        df = GetRawAccelData(s.name,'',s.nos)
+        df = GetRawAccelData(siteid=s.name,maxnode=s.nos)
         df = filterSensorData.applyFilters(df,True,True,False)         
         
         dflgd = GetLastGoodData(df,s.nos,True)
         del df           
           
-        PushLastGoodData(dflgd,s.name)
-   
+        try:
+            PushLastGoodData(dflgd,s.name)
+        except (AttributeError,TypeError):
+            PrintOut("Error. Empty database")
 
             
 # import values from config file
