@@ -27,16 +27,20 @@ def GenerateGroundDataAlert():
     #Monitoring output directory
     path2 = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
     out_path = up_one(up_one(path2))
-    print out_path
     print path2
-
+    print out_path    
+    
     cfg = ConfigParser.ConfigParser()
-    cfg.read(path2+'/server-config.txt')     
+    cfg.read(path2 + '/server-config.txt')     
     
-    mode = 2
-    if mode == 1 or True:
-        output_file_path = cfg.get('I/O','OutputFilePath')
-    
+
+    output_file_path = cfg.get('I/O','OutputFilePath')
+    PrintJSON = cfg.get('I/O','PrintJSON')
+    PrintGAlert = cfg.get('I/O','PrintGAlert')
+    Hostdb = cfg.get('DB I/O','Hostdb')
+    Userdb = cfg.get('DB I/O','Userdb')
+    Passdb = cfg.get('DB I/O','Passdb')
+    Namedb = cfg.get('DB I/O','Namedb')    
     #Set the date of the report as the current date rounded to HH:30 or HH:00
     end=datetime.now()
     end_Year=end.year
@@ -191,7 +195,7 @@ def GenerateGroundDataAlert():
         #change dict format to tuple for more easy output writing
         ground_alert_release = sorted(ground_data_alert.items())
         
-    if mode == 1:
+    if PrintGAlert:
         #Creating Monitoring Output directory if it doesn't exist
         print_out_path = out_path + output_file_path
         print print_out_path        
@@ -213,7 +217,7 @@ def GenerateGroundDataAlert():
                 t.write ("{:5}: {:5}; {}".format(site,galert,measurement_dates[i])+'\n')
                 i += 1
     
-    if mode == 2:
+    if PrintJSON:
         #create data frame as for easy conversion to JSON format
         
         for i in range(len(ground_alert_release)): ground_alert_release[i] = (measurement_dates[i],) + ground_alert_release[i]
