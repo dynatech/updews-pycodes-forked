@@ -132,7 +132,7 @@ def ASTIplot(r,offsetstart,end,tsn, data):
         plt.plot(plot4.index,plot4,color="#fbb714") # half of 2-yr max rainfall
         plt.plot(plot5.index,plot5,color="#963bd6")  # 2-yr max rainfall
         plt.savefig(RainfallPlotsPath+tsn+" "+r,
-            dpi=320, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
+            dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
         plt.close()
     
     print rainfall[-1:]
@@ -392,7 +392,7 @@ for s in range(len(rainprops)):
                 plt.plot(plot3.index,plot3,color="#0d90d0") # 72-hr cumulative rainfall
                 plt.plot(plot4.index,plot4,color="#fbb714") # half of 2-yr max rainfall
                 plt.plot(plot5.index,plot5,color="#963bd6")  # 2-yr max rainfall
-                plt.savefig(RainfallPlotsPath+tsn+" "+r, dpi=320, 
+                plt.savefig(RainfallPlotsPath+tsn+" "+r, dpi=160, 
                     facecolor='w', edgecolor='w',orientation='landscape',mode='w')
                 plt.close()
 

@@ -344,21 +344,23 @@ def alert_generation(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velA1, T_v
 
     #checks if file exist, append latest alert; else, write new file
     if PrintProc:
-        if os.path.exists(proc_file_path+colname+"/"+colname+" "+"alert"+CSVFormat) and os.stat(proc_file_path+colname+"/"+colname+" "+"alert"+CSVFormat).st_size != 0:
-            alert_monthly=pd.read_csv(proc_file_path+colname+"/"+colname+" "+"alert"+CSVFormat,
-                                      names=alert_headers,parse_dates='ts',index_col='ts')
-            alert_monthly=alert_monthly[(alert_monthly.index>=end-timedelta(days=alert_file_length))]
-            alert_monthly=alert_monthly.reset_index()
-            alert_monthly=alert_monthly.set_index(['ts','id'])
-            alert_monthly=alert_monthly.append(alert_out)
-            alert_monthly=alert_monthly[alertgen_headers]
-            alert_monthly.to_csv(proc_file_path+colname+"/"+colname+" "+"alert"+CSVFormat,
+        try:
+            if os.path.exists(proc_file_path+colname+"/"+colname+" "+"alert"+CSVFormat) and os.stat(proc_file_path+colname+"/"+colname+" "+"alert"+CSVFormat).st_size != 0:
+                alert_monthly=pd.read_csv(proc_file_path+colname+"/"+colname+" "+"alert"+CSVFormat,names=alert_headers,parse_dates='ts',index_col='ts')
+                alert_monthly=alert_monthly[(alert_monthly.index>=end-timedelta(days=alert_file_length))]
+                alert_monthly=alert_monthly.reset_index()
+                alert_monthly=alert_monthly.set_index(['ts','id'])
+                alert_monthly=alert_monthly.append(alert_out)
+                alert_monthly=alert_monthly[alertgen_headers]
+                alert_monthly.to_csv(proc_file_path+colname+"/"+colname+" "+"alert"+CSVFormat,
+                                     sep=',', header=False,mode='w')
+            else:
+                if not os.path.exists(proc_file_path+colname+"/"):
+                    os.makedirs(proc_file_path+colname+"/")
+                alert_out.to_csv(proc_file_path+colname+"/"+colname+" "+"alert"+CSVFormat,
                                  sep=',', header=False,mode='w')
-        else:
-            if not os.path.exists(proc_file_path+colname+"/"):
-                os.makedirs(proc_file_path+colname+"/")
-            alert_out.to_csv(proc_file_path+colname+"/"+colname+" "+"alert"+CSVFormat,
-                             sep=',', header=False,mode='w')
+        except:
+            print "Error in Printing Proc"
 
     
     return alert_out
@@ -408,7 +410,7 @@ def plot_column_positions(colname,x,xz,xy):
     try:
         fig=plt.figure(1)
         plt.clf()
-        plt.suptitle(colname+" absolute position")
+        plt.suptitle(colname+" absolute position", fontsize = 12)
         ax_xz=fig.add_subplot(121)
         ax_xy=fig.add_subplot(122,sharex=ax_xz,sharey=ax_xz)
 
@@ -426,9 +428,24 @@ def plot_column_positions(colname,x,xz,xy):
             curax.plot(curcolpos_xy[0],curcolpos_x[0],'.-', label=i)
             curax.set_xlabel('xy')
 
+        for tick in ax_xz.xaxis.get_minor_ticks():
+            tick.label.set_rotation('vertical')
+            tick.label.set_fontsize(10)
+            
+        for tick in ax_xy.xaxis.get_minor_ticks():
+            tick.label.set_rotation('vertical')
+            tick.label.set_fontsize(10)
+       
+        for tick in ax_xz.xaxis.get_major_ticks():
+            tick.label.set_rotation('vertical')
+            tick.label.set_fontsize(10)
+            
+        for tick in ax_xy.xaxis.get_major_ticks():
+            tick.label.set_rotation('vertical')
+            tick.label.set_fontsize(10)
+    
         fig.tight_layout()
-        plt.legend(fontsize='x-small')
-        
+        plt.legend(fontsize='x-small')        
     
     except:        
         print colname, "ERROR in plotting column position"
@@ -687,9 +704,6 @@ sensorlist = GetSensorList()
 
 for s in sensorlist:
 
-#    if s.name == 'magta' or s.name == 'cudta' or s.name == 'peptc':
-#        continue
-
     last_col=sensorlist[-1:]
     last_col=last_col[0]
     last_col=last_col.name
@@ -773,7 +787,7 @@ for s in sensorlist:
     
     # trending node alert for all nodes
     trending_node_alerts = []
-    for n in range(1,1+num_nodes): # working_nodes.get(colname)
+    for n in range(1,1+num_nodes): 
         calert = df.loc[df['id'] == n]        
         node_trend = pd.Series.tolist(calert.alerts)
         counter = Counter(node_trend)
@@ -897,13 +911,13 @@ for s in sensorlist:
         plot_column_positions(colname,cs_x,cs_xz_0,cs_xy_0)
         plot_column_positions(colname,cs_x,cs_xz,cs_xy)
         plt.savefig(output_file_path+colname+' colpos ',
-                    dpi=320, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
+                    dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
 #
     #12. Plotting displacement and velocity
     if PrintDispVel:
         plot_disp_vel(colname, xz_0off,xy_0off, vel_xz_0off, vel_xy_0off)
         plt.savefig(output_file_path+colname+' disp_vel ',
-                    dpi=320, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
+                    dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
 
     if PrintColPos or PrintDispVel:
         plt.close()
