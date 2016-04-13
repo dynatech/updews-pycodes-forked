@@ -54,7 +54,7 @@ valid_data = end - timedelta(hours=3)
 
 
 
-def node_alert(colname, xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_velA1, T_velA2, k_ac_ax):
+def node_alert(colname, xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_vell2, T_vell3, k_ac_ax):
 
     #DESCRIPTION
     #Evaluates node-level alerts from node tilt and velocity data
@@ -62,7 +62,7 @@ def node_alert(colname, xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_v
     #INPUT
     #xz_tilt,xy_tilt, xz_vel, xy_vel:   Pandas DataFrame objects, with length equal to real-time window size, and columns for timestamp and individual node values
     #num_nodes:                         integer; number of nodes in a column
-    #T_disp, TvelA1, TvelA2:            floats; threshold values for displacement, and velocities correspoding to alert levels A1 and A2
+    #T_disp, Tvell2, Tvell3:            floats; threshold values for displacement, and velocities correspoding to alert levels l2 and l3
     #k_ac_ax:                           float; minimum value of (minimum velocity / maximum velocity) required to consider movement as valid
 
     #OUTPUT:
@@ -114,7 +114,7 @@ def node_alert(colname, xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_v
                                           np.zeros(len(alert)),
                                           np.ones(len(alert))),
 
-                                 #disp alert=a0
+                                 #disp alert=l0
                                  np.zeros(len(alert)))
     
     #getting minimum axis velocity value
@@ -134,13 +134,13 @@ def node_alert(colname, xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_v
                                 np.zeros(len(alert)),    
 
                                 #checking if max node velocity exceeds threshold velocity for alert 1
-                                np.where(alert['max_vel'].values<=T_velA1,                  
+                                np.where(alert['max_vel'].values<=T_vell2,                  
 
                                          #vel alert=0
                                          np.zeros(len(alert)),
 
                                          #checking if max node velocity exceeds threshold velocity for alert 2
-                                         np.where(alert['max_vel'].values<=T_velA2,         
+                                         np.where(alert['max_vel'].values<=T_vell3,         
 
                                                   #vel alert=1
                                                   np.ones(len(alert)),
@@ -150,7 +150,7 @@ def node_alert(colname, xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_v
     
     alert['node_alert']=np.where(alert['vel_alert'].values==0,
 
-                                 # node alert = displacement alert (0 or 1) if velocity alert is a0 
+                                 # node alert = displacement alert (0 or 1) if velocity alert is l0 
                                  alert['disp_alert'].values,                                
 
                                  # node alert = velocity alert if displacement alert = 1 
@@ -217,8 +217,8 @@ def column_alert(alert, num_nodes_to_check, k_ac_ax):
             
     alert['col_alert']=np.asarray(col_alert)
 
-    alert['node_alert']=alert['node_alert'].map({-1:'nd',0:'a0',1:'a1',2:'a2'})
-    alert['col_alert']=alert['col_alert'].map({-1:'nd',0:'a0',1:'a1',2:'a2'})
+    alert['node_alert']=alert['node_alert'].map({-1:'nd',0:'l0',1:'l2',2:'l3'})
+    alert['col_alert']=alert['col_alert'].map({-1:'nd',0:'l0',1:'l2',2:'l3'})
 
     return alert
 
