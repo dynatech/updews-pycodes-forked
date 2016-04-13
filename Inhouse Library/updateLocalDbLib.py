@@ -483,6 +483,7 @@ def updateSiteColumnTable():
         print "Number of %s elements: %s" % (targetTable, numElements)
           
         truncateTable(targetTable)
+        time.sleep(2)
         writeDFtoLocalDB(targetTable,df)
 
 #update the site_column_props data
@@ -499,6 +500,7 @@ def updateColumnPropsTable():
         print "Number of %s elements: %s" % (targetTable, numElements)
           
         truncateTable(targetTable)
+        time.sleep(2)
         writeDFtoLocalDB(targetTable,df)
         
 #update the site_rain_props data
@@ -515,4 +517,5 @@ def updateRainPropsTable():
         print "Number of %s elements: %s" % (targetTable, numElements)
           
         truncateTable(targetTable)
+        time.sleep(2)
         writeDFtoLocalDB(targetTable,df)
