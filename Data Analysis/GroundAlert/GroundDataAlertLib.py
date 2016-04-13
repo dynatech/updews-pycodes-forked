@@ -131,28 +131,28 @@ def GenerateGroundDataAlert():
                 if feature_displacement >= 75:
                     feature_alert = 'L2'
                 elif feature_displacement >= 3:
-                    feature_alert = 'L1'
+                    feature_alert = 'L2'
                 else:
                     feature_alert = 'L0'
             elif time_delta_last >= 3:
                 if feature_displacement >= 30:
-                    feature_alert = 'L2'
+                    feature_alert = 'L3'
                 elif feature_displacement >= 1.5:
-                    feature_alert = 'L1'
+                    feature_alert = 'L2'
                 else:
                     feature_alert = 'L0'
             elif time_delta_last >= 1:
                 if feature_displacement >= 10:
-                    feature_alert = 'L2'
+                    feature_alert = 'L3'
                 elif feature_displacement >= 0.5:
-                    feature_alert = 'L1'
+                    feature_alert = 'L2'
                 else:
                     feature_alert = 'L0'
             else:
                 if feature_displacement >= 5:
-                    feature_alert = 'L2'
+                    feature_alert = 'L3'
                 elif feature_displacement >= 0.5:
-                    feature_alert = 'L1'
+                    feature_alert = 'L2'
                 else:
                     feature_alert = 'L0'
             
@@ -179,10 +179,10 @@ def GenerateGroundDataAlert():
             if end - last_data_time > np.timedelta64(4, 'h'):
                 ground_data_alert.update({cur_site:'ND'})
             else:
-                if 'L2' in site_eval:
+                if 'L3' in site_eval:
+                    ground_data_alert.update({cur_site:'L3'})
+                elif 'L2' in site_eval:
                     ground_data_alert.update({cur_site:'L2'})
-                elif 'L1' in site_eval:
-                    ground_data_alert.update({cur_site:'L1'})
                 elif 'L0p' in site_eval:
                     ground_data_alert.update({cur_site:'L0p'})
                 elif 'L0' in site_eval:
