@@ -15,3 +15,6 @@ updatedb.updateColumnPropsTable()
 
 #update the site_rain_props table
 updatedb.updateRainPropsTable()
+
+#update the node_status table
+updatedb.updateNodeStatusTable()

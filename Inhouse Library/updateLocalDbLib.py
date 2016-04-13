@@ -45,6 +45,21 @@ def getLatestTimestamp(col):
         print ret
         return ret
         
+def getLatestNodeStatusId():
+    dbc = MySQLdb.connect(host=dbhost,user=dbuser,passwd=dbpwd,db=dbname)
+    cur = dbc.cursor()
+    query = "select max(post_id) from %s.node_status" % (dbname)
+    ret = 0
+    try:
+        a = cur.execute(query)
+        ret = cur.fetchall()[0][0]
+    except TypeError:
+        print "Error"
+        ret = 0
+    finally:
+        dbc.close()
+        return ret
+        
 def getSiteColumnsList():
     dbc = MySQLdb.connect(host=dbhost,user=dbuser,passwd=dbpwd,db=dbname)
     cur = dbc.cursor()
@@ -82,6 +97,22 @@ def checkEntryExistence(table,col,value):
     finally:
         dbc.close()
         return ret
+        
+def checkTableExistence(table):
+    dbc = MySQLdb.connect(host=dbhost,user=dbuser,passwd=dbpwd,db=dbname)
+    cur = dbc.cursor()
+    query = "select 1 from %s.%s limit 1" % (dbname,table)
+    print query
+    ret = 1
+    try:
+        a = cur.execute(query)
+        ret = 1
+    except:
+        print "Table doesn't exist"
+        ret = -1
+    finally:
+        dbc.close()
+        return ret
     
 ###############################################################################
 # Create Tables on Database    
@@ -114,6 +145,25 @@ def createSensorTable(table,version):
         dbc.close()
         return ret      
 
+def createNodeStatusTable():
+    dbc = MySQLdb.connect(host=dbhost,user=dbuser,passwd=dbpwd,db=dbname)
+    cur = dbc.cursor()
+
+    query = "CREATE TABLE `%s`.`node_status` (`post_id` BIGINT(20) NOT NULL AUTO_INCREMENT, `post_timestamp` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, `date_of_identification` DATE NULL, `flagger` VARCHAR(45) NOT NULL, `site` VARCHAR(8) NOT NULL, `node` INT(11) NOT NULL, `status` VARCHAR(32) NOT NULL, `comment` VARCHAR(255) NULL, `inUse` TINYINT(1) NOT NULL, PRIMARY KEY (`post_id`)) ENGINE = InnoDB DEFAULT CHARACTER SET = latin1;" % (dbname)
+    
+    #print query
+    print "Created Node Status Table: node_status"
+    ret = 0
+    
+    try:
+        a = cur.execute(query)
+        ret = cur.fetchall()[0][0]
+    except TypeError:
+        print "Error"
+        ret = 0
+    finally:
+        dbc.close()
+        return ret   
         
 ###############################################################################
 # Truncate Tables on Database    
@@ -312,6 +362,39 @@ def downloadSiteColumnData(col):
         return None
         
     return True
+    
+def downloadNodeStatusData(postId = 0):
+    #check existence of node_status table
+    exists = checkTableExistence("node_status")
+    if exists < 0:
+        #create the new table
+        print "node_status table is not found in database"
+        createNodeStatusTable()
+        latestPid = postId
+    else:
+        latestPid = getLatestNodeStatusId()
+        
+    print "latest post id = %s" % latestPid
+    
+    url = 'http://www.dewslandslide.com/ajax/getSenslopeData.php?db=%s&nodestatus&pid=%s&json' % (dbname,latestPid)  
+    print url
+    
+    try:
+        jsonData = pd.read_json(url, orient='columns')
+        df = pd.DataFrame(jsonData)
+        df = df.set_index(['post_id'])
+        print "downloadNodeStatusData done" 
+        
+        #return df
+    except urllib2.URLError:
+        print "<urlopen error [Errno 10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond>"
+        return pd.DataFrame()
+    
+    except ValueError:
+        print "No Data from web server. Table does not exist on web server"
+        return pd.DataFrame()
+        
+    return df
    
 ###############################################################################
 # Writes to Database
@@ -502,6 +585,21 @@ def updateColumnPropsTable():
         truncateTable(targetTable)
         time.sleep(2)
         writeDFtoLocalDB(targetTable,df)
+        
+#update the node_status data
+def updateNodeStatusTable():
+    df = downloadNodeStatusData()    
+    isDFempty = df.empty
+    targetTable = "node_status"
+    
+    if isDFempty == True:
+        print 'Update failed...'
+    else:
+        print 'Updating %s table...' % (targetTable)
+        numElements = len(df.index)
+        print "Number of %s elements: %s" % (targetTable, numElements)
+          
+        writeDFtoLocalDB(targetTable,df)    
         
 #update the site_rain_props data
 def updateRainPropsTable():
