@@ -191,7 +191,8 @@ for row in rainsenslope_tables:
         last_timestamp = getLastTimestamp(meta, row[1])
         
         # Get data from DEWS API
-        data = getDataFromDEWSapi(row[0], last_timestamp)
+        temp = row.name[0:3]
+        data = getDataFromDEWSapi(temp, last_timestamp)
         try:
             print "Data retrieved: {0}".format(len(data['rain_senslope']))
         except:

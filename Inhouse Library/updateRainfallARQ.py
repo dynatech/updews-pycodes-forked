@@ -190,7 +190,7 @@ downloadMore = True
 # Get the corresponding ARQ tables for site if available
 arq_tables = getRainfallARQTables(conn, meta)
 
-# Iterate to all ARQ tables and update each
+## Iterate to all ARQ tables and update each
 for row in arq_tables:
     while downloadMore is True:
         # Get the latest timestamp
@@ -198,7 +198,8 @@ for row in arq_tables:
         #print "Last timestamp: ", last_timestamp
         
         # Get data from DEWS API
-        data = getDataFromDEWSapi(row[0], last_timestamp)
+        temp = row.name[0:3]
+        data = getDataFromDEWSapi(temp, last_timestamp)
         try:
             print "Data retrieved: {0}".format(len(data['rain_arq']))
         except:
