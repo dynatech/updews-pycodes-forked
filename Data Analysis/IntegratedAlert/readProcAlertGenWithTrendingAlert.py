@@ -691,9 +691,8 @@ names = ['ts','col_a']
 fmt = '%Y-%m-%d %H:%M'
 hr = end - timedelta(hours=3)
 
-with open(output_file_path+webtrends, 'ab') as w, open (output_file_path+textalert, 'wb') as t, open (output_file_path+textalert2, 'wb') as t2:
+with open(output_file_path+webtrends, 'ab') as w, open (output_file_path+textalert, 'wb') as t:
     t.write('As of ' + end.strftime(fmt) + ':\n')
-    t2.write('As of ' + end.strftime(fmt) + ':\n')
     w.write(end.strftime(fmt) + ',')
 
 
@@ -924,7 +923,8 @@ for s in sensorlist:
 
 # writes list of site per alert level in textalert2
 if PrintTAlert2:
-    with open (output_file_path+textalert2, 'ab') as t:
+    with open (output_file_path+textalert2, 'wb') as t:
+        t.write('As of ' + end.strftime(fmt) + ':\n')
         t.write ('l0: ' + ','.join(sorted(l0_alert)) + '\n')
         t.write ('nd: ' + ','.join(sorted(nd_alert)) + '\n')
         t.write ('l2: ' + ','.join(sorted(l2_alert)) + '\n')
