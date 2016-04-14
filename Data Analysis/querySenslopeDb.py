@@ -507,15 +507,7 @@ def GetRawRainData(siteid = "", fromTime = ""):
         
     except UnboundLocalError:
         print 'No ' + siteid + ' table in SQL'
-
-
-
-#GetSensorList():
-#    returns a list of columnArray objects from the database tables
-#    
-#    Returns:
-#        sensorlist: list
-#            list of columnArray (see class definition above)
+    
 
 def GetCoordsList():
     try:
@@ -535,6 +527,13 @@ def GetCoordsList():
         return sensors
     except:
         raise ValueError('Could not get sensor list from database')
+
+#GetSensorList():
+#    returns a list of columnArray objects from the database tables
+#    
+#    Returns:
+#        sensorlist: list
+#            list of columnArray (see class definition above)
 
 def GetSensorList():
     try:
@@ -569,6 +568,31 @@ def GetSensorDF():
         return df
     except:
         raise ValueError('Could not get sensor list from database')
+
+#returns list of non-working nodes from the node status table
+#function will only return the latest entry per site per node with
+#"Not OK" status
+def GetNodeStatus(statusid = 1):
+    if statusid == 1:
+        status = "Not OK"
+    elif statusid == 2:
+        status = "Use with Caution"
+    elif statusid == 3:
+        status = "Special Case"
+    
+    try:
+        query = 'SELECT ns1.site, ns1.node, ns1.status FROM node_status ns1 '
+        query += 'WHERE ns1.post_id = '
+        query += '(SELECT max(ns2.post_id) FROM node_status ns2 '
+        query += 'WHERE ns2.site = ns1.site AND ns2.node = ns1.node) '
+        query += 'AND ns1.status = "%s" ' % (status)
+        query += 'order by site asc, node asc'
+        
+        df = GetDBDataFrame(query)
+        return df
+    except:
+        raise ValueError('Could not get sensor list from database')
+
 
 #GetRainList():
 #    returns a list of columnArray objects from the database tables
