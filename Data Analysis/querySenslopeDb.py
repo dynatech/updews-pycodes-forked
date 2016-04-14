@@ -241,8 +241,12 @@ def GetFilledAccelData(siteid = "", fromTime = "", toTime = "", drop_msgid = 1 ,
     
     if printtostdout:
         PrintOut('Querying database ...')
-
-    query = "select timestamp,id,msgid,xvalue,yvalue,zvalue from senslopedb.%s " % (siteid)        
+        
+    # take into account old sites ( version 1)
+    if (len(siteid) == 5):
+        query = "select timestamp,id,msgid,xvalue,yvalue,zvalue from senslopedb.%s " % (siteid)
+    else:
+        query = "select timestamp,id,xvalue,yvalue,zvalue from senslopedb.%s " % (siteid) 
 
     if not fromTime:
         fromTime = "2010-01-01"
@@ -260,17 +264,20 @@ def GetFilledAccelData(siteid = "", fromTime = "", toTime = "", drop_msgid = 1 ,
     PrintOut(query)
  
     df =  GetDBDataFrame(query)
-
-    if len(df) > 0:
-        #df = fill_axel_data(df, drop_msgid)
-        df = df.groupby([df['id']]).apply(fill_axel_data)
-        if drop_msgid:
-            df.columns = ['ts','id','x','y','z']
-        elif drop_msgid == 0:
-            df.columns = ['ts','id','msgid','x','y','z']
+    if (len(siteid) == 5):
+        if len(df) > 0:
+            #df = fill_axel_data(df, drop_msgid)
+            df = df.groupby([df['id']]).apply(fill_axel_data)
+            if drop_msgid:
+                df.columns = ['ts','id','x','y','z']
+            elif drop_msgid == 0:
+                df.columns = ['ts','id','msgid','x','y','z']
+            # change ts column to datetime
+            df.ts = pd.to_datetime(df.ts)
+    elif (len(siteid) == 4):
+        df.columns = ['ts','id','x','y','z']
         # change ts column to datetime
-        df.ts = pd.to_datetime(df.ts)
-    
+        df.ts = pd.to_datetime(df.ts)  
     return df
 
 #fill_axel_data(df)
