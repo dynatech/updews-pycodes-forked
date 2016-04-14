@@ -693,7 +693,7 @@ hr = end - timedelta(hours=3)
 
 with open(output_file_path+webtrends, 'ab') as w, open (output_file_path+textalert, 'wb') as t:
     t.write('As of ' + end.strftime(fmt) + ':\n')
-    w.write(end.strftime(fmt) + ',')
+    w.write(end.strftime(fmt) + ';')
 
 
 CreateColAlertsTable('col_alerts', Namedb)
