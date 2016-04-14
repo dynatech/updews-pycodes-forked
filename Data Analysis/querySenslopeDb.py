@@ -70,7 +70,7 @@ def GetLatestTimestamp(nameDb, table):
     try:
         cur.execute("select max(timestamp) from %s.%s" %(nameDb,table))
     except:
-        print "Error in getting maximum timstamp"
+        print "Error in getting maximum timestamp"
 
     a = cur.fetchall()
     if a:
@@ -198,7 +198,7 @@ def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid
         
     query = query + " where timestamp > '%s'" % fromTime
     
-    if toTime:
+    if toTime != '':
         query = query + " and timestamp < '%s'" % toTime
 
     if len(siteid) == 5:
@@ -217,6 +217,198 @@ def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid
     df.ts = pd.to_datetime(df.ts)
     
     return df
+
+#GetFilledAccelData(siteid = "", fromTime = "", maxnode = 40): 
+#    retrieves filled accel data from database
+#    
+#    Parameters:
+#        siteid: str
+#            sitename or column name of the sensor column
+#        fromTime: str 
+#            starting time of the query that needs to be retrieved
+#        maxnode: int, default 40
+#            maximum node expected from this particular sensor column. Used
+#            to remove extraneous node ids which may not belong to the sensor column
+#            
+#    Returns:
+#        dfm: dataframe object 
+#            dataframe object of the result set 
+    
+def GetFilledAccelData(siteid = "", fromTime = "", toTime = "", drop_msgid = 1 ,maxnode = 40, targetnode = -1):
+
+    if not siteid:
+        raise ValueError('no site id entered')
+    
+    if printtostdout:
+        PrintOut('Querying database ...')
+
+    query = "select timestamp,id,msgid,xvalue,yvalue,zvalue from senslopedb.%s " % (siteid)        
+
+    if not fromTime:
+        fromTime = "2010-01-01"
+        
+    query = query + " where timestamp > '%s'" % fromTime
+    
+    if toTime:
+        query = query + " and timestamp < '%s'" % toTime
+    
+    if targetnode <= 0:  
+        query = query + " and id >= 1 and id <= %s ;" % (str(maxnode))
+    else:
+        query = query + " and id = %s;" % (targetnode)
+    
+    PrintOut(query)
+ 
+    df =  GetDBDataFrame(query)
+
+    if len(df) > 0:
+        #df = fill_axel_data(df, drop_msgid)
+        df = df.groupby([df['id']]).apply(fill_axel_data)
+        if drop_msgid:
+            df.columns = ['ts','id','x','y','z']
+        elif drop_msgid == 0:
+            df.columns = ['ts','id','msgid','x','y','z']
+        # change ts column to datetime
+        df.ts = pd.to_datetime(df.ts)
+    
+    return df
+
+#fill_axel_data(df)
+##    Summary: 
+#        fill in missing axel 1 data ( x,y,z ) with axel2 data 
+##    inputs:
+#        df is a dataframe containing a column named msgid with values 11,12,32 and 33
+#        df has a column ts ( timestamp)
+#        df returns a dataframe dfm with columns ts,id,x,y,z
+##    Others:
+#        if df is a dataframe for multiple node ids use groupby
+#        Example:
+#            df = df.groupby([df['id']]).apply(fill_axel_data)
+
+def fill_axel_data(df, drop_msgid = 1):
+    #we need to rename the column 'timestamp' to 'ts'
+    df.columns = ['ts','id','msgid','x','y','z']
+    #let's clean up the data a bit
+    #df = df.groupby([df['id']]).apply(condition_df)
+    #print df
+    df1 = df[(df.msgid == 32) | (df.msgid == 11)]
+    df2 = df[(df.msgid == 33) | (df.msgid == 12)]
+    #print df1
+    df1 = condition_df(df1)
+    df2 = condition_df(df2)
+    df1 = df1.reset_index(level = 1) 
+    df2 = df2.reset_index(level = 1)    
+    
+    # create a dataframe with all timestamps present in df1 and df2
+    dfts = pd.merge(df1,df2, how='outer')
+    
+    dfts = resample_df(dfts)   
+    # at this point, dfts has all the timestamps available on both df1 and df2
+    
+    dfts = dfts.reset_index(level = 1)
+    
+    df2 = df2.set_index('ts')
+    
+    dfm = pd.merge(dfts,df1, how = 'outer')
+    
+    dfm = dfm.set_index('ts')
+    #start filling id,x,y,z YEY!
+    dfm.id.fillna(df2.id, inplace=True)
+    dfm.x.fillna(df2.x, inplace=True)
+    dfm.y.fillna(df2.y, inplace=True)
+    dfm.z.fillna(df2.z, inplace=True)
+    
+    dfm = dfm[np.isfinite(dfm.id)] #removes all rows with NaNs in id
+    # rows removed this way are rows with no data from either axel 1 or axel 2
+    dfm = dfm.reset_index(level = 1)   
+    if drop_msgid:
+        dfm = dfm[['ts','id','x','y','z']]
+    elif drop_msgid == 0:
+        dfm = dfm[['ts','id','msgid','x','y','z']]
+        
+    dfm = dfm.sort('ts')
+    return dfm
+#    df.columns = ['ts','id','msgid','x','y','z']
+#    #let's clean up the data a bit
+#    df = condition_df(df,resample=0)
+#    
+#    df1 = df[(df.msgid == 32) | (df.msgid == 11)]
+#    df2 = df[(df.msgid == 33) | (df.msgid == 12)]
+#    
+#    df1 = condition_df(df1)
+#    df2 = condition_df(df2)
+#    
+#    df1 = df1.reset_index(level = 1) 
+#    df2 = df2.reset_index(level = 1)    
+#    
+#    # create a dataframe with all timestamps present in df1 and df2
+#    dfts = pd.merge(df1,df2, how='outer')
+#    
+#    dfts = resample_df(dfts)   
+#    # at this point, dfts has all the timestamps available on both df1 and df2
+#    
+#    dfts = dfts.reset_index(level = 1)
+#    
+#    df2 = df2.set_index('ts')
+#    
+#    dfm = pd.merge(dfts,df1, how = 'outer')
+#    
+#    dfm = dfm.set_index('ts')
+#    #start filling id,x,y,z YEY!
+#    dfm.id.fillna(df2.id, inplace=True)
+#    dfm.x.fillna(df2.x, inplace=True)
+#    dfm.y.fillna(df2.y, inplace=True)
+#    dfm.z.fillna(df2.z, inplace=True)
+#    
+#    dfm = dfm[np.isfinite(dfm.id)] #removes all rows with NaNs in id
+#    # rows removed this way are rows with no data from either axel 1 or axel 2
+#    dfm = dfm.reset_index(level = 1)   
+#    if drop_msgid:
+#        dfm = dfm[['ts','id','x','y','z']]
+#    elif drop_msgid == 0:
+#        dfm = dfm[['ts','id','msgid','x','y','z']]
+#        
+#    dfm = dfm.sort('ts')
+#    return dfm
+
+    
+#condition_df()
+#    Summary:
+#        filters ids > 40 and < 1 from input dataframe df
+#    inputs:
+#        df is a dataframe with a column ts ( timestamp )
+#        resample is either 1 or 0:
+#            resample 1: df returned is resampled every 30 mins
+#            resample 0: df returned is not resampled
+#    returns:
+#        df
+#        df is a dataframe
+#        filters NaT ( not a timestamp values)
+#        filters magnitude
+
+def condition_df(df, resample=1):
+    df = df[(df.id > 0) & (df.id <= 40)] # filters id
+    df = df[df.ts.notnull()] # filters timestamp
+    if resample:
+        df = resample_df(df)
+    df = filters_magnitude(df)
+    return df
+
+def resample_df(df):
+    df.ts = pd.to_datetime(df['ts'], unit = 's')
+    df = df.set_index('ts')
+    df = df.resample('30min').first() 
+    return df
+    
+#filter_magnitude()
+#  filters frames whose magnitude exceed the set tolerance t
+#  df must have x y z columns
+def filters_magnitude(df , t=0.05, init_mag = 1024.0):
+    
+    dfo = df[['x','y','z']]/init_mag
+    mag = (dfo.x*dfo.x + dfo.y*dfo.y + dfo.z*dfo.z).apply(np.sqrt)
+    
+    return df[((mag>(1-t)) & (mag<(1+t)))]
 
 #TODO: This code should have the GID as input and part of the query to make -> used targetnode and edited ConvertSomsRaw.py
 #   the processing time faster
@@ -308,15 +500,7 @@ def GetRawRainData(siteid = "", fromTime = ""):
         
     except UnboundLocalError:
         print 'No ' + siteid + ' table in SQL'
-
-
-
-#GetSensorList():
-#    returns a list of columnArray objects from the database tables
-#    
-#    Returns:
-#        sensorlist: list
-#            list of columnArray (see class definition above)
+    
 
 def GetCoordsList():
     try:
@@ -337,6 +521,13 @@ def GetCoordsList():
     except:
         raise ValueError('Could not get sensor list from database')
 
+#GetSensorList():
+#    returns a list of columnArray objects from the database tables
+#    
+#    Returns:
+#        sensorlist: list
+#            list of columnArray (see class definition above)
+
 def GetSensorList():
     try:
         db, cur = SenslopeDBConnect(Namedb)
@@ -345,8 +536,6 @@ def GetSensorList():
         query = 'SELECT name, num_nodes, seg_length, col_length FROM site_column_props'
         
         df = psql.read_sql(query, db)
-        if PrintColProps:
-            df.to_csv("column_properties.csv",index=False,header=False);
         
         # make a sensor list of columnArray class functions
         sensors = []
@@ -372,6 +561,31 @@ def GetSensorDF():
         return df
     except:
         raise ValueError('Could not get sensor list from database')
+
+#returns list of non-working nodes from the node status table
+#function will only return the latest entry per site per node with
+#"Not OK" status
+def GetNodeStatus(statusid = 1):
+    if statusid == 1:
+        status = "Not OK"
+    elif statusid == 2:
+        status = "Use with Caution"
+    elif statusid == 3:
+        status = "Special Case"
+    
+    try:
+        query = 'SELECT ns1.site, ns1.node, ns1.status FROM node_status ns1 '
+        query += 'WHERE ns1.post_id = '
+        query += '(SELECT max(ns2.post_id) FROM node_status ns2 '
+        query += 'WHERE ns2.site = ns1.site AND ns2.node = ns1.node) '
+        query += 'AND ns1.status = "%s" ' % (status)
+        query += 'order by site asc, node asc'
+        
+        df = GetDBDataFrame(query)
+        return df
+    except:
+        raise ValueError('Could not get sensor list from database')
+
 
 #GetRainList():
 #    returns a list of columnArray objects from the database tables
@@ -458,6 +672,9 @@ def GetRainProps():
 #        dflgd: dataframe object
 #            dataframe object of the resulting last good data
 def GetLastGoodData(df, nos, fillMissing=False):
+    if df.empty:
+        print "Error: Empty dataframe inputted"
+        return
     # groupby id first
     dfa = df.groupby('id')
     # extract the latest timestamp per id, drop the index
@@ -561,14 +778,16 @@ def GenerateLastGoodData():
     for s in slist:
         print s.name, s.nos
         
-        df = GetRawAccelData(s.name,'',s.nos)
+        df = GetRawAccelData(siteid=s.name,maxnode=s.nos)
         df = filterSensorData.applyFilters(df,True,True,False)         
         
         dflgd = GetLastGoodData(df,s.nos,True)
         del df           
           
-        PushLastGoodData(dflgd,s.name)
-   
+        try:
+            PushLastGoodData(dflgd,s.name)
+        except (AttributeError,TypeError):
+            PrintOut("Error. Empty database")
 
             
 # import values from config file
@@ -595,7 +814,6 @@ try:
     muplim = cfg.get(valueSect,'muplim')
     islimval = cfg.getboolean(valueSect,'LimitValues')
     
-    PrintColProps = cfg.get('I/O', 'PrintColProps')
 except:
     #default values are used for missing configuration files or for cases when
     #sensitive info like db access credentials must not be viewed using a browser

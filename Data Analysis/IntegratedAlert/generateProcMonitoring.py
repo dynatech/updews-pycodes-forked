@@ -4,12 +4,28 @@ from pandas.stats.api import ols
 import numpy as np
 import matplotlib.pyplot as plt
 import ConfigParser
-from querySenslopeDb import *
-from filterSensorData import *
+import os
+import sys
+
 import generic_functions as gf
 
+#include the path of "Data Analysis" folder for the python scripts searching
+path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+if not path in sys.path:
+    sys.path.insert(1,path)
+del path   
+
+from querySenslopeDb import *
+from filterSensorData import *
+
+#Function for directory manipulations
+def up_one(p):
+    out = os.path.abspath(os.path.join(p, '..'))
+    return out
+
 cfg = ConfigParser.ConfigParser()
-cfg.read('server-config.txt')
+cfg.read(up_one(os.path.dirname(__file__))+'/server-config.txt')
+
 
 ##set/get values from config file
 
@@ -28,7 +44,12 @@ num_roll_window_ops = cfg.getfloat('I/O','num_roll_window_ops')
 #INPUT/OUTPUT FILES
 
 #local file paths
-proc_monitoring_path=cfg.get('I/O','OutputFilePathMonitoring2')
+
+#Retrieve 
+output_path = up_one(up_one(up_one(os.path.dirname(__file__))))
+
+
+proc_monitoring_path= output_path + cfg.get('I/O','ProcFilePath')
 
 #file names
 proc_monitoring_file = cfg.get('I/O','CSVFormat')
@@ -40,9 +61,11 @@ proc_monitoring_file_headers = cfg.get('I/O','proc_monitoring_file_headers').spl
 #To Output File or not
 PrintProc = cfg.getboolean('I/O','PrintProc')
 
-def generate_proc(site):
+if PrintProc:
+    if not os.path.exists(proc_monitoring_path):
+        os.makedirs(proc_monitoring_path)
 
-    print rt_window_length
+def generate_proc(site):
     
     #1. setting date boundaries for real-time monitoring window
     roll_window_numpts=int(1+roll_window_length/data_dt)
@@ -62,7 +85,7 @@ def generate_proc(site):
             print seg_len
                 
             #3. getting accelerometer data for site 'colname'
-            monitoring=GetRawAccelData(colname,offsetstart)
+            monitoring=GetFilledAccelData(colname,offsetstart)
     
             #4. evaluating which data needs to be filtered
             try:
@@ -74,6 +97,7 @@ def generate_proc(site):
             except:
                 LastGoodData = GetLastGoodDataFromDb(colname)
                 print 'error'
+
             if len(LastGoodData)<num_nodes: print colname, " Missing nodes in LastGoodData"
     
             #5. extracting last data outside monitoring window
@@ -100,6 +124,6 @@ def generate_proc(site):
             
             #12. saving proc monitoring data
             if PrintProc:
-                monitoring.to_csv(proc_monitoring_path+"Proc\\"+colname+proc_monitoring_file,sep=',', header=False,mode='w')
+                monitoring.to_csv(proc_monitoring_path+colname+proc_monitoring_file,sep=',', header=False,mode='w')
                 
             return monitoring

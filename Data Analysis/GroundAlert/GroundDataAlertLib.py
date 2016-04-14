@@ -7,6 +7,12 @@ from scipy import stats
 import os
 import sys
 
+
+#up one level function
+def up_one(p):
+    out = os.path.abspath(os.path.join(p, '..'))
+    return out
+
 #include the path of "Data Analysis" folder for the python scripts searching
 path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 if not path in sys.path:
@@ -17,10 +23,24 @@ from querySenslopeDb import *
 
 def GenerateGroundDataAlert():
     #Step 0: Specify mode of output, mode = 1: txt1; mode = 2 txt 2; mode = 3 json
-    mode = 2
-    if mode == 1:
-        output_file_path = cfg.get('I/O','OutputFilePath')
+
+    #Monitoring output directory
+    path2 = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+    out_path = up_one(up_one(path2))
+    print path2
+    print out_path    
     
+    cfg = ConfigParser.ConfigParser()
+    cfg.read(path2 + '/server-config.txt')     
+    
+
+    output_file_path = cfg.get('I/O','OutputFilePath')
+    PrintJSON = cfg.get('I/O','PrintJSON')
+    PrintGAlert = cfg.get('I/O','PrintGAlert')
+    Hostdb = cfg.get('DB I/O','Hostdb')
+    Userdb = cfg.get('DB I/O','Userdb')
+    Passdb = cfg.get('DB I/O','Passdb')
+    Namedb = cfg.get('DB I/O','Namedb')    
     #Set the date of the report as the current date rounded to HH:30 or HH:00
     end=datetime.now()
     end_Year=end.year
@@ -111,28 +131,28 @@ def GenerateGroundDataAlert():
                 if feature_displacement >= 75:
                     feature_alert = 'L2'
                 elif feature_displacement >= 3:
-                    feature_alert = 'L1'
+                    feature_alert = 'L2'
                 else:
                     feature_alert = 'L0'
             elif time_delta_last >= 3:
                 if feature_displacement >= 30:
-                    feature_alert = 'L2'
+                    feature_alert = 'L3'
                 elif feature_displacement >= 1.5:
-                    feature_alert = 'L1'
+                    feature_alert = 'L2'
                 else:
                     feature_alert = 'L0'
             elif time_delta_last >= 1:
                 if feature_displacement >= 10:
-                    feature_alert = 'L2'
+                    feature_alert = 'L3'
                 elif feature_displacement >= 0.5:
-                    feature_alert = 'L1'
+                    feature_alert = 'L2'
                 else:
                     feature_alert = 'L0'
             else:
                 if feature_displacement >= 5:
-                    feature_alert = 'L2'
+                    feature_alert = 'L3'
                 elif feature_displacement >= 0.5:
-                    feature_alert = 'L1'
+                    feature_alert = 'L2'
                 else:
                     feature_alert = 'L0'
             
@@ -159,10 +179,10 @@ def GenerateGroundDataAlert():
             if end - last_data_time > np.timedelta64(4, 'h'):
                 ground_data_alert.update({cur_site:'ND'})
             else:
-                if 'L2' in site_eval:
+                if 'L3' in site_eval:
+                    ground_data_alert.update({cur_site:'L3'})
+                elif 'L2' in site_eval:
                     ground_data_alert.update({cur_site:'L2'})
-                elif 'L1' in site_eval:
-                    ground_data_alert.update({cur_site:'L1'})
                 elif 'L0p' in site_eval:
                     ground_data_alert.update({cur_site:'L0p'})
                 elif 'L0' in site_eval:
@@ -175,21 +195,29 @@ def GenerateGroundDataAlert():
         #change dict format to tuple for more easy output writing
         ground_alert_release = sorted(ground_data_alert.items())
         
-    if mode == 1:
+    if PrintGAlert:
+        #Creating Monitoring Output directory if it doesn't exist
+        print_out_path = out_path + output_file_path
+        print print_out_path        
+        if not os.path.exists(print_out_path):
+            os.makedirs(print_out_path)
+        
         print "Ground measurement report as of {}".format(end)
         print "{:5}: {:5}; Last Date of Measurement".format('Site','Alert')
         i = 0
         for site, galert in ground_alert_release:
             print "{:5}: {:5}; {}".format(site,galert,measurement_dates[i])
             i += 1
-        with open (output_file_path+'groundalert.txt', 'w') as t:
+        
+
+        with open (print_out_path+'groundalert.txt', 'w') as t:
             i = 0
             t.write("Ground measurement report as of {}".format(end)+'\n')
             for site, galert in ground_alert_release:
                 t.write ("{:5}: {:5}; {}".format(site,galert,measurement_dates[i])+'\n')
                 i += 1
     
-    if mode == 2:
+    if PrintJSON:
         #create data frame as for easy conversion to JSON format
         
         for i in range(len(ground_alert_release)): ground_alert_release[i] = (measurement_dates[i],) + ground_alert_release[i]

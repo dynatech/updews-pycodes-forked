@@ -1,13 +1,15 @@
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date, time
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import ConfigParser
 import math
+import sys
 
-import generic_functions as gf
-import rainDownload as rd
+import rainNOAH as rd
+
+output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
 
 #include the path of "Data Analysis" folder for the python scripts searching
 path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -19,6 +21,43 @@ from querySenslopeDb import *
 
 
 plt.ioff()
+
+############################################################
+##      TIME FUNCTIONS                                    ##    
+############################################################
+
+def get_rt_window(rt_window_length,roll_window_size,num_roll_window_ops):
+    
+    ##DESCRIPTION:
+    ##returns the time interval for real-time monitoring
+
+    ##INPUT:
+    ##rt_window_length; float; length of real-time monitoring window in days
+    ##roll_window_size; integer; number of data points to cover in moving window operations
+    
+    ##OUTPUT: 
+    ##end, start, offsetstart; datetimes; dates for the end, start and offset-start of the real-time monitoring window 
+
+    ##set current time as endpoint of the interval
+    end=datetime.now()
+
+    ##round down current time to the nearest HH:00 or HH:30 time value
+    end_Year=end.year
+    end_month=end.month
+    end_day=end.day
+    end_hour=end.hour
+    end_minute=end.minute
+    if end_minute<30:end_minute=0
+    else:end_minute=30
+    end=datetime.combine(date(end_Year,end_month,end_day),time(end_hour,end_minute,0))
+
+    #starting point of the interval
+    start=end-timedelta(days=rt_window_length)
+    
+    #starting point of interval with offset to account for moving window operations 
+    offsetstart=end-timedelta(days=rt_window_length+((num_roll_window_ops*roll_window_size-1)/48.))
+    
+    return end, start, offsetstart
 
 def set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_window_ops):
 
@@ -35,7 +74,7 @@ def set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_w
     ##roll_window_numpts, end, start, offsetstart, monwin
     
     roll_window_numpts=int(1+roll_window_length/data_dt)
-    end, start, offsetstart=gf.get_rt_window(rt_window_length,roll_window_numpts,num_roll_window_ops)
+    end, start, offsetstart=get_rt_window(rt_window_length,roll_window_numpts,num_roll_window_ops)
     monwin_time=pd.date_range(start=start, end=end, freq='30Min',name='ts', closed=None)
     monwin=pd.DataFrame(data=np.nan*np.ones(len(monwin_time)), index=monwin_time)
 
@@ -54,6 +93,7 @@ def ASTIplot(r,offsetstart,end,tsn, data):
     ##tsn; string; datetime format allowed in savefig
 
     rainfall = data
+    rainfall = rainfall.loc[rainfall['rain']>=0]
     rainfall = rainfall[(rainfall.index>=offsetstart)]
     rainfall = rainfall[(rainfall.index<=end)]
     rainfall = rainfall.resample('15min',how='sum')
@@ -62,13 +102,13 @@ def ASTIplot(r,offsetstart,end,tsn, data):
         plt.xticks(rotation=70, size=5)
     
     #getting the rolling sum for the last24 hours
-    rainfall2=pd.rolling_sum(rainfall,96,min_periods=1)
+    rainfall2 = rainfall.rolling(min_periods=1,window=96,center=False).sum()
     rainfall2=np.round(rainfall2,4)
     if PrintCumSum:
         rainfall2.to_csv(CumSum_file_path+r+' 1d'+CSVFormat,sep=',',mode='w')
     
     #getting the rolling sum for the last 3 days
-    rainfall3=pd.rolling_sum(rainfall,288,min_periods=1)
+    rainfall3 = rainfall.rolling(min_periods=1,window=288,center=False).sum()
     rainfall3=np.round(rainfall3,4)
     if PrintCumSum:
         rainfall3.to_csv(CumSum_file_path+r+' 3d'+CSVFormat,sep=',',mode='w')
@@ -92,7 +132,7 @@ def ASTIplot(r,offsetstart,end,tsn, data):
         plt.plot(plot4.index,plot4,color="#fbb714") # half of 2-yr max rainfall
         plt.plot(plot5.index,plot5,color="#963bd6")  # 2-yr max rainfall
         plt.savefig(RainfallPlotsPath+tsn+" "+r,
-            dpi=320, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
+            dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
         plt.close()
     
     print rainfall[-1:]
@@ -177,7 +217,7 @@ def summary_writer(s,r,datasource,twoyrmax,halfmax,summary,alert,alert_df,data):
     summary.loc[s]=[r,one,three,datasource,ralert,advisory]
             
 cfg = ConfigParser.ConfigParser()
-cfg.read('IO-config.txt')    
+cfg.read('IO-Config.txt')    
 
 ##set/get values from config file
 
@@ -202,10 +242,10 @@ col_pos_num= cfg.getfloat('I/O','num_col_pos')
 #INPUT/OUTPUT FILES
 
 #local file paths
-output_file_path = cfg.get('I/O', 'OutputFilePath')
-CumSum_file_path = cfg.get('I/O', 'CumSumFilePath')
-ASTIpath = cfg.get('I/O', 'ASTIpath')
-RainfallPlotsPath = cfg.get('I/O', 'RainfallPlotsPath')
+output_file_path = output_path + cfg.get('I/O', 'OutputFilePath')
+CumSum_file_path = output_path + cfg.get('I/O', 'CumSumFilePath')
+ASTIpath = output_path + cfg.get('I/O', 'ASTIpath')
+RainfallPlotsPath = output_path + cfg.get('I/O', 'RainfallPlotsPath')
 
 #file names
 CSVFormat = cfg.get('I/O','CSVFormat')
@@ -223,6 +263,23 @@ PrintPlot = cfg.getboolean('I/O','PrintPlot')
 PrintSummaryAlert = cfg.getboolean('I/O','PrintSummaryAlert')
 PrintCumSum = cfg.getboolean('I/O','PrintCumSum')
 PrintRAlert = cfg.getboolean('I/O','PrintRAlert')
+PrintASTIdata = cfg.getboolean('I/O','PrintASTIdata')
+
+if not os.path.exists(output_file_path):
+    os.makedirs(output_file_path)
+    
+if PrintPlot or PrintSummaryAlert:
+    if not os.path.exists(RainfallPlotsPath):
+        os.makedirs(RainfallPlotsPath)
+
+if PrintCumSum:
+    if not os.path.exists(CumSum_file_path):
+        os.makedirs(CumSum_file_path)
+
+if PrintASTIdata:
+    if not os.path.exists(ASTIpath):
+        os.makedirs(ASTIpath)
+    
 
 #1. setting monitoring window
 roll_window_numpts, end, start, offsetstart, monwin = set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_window_ops)
@@ -267,7 +324,8 @@ for s in range(len(rainprops)):
     
         rainfall = GetRawRainData(r, start)
         rainfall = rainfall.set_index('ts')
-    
+        rainfall = rainfall.loc[rainfall['rain']>=0]
+           
         if rainfall.index[-1:]<end:
             blankdf_time=pd.date_range(start=start, end=end, freq='15Min',name='timestamp', closed=None)
             blankdf=pd.DataFrame(data=np.nan*np.ones(len(blankdf_time)), index=blankdf_time,columns=['rain'])
@@ -334,7 +392,7 @@ for s in range(len(rainprops)):
                 plt.plot(plot3.index,plot3,color="#0d90d0") # 72-hr cumulative rainfall
                 plt.plot(plot4.index,plot4,color="#fbb714") # half of 2-yr max rainfall
                 plt.plot(plot5.index,plot5,color="#963bd6")  # 2-yr max rainfall
-                plt.savefig(RainfallPlotsPath+tsn+" "+r, dpi=320, 
+                plt.savefig(RainfallPlotsPath+tsn+" "+r, dpi=160, 
                     facecolor='w', edgecolor='w',orientation='landscape',mode='w')
                 plt.close()
 

@@ -4,10 +4,10 @@
 ############################
 ###   LOCAL FILE PATH    ###
 ############################
-OutputFilePath = D:\Documents\DYNA\Monitoring Output\
-CumSumFilePath = D:\Documents\DYNA\Monitoring Output\CumSum Rainfall\
-ASTIpath = D:\Documents\DYNA\Monitoring Output\ASTI\
-RainfallPlotsPath = D:\Documents\DYNA\Monitoring Output\Rainfall Plots\
+OutputFilePath = /MonitoringOutput/
+CumSumFilePath = /MonitoringOutput/CumSumRainfall/
+ASTIpath = /MonitoringOutput/ASTI/
+RainfallPlotsPath = /MonitoringOutput/RainfallPlots/
 
 ############################
 ###      FILE NAMES      ###
@@ -35,8 +35,8 @@ num_roll_window_ops=2		;number of rolling window operations in the whole monitor
 col_pos_interval='1D'    	; string expression indicating interval between two adjacent column position dates ex: '1D'= 1 day
 num_col_pos=20	         	; number of column position dates to plot
 
-PrintPlot = False
+PrintPlot = True
 PrintASTIdata = False
-PrintSummaryAlert = False
-PrintCumSum = False
+PrintSummaryAlert = True
+PrintCumSum = True
 PrintRAlert = True

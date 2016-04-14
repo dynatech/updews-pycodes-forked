@@ -1,5 +1,5 @@
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date, time
 import pandas as pd
 from pandas.stats.api import ols
 import numpy as np
@@ -10,19 +10,22 @@ import csv
 import fileinput
 from querySenslopeDb import *
 
-import generic_functions as gf
-import generateProcMonitoring as genproc
-import alertEvaluation as alert
+def up_one(p):
+    out = os.path.abspath(os.path.join(p, '..'))
+    return out
 
 #Step 0: File path and initializations
 cfg = ConfigParser.ConfigParser()
 cfg.read('server-config.txt')  
 
-nd_path = cfg.get('I/O', 'NDFilePath')
-output_file_path = cfg.get('I/O','OutputFilePath')
-proc_file_path = cfg.get('I/O','ProcFilePath')
-ColAlerts_file_path = cfg.get('I/O','ColAlertsFilePath')
-TrendAlerts_file_path = cfg.get('I/O','TrendAlertsFilePath')
+path2 = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+out_path = up_one(path2)
+
+nd_path = out_path + cfg.get('I/O', 'NDFilePath')
+output_file_path = out_path + cfg.get('I/O','OutputFilePath')
+proc_file_path = out_path + cfg.get('I/O','ProcFilePath')
+ColAlerts_file_path = out_path + cfg.get('I/O','ColAlertsFilePath')
+TrendAlerts_file_path = out_path + cfg.get('I/O','TrendAlertsFilePath')
 
 CSVFormat = cfg.get('I/O','CSVFormat')
 webtrends = cfg.get('I/O','webtrends')
@@ -37,6 +40,8 @@ NDlog = cfg.get('I/O','NDlog')
 ND7x = cfg.get('I/O','ND7x')
 
 end=datetime.now()
+
+##round down current time to the nearest HH:00 or HH:30 time value
 end_Year=end.year
 end_month=end.month
 end_day=end.day
@@ -44,15 +49,22 @@ end_hour=end.hour
 end_minute=end.minute
 if end_minute<30:end_minute=0
 else:end_minute=30
-
 end=datetime.combine(date(end_Year,end_month,end_day),time(end_hour,end_minute,0))
 
 
 #alert container
 alerts = {}
 
-#sitelist
-sitelist = ['Agb','Bak','Ban','Bar','Bat','Bay','Blc','Bol','Car','Cud','Dad','Gaa','Gam','Hin','Hum','Ime','Imu','Ina','Kan','Lab','Lay','Lip','Lpa','Lun','Mag','Mam','Man','Mar','Mca','Messb','Mesta','Nag','Nur','Osl','Pan','Par','Pep','Pin','Pla','Pob','Pug','Sag','Sib','Sin','Sum','Tag','Tal','Tam','Tue','Umi']
+#Get the sitelist from database
+sitelist = []
+sensorlist = GetSensorList()
+for i in sensorlist:
+    if i.name != 'messb' and i.name != 'mesta':  
+        sitelist.append(i.name[:3].title())
+    else:
+        sitelist.append(i.name.title())
+
+sitelist = set(sitelist)
 
 #Step 1: Collect Rain Alerts
 with open (output_file_path+rainfallalert) as rainalert:
@@ -123,11 +135,11 @@ with open (output_file_path+textalert) as txtalert_output:
                 site_sensor_alert.update({site:(s,sensor_alerts[s])})
     for s in alerts.keys():
         try:
-            if 'a2' in site_sensor_alert[s]:
+            if 'l3' in site_sensor_alert[s]:
+                alerts[s] = alerts[s] + ((site_sensor_alert[s] + ('L3s',timestamp)),)
+            elif 'l2' in site_sensor_alert[s]:
                 alerts[s] = alerts[s] + ((site_sensor_alert[s] + ('L2s',timestamp)),)
-            elif 'a1' in site_sensor_alert[s]:
-                alerts[s] = alerts[s] + ((site_sensor_alert[s] + ('L1s',timestamp)),)
-            elif 'a0' in site_sensor_alert[s]:
+            elif 'l0' in site_sensor_alert[s]:
                 alerts[s] = alerts[s] + ((site_sensor_alert[s] + ('L0s',timestamp)),)
             else:
                 alerts[s] = alerts[s] + ((site_sensor_alert[s] + ('NDs',timestamp)),)

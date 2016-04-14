@@ -12,7 +12,7 @@ ColumnPropertiesFile = column_properties.csv
 [DB I/O]
 Hostdb = 127.0.0.1
 Userdb = root
-Passdb = dyn4m1ght
+Passdb = senslope
 Namedb = senslopedb
 NamedbPurged = senslopedb_purged
 Printtostdout = True
@@ -37,20 +37,20 @@ off_lim = 80
 RangeDefault = 3
 
 [Misc]
-Debug = False
+Debug = True
 DotProductThreshold = 0.09
 
 [I/O]
 ############################
 ###   LOCAL FILE PATH    ###
 ############################
-OutputFilePathMonitoring = D:\Documents\DYNA\Monitoring Output\
-OutputFilePathMonitoring2 = D:\Documents\DYNA\Monitoring Output\
-NDFilePath = D:\Documents\DYNA\Monitoring Output\ND back analysis\
-OutputFilePath = D:\Documents\DYNA\Monitoring Output\
-ProcFilePath = D:\Documents\DYNA\Monitoring Output\Proc\
-ColAlertsFilePath = D:\Documents\DYNA\Monitoring Output\col alerts\
-TrendAlertsFilePath = D:\Documents\DYNA\Monitoring Output\trend alerts\
+OutputFilePathMonitoring = /Monitoring Output/
+OutputFilePathMonitoring2 = /Monitoring Output/
+NDFilePath = /Monitoring Output/ND back analysis/
+OutputFilePath = /Monitoring Output/
+ProcFilePath = /Monitoring Output/Proc/
+ColAlertsFilePath = /Monitoring Output/col alerts/
+TrendAlertsFilePath = /Monitoring Output/trend alerts/
 
 ############################
 ###      FILE NAMES      ###
@@ -102,15 +102,15 @@ col_pos_interval='12H'    	; string expression indicating interval between two a
 num_col_pos=30            	; number of column position dates to plot 
 alert_time_int=30 		;timeframe of alert files to be saved, in days
 
-PrintProc = False
-PrintColPos = False
-PrintDispVel = False
-PrintTrendAlerts = False
+PrintProc = True
+PrintColPos = True
+PrintDispVel = True
+PrintTrendAlerts = True
 PrintTAlert = True
 PrintTAlert2 = True
 PrintWAlert = True
-PrintND = False
-PrintTimer = False
+PrintND = True
+PrintTimer = True
 PrintAAlert = True
-PrintColProps = False
+PrintColProps = True
 PrintGSMAlert = True

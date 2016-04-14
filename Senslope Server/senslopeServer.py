@@ -108,13 +108,35 @@ def twoscomp(hexstr):
         return num
 
 def ProcTwoAccelColData(msg,sender,txtdatetime):
+    
+    if len(msg.split(",")) == 3:
+        print ">> Editing old data format"
+        datafield = msg.split(",")[1]
+        dtype = datafield[2:4].upper()
+        if dtype == "20" or dtype == "0B":
+            dtypestr = "x"
+        elif dtype == "21" or dtype == "0C":
+            dtypestr = "y"
+        elif dtype == "6F" or dtype == "15":
+            dtypestr = "b"
+        elif dtype == "70" or dtype == "1A":
+            dtypestr = "c"
+        else:
+            raise ValueError(">> Data type" + dtype + "not recognized")
+            
+        
+        i = msg.find(",")
+        msg = msg[:i] + "*" + dtypestr + "*" + msg[i+1:]
+        msg = msg.replace(",","*").replace("/","")
+        
     outl = []
     msgsplit = msg.split('*')
     colid = msgsplit[0] # column id
+        
     
     if len(msgsplit) != 4:
         print 'wrong data format'
-        print msg
+        # print msg
         return
 
     if len(colid) != 5:
@@ -130,7 +152,7 @@ def ProcTwoAccelColData(msg,sender,txtdatetime):
     if len(datastr) == 136:
         datastr = datastr[0:72] + datastr[73:]
     
-    ts = msgsplit[3]
+    ts = msgsplit[3].strip()
   
     if datastr == '':
         datastr = '000000000000000'
@@ -140,16 +162,23 @@ def ProcTwoAccelColData(msg,sender,txtdatetime):
     if len(ts) < 10:
        print '>> Error in time value format: '
        return
-       
-    timestamp = "20"+ts[0:2]+"-"+ts[2:4]+"-"+ts[4:6]+" "+ts[6:8]+":"+ts[8:10]+":00"
-        #print '>>',
+    
+    ts_patterns = ['%y%m%d%H%M%S', '%Y-%m-%d %H:%M:%S']
+    # timestamp = "20"+ts[0:2]+"-"+ts[2:4]+"-"+ts[4:6]+" "+ts[6:8]+":"+ts[8:10]+":00"
+    #print '>>',
     #print timestamp
     #timestamp = dt.strptime(txtdatetime,'%y%m%d%H%M').strftime('%Y-%m-%d %H:%M:00')
-    try:
-        timestamp = dt.strptime(ts,'%y%m%d%H%M%S').strftime('%Y-%m-%d %H:%M:00')
-    except ValueError:
-        print "Error: wrong timestamp format", ts
+    timestamp = ''
+    ts = re.sub("[^0-9]","",ts)
+    for pattern in ts_patterns:
+        try:
+            timestamp = dt.strptime(ts,pattern).strftime('%Y-%m-%d %H:%M:00')
+            break
+        except ValueError:
+            print "Error: wrong timestamp format", ts, "for pattern", pattern
  
+    if timestamp == '':
+        raise ValueError(">> Error: Unrecognized timestamp pattern " + ts)
  # PARTITION the message into n characters
     if dtype == 'Y' or dtype == 'X':
        n = 15
@@ -191,25 +220,30 @@ def ProcTwoAccelColData(msg,sender,txtdatetime):
 
 def WriteTwoAccelDataToDb(dlist,msgtime):
     query = """INSERT IGNORE INTO %s (timestamp,id,msgid,xvalue,yvalue,zvalue,batt) VALUES """ % str(dlist[0][0])
+    
     if WriteToDB:
+        createTable(dlist[0][0], "sensor v2")
         for item in dlist:
-            createTable(item[0], "sensor v2")
             timetowrite = str(item[1])
             query = query + """('%s',%s,%s,%s,%s,%s,%s),""" % (timetowrite,str(item[2]),str(item[3]),str(item[4]),str(item[5]),str(item[6]),str(item[7]))
 
     query = query[:-1]
+    # print len(query)
     
     commitToDb(query, 'WriteTwoAccelDataToDb')
    
 def WriteSomsDataToDb(dlist,msgtime):
     query = """INSERT IGNORE INTO %s (timestamp,id,msgid,mval1,mval2) VALUES """ % str(dlist[0][0])
+    
+    print "site_name", str(dlist[0][0])
     if WriteToDB:
-        for item in dlist:
-            createTable(item[0], "soms")
+        createTable(str(dlist[0][0]), "soms")
+        for item in dlist:            
             timetowrite = str(item[1])
             query = query + """('%s',%s,%s,%s,%s),""" % (timetowrite,str(item[2]),str(item[3]),str(item[4]),str(item[5]))
 
     query = query[:-1]
+    query = query.replace("nan","NULL")
     
     commitToDb(query, 'WriteSomsDataToDb')
     
@@ -331,8 +365,12 @@ def ProcessPiezometer(line,sender):
         msgid = int(('0x'+data[:2]), 16)
         p1 = int(('0x'+data[2:4]), 16)*100
         p2 = int(('0x'+data[4:6]), 16)
-        p3 = int(('0x'+data[6:]), 16)*.01
+        p3 = int(('0x'+data[6:8]), 16)*.01
         piezodata = p1+p2+p3
+        
+        t1 = int(('0x'+data[8:10]), 16)
+        t2 = int(('0x'+data[10:12]), 16)*.01
+        tempdata = t1+t2
         try:
             txtdatetime = dt.strptime(linesplit[2],'%y%m%d%H%M%S').strftime('%Y-%m-%d %H:%M:00')
         except ValueError:
@@ -350,7 +388,7 @@ def ProcessPiezometer(line,sender):
     if WriteToDB:
         createTable(str(msgname), "piezo")
         try:
-          query = """INSERT INTO %s(timestamp, name, msgid, freq ) VALUES ('%s','%s', %s, %s )""" %(msgname,txtdatetime,msgname, str(msgid), str(piezodata))
+          query = """INSERT INTO %s(timestamp, name, msgid, freq, temp ) VALUES ('%s','%s', %s, %s, %s )""" %(msgname,txtdatetime,msgname, str(msgid), str(piezodata), str(tempdata))
             
             # print query
         except ValueError:
@@ -443,7 +481,7 @@ def ProcessRain(line,sender):
         msgdatetime = items.group(2)
 
         txtdatetime = dt.strptime(msgdatetime,'%m/%d/%y,%H:%M:%S')
-        #temporary adjust (wrong set values)
+        # temporary adjust (wrong set values)
         if msgtable=="PUGW":
             txtdatetime = txtdatetime + td(days=1) # add one day
         elif msgtable=="PLAW":
@@ -633,7 +671,7 @@ def RunSenslopeServer(network):
     minute_of_last_alert = dt.now().minute
     timetosend = 0
     email_flg = 0
-    txtalert_flg = 0
+    timetosendalerts = True
     logruntimeflag = True
     global checkIfActive
     if network == "SUN":
@@ -650,9 +688,11 @@ def RunSenslopeServer(network):
         print ">> ERROR: Could not open COM %r!" % (Port+1)
         print '**NO COM PORT FOUND**'
         serverstate = 'serial'
-        SendAlertEmail(network,serverstate)
-        while True:
-            gsm.close()
+        # SendAlertEmail(network,serverstate)
+        # while True:
+        gsm.close()
+        logRuntimeStatus(network,"com port error")
+        raise ValueError(">> Error: no com port found")
             
     createTable("runtimelog","runtime")
     logRuntimeStatus(network,"startup")
@@ -687,7 +727,7 @@ def RunSenslopeServer(network):
                     except ValueError as e:
                         print ">> Error in manual ground measurement SMS"
                         f = open(gndmeasfilesdir + "gnd_measuremenst_w_errors.txt","a")
-                        f.write(m)
+                        f.write(msg.data.uppper())
                         f.close()
                         sendMsg(str(e), msg.simnum)
                     finally:
@@ -719,13 +759,12 @@ def RunSenslopeServer(network):
                     ProcessColumn(msg.data,msg.dt,msg.simnum)
                 #check if message is from rain gauge
                 elif re.search("(\w{4})[, ](\d{02}\/\d{02}\/\d{02},\d{02}:\d{02}:\d{02})[,\*](-*\d{2}.\d,\d{1,3},\d{1,3},\d{1,2}.\d{1,2},\d.\d{1,2},\d{1,2}),*\*?",msg.data):
+                # elif msg.data[3] == 'W' and len(msg.data.split(",")) == 9:
                     ProcessRain(msg.data,msg.simnum)
                 elif re.search(r'(\w{4})[-](\d{1,2}[.]\d{02}),(\d{01}),(\d{1,2})/(\d{1,2}),#(\d),(\d),(\d{1,2}),(\d)[*](\d{10})',msg.data):
                     ProcessStats(msg.data,msg.dt)
                 elif msg.data[:4] == "ARQ+":
                     ProcessARQWeather(msg.data,msg.simnum)
-                    
-                #if message is from piezometer
                 elif msg.data[4:7] == "PZ*":
                     ProcessPiezometer(msg.data, msg.simnum)
                 elif msg.data.split('*')[0] == 'COORDINATOR' or msg.data.split('*')[0] == 'GATEWAY':
@@ -738,7 +777,6 @@ def RunSenslopeServer(network):
                 msgname = checkNameOfNumber(msg.simnum) 
                 if msgname:
                     updateLastMsgReceivedTable(msg.dt,msgname,msg.simnum,msg.data)
-                    
                     if SaveToFile:
                         dir = inboxdir+msgname + "\\"
                         if not os.path.exists(dir):
@@ -763,71 +801,55 @@ def RunSenslopeServer(network):
             except ValueError:
                 print '>> Error deleting messages'
                 
-            
-            if FileInput:
-                break
-            
             print dt.today().strftime("\nServer active as of %A, %B %d, %Y, %X")
             time.sleep(10)
             
-        elif  m == 0:
+        elif m == 0:
             time.sleep(SleepPeriod)
             gsmflush()
-
             today = dt.today()
-            
             if (today.minute % 10 == 0):
                 if checkIfActive:
                     print today.strftime("\nServer active as of %A, %B %d, %Y, %X")
                 checkIfActive = False
-            
             else:
                 checkIfActive = True
                 if (today.minute % 10):
                     email_flg = 0;
-                    txtalert_flg = 0;
-                    
+                    timetosendalerts = True;
                 
         elif m == -1:
             print'GSM MODULE MAYBE INACTIVE'
             serverstate = 'inactive'
             gsm.close()
-            SendAlertEmail(network,serverstate)
+            # SendAlertEmail(network,serverstate)
+            logRuntimeStatus(network,"gsm inactive")
 
-			
         elif m == -2:
             print '>> Error in parsing mesages: No data returned by GSM'            
         else:
             print '>> Error in parsing mesages: Error unknown'
             
-                        
         today = dt.today()
-        if (today.minute % 30 == 0):
+        if (today.minute % 10 == 0):
             serverstate = 'active'
             if logruntimeflag:
                 logRuntimeStatus(network,"alive")
                 logruntimeflag = False
             
-            if (not email_flg):
-                SendAlertEmail(network, serverstate)
-                email_flg = 1
+            # if (not email_flg):
+                # SendAlertEmail(network, serverstate)
+                # email_flg = 1
         else:
             logruntimeFlag = True
             
-            
-                
-        if (today.minute == 20 or today.minute == 50) and (not txtalert_flg):
+        if (today.minute >= 20 or today.minute >= 50) and timetosendalerts:
         #if (today.minute % 10 == 0):
             fpath = allalertsfile
-            txtalert_flg = 1;
+            timetosendalerts = False;
             if os.path.isfile(fpath) and os.path.getsize(fpath) > 0:
                 SendAlertGsm(network)
             
-        
-    if not FileInput:
-        gsm.close()
-    test = raw_input('>> End of Code: Press any key to exit')
-
 """ Global variables"""
 checkIfActive = True
 anomalysave = ''

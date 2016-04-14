@@ -28,7 +28,12 @@ def downloadRainfallNOAH(rsite, fdate, tdate):
     fdateMinus = (pd.to_datetime(fdate) - td(2)).strftime("%Y-%m-%d")
     
     url = "http://weather.asti.dost.gov.ph/home/index.php/api/data/%s/from/%s/to/%s" % (rsite,fdateMinus,tdate)
-    r = requests.get(url)
+    
+    try:
+        r = requests.get(url)
+    except:
+        print "    Can not get request. Please check if your internet connection is stable"
+        return pd.DataFrame()
 
     try:
         df = pd.DataFrame(r.json()["data"])
@@ -40,13 +45,15 @@ def downloadRainfallNOAH(rsite, fdate, tdate):
         df = df.set_index(['dateTimeRead'])
         df.index = pd.to_datetime(df.index)
         df = df["rain_value"].astype(float)
-        df = df.resample('15Min').fillna(0.00)
-        dfs = pd.rolling_sum(df,96)
+        df.resample('15Min')
+        df = df.fillna(0.00)
+        df = df.sort_index(ascending = True)
+        dfs = df.rolling(min_periods=1,window=96,center=False).sum()
         dfa = pd.DataFrame({"rval":df,"cumm":dfs})
-        dfa = dfa.fillna(0)
-        dfa = dfa[96:]
+        dfa = dfa.fillna(0.00)
+        dfa = np.round(dfa, decimals=2)
         
-        #remove the entries that are less than or equal to fdate
+        #remove the entries that are less than fdate
         dfa = dfa[dfa.index > fdate]            
         
         #set "cumm" values to 0 if it is smaller than 0.1
