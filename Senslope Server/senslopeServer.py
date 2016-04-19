@@ -11,6 +11,7 @@ from gsmSerialio import *
 from groundMeasurements import *
 import multiprocessing
 import SomsServerParser as SSP
+import math
 #---------------------------------------------------------------------------------------------------------------------------
 
 def updateSimNumTable(name,sim_num,date_activated):
@@ -44,9 +45,16 @@ def updateSimNumTable(name,sim_num,date_activated):
     commitToDb(query, 'updateSimNumTable')                
     
 def logRuntimeStatus(script_name,status):
-    logtimestamp = dt.today().strftime("%Y-%m-%d %X")
+    if (status == 'alive'):
+        ts = dt.today()
+        roundmintoten = int(math.floor(ts.minute / 10.0)) * 10
+        logtimestamp = "%d-%02d-%02d %02d:%02d:00" % (ts.year,ts.month,ts.day,ts.hour,roundmintoten)
+    else:
+        logtimestamp = dt.today().strftime("%Y-%m-%d %H:%M:00")
     
-    query = """insert into senslopedb.runtimelog
+    print ">> Logging runtime '" + status + "' at " + logtimestamp 
+    
+    query = """insert ignore into senslopedb.runtimelog
                 (timestamp,script_name,status)
                 values ('%s','%s','%s')
                 """ %(logtimestamp,script_name,status)
@@ -476,7 +484,7 @@ def ProcessRain(line,sender):
 
     try:
     
-        items = re.match(".*(\w{4})[, ](\d{02}\/\d{02}\/\d{02},\d{02}:\d{02}:\d{02})[,\*](\d{2}.\d,\d{1,3},\d{1,3},\d.\d{1,2},\d{1,2}.\d{1,2},\d{1,2}),*\*?.*",line)
+        items = re.match(".*(\w{4})[, ](\d{02}\/\d{02}\/\d{02},\d{02}:\d{02}:\d{02})[,\*](\d{2}.+,\d{1,3},\d{1,3},\d.+,\d{1,2}.+,\d{1,2}),*\*?.*",line)
         msgtable = items.group(1)
         msgdatetime = items.group(2)
 
@@ -593,17 +601,17 @@ def SendAlertEmail(network, serverstate):
     # emailer.sendmessage(sender,sender_password,receiver,sender,subject,active_message)
     print ">> Sending email done.."
     
-def SendAlertGsm(network):
+def SendAlertGsm(network,alertmsg):
     try:
         if network == 'GLOBE':    
             numlist = globenumbers.split(",")
         else:
             numlist = smartnumbers.split(",")
-        f = open(allalertsfile,'r')
-        alllines = f.read()
-        f.close()
+        # f = open(allalertsfile,'r')
+        # alllines = f.read()
+        # f.close()
         for n in numlist:
-            sendMsg(alllines,n)
+            sendMsg(alertmsg,n)
     except IndexError:
         print "Error sending all_alerts.txt"
 
@@ -629,6 +637,7 @@ def RecordManualWeather(mw_text):
         
 def ProcessCoordinatorMsg(coordsms, num):
     print ">> Coordinator message received"
+    print coordsms
     
     createTable("coordrssi","coordrssi")
     
@@ -671,7 +680,7 @@ def RunSenslopeServer(network):
     minute_of_last_alert = dt.now().minute
     timetosend = 0
     email_flg = 0
-    timetosendalerts = True
+    lastAlertMsgSent = ''
     logruntimeflag = True
     global checkIfActive
     if network == "SUN":
@@ -681,7 +690,6 @@ def RunSenslopeServer(network):
     else:
         Port = cfg.getint('Serial', 'SmartPort') - 1
 
-    
     try:
         gsmInit(Port)        
     except serial.SerialException:
@@ -727,7 +735,7 @@ def RunSenslopeServer(network):
                     except ValueError as e:
                         print ">> Error in manual ground measurement SMS"
                         f = open(gndmeasfilesdir + "gnd_measuremenst_w_errors.txt","a")
-                        f.write(msg.data.uppper())
+                        f.write(msg.data.upper())
                         f.close()
                         sendMsg(str(e), msg.simnum)
                     finally:
@@ -758,7 +766,8 @@ def RunSenslopeServer(network):
                     #ProcessColumn(msg.data)
                     ProcessColumn(msg.data,msg.dt,msg.simnum)
                 #check if message is from rain gauge
-                elif re.search("(\w{4})[, ](\d{02}\/\d{02}\/\d{02},\d{02}:\d{02}:\d{02})[,\*](-*\d{2}.\d,\d{1,3},\d{1,3},\d{1,2}.\d{1,2},\d.\d{1,2},\d{1,2}),*\*?",msg.data):
+                # elif re.search("(\w{4})[, ](\d{02}\/\d{02}\/\d{02},\d{02}:\d{02}:\d{02})[,\*](-*\d{2}.\d,\d{1,3},\d{1,3},\d{1,2}.\d{1,2},\d.\d{1,2},\d{1,2}),*\*?",msg.data):
+                elif len(msg.data.split(",")) == 9:
                 # elif msg.data[3] == 'W' and len(msg.data.split(",")) == 9:
                     ProcessRain(msg.data,msg.simnum)
                 elif re.search(r'(\w{4})[-](\d{1,2}[.]\d{02}),(\d{01}),(\d{1,2})/(\d{1,2}),#(\d),(\d),(\d{1,2}),(\d)[*](\d{10})',msg.data):
@@ -802,6 +811,7 @@ def RunSenslopeServer(network):
                 print '>> Error deleting messages'
                 
             print dt.today().strftime("\nServer active as of %A, %B %d, %Y, %X")
+            logRuntimeStatus(network,"alive")
             time.sleep(10)
             
         elif m == 0:
@@ -814,9 +824,6 @@ def RunSenslopeServer(network):
                 checkIfActive = False
             else:
                 checkIfActive = True
-                if (today.minute % 10):
-                    email_flg = 0;
-                    timetosendalerts = True;
                 
         elif m == -1:
             print'GSM MODULE MAYBE INACTIVE'
@@ -830,25 +837,20 @@ def RunSenslopeServer(network):
         else:
             print '>> Error in parsing mesages: Error unknown'
             
-        today = dt.today()
-        if (today.minute % 10 == 0):
-            serverstate = 'active'
-            if logruntimeflag:
-                logRuntimeStatus(network,"alive")
-                logruntimeflag = False
+
             
-            # if (not email_flg):
-                # SendAlertEmail(network, serverstate)
-                # email_flg = 1
-        else:
-            logruntimeFlag = True
+
             
-        if (today.minute >= 20 or today.minute >= 50) and timetosendalerts:
-        #if (today.minute % 10 == 0):
-            fpath = allalertsfile
-            timetosendalerts = False;
-            if os.path.isfile(fpath) and os.path.getsize(fpath) > 0:
-                SendAlertGsm(network)
+        if os.path.isfile(allalertsfile) and os.path.getsize(allalertsfile) > 0:
+            f = open(allalertsfile,'r')
+            alllines = f.read()
+            f.close()
+            if lastAlertMsgSent != alllines:
+                print ">> Sending alert SMS"
+                lastAlertMsgSent = alllines
+                SendAlertGsm(network,alllines)
+            else:
+                print ">> Alert already sent"
             
 """ Global variables"""
 checkIfActive = True
