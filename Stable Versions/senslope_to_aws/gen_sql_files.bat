@@ -6,3 +6,6 @@ start python gen_sql.py
 
 cd ../sqlBasedSOMS
 start python gen_sql.py
+
+cd ../sqlBasedGndMeas
+start python gen_sql.py
