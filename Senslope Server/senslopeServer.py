@@ -484,9 +484,9 @@ def ProcessRain(line,sender):
 
     try:
     
-        items = re.match(".*(\w{4})[, ](\d{02}\/\d{02}\/\d{02},\d{02}:\d{02}:\d{02})[,\*](\d{2}.+,\d{1,3},\d{1,3},\d.+,\d{1,2}.+,\d{1,2}),*\*?.*",line)
-        msgtable = items.group(1)
-        msgdatetime = items.group(2)
+        msgtable = line.split(",")[0]
+        print msgtable
+        msgdatetime = re.search("\d{02}\/\d{02}\/\d{02},\d{02}:\d{02}:\d{02}",line).group(0)
 
         txtdatetime = dt.strptime(msgdatetime,'%m/%d/%y,%H:%M:%S')
         # temporary adjust (wrong set values)
@@ -497,7 +497,8 @@ def ProcessRain(line,sender):
 
         txtdatetime = txtdatetime.strftime('%Y-%m-%d %H:%M:00')
         
-        data = items.group(3)
+        # data = items.group(3)
+        data = line.split(",",3)[3]
         
     except IndexError and AttributeError:
         print '\n>> Error: Rain message format is not recognized'
@@ -675,6 +676,12 @@ def UnexpectedCharactersLog(msg, network):
     f = open(unexpectedchardir+network+'Nonalphanumeric_errorlog.txt','a')
     f.write(msg.dt + ',' + msg.simnum + ',' + msg.data+ '\n')
     f.close()
+
+def LogUnrecognizedMessage(msg, network):
+    # print ">> Error: Unexpected characters/s detected in ", msg.data
+    f = open(unexpectedchardir+network+'-unrecognized-messages.txt','a')
+    f.write(msg.dt + ',' + msg.simnum + ',' + msg.data+ '\n')
+    f.close()
         
 def RunSenslopeServer(network):
     minute_of_last_alert = dt.now().minute
@@ -724,7 +731,7 @@ def RunSenslopeServer(network):
                              
                 msgname = checkNameOfNumber(msg.simnum)
                 ##### Added for V1 sensors removes unnecessary characters pls see function PreProcessColumnV1(data)
-                if msg.data.find("DUE*") >0:
+                if re.search("[A-Z]{4}DUE\*[A-F0-9]+\*\d+T?$",msg.data):
                    msg.data = PreProcessColumnV1(msg.data)
                    ProcessColumn(msg.data,msg.dt,msg.simnum)
                 elif re.search("(RO*U*TI*N*E )|(EVE*NT )", msg.data.upper()):
@@ -744,10 +751,7 @@ def RunSenslopeServer(network):
                         g.write(msg.simnum+',')
                         g.write(msg.data+'\n')
                         g.close()
-                elif re.findall('[^A-Zabcyx0-9\*\+\.\/\,\:\#-]',msg.data):
-                    print ">> Error: Unexpected characters/s detected in ", msg.data
-                    UnexpectedCharactersLog(msg, network)
-                elif len(msg.data.split("*")[0]) == 5:
+                elif re.search("[A-Z]{4,5}\*[xyabc]\*[A-F0-9]+\*[0-9]+T?$",msg.data):
                     try:
                         if re.findall('[^A-Z]', msg.data.split("*")[0]):
                             UnexpectedCharactersLog(msg, network)
@@ -762,12 +766,12 @@ def RunSenslopeServer(network):
                     except IndexError:
                         print "\n\n>> Error: Possible data type error"
                         print msg.data
-                elif len(msg.data)>4 and msg.data[4] == '*':
+                elif re.search("[A-Z]{4}\*[A-F0-9]+\*[0-9]+$",msg.data):
                     #ProcessColumn(msg.data)
                     ProcessColumn(msg.data,msg.dt,msg.simnum)
                 #check if message is from rain gauge
                 # elif re.search("(\w{4})[, ](\d{02}\/\d{02}\/\d{02},\d{02}:\d{02}:\d{02})[,\*](-*\d{2}.\d,\d{1,3},\d{1,3},\d{1,2}.\d{1,2},\d.\d{1,2},\d{1,2}),*\*?",msg.data):
-                elif len(msg.data.split(",")) == 9:
+                elif re.search("\w{4},[\d\/:,]+,[\d,\.]+$",msg.data):
                 # elif msg.data[3] == 'W' and len(msg.data.split(",")) == 9:
                     ProcessRain(msg.data,msg.simnum)
                 elif re.search(r'(\w{4})[-](\d{1,2}[.]\d{02}),(\d{01}),(\d{1,2})/(\d{1,2}),#(\d),(\d),(\d{1,2}),(\d)[*](\d{10})',msg.data):
@@ -782,6 +786,7 @@ def RunSenslopeServer(network):
                     print '>> Unrecognized message format: '
                     print 'NUM: ' , msg.simnum
                     print 'MSG: ' , msg.data
+                    LogUnrecognizedMessage(msg, network)
                     
                 msgname = checkNameOfNumber(msg.simnum) 
                 if msgname:
@@ -836,10 +841,6 @@ def RunSenslopeServer(network):
             print '>> Error in parsing mesages: No data returned by GSM'            
         else:
             print '>> Error in parsing mesages: Error unknown'
-            
-
-            
-
             
         if os.path.isfile(allalertsfile) and os.path.getsize(allalertsfile) > 0:
             f = open(allalertsfile,'r')
