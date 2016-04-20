@@ -1,3 +1,9 @@
+##### IMPORTANT matplotlib declarations must always be FIRST to make sure that matplotlib works with cron-based automation
+import matplotlib as mpl
+mpl.use('Agg')
+import matplotlib.pyplot as plt
+plt.ioff()
+
 import os
 from datetime import datetime, timedelta
 import pandas as pd
@@ -21,6 +27,10 @@ del path
 
 from querySenslopeDb import *
 from filterSensorData import *
+
+
+
+
 
 def set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_window_ops):
     
@@ -413,40 +423,40 @@ def plot_column_positions(colname,x,xz,xy):
         plt.suptitle(colname+" absolute position", fontsize = 12)
         ax_xz=fig.add_subplot(121)
         ax_xy=fig.add_subplot(122,sharex=ax_xz,sharey=ax_xz)
-
+        print 'plot_column_positions 1'
         for i in cs_x.index:
             curcolpos_x=x[(x.index==i)].values
-
+    
             curax=ax_xz
             curcolpos_xz=xz[(xz.index==i)].values
             curax.plot(curcolpos_xz[0],curcolpos_x[0],'.-')
             curax.set_xlabel('xz')
             curax.set_ylabel('x')
-
+    
             curax=ax_xy
             curcolpos_xy=xy[(xy.index==i)].values
             curax.plot(curcolpos_xy[0],curcolpos_x[0],'.-', label=i)
             curax.set_xlabel('xy')
-
+    
         for tick in ax_xz.xaxis.get_minor_ticks():
             tick.label.set_rotation('vertical')
             tick.label.set_fontsize(10)
-            
+    
         for tick in ax_xy.xaxis.get_minor_ticks():
             tick.label.set_rotation('vertical')
             tick.label.set_fontsize(10)
-       
+    
         for tick in ax_xz.xaxis.get_major_ticks():
             tick.label.set_rotation('vertical')
             tick.label.set_fontsize(10)
-            
+       
         for tick in ax_xy.xaxis.get_major_ticks():
             tick.label.set_rotation('vertical')
             tick.label.set_fontsize(10)
     
         fig.tight_layout()
         plt.legend(fontsize='x-small')        
-    
+
     except:        
         print colname, "ERROR in plotting column position"
     return
@@ -652,10 +662,6 @@ PrintTimer = cfg.getboolean('I/O','PrintTimer')
 PrintAAlert = cfg.getboolean('I/O','PrintAAlert')
 PrintGSMAlert = cfg.getboolean('I/O', 'PrintGSMAlert')
 
-if PrintColPos or PrintTrendAlerts:
-    import matplotlib.pyplot as plt
-    plt.ioff()
-
 #MAIN
 
 #Set as true if printing by JSON would be done
@@ -693,7 +699,7 @@ hr = end - timedelta(hours=3)
 
 with open(output_file_path+webtrends, 'ab') as w, open (output_file_path+textalert, 'wb') as t:
     t.write('As of ' + end.strftime(fmt) + ':\n')
-    w.write(end.strftime(fmt) + ';')
+    w.write(end.strftime(fmt) + ',')
 
 
 CreateColAlertsTable('col_alerts', Namedb)
@@ -907,10 +913,14 @@ for s in sensorlist:
 
 #    #11. Plotting column positions
     if PrintColPos:
+        print 'printcolpos 1'
         plot_column_positions(colname,cs_x,cs_xz_0,cs_xy_0)
+        print 'printcolpos 2'
         plot_column_positions(colname,cs_x,cs_xz,cs_xy)
+        print 'printcolpos 3'
         plt.savefig(output_file_path+colname+' colpos ',
                     dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
+        print 'printcolpos 4'
 #
     #12. Plotting displacement and velocity
     if PrintDispVel:
