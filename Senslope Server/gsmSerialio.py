@@ -1,5 +1,6 @@
 import serial, datetime, ConfigParser, time, re
 from datetime import datetime as dt
+from senslopedbio import * 
 
 cfg = ConfigParser.ConfigParser()
 cfg.read('senslope-server-config.txt')
@@ -9,6 +10,7 @@ Baudrate = cfg.getint('Serial', 'Baudrate')
 Timeout = cfg.getint('Serial', 'Timeout')
 ConsoleOutput = cfg.getboolean('I/O','consoleoutput')
 SaveToFile = cfg.getboolean('I/O','savetofile')
+Namedb = cfg.get('LocalDB', 'DBName')
 
 class sms:
     def __init__(self,num,sender,data,dt):
@@ -27,7 +29,11 @@ def gsmInit(port):
     print port+1
     print 'Switching to no-echo mode', gsmcmd('ATE0').strip('\r\n')
     print 'Switching to text mode', gsmcmd('AT+CMGF=1').rstrip('\r\n')
-
+    print 'Creating SMS tables',
+    createTable('smsinbox','smsinbox')
+    createTable('smsoutbox','smsoutbox')
+    print 'done'
+    
 def gsmflush():
     """Removes any pending inputs from the GSM modem and checks if it is alive."""
     try:
@@ -168,6 +174,8 @@ def getAllSms(network):
         
     msglist = []
     
+    query = "INSERT INTO smsinbox (timestamp,sim_num,sms_msg,read_status) VALUES "
+    
     for msg in allmsgs:
         if SaveToFile:
             mon = dt.now().strftime("-%Y-%B-")
@@ -200,5 +208,11 @@ def getAllSms(network):
         
         msglist.append(smsItem)
         
+    for m in msglist:
+        query += "('" + str(m.dt.replace("/","-")) + "','" + str(m.simnum) + "','" + str(m.data) + "','UNREAD'),"
+    
+    query = query[:-1]
+    
+    commitToDb(query, "getAllSms")
     return msglist
         
