@@ -29,10 +29,6 @@ def gsmInit(port):
     print port+1
     print 'Switching to no-echo mode', gsmcmd('ATE0').strip('\r\n')
     print 'Switching to text mode', gsmcmd('AT+CMGF=1').rstrip('\r\n')
-    print 'Creating SMS tables',
-    createTable('smsinbox','smsinbox')
-    createTable('smsoutbox','smsoutbox')
-    print 'done'
     
 def gsmflush():
     """Removes any pending inputs from the GSM modem and checks if it is alive."""
@@ -174,7 +170,6 @@ def getAllSms(network):
         
     msglist = []
     
-    query = "INSERT INTO smsinbox (timestamp,sim_num,sms_msg,read_status) VALUES "
     
     for msg in allmsgs:
         if SaveToFile:
@@ -208,11 +203,6 @@ def getAllSms(network):
         
         msglist.append(smsItem)
         
-    for m in msglist:
-        query += "('" + str(m.dt.replace("/","-")) + "','" + str(m.simnum) + "','" + str(m.data) + "','UNREAD'),"
     
-    query = query[:-1]
-    
-    commitToDb(query, "getAllSms")
     return msglist
         

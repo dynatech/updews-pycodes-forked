@@ -55,6 +55,45 @@ def createTable(table_name, type):
    
         
     db.close()
+    
+def setReadStatus(read_status,sms_id_list):
+    db, cur = SenslopeDBConnect()
+    
+    while True:
+        try:
+            query = """update %s.smsinbox set read_status = %s
+                where read_status in (%s) """ % (Namedb, read_status, str(sms_id_list)[1:-1] )
+        
+            a = cur.execute(query)
+            if a:
+                print a
+            else:
+                print ">> Query has no resultset"
+                                    
+                break
+        except MySQLdb.OperationalError:
+            print '9.',
+    
+def getAllSmsFromDb(read_status):
+    db, cur = SenslopeDBConnect()
+    
+    while True:
+        try:
+            query = """select sms_id, timestamp, sim_num, sms_msg from %s.smsinbox
+                where read_status = '%s' """ % (Namedb, read_status)
+        
+            a = cur.execute(query)
+            if a:
+                out = cur.fetchall()
+                # msglist = []
+                # for item in out:
+                    # smsItem = sms(item[0], item[2], item[3], item[1])
+                    # msglist.append(smsItem)
+                return out
+                                    
+                break
+        except MySQLdb.OperationalError:
+            print '9.',
 
 def commitToDb(query, identifier):
     db, cur = SenslopeDBConnect()

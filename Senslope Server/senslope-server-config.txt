@@ -11,6 +11,7 @@ savetofile = True
 fileinput = False
 consoleoutput = False
 inputfile = backup.txt
+readfromdb = True
 
 [Serial]
 baudrate = 57600

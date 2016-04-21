@@ -682,6 +682,19 @@ def LogUnrecognizedMessage(msg, network):
     f = open(unexpectedchardir+network+'-unrecognized-messages.txt','a')
     f.write(msg.dt + ',' + msg.simnum + ',' + msg.data+ '\n')
     f.close()
+    
+def WriteRawSmsToDb(msglist):
+    createTable('smsinbox','smsinbox')
+    createTable('smsoutbox','smsoutbox')
+    
+    query = "INSERT INTO smsinbox (timestamp,sim_num,sms_msg,read_status) VALUES "
+    
+    for m in msglist:
+        query += "('" + str(m.dt.replace("/","-")) + "','" + str(m.simnum) + "','" + str(m.data) + "','UNREAD'),"
+    
+    query = query[:-1]
+    
+    commitToDb(query, "getAllSms")
         
 def RunSenslopeServer(network):
     minute_of_last_alert = dt.now().minute
@@ -722,6 +735,8 @@ def RunSenslopeServer(network):
         m = countmsg()
         if m>0:
             allmsgs = getAllSms(network)
+            WriteRawSmsToDb(allmsgs)
+
             
             while allmsgs:
             
@@ -770,9 +785,7 @@ def RunSenslopeServer(network):
                     #ProcessColumn(msg.data)
                     ProcessColumn(msg.data,msg.dt,msg.simnum)
                 #check if message is from rain gauge
-                # elif re.search("(\w{4})[, ](\d{02}\/\d{02}\/\d{02},\d{02}:\d{02}:\d{02})[,\*](-*\d{2}.\d,\d{1,3},\d{1,3},\d{1,2}.\d{1,2},\d.\d{1,2},\d{1,2}),*\*?",msg.data):
                 elif re.search("\w{4},[\d\/:,]+,[\d,\.]+$",msg.data):
-                # elif msg.data[3] == 'W' and len(msg.data.split(",")) == 9:
                     ProcessRain(msg.data,msg.simnum)
                 elif re.search(r'(\w{4})[-](\d{1,2}[.]\d{02}),(\d{01}),(\d{1,2})/(\d{1,2}),#(\d),(\d),(\d{1,2}),(\d)[*](\d{10})',msg.data):
                     ProcessStats(msg.data,msg.dt)
@@ -787,6 +800,7 @@ def RunSenslopeServer(network):
                     print 'NUM: ' , msg.simnum
                     print 'MSG: ' , msg.data
                     LogUnrecognizedMessage(msg, network)
+                    
                     
                 msgname = checkNameOfNumber(msg.simnum) 
                 if msgname:
@@ -866,6 +880,7 @@ ConsoleOutput = cfg.getboolean('I/O','consoleoutput')
 DeleteAfterRead = cfg.getboolean('I/O','deleteafterread')
 SaveToFile = cfg.getboolean('I/O','savetofile')
 WriteToDB = cfg.getboolean('I/O','writetodb')
+readfrom = cfg.getboolean('I/O','readfromdb')
 
 # gsm = serial.Serial() 
 Baudrate = cfg.getint('Serial', 'Baudrate')
