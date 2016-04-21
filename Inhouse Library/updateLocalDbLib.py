@@ -45,6 +45,21 @@ def getLatestTimestamp(col):
         print ret
         return ret
         
+def getLatestTimestampGndMeas(col):
+    dbc = MySQLdb.connect(host=dbhost,user=dbuser,passwd=dbpwd,db=dbname)
+    cur = dbc.cursor()
+    query = "SELECT MAX(timestamp) FROM %s.gndmeas WHERE site_id = '%s'" % (dbname, col)
+    ret = 0
+    try:
+        a = cur.execute(query)
+        ret = cur.fetchall()[0][0]
+    except TypeError:
+        print "Error"
+        ret = 0
+    finally:
+        dbc.close()
+        return ret
+        
 def getLatestNodeStatusId():
     dbc = MySQLdb.connect(host=dbhost,user=dbuser,passwd=dbpwd,db=dbname)
     cur = dbc.cursor()
@@ -70,6 +85,18 @@ def getSiteColumnsList():
     print "Number of loaded records: ", len(df)
     dbc.close()
     return df
+    
+# 3-Letter site code
+def getSiteCodeList():
+    dbc = MySQLdb.connect(host=dbhost,user=dbuser,passwd=dbpwd,db=dbname)
+    cur = dbc.cursor()
+    query = "SELECT DISTINCT LEFT(name, 3) as site_code FROM %s.site_column ORDER BY site_code ASC" % (dbname)
+
+    df = pd.read_sql(query, con=dbc)
+    #print df
+    print "Number of loaded records: ", len(df)
+    dbc.close()
+    return df    
     
 def getSiteSomsList():
     dbc = MySQLdb.connect(host=dbhost,user=dbuser,passwd=dbpwd,db=dbname)
@@ -165,6 +192,27 @@ def createNodeStatusTable():
         dbc.close()
         return ret   
         
+#Create ground measurement table
+def createGndMeasTable():
+    dbc = MySQLdb.connect(host=dbhost,user=dbuser,passwd=dbpwd,db=dbname)
+    cur = dbc.cursor()
+
+    query = "CREATE TABLE `%s`.`node_status` (`post_id` BIGINT(20) NOT NULL AUTO_INCREMENT, `post_timestamp` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, `date_of_identification` DATE NULL, `flagger` VARCHAR(45) NOT NULL, `site` VARCHAR(8) NOT NULL, `node` INT(11) NOT NULL, `status` VARCHAR(32) NOT NULL, `comment` VARCHAR(255) NULL, `inUse` TINYINT(1) NOT NULL, PRIMARY KEY (`post_id`)) ENGINE = InnoDB DEFAULT CHARACTER SET = latin1;" % (dbname)
+    
+    #print query
+    print "Created Ground Measurement Table: gndmeas"
+    ret = 0
+    
+    try:
+        a = cur.execute(query)
+        ret = cur.fetchall()[0][0]
+    except TypeError:
+        print "Error"
+        ret = 0
+    finally:
+        dbc.close()
+        return ret   
+        
 ###############################################################################
 # Truncate Tables on Database    
 ###############################################################################        
@@ -211,6 +259,44 @@ def downloadLatestData(col,fromDate='',toDate=''):
         return df
     except urllib2.URLError:
         print "<urlopen error [Errno 10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond>"
+
+# Download Ground Measurement Data
+def downloadLatestGndMeas(sitecode,fromDate='',toDate='',crackId=''):
+    # Checker in case of "None" values
+    if fromDate == None:
+        fromDate = ''
+    if toDate == None:
+        toDate = ''
+    if crackId == None:
+        crackId = ''
+    
+    url = 'http://www.dewslandslide.com/ajax/getSenslopeData.php?gndmeas&site=%s&from=%s&to=%s&cid=%s' % (sitecode,fromDate,toDate,crackId)
+    print url
+    print "Downloading", sitecode, "data from", fromDate, "..."
+    
+    # comment out this part for direct (no proxy) connection
+    # urllib2.install_opener(
+        # urllib2.build_opener(
+            # urllib2.ProxyHandler({'http': 'proxy.engg.upd.edu.ph:8080'})
+        # )
+    # )    
+    
+    try:
+        jsonData = pd.read_json(url, orient='columns')
+        df = pd.DataFrame(jsonData)
+        df = df.set_index(['timestamp','meas_type','site_id','crack_id'])
+#        conv = StringIO(s)
+#        df = pd.DataFrame.from_csv(conv, sep=',', parse_dates=False)
+        print "downloadLatestGndMeas done. Number of rows: %s" % (len(df))
+        return df
+    except urllib2.URLError:
+        print "<urlopen error [Errno 10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond>"
+    except ValueError:
+        print "No Data for %s" % (sitecode)
+        
+        # Empty dataframe
+        return pd.DataFrame()
+
 
 def downloadFullSiteColumnTable():
     url = 'http://www.dewslandslide.com/ajax/getSenslopeData.php?db=%s&sitecolumnjson' % (dbname)     
@@ -407,7 +493,7 @@ def writeDFtoLocalDB(col,df,fromDate='',numDays=30):
     df.to_sql(con=dbc, name=col, if_exists='append', flavor='mysql')
     dbc.close()
 
-    print "writeDFtoLocalDB done"   
+    print "writeDFtoLocalDB done"
 
 # Overwrite (Used mostly on static info updating)
 def overwriteDFtoLocalDB(col,df):   
@@ -600,6 +686,28 @@ def updateNodeStatusTable():
         print "Number of %s elements: %s" % (targetTable, numElements)
           
         writeDFtoLocalDB(targetTable,df)    
+        
+#update the gndmeas data
+def updateGndMeasTable():
+    sitecodes = getSiteCodeList()
+    targetTable = "gndmeas"
+    print 'Updating %s table...' % (targetTable)
+    
+    for index, row in sitecodes.iterrows():
+        sitecode = row['site_code']
+        ts = getLatestTimestampGndMeas(sitecode)
+        df = downloadLatestGndMeas(sitecode,ts)    
+        isDFempty = df.empty
+        
+        
+        if isDFempty == True:
+            print 'No New Data...'
+        else:
+            numElements = len(df.index)
+            print "Number of %s elements: %s" % (targetTable, numElements)
+              
+            writeDFtoLocalDB(targetTable,df)  
+      
         
 #update the site_rain_props data
 def updateRainPropsTable():
