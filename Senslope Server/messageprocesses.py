@@ -12,6 +12,7 @@ from groundMeasurements import *
 import multiprocessing
 import SomsServerParser as SSP
 import math
+from senslopeServer import *
 
 def LogUnrecognizedMessage(msg, network):
     # print ">> Error: Unexpected characters/s detected in ", msg.data
@@ -580,13 +581,15 @@ def ProcessAllMessages(allmsgs,network):
             try:
                 gm = getGndMeas(msg.data)
                 RecordGroundMeasurements(gm)
-                a = sendMsg(successen, msg.simnum)
+                # a = sendMsg(successen, msg.simnum)
+                WriteOutboxMessageToDb(successen, msg.simnum)
             except ValueError as e:
                 print ">> Error in manual ground measurement SMS"
                 f = open(gndmeasfilesdir + "gnd_measuremenst_w_errors.txt","a")
                 f.write(msg.data.upper())
                 f.close()
                 # sendMsg(str(e), msg.simnum)
+                WriteOutboxMessageToDb(str(e), msg.simnum)
             finally:
                 g = open(smsgndfile, 'a')
                 g.write(msg.dt+',')
@@ -715,3 +718,4 @@ unknownsenderfile = cfg.get('FileIO','unknownsenderfile')
 smsgndfile = cfg.get('SMSAlert','SMSgndmeasfile')
 gndmeasfilesdir= cfg.get('SMSAlert','gndmeasfilesdir')
 WriteToDB = cfg.get('I/O','writetodb')
+successen = cfg.get('ReplyMessages','SuccessEN')

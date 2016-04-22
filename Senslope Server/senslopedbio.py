@@ -1,5 +1,6 @@
 import ConfigParser, MySQLdb, time
 from senslopedbio import *
+from datetime import datetime as dt
 
 cfg = ConfigParser.ConfigParser()
 cfg.read("senslope-server-config.txt")
@@ -70,8 +71,10 @@ def setSendStatus(send_status,sms_id_list):
     
     if len(sms_id_list) <= 0:
         return
+        
+    now = dt.today().strftime("%Y-%m-%d %H:%M:%S")
 
-    query = "update %s.smsoutbox set send_status = '%s' where sms_id in (%s) " % (Namedb, send_status, str(sms_id_list)[1:-1].replace("L",""))
+    query = "update %s.smsoutbox set send_status = '%s', timestamp_written ='%s' where sms_id in (%s) " % (Namedb, send_status, now, str(sms_id_list)[1:-1].replace("L",""))
     commitToDb(query,"setSendStatus")
     
 def getAllSmsFromDb(read_status):

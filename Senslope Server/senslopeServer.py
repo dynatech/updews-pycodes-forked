@@ -124,7 +124,7 @@ def WriteRawSmsToDb(msglist):
     
     commitToDb(query, "getAllSms")
 
-def WriteOutboxMessageToDb(recepients,message,send_status='UNSENT'):
+def WriteOutboxMessageToDb(message,recepients,send_status='UNSENT'):
     query = "INSERT INTO smsoutbox (timestamp_written,recepients,sms_msg,send_status) VALUES "
     
     tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
@@ -299,8 +299,6 @@ gndmeasfilesdir= cfg.get('SMSAlert','gndmeasfilesdir')
 ##SMS alert numbers
 smartnumbers = cfg.get('SMSAlert', 'smartnumbers')
 globenumbers = cfg.get('SMSAlert', 'globenumbers')
-
-successen = cfg.get('ReplyMessages','SuccessEN')
 
 inboxdir = cfg.get('FileIO','inboxdir')
 unknownsenderfile = cfg.get('FileIO','unknownsenderfile')
