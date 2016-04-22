@@ -406,7 +406,6 @@ def ProcessARQWeather(line,sender):
             # print ">> New number", sender
             # msgname = ''
             
-            
         r15m = int(linesplit[1])*0.5
         r24h = int(linesplit[2])*0.5
         batv1 = linesplit[3]
@@ -587,7 +586,7 @@ def ProcessAllMessages(allmsgs,network):
                 f = open(gndmeasfilesdir + "gnd_measuremenst_w_errors.txt","a")
                 f.write(msg.data.upper())
                 f.close()
-                sendMsg(str(e), msg.simnum)
+                # sendMsg(str(e), msg.simnum)
             finally:
                 g = open(smsgndfile, 'a')
                 g.write(msg.dt+',')
@@ -635,23 +634,23 @@ def ProcessAllMessages(allmsgs,network):
         else:
             read_fail_list.append(msg.num)
         
-        msgname = checkNameOfNumber(msg.simnum) 
-        if msgname:
-            updateLastMsgReceivedTable(msg.dt,msgname,msg.simnum,msg.data)
-            if SaveToFile:
-                dir = inboxdir+msgname + "\\"
-                if not os.path.exists(dir):
-                    os.makedirs(dir)
-                inbox = open(dir+msgname+'-backup.txt','a')
-                inbox.write(msg.dt+',')
-                inbox.write(msg.data+'\n')
-                inbox.close()
-        else:
-            unk = open(unknownsenderfile,'a')
-            unk.write(msg.dt+',')
-            unk.write(msg.simnum+',')
-            unk.write(msg.data+'\n')
-            unk.close()
+        # msgname = checkNameOfNumber(msg.simnum) 
+        # if msgname:
+            # updateLastMsgReceivedTable(msg.dt,msgname,msg.simnum,msg.data)
+            # if SaveToFile:
+                # dir = inboxdir+msgname + "\\"
+                # if not os.path.exists(dir):
+                    # os.makedirs(dir)
+                # inbox = open(dir+msgname+'-backup.txt','a')
+                # inbox.write(msg.dt+',')
+                # inbox.write(msg.data+'\n')
+                # inbox.close()
+        # else:
+            # unk = open(unknownsenderfile,'a')
+            # unk.write(msg.dt+',')
+            # unk.write(msg.simnum+',')
+            # unk.write(msg.data+'\n')
+            # unk.close()
             
     return read_success_list, read_fail_list
     
@@ -710,9 +709,9 @@ def ProcessCoordinatorMsg(coordsms, num):
     except IndexError:
         print "IndexError: list index out of range"
     
-WriteToDB = cfg.getboolean('I/O','writetodb')
 inboxdir = cfg.get('FileIO','inboxdir')
 unexpectedchardir = cfg.get('FileIO','unexpectedchardir')
 unknownsenderfile = cfg.get('FileIO','unknownsenderfile')
 smsgndfile = cfg.get('SMSAlert','SMSgndmeasfile')
 gndmeasfilesdir= cfg.get('SMSAlert','gndmeasfilesdir')
+WriteToDB = cfg.get('I/O','writetodb')

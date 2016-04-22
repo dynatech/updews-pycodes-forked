@@ -123,6 +123,65 @@ def WriteRawSmsToDb(msglist):
     query = query[:-1]
     
     commitToDb(query, "getAllSms")
+
+def WriteOutboxMessageToDb(recepients,message,send_status='UNSENT'):
+    query = "INSERT INTO smsoutbox (timestamp_written,recepients,sms_msg,send_status) VALUES "
+    
+    tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
+    query += "('%s','%s','%s','%s')" % (tsw,recepients,message,send_status)
+    
+    print query
+    
+    commitToDb(query, "WriteOutboxMessageToDb")
+    
+def CheckAlertMessages():
+    alllines = ''
+    if os.path.isfile(allalertsfile) and os.path.getsize(allalertsfile) > 0:
+        f = open(allalertsfile,'r')
+        alllines = f.read()
+        f.close()
+        
+    return alllines
+    
+def SendMessagesFromDb(network):
+    allmsgs = getAllOutboxSmsFromDb("UNSENT")
+    if len(allmsgs) <= 0:
+        # print ">> No messages in outbox"
+        return
+        
+    msglist = []
+    for item in allmsgs:
+        smsItem = sms(item[0], str(item[2]), str(item[3]), str(item[1]))
+        msglist.append(smsItem)
+    allmsgs = msglist
+    
+    if network.upper() == 'SMART':
+        prefix_list = cfg.get('simprefix','smart').split(',')
+    else:
+        prefix_list = cfg.get('simprefix','globe').split(',')
+    
+    extended_prefix_list = []
+    for p in prefix_list:
+        extended_prefix_list.append("639"+p)
+        extended_prefix_list.append("09"+p)        
+    
+    send_success_list = []
+    # cycle through all messages
+    for msg in allmsgs:
+        # get recepient numbers in list
+        recepient_list = msg.simnum.split(",")
+        for num in recepient_list:
+            try:
+                num_prefix = re.match("^((0)|(63))9\d\d",num).group()
+            except:
+                print '>> Unable to send sim number in this gsm module'
+                continue
+            # check if recepient number in allowed prefixed list    
+            if num_prefix in extended_prefix_list:
+                sendMsg(msg.data,num)
+                send_success_list.append(msg.num)
+                
+    setSendStatus("SENT",send_success_list)
         
 def RunSenslopeServer(network):
     minute_of_last_alert = dt.now().minute
@@ -184,7 +243,7 @@ def RunSenslopeServer(network):
             time.sleep(10)
             
         elif m == 0:
-            time.sleep(SleepPeriod)
+            time.sleep(2)
             gsmflush()
             today = dt.today()
             if (today.minute % 10 == 0):
@@ -194,11 +253,12 @@ def RunSenslopeServer(network):
             else:
                 checkIfActive = True
                 
+            SendMessagesFromDb(network)
+                
         elif m == -1:
             print'GSM MODULE MAYBE INACTIVE'
             serverstate = 'inactive'
             gsm.close()
-            # SendAlertEmail(network,serverstate)
             logRuntimeStatus(network,"gsm inactive")
 
         elif m == -2:
@@ -206,16 +266,16 @@ def RunSenslopeServer(network):
         else:
             print '>> Error in parsing mesages: Error unknown'
             
-        if os.path.isfile(allalertsfile) and os.path.getsize(allalertsfile) > 0:
-            f = open(allalertsfile,'r')
-            alllines = f.read()
-            f.close()
-            if lastAlertMsgSent != alllines:
-                print ">> Sending alert SMS"
-                lastAlertMsgSent = alllines
-                SendAlertGsm(network,alllines)
-            else:
-                print ">> Alert already sent"
+        # if os.path.isfile(allalertsfile) and os.path.getsize(allalertsfile) > 0:
+            # f = open(allalertsfile,'r')
+            # alllines = f.read()
+            # f.close()
+            # if lastAlertMsgSent != alllines:
+                # print ">> Sending alert SMS"
+                # lastAlertMsgSent = alllines
+                # SendAlertGsm(network,alllines)
+            # else:
+                # print ">> Alert already sent"
             
 """ Global variables"""
 checkIfActive = True
@@ -224,14 +284,6 @@ anomalysave = ''
 cfg = ConfigParser.ConfigParser()
 cfg.read('senslope-server-config.txt')
 
-FileInput = cfg.getboolean('I/O','fileinput')
-InputFile = cfg.get('I/O','inputfile')
-ConsoleOutput = cfg.getboolean('I/O','consoleoutput')
-DeleteAfterRead = cfg.getboolean('I/O','deleteafterread')
-SaveToFile = cfg.getboolean('I/O','savetofile')
-WriteToDB = cfg.getboolean('I/O','writetodb')
-readfrom = cfg.getboolean('I/O','readfromdb')
-
 # gsm = serial.Serial() 
 Baudrate = cfg.getint('Serial', 'Baudrate')
 Timeout = cfg.getint('Serial', 'Timeout')
@@ -239,15 +291,7 @@ Namedb = cfg.get('LocalDB', 'DBName')
 Hostdb = cfg.get('LocalDB', 'Host')
 Userdb = cfg.get('LocalDB', 'Username')
 Passdb = cfg.get('LocalDB', 'Password')
-SleepPeriod = cfg.getint('Misc','SleepPeriod')
 
-# SMS Alerts for columns
-##    Numbers = cfg.get('SMSAlert','Numbers')
-
-SMSAlertEnable = cfg.getboolean('SMSAlert','Enable')
-Directory = cfg.get('SMSAlert','Directory')
-CSVInputFile = cfg.get('SMSAlert','CSVInputFile')
-AlertFlags = cfg.get('SMSAlert','AlertFlags')
 AlertReportInterval = cfg.getint('SMSAlert','AlertReportInterval')
 smsgndfile = cfg.get('SMSAlert','SMSgndmeasfile')
 gndmeasfilesdir= cfg.get('SMSAlert','gndmeasfilesdir')

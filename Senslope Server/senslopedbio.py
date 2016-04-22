@@ -49,7 +49,7 @@ def createTable(table_name, type):
     elif type == "smsinbox":
         cur.execute("CREATE TABLE IF NOT EXISTS %s(sms_id int unsigned not null auto_increment, timestamp datetime, sim_num varchar(20), sms_msg varchar(255), read_status varchar(20), PRIMARY KEY (sms_id))" %table_name)
     elif type == "smsoutbox":
-        cur.execute("CREATE TABLE IF NOT EXISTS %s(sms_id int unsigned not null auto_increment, timestamp datetime, sim_num varchar(20), sms_msg varchar(255), send_status varchar(20), PRIMARY KEY (sms_id))" %table_name)
+        cur.execute("CREATE TABLE IF NOT EXISTS %s(sms_id int unsigned not null auto_increment, timestamp_written datetime, timestamp_sent datetime, recepients varchar(255), sms_msg varchar(255), send_status varchar(20), PRIMARY KEY (sms_id))" %table_name)
     else:
         raise ValueError("ERROR: No option for creating table " + type)
    
@@ -65,6 +65,15 @@ def setReadStatus(read_status,sms_id_list):
     query = "update %s.smsinbox set read_status = '%s' where sms_id in (%s) " % (Namedb, read_status, str(sms_id_list)[1:-1].replace("L",""))
     commitToDb(query,"setReadStatus")
     
+def setSendStatus(send_status,sms_id_list):
+    db, cur = SenslopeDBConnect()
+    
+    if len(sms_id_list) <= 0:
+        return
+
+    query = "update %s.smsoutbox set send_status = '%s' where sms_id in (%s) " % (Namedb, send_status, str(sms_id_list)[1:-1].replace("L",""))
+    commitToDb(query,"setSendStatus")
+    
 def getAllSmsFromDb(read_status):
     db, cur = SenslopeDBConnect()
     
@@ -73,6 +82,24 @@ def getAllSmsFromDb(read_status):
             query = """select sms_id, timestamp, sim_num, sms_msg from %s.smsinbox
                 where read_status = '%s' limit 200""" % (Namedb, read_status)
         
+            a = cur.execute(query)
+            out = []
+            if a:
+                out = cur.fetchall()
+            return out
+
+        except MySQLdb.OperationalError:
+            print '9.',
+            
+def getAllOutboxSmsFromDb(send_status):
+    db, cur = SenslopeDBConnect()
+    
+    while True:
+        try:
+            query = """select sms_id, timestamp_written, recepients, sms_msg from %s.smsoutbox
+                where send_status = '%s' limit 200""" % (Namedb, send_status)
+        
+            # print query
             a = cur.execute(query)
             out = []
             if a:
