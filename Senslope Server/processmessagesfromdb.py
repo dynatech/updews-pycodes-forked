@@ -12,6 +12,7 @@ from groundMeasurements import *
 import multiprocessing
 import SomsServerParser as SSP
 import math
+from messageprocesses import *
 #---------------------------------------------------------------------------------------------------------------------------
 
 def updateSimNumTable(name,sim_num,date_activated):
@@ -114,109 +115,44 @@ def UnexpectedCharactersLog(msg, network):
     f.close()
 
 def WriteRawSmsToDb(msglist):
+    createTable('smsinbox','smsinbox')
+    createTable('smsoutbox','smsoutbox')
+    
     query = "INSERT INTO smsinbox (timestamp,sim_num,sms_msg,read_status) VALUES "
     
     for m in msglist:
         query += "('" + str(m.dt.replace("/","-")) + "','" + str(m.simnum) + "','" + str(m.data) + "','UNREAD'),"
     
-    # just to remove the trailing ','
     query = query[:-1]
     
     commitToDb(query, "getAllSms")
         
-def RunSenslopeServer(network):
-    minute_of_last_alert = dt.now().minute
-    timetosend = 0
-    email_flg = 0
-    lastAlertMsgSent = ''
-    logruntimeflag = True
-    global checkIfActive
-    if network == "SUN":
-        Port = cfg.getint('Serial', 'SunPort') - 1
-    elif network == "GLOBE":
-        Port = cfg.getint('Serial', 'GlobePort') - 1
-    else:
-        Port = cfg.getint('Serial', 'SmartPort') - 1
-
-    try:
-        gsmInit(Port)        
-    except serial.SerialException:
-        print ">> ERROR: Could not open COM %r!" % (Port+1)
-        print '**NO COM PORT FOUND**'
-        serverstate = 'serial'
-        # SendAlertEmail(network,serverstate)
-        # while True:
-        gsm.close()
-        logRuntimeStatus(network,"com port error")
-        raise ValueError(">> Error: no com port found")
+def main():
             
     createTable("runtimelog","runtime")
-    logRuntimeStatus(network,"startup")
-    
-    createTable('smsinbox','smsinbox')
-    createTable('smsoutbox','smsoutbox')
+    logRuntimeStatus("procfromdb","startup")
 
-    print '**' + network + ' GSM server active**'
-    print time.asctime()
+    # force backup
     while True:
-        m = countmsg()
-        if m>0:
-            allmsgs = getAllSms(network)
-            
-            try:
-                WriteRawSmsToDb(allmsgs)
-            except MySQLdb.ProgrammingError:
-                print ">> Error: May be an empty line.. skipping message storing"
-            
-            # if not reading from database, uncomment the following line
-            # ProcessAllMessages(allmsgs,network)
-            
-            # delete all read messages
-            print "\n>> Deleting all read messages"
-            try:
-                gsmcmd('AT+CMGD=0,2').strip()
-                print 'OK'
-            except ValueError:
-                print '>> Error deleting messages'
-                
-            print dt.today().strftime("\nServer active as of %A, %B %d, %Y, %X")
-            logRuntimeStatus(network,"alive")
-            time.sleep(10)
-            
-        elif m == 0:
-            time.sleep(SleepPeriod)
-            gsmflush()
-            today = dt.today()
-            if (today.minute % 10 == 0):
-                if checkIfActive:
-                    print today.strftime("\nServer active as of %A, %B %d, %Y, %X")
-                checkIfActive = False
-            else:
-                checkIfActive = True
-                
-        elif m == -1:
-            print'GSM MODULE MAYBE INACTIVE'
-            serverstate = 'inactive'
-            gsm.close()
-            # SendAlertEmail(network,serverstate)
-            logRuntimeStatus(network,"gsm inactive")
+        allmsgs = getAllSmsFromDb("UNREAD")
+        if len(allmsgs) > 0:
+            msglist = []
+            for item in allmsgs:
+                smsItem = sms(item[0], str(item[2]), str(item[3]), str(item[1]))
+                msglist.append(smsItem)
 
-        elif m == -2:
-            print '>> Error in parsing mesages: No data returned by GSM'            
-        else:
-            print '>> Error in parsing mesages: Error unknown'
-            
-        if os.path.isfile(allalertsfile) and os.path.getsize(allalertsfile) > 0:
-            f = open(allalertsfile,'r')
-            alllines = f.read()
-            f.close()
-            if lastAlertMsgSent != alllines:
-                print ">> Sending alert SMS"
-                lastAlertMsgSent = alllines
-                SendAlertGsm(network,alllines)
-            else:
-                print ">> Alert already sent"
-            
+        
+            allmsgs = msglist
+            read_success_list, read_fail_list = ProcessAllMessages(allmsgs,"procfromdb")
+
+            setReadStatus("READ-SUCCESS",read_success_list)
+            setReadStatus("READ-FAIL",read_fail_list)
+        
+        logRuntimeStatus("procfromdb","alive")
+        print dt.today().strftime("\nServer active as of %A, %B %d, %Y, %X")
+        time.sleep(5)
+        
+        
 """ Global variables"""
 checkIfActive = True
 anomalysave = ''
@@ -262,3 +198,6 @@ inboxdir = cfg.get('FileIO','inboxdir')
 unknownsenderfile = cfg.get('FileIO','unknownsenderfile')
 allalertsfile = cfg.get('FileIO','allalertsfile')
 
+if __name__ == "__main__":
+    print 'hey'
+    main()

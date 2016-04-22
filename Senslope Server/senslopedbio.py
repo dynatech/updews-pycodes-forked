@@ -59,20 +59,11 @@ def createTable(table_name, type):
 def setReadStatus(read_status,sms_id_list):
     db, cur = SenslopeDBConnect()
     
-    while True:
-        try:
-            query = """update %s.smsinbox set read_status = %s
-                where read_status in (%s) """ % (Namedb, read_status, str(sms_id_list)[1:-1] )
-        
-            a = cur.execute(query)
-            if a:
-                print a
-            else:
-                print ">> Query has no resultset"
-                                    
-                break
-        except MySQLdb.OperationalError:
-            print '9.',
+    if len(sms_id_list) <= 0:
+        return
+
+    query = "update %s.smsinbox set read_status = '%s' where sms_id in (%s) " % (Namedb, read_status, str(sms_id_list)[1:-1].replace("L",""))
+    commitToDb(query,"setReadStatus")
     
 def getAllSmsFromDb(read_status):
     db, cur = SenslopeDBConnect()
@@ -80,18 +71,14 @@ def getAllSmsFromDb(read_status):
     while True:
         try:
             query = """select sms_id, timestamp, sim_num, sms_msg from %s.smsinbox
-                where read_status = '%s' """ % (Namedb, read_status)
+                where read_status = '%s' limit 200""" % (Namedb, read_status)
         
             a = cur.execute(query)
+            out = []
             if a:
                 out = cur.fetchall()
-                # msglist = []
-                # for item in out:
-                    # smsItem = sms(item[0], item[2], item[3], item[1])
-                    # msglist.append(smsItem)
-                return out
-                                    
-                break
+            return out
+
         except MySQLdb.OperationalError:
             print '9.',
 
@@ -110,7 +97,7 @@ def commitToDb(query, identifier):
                 else:
                     print '>> Warning: Query has no result set', identifier
                     db.commit()
-                    time.sleep(2)
+                    time.sleep(0.5)
                     break
             except MySQLdb.OperationalError:
             #except IndexError:
@@ -125,7 +112,7 @@ def commitToDb(query, identifier):
         print '>> Error: Writing to database', identifier
     except MySQLdb.IntegrityError:
         print '>> Warning: Duplicate entry detected', identifier
-    except:
-        print '>> Unexpected error in writing to database query', query, 'from', identifier
+    # except:
+        # print '>> Unexpected error in writing to database query', query, 'from', identifier
     finally:
         db.close()

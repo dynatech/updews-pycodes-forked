@@ -82,6 +82,8 @@ def sendMsg(alert_msg, number):
     Returns the reply of the module
     Usage: str = gsmcmd()
     """
+    # under development
+    return
     try: 
         gsm.flushInput()
         gsm.flushOutput()
@@ -174,9 +176,9 @@ def getAllSms(network):
     for msg in allmsgs:
         if SaveToFile:
             mon = dt.now().strftime("-%Y-%B-")
-            f = open("D:\\Server Files\\Consolidated\\"+network+mon+'backup.txt','a')
-            f.write(msg)
-            f.close()
+            # f = open("D:\\Server Files\\Consolidated\\"+network+mon+'backup.txt','a')
+            # f.write(msg)
+            # f.close()
                 
         msg = msg.replace('\n','').split("\r")
         try:
