@@ -14,7 +14,7 @@ import math
 #---------------------------------------------------------------------------------------------------------------------------
 
 def updateSimNumTable(name,sim_num,date_activated):
-    db, cur = SenslopeDBConnect()
+    db, cur = SenslopeDBConnect('local')
     
     while True:
         try:
@@ -41,7 +41,7 @@ def updateSimNumTable(name,sim_num,date_activated):
                 (name,sim_num,date_activated)
                 VALUES ('%s','%s','%s')""" %(name,sim_num,date_activated)
 
-    commitToDb(query, 'updateSimNumTable')                
+    commitToDb(query, 'updateSimNumTable')
     
 def logRuntimeStatus(script_name,status):
     if (status == 'alive'):
@@ -121,7 +121,7 @@ def WriteRawSmsToDb(msglist):
     # just to remove the trailing ','
     query = query[:-1]
     
-    commitToDb(query, "getAllSms")
+    commitToDb(query, "WriteRawSmsToDb", instance='GSM')
 
 def WriteOutboxMessageToDb(message,recepients,send_status='UNSENT'):
     query = "INSERT INTO smsoutbox (timestamp_written,recepients,sms_msg,send_status) VALUES "

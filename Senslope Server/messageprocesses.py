@@ -32,7 +32,7 @@ def updateLastMsgReceivedTable(txtdatetime,name,sim_num,msg):
     commitToDb(query, 'updateLastMsgReceivedTable')
     
 def updateSimNumTable(name,sim_num,date_activated):
-    db, cur = SenslopeDBConnect()
+    db, cur = SenslopeDBConnect('local')
     
     while True:
         try:
@@ -62,7 +62,7 @@ def updateSimNumTable(name,sim_num,date_activated):
     commitToDb(query, 'updateSimNumTable')
 
 def checkNameOfNumber(number):
-    db, cur = SenslopeDBConnect()
+    db, cur = SenslopeDBConnect('local')
     
     while True:
         try:
