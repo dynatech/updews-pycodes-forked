@@ -41,8 +41,8 @@ def main():
             print '>> Checking for alert sms'
             alertmsg = CheckAlertMessages()
             if alertmsg:
-                WriteOutboxMessageToDb(smartnumbers,alertmsg)
-                WriteOutboxMessageToDb(globenumbers,alertmsg)
+                WriteOutboxMessageToDb(alertmsg,smartnumbers)
+                WriteOutboxMessageToDb(alertmsg,globenumbers)
         
         logRuntimeStatus("procfromdb","alive")
         print dt.today().strftime("\nServer active as of %A, %B %d, %Y, %X")

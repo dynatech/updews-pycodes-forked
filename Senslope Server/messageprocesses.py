@@ -619,7 +619,7 @@ def ProcessAllMessages(allmsgs,network):
             ProcessRain(msg.data,msg.simnum)
         elif re.search(r'(\w{4})[-](\d{1,2}[.]\d{02}),(\d{01}),(\d{1,2})/(\d{1,2}),#(\d),(\d),(\d{1,2}),(\d)[*](\d{10})',msg.data):
             ProcessStats(msg.data,msg.dt)
-        elif msg.data[:4] == "ARQ+":
+        elif re.search("ARQ\+[0-9\.\+/]+$",msg.data):
             ProcessARQWeather(msg.data,msg.simnum)
         elif msg.data[4:7] == "PZ*":
             ProcessPiezometer(msg.data, msg.simnum)
