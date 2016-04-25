@@ -250,7 +250,6 @@ def extractDBToSQL(table, version = 3):
     tsStartParsed = re.sub('[.!,;:]', '', TSstart)
     tsStartParsed = re.sub(' ', '_', tsStartParsed)
     
-#    fullPath = 'D:\\dewslandslide\\' + table + '_' + tsStartParsed + '.sql'
     fullPath = outputPath + table + '_' + tsStartParsed + '.sql'
     winCmd = None
 

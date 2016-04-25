@@ -12,6 +12,10 @@ fileinput = False
 consoleoutput = False
 inputfile = backup.txt
 
+[Folders]
+linuxOutput = websiteUploads/
+windowsOutput = D:\dewslandslide\
+
 [Serial]
 baudrate = 57600
 sunport = 6

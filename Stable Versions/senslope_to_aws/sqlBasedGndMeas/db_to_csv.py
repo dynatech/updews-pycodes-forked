@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime as dt
 from datetime import timedelta as td
+import platform
 
 #---------------------------------------------------------------------------------------------------------------------------
 
@@ -146,6 +147,21 @@ Userdb = cfg.get('LocalDB', 'Username')
 Passdb = cfg.get('LocalDB', 'Password')
 SleepPeriod = cfg.getint('Misc','SleepPeriod')
 
+operatingSystem = platform.system()
+print operatingSystem
+
+if operatingSystem == 'Windows':
+    outputPath = cfg.get('Folders', 'windowsOutput')
+elif operatingSystem == 'Linux':
+    tempPath = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../..'))
+    outputFolder = cfg.get('Folders', 'linuxOutput')
+    outputPath = tempPath + "/" + outputFolder
+    
+    #Create the 'linuxOutput' folder if it doesn't exist yet
+    if not os.path.exists(outputPath):
+        os.makedirs(outputPath)
+    
+print "output path = " + outputPath
 
 def extractDBToSQL(table, doesTableExist = 1, version = 3):    
     TSstart = 0
@@ -190,7 +206,8 @@ def extractDBToSQL(table, doesTableExist = 1, version = 3):
     tsStartParsed = re.sub('[.!,;:]', '', TSstart)
     tsStartParsed = re.sub(' ', '_', tsStartParsed)
     
-    fullPath = 'D:\\dewslandslide\\gndmeas_' + table + '_' + tsStartParsed + '.sql'
+#    fullPath = 'D:\\dewslandslide\\gndmeas_' + table + '_' + tsStartParsed + '.sql'
+    fullPath = outputPath + 'gndmeas_' + table + '_' + tsStartParsed + '.sql'
     winCmd = None
 
     #SQL creation is different for a site's first time upload of data

@@ -14,7 +14,7 @@ inputfile = backup.txt
 
 [Folders]
 linuxOutput = websiteUploads/
-windowsOutput = D:\dewslandslide\TESTF\
+windowsOutput = D:\dewslandslide\
 
 [Serial]
 baudrate = 57600
