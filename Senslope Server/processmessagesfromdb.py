@@ -4,7 +4,6 @@ import datetime
 import ConfigParser
 from datetime import datetime as dt
 from datetime import timedelta as td
-import winsound
 import emailer
 from senslopedbio import *
 from gsmSerialio import *
@@ -41,8 +40,8 @@ def main():
             print '>> Checking for alert sms'
             alertmsg = CheckAlertMessages()
             if alertmsg:
-                WriteOutboxMessageToDb(smartnumbers,alertmsg)
-                WriteOutboxMessageToDb(globenumbers,alertmsg)
+                WriteOutboxMessageToDb(alertmsg,smartnumbers)
+                WriteOutboxMessageToDb(alertmsg,globenumbers)
         
         logRuntimeStatus("procfromdb","alive")
         print dt.today().strftime("\nServer active as of %A, %B %d, %Y, %X")

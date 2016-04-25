@@ -4,7 +4,6 @@ import datetime
 import ConfigParser
 from datetime import datetime as dt
 from datetime import timedelta as td
-import winsound
 import emailer
 from senslopedbio import *
 from gsmSerialio import *
@@ -15,7 +14,7 @@ import math
 #---------------------------------------------------------------------------------------------------------------------------
 
 def updateSimNumTable(name,sim_num,date_activated):
-    db, cur = SenslopeDBConnect()
+    db, cur = SenslopeDBConnect('local')
     
     while True:
         try:
@@ -42,7 +41,7 @@ def updateSimNumTable(name,sim_num,date_activated):
                 (name,sim_num,date_activated)
                 VALUES ('%s','%s','%s')""" %(name,sim_num,date_activated)
 
-    commitToDb(query, 'updateSimNumTable')                
+    commitToDb(query, 'updateSimNumTable')
     
 def logRuntimeStatus(script_name,status):
     if (status == 'alive'):
@@ -122,7 +121,7 @@ def WriteRawSmsToDb(msglist):
     # just to remove the trailing ','
     query = query[:-1]
     
-    commitToDb(query, "getAllSms")
+    commitToDb(query, "WriteRawSmsToDb", instance='GSM')
 
 def WriteOutboxMessageToDb(message,recepients,send_status='UNSENT'):
     query = "INSERT INTO smsoutbox (timestamp_written,recepients,sms_msg,send_status) VALUES "
@@ -190,15 +189,9 @@ def RunSenslopeServer(network):
     lastAlertMsgSent = ''
     logruntimeflag = True
     global checkIfActive
-    if network == "SUN":
-        Port = cfg.getint('Serial', 'SunPort') - 1
-    elif network == "GLOBE":
-        Port = cfg.getint('Serial', 'GlobePort') - 1
-    else:
-        Port = cfg.getint('Serial', 'SmartPort') - 1
 
     try:
-        gsmInit(Port)        
+        gsmInit(network)        
     except serial.SerialException:
         print ">> ERROR: Could not open COM %r!" % (Port+1)
         print '**NO COM PORT FOUND**'

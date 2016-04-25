@@ -5,17 +5,26 @@ from datetime import datetime as dt
 cfg = ConfigParser.ConfigParser()
 cfg.read("senslope-server-config.txt")
 
-Namedb = cfg.get('LocalDB', 'DBName')
-Hostdb = cfg.get('LocalDB', 'Host')
-Userdb = cfg.get('LocalDB', 'Username')
-Passdb = cfg.get('LocalDB', 'Password')
+class dbInstance:
+    def __init__(self,name,host,user,password):
+       self.name = name
+       self.host = host
+       self.user = user
+       self.password = password
+
+localdbinstance = dbInstance(cfg.get('LocalDB', 'DBName'),cfg.get('LocalDB', 'Host'),cfg.get('LocalDB', 'Username'),cfg.get('LocalDB', 'Password'))
+gsmdbinstance = dbInstance(cfg.get('GSMDB', 'DBName'),cfg.get('GSMDB', 'Host'),cfg.get('GSMDB', 'Username'),cfg.get('GSMDB', 'Password'))
 
 # def SenslopeDBConnect():
 # Definition: Connect to senslopedb in mysql
-def SenslopeDBConnect():
+def SenslopeDBConnect(instance):
+    if instance.upper() == 'LOCAL':
+        dbc = localdbinstance
+    else:
+        dbc = gsmdbinstance
     while True:
         try:
-            db = MySQLdb.connect(host = Hostdb, user = Userdb, passwd = Passdb, db = Namedb)
+            db = MySQLdb.connect(host = dbc.host, user = dbc.user, passwd = dbc.password, db = dbc.name)
             cur = db.cursor()
             return db, cur
         except MySQLdb.OperationalError:
@@ -23,9 +32,9 @@ def SenslopeDBConnect():
             time.sleep(2)
             
 def createTable(table_name, type):
-    db, cur = SenslopeDBConnect()
-    cur.execute("CREATE DATABASE IF NOT EXISTS %s" %Namedb)
-    cur.execute("USE %s"%Namedb)
+    db, cur = SenslopeDBConnect('local')
+    # cur.execute("CREATE DATABASE IF NOT EXISTS %s" %Namedb)
+    # cur.execute("USE %s"%Namedb)
     
     if type == "sensor v1":
         cur.execute("CREATE TABLE IF NOT EXISTS %s(timestamp datetime, id int, xvalue int, yvalue int, zvalue int, mvalue int, PRIMARY KEY (timestamp, id))" %table_name)
@@ -58,16 +67,16 @@ def createTable(table_name, type):
     db.close()
     
 def setReadStatus(read_status,sms_id_list):
-    db, cur = SenslopeDBConnect()
+    db, cur = SenslopeDBConnect('gsm')
     
     if len(sms_id_list) <= 0:
         return
 
-    query = "update %s.smsinbox set read_status = '%s' where sms_id in (%s) " % (Namedb, read_status, str(sms_id_list)[1:-1].replace("L",""))
-    commitToDb(query,"setReadStatus")
+    query = "update %s.smsinbox set read_status = '%s' where sms_id in (%s) " % (gsmdbinstance.name, read_status, str(sms_id_list)[1:-1].replace("L",""))
+    commitToDb(query,"setReadStatus", instance='GSM')
     
 def setSendStatus(send_status,sms_id_list):
-    db, cur = SenslopeDBConnect()
+    db, cur = SenslopeDBConnect('gsm')
     
     if len(sms_id_list) <= 0:
         return
@@ -75,15 +84,15 @@ def setSendStatus(send_status,sms_id_list):
     now = dt.today().strftime("%Y-%m-%d %H:%M:%S")
 
     query = "update %s.smsoutbox set send_status = '%s', timestamp_written ='%s' where sms_id in (%s) " % (Namedb, send_status, now, str(sms_id_list)[1:-1].replace("L",""))
-    commitToDb(query,"setSendStatus")
+    commitToDb(query,"setSendStatus", instance='GSM')
     
 def getAllSmsFromDb(read_status):
-    db, cur = SenslopeDBConnect()
+    db, cur = SenslopeDBConnect('gsm')
     
     while True:
         try:
             query = """select sms_id, timestamp, sim_num, sms_msg from %s.smsinbox
-                where read_status = '%s' limit 200""" % (Namedb, read_status)
+                where read_status = '%s' limit 200""" % (gsmdbinstance.name, read_status)
         
             a = cur.execute(query)
             out = []
@@ -95,25 +104,26 @@ def getAllSmsFromDb(read_status):
             print '9.',
             
 def getAllOutboxSmsFromDb(send_status):
-    db, cur = SenslopeDBConnect()
+    db, cur = SenslopeDBConnect('gsm')
     
     while True:
         try:
             query = """select sms_id, timestamp_written, recepients, sms_msg from %s.smsoutbox
-                where send_status = '%s' limit 200""" % (Namedb, send_status)
+                where send_status = '%s' limit 200""" % (gsmdbinstance.name, send_status)
         
             # print query
             a = cur.execute(query)
             out = []
             if a:
                 out = cur.fetchall()
+                db.close()
             return out
 
         except MySQLdb.OperationalError:
             print '9.',
 
-def commitToDb(query, identifier):
-    db, cur = SenslopeDBConnect()
+def commitToDb(query, identifier, instance='local'):
+    db, cur = SenslopeDBConnect(instance)
     
     try:
         retry = 0

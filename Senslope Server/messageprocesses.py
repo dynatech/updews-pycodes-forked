@@ -4,7 +4,6 @@ import datetime
 import ConfigParser
 from datetime import datetime as dt
 from datetime import timedelta as td
-import winsound
 import emailer
 from senslopedbio import *
 from gsmSerialio import *
@@ -32,7 +31,7 @@ def updateLastMsgReceivedTable(txtdatetime,name,sim_num,msg):
     commitToDb(query, 'updateLastMsgReceivedTable')
     
 def updateSimNumTable(name,sim_num,date_activated):
-    db, cur = SenslopeDBConnect()
+    db, cur = SenslopeDBConnect('local')
     
     while True:
         try:
@@ -62,7 +61,7 @@ def updateSimNumTable(name,sim_num,date_activated):
     commitToDb(query, 'updateSimNumTable')
 
 def checkNameOfNumber(number):
-    db, cur = SenslopeDBConnect()
+    db, cur = SenslopeDBConnect('local')
     
     while True:
         try:
@@ -619,7 +618,7 @@ def ProcessAllMessages(allmsgs,network):
             ProcessRain(msg.data,msg.simnum)
         elif re.search(r'(\w{4})[-](\d{1,2}[.]\d{02}),(\d{01}),(\d{1,2})/(\d{1,2}),#(\d),(\d),(\d{1,2}),(\d)[*](\d{10})',msg.data):
             ProcessStats(msg.data,msg.dt)
-        elif msg.data[:4] == "ARQ+":
+        elif re.search("ARQ\+[0-9\.\+/]+$",msg.data):
             ProcessARQWeather(msg.data,msg.simnum)
         elif msg.data[4:7] == "PZ*":
             ProcessPiezometer(msg.data, msg.simnum)
