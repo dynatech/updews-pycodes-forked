@@ -1,7 +1,7 @@
 [LocalDB]
 username = root
 host = 127.0.0.1
-password = irc311
+password = senslope
 dbname = senslopedb
 
 [I/O]
@@ -11,6 +11,10 @@ savetofile = True
 fileinput = False
 consoleoutput = False
 inputfile = backup.txt
+
+[Folders]
+linuxOutput = websiteUploads/
+windowsOutput = D:\dewslandslide\TESTF\
 
 [Serial]
 baudrate = 57600
@@ -30,78 +34,7 @@ directory = D:\Dropbox\Senslope Data\Proc\csv
 alertreportinterval = 30
 
 [Misc]
-ts_pugt = 2015-09-21 06:00:00
-ts_pugb = 2015-10-01 13:00:00
-ts_bolb = 2015-08-24 02:00:00
 sleepperiod = 2
-ts_plat = 2015-10-15 15:00:00
-ts_oslb = 2015-10-15 14:30:00
-ts_lipb = 2015-10-15 14:30:00
-ts_plab = 2015-10-15 15:30:00
-ts_lipt = 2015-10-15 14:30:00
-ts_oslt = 2015-07-14 20:32:00
-ts_mamt = 2015-10-15 15:30:00
-ts_humb = 2015-10-03 19:30:00
-ts_blct = 2015-01-08 19:32:00
-ts_mamb = 2015-10-15 15:30:00
-ts_humt = 2015-10-15 15:30:00
-ts_blcb = 2015-10-09 18:31:00
-ts_gamt = 2015-10-15 16:00:00
-ts_sinu = 2015-05-31 14:00:00
-ts_sint = 2014-10-29 10:30:00
-ts_labb = 2015-10-15 15:30:00
 timestampend = 2010-10-30 00:00:00
-ts_sinb = 2015-10-15 14:01:00
-ts_gamb = 2015-10-15 16:00:00
 adjustcolumntimeof = MLKT
-ts_labt = 2015-10-15 15:30:00
-ts_agbsb = 2015-10-15 13:31:00
-ts_agbta = 2015-10-15 14:00:00
-ts_baysb = 2015-10-15 14:00:00
-ts_bayta = 2015-10-15 14:01:00
-ts_baytc = 2015-10-13 09:30:00
-ts_blcsa = 2015-10-05 18:00:00
-ts_carsb = 2015-10-05 18:00:00
-ts_carta = 2015-10-15 15:31:00
-ts_cudta = 2015-10-15 14:15:00
-ts_cudtb = 2015-10-05 18:00:00
-ts_mcasb = 2015-10-05 18:00:00
-ts_mcata = 2015-10-15 15:30:00
-ts_mesta = 2015-10-15 15:30:00
-ts_nagsa = 2015-10-15 14:02:00
-ts_nagtb = 2015-10-15 11:00:00
-ts_nurta = 2015-10-15 15:31:00
-ts_nurtb = 2015-10-15 15:31:00
-ts_pepsb = 2014-01-01 00:00:00
-ts_pepta = 2015-10-15 14:03:00
-ts_peptc = 2015-10-15 14:01:00
-ts_sagta = 2015-10-14 15:31:00
-ts_sagtb = 2015-10-15 14:00:00
-ts_tuetb = 2015-10-15 14:02:00
-ts_agbsbm = 2015-10-06 18:00:00
-ts_baysbm = 2015-10-06 18:00:00
-ts_blcsam = 2015-10-06 18:00:00
-ts_calsam = 2015-10-06 18:00:00
-ts_calsbm = 2015-10-06 18:00:00
-ts_caltam = 2015-10-06 18:00:00
-ts_mcasbm = 2015-10-06 18:00:00
-ts_pepsbm = 2015-10-06 18:00:00
-
-
-ts_dadta = 2014-01-01 00:00:00
-ts_dadtb = 2014-01-01 00:00:00
-ts_lunsa = 2014-01-01 00:00:00
-ts_luntb = 2014-01-01 00:00:00
-ts_luntc = 2014-01-01 00:00:00
-ts_magta = 2014-01-01 00:00:00
-ts_magtb = 2014-01-01 00:00:00
-ts_magtc = 2014-01-01 00:00:00
-ts_magtd = 2014-01-01 00:00:00
-ts_messb = 2014-01-01 00:00:00
-ts_sibta = 2014-01-01 00:00:00
-ts_sibtb = 2014-01-01 00:00:00
-ts_sumta = 2014-01-01 00:00:00
-ts_sumtb = 2014-01-01 00:00:00
-ts_tueta = 2014-01-01 00:00:00
-
 
