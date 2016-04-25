@@ -189,9 +189,9 @@ print operatingSystem
 if operatingSystem == 'Windows':
     outputPath = cfg.get('Folders', 'windowsOutput')
 elif operatingSystem == 'Linux':
-    tempPath = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
+    tempPath = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../..'))
     outputFolder = cfg.get('Folders', 'linuxOutput')
-    outputPath = tempPath + outputFolder
+    outputPath = tempPath + "/" + outputFolder
     
     #Create the 'linuxOutput' folder if it doesn't exist yet
     if not os.path.exists(outputPath):
