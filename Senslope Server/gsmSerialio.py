@@ -18,14 +18,18 @@ class sms:
        self.data = data
        self.dt = dt
        
-def gsmInit(port):
-    print 'Connecting to GSM modem at COM',
-    gsm.port = port
+def gsmInit(network):
+    Port = cfg.get('Serial', network+'port')
+    print 'Connecting to GSM modem at', Port
+    
+    if Port.find("COM")>0:
+        gsm.port = int(re.search("\d+").group(0)) - 1
+    else:
+        gsm.port = Port
     gsm.baudrate = Baudrate
     gsm.timeout = Timeout
     gsm.open()
     #gsmflush()
-    print port+1
     print 'Switching to no-echo mode', gsmcmd('ATE0').strip('\r\n')
     print 'Switching to text mode', gsmcmd('AT+CMGF=1').rstrip('\r\n')
     

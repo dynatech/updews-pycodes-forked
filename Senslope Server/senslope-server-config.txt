@@ -10,10 +10,10 @@ savetofile = False
 
 [Serial]
 baudrate = 57600
-sunport = 16
-globeport = 16
+sunport = COM16
+globeport = COM16
 timeout = 5
-smartport = 17
+smartport = COM17
 
 [SMSAlert]
 sunnumbers = 09228412065,09228120490,09253120491

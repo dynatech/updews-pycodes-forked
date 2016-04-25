@@ -4,7 +4,6 @@ import datetime
 import ConfigParser
 from datetime import datetime as dt
 from datetime import timedelta as td
-import winsound
 import emailer
 from senslopedbio import *
 from gsmSerialio import *
@@ -190,15 +189,9 @@ def RunSenslopeServer(network):
     lastAlertMsgSent = ''
     logruntimeflag = True
     global checkIfActive
-    if network == "SUN":
-        Port = cfg.getint('Serial', 'SunPort') - 1
-    elif network == "GLOBE":
-        Port = cfg.getint('Serial', 'GlobePort') - 1
-    else:
-        Port = cfg.getint('Serial', 'SmartPort') - 1
 
     try:
-        gsmInit(Port)        
+        gsmInit(network)        
     except serial.SerialException:
         print ">> ERROR: Could not open COM %r!" % (Port+1)
         print '**NO COM PORT FOUND**'
