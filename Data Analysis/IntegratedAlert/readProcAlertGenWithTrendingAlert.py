@@ -662,6 +662,11 @@ PrintTimer = cfg.getboolean('I/O','PrintTimer')
 PrintAAlert = cfg.getboolean('I/O','PrintAAlert')
 PrintGSMAlert = cfg.getboolean('I/O', 'PrintGSMAlert')
 
+#if PrintColPos or PrintTrendAlerts:
+#    import matplotlib.pyplot as plt
+#    plt.ioff()
+
+
 #MAIN
 
 #Set as true if printing by JSON would be done
@@ -699,7 +704,7 @@ hr = end - timedelta(hours=3)
 
 with open(output_file_path+webtrends, 'ab') as w, open (output_file_path+textalert, 'wb') as t:
     t.write('As of ' + end.strftime(fmt) + ':\n')
-    w.write(end.strftime(fmt) + ',')
+    w.write(end.strftime(fmt) + ';')
 
 
 CreateColAlertsTable('col_alerts', Namedb)
@@ -913,14 +918,10 @@ for s in sensorlist:
 
 #    #11. Plotting column positions
     if PrintColPos:
-        print 'printcolpos 1'
         plot_column_positions(colname,cs_x,cs_xz_0,cs_xy_0)
-        print 'printcolpos 2'
         plot_column_positions(colname,cs_x,cs_xz,cs_xy)
-        print 'printcolpos 3'
         plt.savefig(output_file_path+colname+' colpos ',
                     dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
-        print 'printcolpos 4'
 #
     #12. Plotting displacement and velocity
     if PrintDispVel:
