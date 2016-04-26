@@ -404,6 +404,10 @@ def alert_summary(alert_out,alert_list):
                 print checklist[c].set_index(['ts','id']).drop(['disp_alert','min_vel','max_vel','vel_alert'], axis=1)
                 break
                 
+def nonrepeat_colors(ax,NUM_COLORS,color='gist_rainbow'):
+    cm = plt.get_cmap(color)
+    ax.set_color_cycle([cm(1.*(NUM_COLORS-i-1)/NUM_COLORS) for i in range(NUM_COLORS)])
+    return ax
     
     
 def plot_column_positions(colname,x,xz,xy):
@@ -423,6 +427,10 @@ def plot_column_positions(colname,x,xz,xy):
         plt.suptitle(colname+" absolute position", fontsize = 12)
         ax_xz=fig.add_subplot(121)
         ax_xy=fig.add_subplot(122,sharex=ax_xz,sharey=ax_xz)
+        
+        ax_xz=nonrepeat_colors(ax_xz,len(cs_x))
+        ax_xy=nonrepeat_colors(ax_xy,len(cs_x))        
+        
         print 'plot_column_positions 1'
         for i in cs_x.index:
             curcolpos_x=x[(x.index==i)].values
@@ -480,6 +488,11 @@ def plot_disp_vel(colname, xz,xy,xz_vel,xy_vel):
     
         ax_xzv=fig.add_subplot(143)
         ax_xyv=fig.add_subplot(144,sharex=ax_xzv,sharey=ax_xzv)
+        
+        ax_xzd=nonrepeat_colors(ax_xzd,len(xz.columns))
+        ax_xyd=nonrepeat_colors(ax_xyd,len(xz.columns))
+        ax_xzv=nonrepeat_colors(ax_xzv,len(xz.columns))
+        ax_xyv=nonrepeat_colors(ax_xyv,len(xz.columns))
     
         curax=ax_xzd
         plt.sca(curax)
