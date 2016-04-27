@@ -704,17 +704,6 @@ alert_df = []
 alert_list=[l3_alert,l2_alert,l0_alert,nd_alert]
 alert_names=['l3: ','l2: ','l0: ','ND: ']
 
-# creating dictionary of working nodes per site
-wn = open('working_nodes.txt', 'r')
-working_nodes = {}
-for line in wn:
-    lst = line.split(',')
-    site = lst[0]
-    for i in range(1,len(lst)):
-        lst[i] = int(lst[i])
-    nodes = lst[1:len(lst)]
-    working_nodes[site] = nodes
-
 print "Generating plots and alerts for:"
 
 names = ['ts','col_a']
@@ -731,6 +720,8 @@ CreateColAlertsTable('col_alerts', Namedb)
 # getting list of sensors
 sensorlist = GetSensorList()
 
+node_status = GetNodeStatus(1)
+
 for s in sensorlist:
 
     if test_specific_sites:
@@ -744,6 +735,13 @@ for s in sensorlist:
     # getting current column properties
     colname,num_nodes,seg_len= s.name,s.nos,s.seglen
     print colname, num_nodes, seg_len
+
+    # list of working nodes     
+    node_list = range(1, num_nodes + 1)
+    not_working = node_status.loc[(node_status.site == colname) & (node_status.node <= num_nodes)]
+    not_working_nodes = not_working['node'].values        
+    for i in not_working_nodes:
+        node_list.remove(i)
 
     # importing proc_monitoring csv file of current column to dataframe
     try:
@@ -818,7 +816,7 @@ for s in sensorlist:
     trending_col_alerts = []
     
     try:
-        for n in working_nodes.get(colname):
+        for n in node_list:
             trending_col_alerts += [pd.Series.tolist(alert_out.col_alert)[n-1]]
     except TypeError:
         continue
@@ -847,7 +845,7 @@ for s in sensorlist:
     working_node_alerts = []
 
     try:
-        for n in working_nodes.get(colname):
+        for n in node_list:
             working_node_alerts += [trending_node_alerts[n-1]]
     except TypeError:
         continue
@@ -1040,23 +1038,23 @@ if PrintGSMAlert:
         f.write(text)
         f.close()
 
-name = []
-nos = []
-for col in sensorlist:
-    name += [col.name]
-    nos += [col.nos]
-sensors = pd.DataFrame(data=None)
-sensors['name']=name
-sensors['nos']=nos
-sensors=sensors.set_index('name')
-
-# gets list of working sites
-working_sites = []
-with open('working_sites.txt', 'r') as SQLsites:
-    for line in SQLsites:
-        working_sites += [line.split('\n')[0]]
-        
-
+#name = []
+#nos = []
+#for col in sensorlist:
+#    name += [col.name]
+#    nos += [col.nos]
+#sensors = pd.DataFrame(data=None)
+#sensors['name']=name
+#sensors['nos']=nos
+#sensors=sensors.set_index('name')
+#
+## gets list of working sites
+#working_sites = []
+#with open('working_sites.txt', 'r') as SQLsites:
+#    for line in SQLsites:
+#        working_sites += [line.split('\n')[0]]
+#        
+#
 ## creates list of sites with no data and classifies whether its raw or filtered
 #if PrintND:
 #    with open(output_file_path+NDlog, 'ab') as ND:
