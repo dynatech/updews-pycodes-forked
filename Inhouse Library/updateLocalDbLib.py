@@ -475,6 +475,12 @@ def downloadNodeStatusData(postId = 0):
     try:
         jsonData = pd.read_json(url, orient='columns')
         df = pd.DataFrame(jsonData)
+        isDFempty = df.empty
+        
+        # Check if there is no data
+        if isDFempty == True:
+            return pd.DataFrame()        
+        
         df = df.set_index(['post_id'])
         print "downloadNodeStatusData done" 
         
@@ -686,7 +692,7 @@ def updateNodeStatusTable():
     targetTable = "node_status"
     
     if isDFempty == True:
-        print 'Update failed...'
+        print 'No new data...'
     else:
         print 'Updating %s table...' % (targetTable)
         numElements = len(df.index)
