@@ -64,6 +64,12 @@ PrintProc = cfg.getboolean('I/O','PrintProc')
 if PrintProc:
     if not os.path.exists(proc_monitoring_path):
         os.makedirs(proc_monitoring_path)
+        
+def GetNodesWithNoInitialData(df,num_nodes,offsetstart):
+    allnodes=np.arange(1,num_nodes+1)*1.
+    with_init_val=df[df.ts==offsetstart]['id'].values
+    no_init_val=allnodes[np.in1d(allnodes, with_init_val, invert=True)]
+    return no_init_val
 
 def generate_proc(site):
     
@@ -86,6 +92,14 @@ def generate_proc(site):
                 
             #3. getting accelerometer data for site 'colname'
             monitoring=GetFilledAccelData(colname,offsetstart)
+            
+             
+            #3.1 identify the node ids with no data at start of monitoring window
+            NodesNoInitVal=GetNodesWithNoInitialData(monitoring,num_nodes,offsetstart)
+            
+            #TODO: get last good data prior to the monitoring window (LGDOM)
+ 
+            #TODO: Resample the dataframe together with the LGDOM
     
             #4. evaluating which data needs to be filtered
             try:

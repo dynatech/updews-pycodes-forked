@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 plt.ioff()
 
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 import pandas as pd
 from pandas.stats.api import ols
 import numpy as np
@@ -29,10 +29,31 @@ from querySenslopeDb import *
 from filterSensorData import *
 
 
+def get_rt_window(rt_window_length,roll_window_size,num_roll_window_ops, end_timestamp):
+    
+    ##DESCRIPTION:
+    ##returns the time interval for real-time monitoring
+
+    ##INPUT:
+    ##rt_window_length; float; length of real-time monitoring window in days
+    ##roll_window_size; integer; number of data points to cover in moving window operations
+    
+    ##OUTPUT: 
+    ##end, start, offsetstart; datetimes; dates for the end, start and offset-start of the real-time monitoring window 
+
+    ##set current time as endpoint of the interval
+    end=end_timestamp
+
+    #starting point of the interval
+    start=end-timedelta(days=rt_window_length)
+    
+    #starting point of interval with offset to account for moving window operations 
+    offsetstart=end-timedelta(days=rt_window_length+((num_roll_window_ops*roll_window_size-1)/48.))
+    
+    return end, start, offsetstart
 
 
-
-def set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_window_ops):
+def set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_window_ops, end_timestamp):
     
     ##DESCRIPTION:    
     ##returns number of data points per rolling window, endpoint of interval, starting point of interval, time interval for real-time monitoring, monitoring window dataframe
@@ -47,7 +68,7 @@ def set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_w
     ##roll_window_numpts, end, start, offsetstart, monwin
     
     roll_window_numpts=int(1+roll_window_length/data_dt)
-    end, start, offsetstart=gf.get_rt_window(rt_window_length,roll_window_numpts,num_roll_window_ops)
+    end, start, offsetstart=get_rt_window(rt_window_length,roll_window_numpts,num_roll_window_ops,end_timestamp)
     monwin_time=pd.date_range(start=offsetstart, end=end, freq='30Min',name='ts', closed=None)
     monwin=pd.DataFrame(data=np.nan*np.ones(len(monwin_time)), index=monwin_time)
     return roll_window_numpts, end, start, offsetstart, monwin
@@ -659,11 +680,9 @@ k_ac_ax = cfg.getfloat('I/O','k_ac_ax')
 num_nodes_to_check = cfg.getint('I/O','num_nodes_to_check')
 alert_file_length=cfg.getint('I/O','alert_time_int') # in days
 
-to_fill = cfg.getint('I/O','to_fill')
-to_smooth = cfg.getint('I/O','to_smooth')
+to_fill = 1
+to_smooth = 0
 
-with_TrendingNodeAlert = cfg.getboolean('I/O','with_TrendingNodeAlert')
-test_specific_sites = cfg.getboolean('I/O','test_specific_sites')
 test_sites = cfg.get('I/O','test_sites').split(',')
 
 
@@ -685,35 +704,11 @@ PrintGSMAlert = cfg.getboolean('I/O', 'PrintGSMAlert')
 #    import matplotlib.pyplot as plt
 #    plt.ioff()
 
-
 #MAIN
-
-#Set as true if printing by JSON would be done
-set_json = False
-
-
-# setting monitoring window
-roll_window_numpts, end, start, offsetstart, monwin = set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_window_ops)
-
-# creating summary of alerts
-nd_alert=[]
-l0_alert=[]
-l2_alert=[]
-l3_alert=[]
-alert_df = []
-alert_list=[l3_alert,l2_alert,l0_alert,nd_alert]
-alert_names=['l3: ','l2: ','l0: ','ND: ']
-
-print "Generating plots and alerts for:"
 
 names = ['ts','col_a']
 fmt = '%Y-%m-%d %H:%M'
-hr = end - timedelta(hours=3)
-
-with open(output_file_path+webtrends, 'ab') as w, open (output_file_path+textalert, 'wb') as t:
-    t.write('As of ' + end.strftime(fmt) + ':\n')
-    w.write(end.strftime(fmt) + ';')
-
+fig_fmt = '%Y-%m-%d %H-%M'  
 
 CreateColAlertsTable('col_alerts', Namedb)
 
@@ -722,171 +717,188 @@ sensorlist = GetSensorList()
 
 node_status = GetNodeStatus(1)
 
-for s in sensorlist:
+positive_l = {}
+f = open(output_file_path+'textalert2.txt')
+n = 0
+for line in f:
+    if n == 0:
+        event_timestamp = line[6:22]
+    if line[0:2] == 'l2' or line[0:2] == 'l3':
+        if len(line) > 5:
+            positive_l[line[0:2]] = line[4:len(line) - 1].split(',')
+    n += 1
 
-    if test_specific_sites:
-        if s.name not in test_sites:
+analyze_sites = []
+for positive_alert in positive_l.keys():
+    analyze_sites += positive_l.get(positive_alert)
+
+event_timestamp = pd.to_datetime(event_timestamp)
+
+##round down event time to the nearest HH:00 or HH:30 time value
+end_Year=event_timestamp.year
+end_month=event_timestamp.month
+end_day=event_timestamp.day
+end_hour=event_timestamp.hour
+end_minute=event_timestamp.minute
+if end_minute<30:end_minute=0
+else:end_minute=30
+from datetime import time
+event_timestamp=datetime.combine(date(end_Year,end_month,end_day),time(end_hour,end_minute,0))
+
+
+for time_analyze in range(7):
+    end_timestamp = event_timestamp - timedelta(hours = 0.5*(6-time_analyze))
+
+    # setting monitoring window
+    roll_window_numpts, end, start, offsetstart, monwin = set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_window_ops, end_timestamp)
+    
+    hr = end - timedelta(hours=3)     
+    
+    # creating summary of alerts
+    nd_alert=[]
+    l0_alert=[]
+    l2_alert=[]
+    l3_alert=[]
+    alert_df = []
+    alert_list=[l3_alert,l2_alert,l0_alert,nd_alert]
+    alert_names=['l3: ','l2: ','l0: ','ND: ']
+    
+    print "Generating plots and alerts for:"
+    
+    print colname
+        
+    for s in sensorlist:
+    
+        if s.name not in analyze_sites:
             continue
-
-    last_col=sensorlist[-1:]
-    last_col=last_col[0]
-    last_col=last_col.name
     
-    # getting current column properties
-    colname,num_nodes,seg_len= s.name,s.nos,s.seglen
-    print colname, num_nodes, seg_len
-
-    # list of working nodes     
-    node_list = range(1, num_nodes + 1)
-    not_working = node_status.loc[(node_status.site == colname) & (node_status.node <= num_nodes)]
-    not_working_nodes = not_working['node'].values        
-    for i in not_working_nodes:
-        node_list.remove(i)
-
-    # importing proc_monitoring csv file of current column to dataframe
-    try:
-        proc_monitoring=genproc.generate_proc(colname)
-        print proc_monitoring
-        print "\n", colname
-    except:
-        print "     ",colname, "ERROR...missing/empty proc monitoring"
-        continue
-
-    # creating series lists per node
-    xz_series_list,xy_series_list = create_series_list(proc_monitoring,monwin,colname,num_nodes)
-
-    # create, fill and smooth dataframes from series lists
-    xz=create_fill_smooth_df(xz_series_list,num_nodes,monwin, roll_window_numpts,to_fill,to_smooth)
-    xy=create_fill_smooth_df(xy_series_list,num_nodes,monwin, roll_window_numpts,to_fill,to_smooth)
+        last_col=sensorlist[-1:]
+        last_col=last_col[0]
+        last_col=last_col.name
+        
+        # getting current column properties
+        colname,num_nodes,seg_len= s.name,s.nos,s.seglen
+        print colname, num_nodes, seg_len
     
-    # computing instantaneous velocity
-    vel_xz, vel_xy = compute_node_inst_vel(xz,xy,roll_window_numpts)
+        # list of working nodes     
+        node_list = range(1, num_nodes + 1)
+        not_working = node_status.loc[(node_status.site == colname) & (node_status.node <= num_nodes)]
+        not_working_nodes = not_working['node'].values        
+        for i in not_working_nodes:
+            node_list.remove(i)
     
-    # computing cumulative displacements
-    cs_x, cs_xz, cs_xy=compute_col_pos(xz,xy,monwin.index[-1], col_pos_interval, col_pos_num)
-
-    # processing dataframes for output
-    xz,xy,xz_0off,xy_0off,vel_xz,vel_xy, vel_xz_0off, vel_xy_0off,cs_x,cs_xz,cs_xy,cs_xz_0,cs_xy_0 = df_to_out(colname,xz,xy,
-                                                                                                               vel_xz,vel_xy,
-                                                                                                               cs_x,cs_xz,cs_xy,
-                                                                                                               proc_file_path,
-                                                                                                               CSVFormat)
-                                                                                                                          
-    # Alert generation
-    alert_out=alert_generation(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velL2, T_velL3, k_ac_ax,
-                               num_nodes_to_check,end,proc_file_path,CSVFormat)
-    print alert_out
-
-########################################################################
-
-    #connecting to localdb
-    db = MySQLdb.connect(host = Hostdb, user = Userdb, passwd = Passdb)
-    cur = db.cursor()
-    cur.execute("USE %s"%Namedb)
-
-
-    #writes col_alert to csv    
-    for s in range(len(pd.Series.tolist(alert_out.col_alert))):
-        query = """INSERT IGNORE INTO col_alerts (sitecode, timestamp, id, alerts) VALUES """
-        query = query + str((str(colname), str(end), str(s+1), str(pd.Series.tolist(alert_out.col_alert)[s])))
+        # importing proc_monitoring csv file of current column to dataframe
+        try:
+            proc_monitoring=genproc.generate_proc(colname)
+            print proc_monitoring
+            print "\n", colname
+        except:
+            print "     ",colname, "ERROR...missing/empty proc monitoring"
+            continue
+    
+        # creating series lists per node
+        xz_series_list,xy_series_list = create_series_list(proc_monitoring,monwin,colname,num_nodes)
+    
+        # create, fill and smooth dataframes from series lists
+        xz=create_fill_smooth_df(xz_series_list,num_nodes,monwin, roll_window_numpts,to_fill,to_smooth)
+        xy=create_fill_smooth_df(xy_series_list,num_nodes,monwin, roll_window_numpts,to_fill,to_smooth)
+        
+        # computing instantaneous velocity
+        vel_xz, vel_xy = compute_node_inst_vel(xz,xy,roll_window_numpts)
+        
+        # computing cumulative displacements
+        cs_x, cs_xz, cs_xy=compute_col_pos(xz,xy,monwin.index[-1], col_pos_interval, col_pos_num)
+    
+        # processing dataframes for output
+        xz,xy,xz_0off,xy_0off,vel_xz,vel_xy, vel_xz_0off, vel_xy_0off,cs_x,cs_xz,cs_xy,cs_xz_0,cs_xy_0 = df_to_out(colname,xz,xy,
+                                                                                                                   vel_xz,vel_xy,
+                                                                                                                   cs_x,cs_xz,cs_xy,
+                                                                                                                   proc_file_path,
+                                                                                                                   CSVFormat)
+                                                                                                                              
+        # Alert generation
+        alert_out=alert_generation(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velL2, T_velL3, k_ac_ax,
+                                   num_nodes_to_check,end,proc_file_path,CSVFormat)
+        print alert_out
+    
+    ########################################################################
+    
+        #connecting to localdb
+        db = MySQLdb.connect(host = Hostdb, user = Userdb, passwd = Passdb)
+        cur = db.cursor()
+        cur.execute("USE %s"%Namedb)
+    
+    
+        #writes col_alert to csv    
+        for s in range(len(pd.Series.tolist(alert_out.col_alert))):
+            query = """INSERT IGNORE INTO col_alerts (sitecode, timestamp, id, alerts) VALUES """
+            query = query + str((str(colname), str(end), str(s+1), str(pd.Series.tolist(alert_out.col_alert)[s])))
+            cur.execute(query)
+            db.commit()
+    
+        #deletes col_alerts older than 3 hrs
+        query = """DELETE FROM col_alerts WHERE timestamp < TIMESTAMP('%s')""" % hr
         cur.execute(query)
-        db.commit()
-
-    #deletes col_alerts older than 3 hrs
-    query = """DELETE FROM col_alerts WHERE timestamp < TIMESTAMP('%s')""" % hr
-    cur.execute(query)
-    db.commit()  
-    
-    #selects and otputs to dataframe col_alerts from the last 3hrs
-    query = "select sitecode, timestamp, id, alerts from senslopedb.col_alerts where timestamp >= timestamp('%s')" % hr
-    query = query + " and timestamp <= timestamp('%s')" % end
-    query = query + " and id >= 1 and id <= %s" % num_nodes
-    query = query + " and sitecode = '%s' ;" % colname
-    df =  GetDBDataFrame(query)   
-    df.columns = ['sitecode', 'timestamp', 'id', 'alerts']
-    df.timestamp = pd.to_datetime(df.timestamp)
-    df = df[['timestamp', 'id', 'alerts']]
-    print df
-    
-    db.close()
-    
-###############################################################################
-    
-    # without trending_node_alert
-    trending_col_alerts = []
-    
-    try:
-        for n in node_list:
-            trending_col_alerts += [pd.Series.tolist(alert_out.col_alert)[n-1]]
-    except TypeError:
-        continue
-    
-    # trending node alert for all nodes
-    trending_node_alerts = []
-    for n in range(1,1+num_nodes): 
-        calert = df.loc[df['id'] == n]        
-        node_trend = pd.Series.tolist(calert.alerts)
-        counter = Counter(node_trend)
-        max_count = max(counter.values())
-        mode = [k for k,v in counter.items() if v == max_count]
-        if 'l3' in mode:
-            mode = ['l3']
-        elif 'l2' in mode:
-            mode = ['l2']
-        elif 'nd' in mode:
-            mode = ['nd']   
-        elif 'l0' in mode:
-            mode = ['l0']
-        else:
-            print "No node data for node " + str(n) + " in" + colname
-        trending_node_alerts.extend(mode)
-
-    # trending node alert for working nodes
-    working_node_alerts = []
-
-    try:
-        for n in node_list:
-            working_node_alerts += [trending_node_alerts[n-1]]
-    except TypeError:
-        continue
+        db.commit()  
         
-    #adding trending node alerts to alert output table 
-    alert_out['trending_alert']=trending_node_alerts
-    print alert_out
-
-    if PrintTrendAlerts:    
-        with open(TrendAlerts_file_path+colname+CSVFormat, "ab") as c:
-            trending_node_alerts.insert(0, end.strftime(fmt))
-            wr = csv.writer(c, quoting=False)
-            wr.writerows([trending_node_alerts])   
+        #selects and otputs to dataframe col_alerts from the last 3hrs
+        query = "select sitecode, timestamp, id, alerts from senslopedb.col_alerts where timestamp >= timestamp('%s')" % hr
+        query = query + " and timestamp <= timestamp('%s')" % end
+        query = query + " and id >= 1 and id <= %s" % num_nodes
+        query = query + " and sitecode = '%s' ;" % colname
+        df =  GetDBDataFrame(query)   
+        df.columns = ['sitecode', 'timestamp', 'id', 'alerts']
+        df.timestamp = pd.to_datetime(df.timestamp)
+        df = df[['timestamp', 'id', 'alerts']]
+        print df
         
-        seen = set() # set for fast O(1) amortized lookup
-        for line in fileinput.FileInput(TrendAlerts_file_path+colname+CSVFormat, inplace=1):
-         if line in seen: continue # skip duplicate
+        db.close()
+        
+    ###############################################################################
+            
+        # trending node alert for all nodes
+        trending_node_alerts = []
+        for n in range(1,1+num_nodes): 
+            calert = df.loc[df['id'] == n]        
+            node_trend = pd.Series.tolist(calert.alerts)
+            counter = Counter(node_trend)
+            max_count = max(counter.values())
+            mode = [k for k,v in counter.items() if v == max_count]
+            if 'l3' in mode:
+                mode = ['l3']
+            elif 'l2' in mode:
+                mode = ['l2']
+            elif 'nd' in mode:
+                mode = ['nd']   
+            elif 'l0' in mode:
+                mode = ['l0']
+            else:
+                print "No node data for node " + str(n) + " in" + colname
+            trending_node_alerts.extend(mode)
     
-         seen.add(line)
-         print line, # standard output is now redirected to the file
+        # trending node alert for working nodes
+        working_node_alerts = []
     
-    # writes sensor name and sensor alerts alphabetically, one sensor per row, in textalert
-    # WITH TRENDING NODE ALERT
-    if with_TrendingNodeAlert:        
+        try:
+            for n in node_list:
+                working_node_alerts += [trending_node_alerts[n-1]]
+        except TypeError:
+            continue
+            
+        #adding trending node alerts to alert output table 
+        alert_out['trending_alert']=trending_node_alerts
+        print alert_out
+        
+        # alert per column
+        # WITH TRENDING NODE ALERT
         if working_node_alerts.count('l3') != 0:
-            if PrintTAlert:
-                with open (output_file_path+textalert, 'ab') as t:
-                    t.write (colname + ":" + 'l3' + '\n')
             l3_alert.append(colname)
             alert_df.append((end,colname,'l3'))                
         elif working_node_alerts.count('l2') != 0:
-            if PrintTAlert:
-                with open (output_file_path+textalert, 'ab') as t:
-                    t.write (colname + ":" + 'l2' + '\n')
             l2_alert.append(colname)
             alert_df.append((end,colname,'l2'))
         else:
             working_node_alerts_count = Counter(working_node_alerts)  
-            if PrintTAlert:
-                with open (output_file_path+textalert, 'ab') as t:
-                    t.write (colname + ":" + (working_node_alerts_count.most_common(1)[0][0]) + '\n')
             if (working_node_alerts_count.most_common(1)[0][0] == 'l0'):
                 l0_alert.append(colname)
                 alert_df.append((end,colname,'l0'))
@@ -896,263 +908,31 @@ for s in sensorlist:
     #        
             if len(calert.index)<7:
                 print 'Trending alert note: less than 6 data points for ' + colname
+            
+        print alert_out
+      
+    #    #11. Plotting column positions
+        if end == event_timestamp:
+            plot_column_positions(colname,cs_x,cs_xz_0,cs_xy_0)
+            plot_column_positions(colname,cs_x,cs_xz,cs_xy)
+            plt.savefig(output_file_path+colname+' colpos '+end.strftime(fig_fmt),
+                        dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
+    #
+        #12. Plotting displacement and velocity
+        if end == event_timestamp:
+            plot_disp_vel(colname, xz_0off,xy_0off, vel_xz_0off, vel_xy_0off)
+            plt.savefig(output_file_path+colname+' disp_vel '+end.strftime(fig_fmt),
+                        dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
     
-    # TRENDING COLUMN ALERT ONLY
-    else:
-        if trending_col_alerts.count('l3') != 0:
-            if PrintTAlert:
-                with open (output_file_path+textalert, 'ab') as t:
-                    t.write (colname + ":" + 'l3' + '\n')
-            l3_alert.append(colname)
-            alert_df.append((end,colname,'l3'))                
-        elif trending_col_alerts.count('l2') != 0:
-            if PrintTAlert:
-                with open (output_file_path+textalert, 'ab') as t:
-                    t.write (colname + ":" + 'l2' + '\n')
-            l2_alert.append(colname)
-            alert_df.append((end,colname,'l2'))
-        else:
-            trending_col_alerts_count = Counter(trending_col_alerts)  
-            if PrintTAlert:
-                with open (output_file_path+textalert, 'ab') as t:
-                    t.write (colname + ":" + (trending_col_alerts_count.most_common(1)[0][0]) + '\n')
-            if (trending_col_alerts_count.most_common(1)[0][0] == 'l0'):
-                l0_alert.append(colname)
-                alert_df.append((end,colname,'l0'))
-            else:
-                nd_alert.append(colname)
-                alert_df.append((end,colname,'nd'))
-    #        
-            if len(calert.index)<7:
-                print 'Trending alert note: less than 6 data points for ' + colname        
-    
-    # writes sensor alerts in one row in webtrends
-    if PrintWAlert:
-        with open(output_file_path+webtrends, 'ab') as w:
-                if working_node_alerts.count('l3') != 0:
-                    w.write ('l3' + ',')
-                elif working_node_alerts.count('l2') != 0:
-                    w.write ('l2' + ',')
-                elif (colname == 'sinb') or (colname == 'blcb'):
-                    if working_node_alerts.count('l0') > 0:
-                        w.write ('l0' + ',')
-                    else:
-                        w.write ('nd' + ',')       
-                else:
-                    working_node_alerts = Counter(working_node_alerts)  
-                    w.write ((working_node_alerts.most_common(1)[0][0]) + ',')
-        #        
-                if len(calert.index)<7:
-                    print 'Trending alert note: less than 6 data points for ' + colname
-                
-                if colname == last_col:
-                           w.seek(-1, os.SEEK_END)
-                           w.truncate()
-                           w.write('\n')
-    
-    print alert_out
-  
-#    prints to csv: node alert, column alert and trending alert of sites with nd alert
-    if PrintND:
-        for colname in nd_alert:
-            if os.path.exists(nd_path + colname + CSVFormat):
-                alert_out[['node_alert', 'col_alert', 'trending_alert']].to_csv(nd_path + colname + CSVFormat, sep=',', header=False, mode='a')
-            else:
-                alert_out[['node_alert', 'col_alert', 'trending_alert']].to_csv(nd_path + colname + CSVFormat, sep=',', header=True, mode='w')
-
-#    #11. Plotting column positions
-    if PrintColPos:
-        plot_column_positions(colname,cs_x,cs_xz_0,cs_xy_0)
-        plot_column_positions(colname,cs_x,cs_xz,cs_xy)
-        plt.savefig(output_file_path+colname+' colpos ',
-                    dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
-#
-    #12. Plotting displacement and velocity
-    if PrintDispVel:
-        plot_disp_vel(colname, xz_0off,xy_0off, vel_xz_0off, vel_xy_0off)
-        plt.savefig(output_file_path+colname+' disp_vel ',
-                    dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
-
-    if PrintColPos or PrintDispVel:
         plt.close()
+    
+print 'nd: ', ','.join(nd_alert)
+print 'l0: ', ','.join(l0_alert)
+print 'l1: ', ','.join(l2_alert)
+print 'l2: ', ','.join(l3_alert)
 
-# writes list of site per alert level in textalert2
-if PrintTAlert2:
-    with open (output_file_path+textalert2, 'wb') as t:
-        t.write('As of ' + end.strftime(fmt) + ':\n')
-        t.write ('l0: ' + ','.join(sorted(l0_alert)) + '\n')
-        t.write ('nd: ' + ','.join(sorted(nd_alert)) + '\n')
-        t.write ('l2: ' + ','.join(sorted(l2_alert)) + '\n')
-        t.write ('l3: ' + ','.join(sorted(l3_alert)) + '\n')
-
-
-#Prints rainfall alerts, text alert and eq summary in one file
-if PrintAAlert:
-    with open(output_file_path+all_alerts, 'wb') as allalerts:
-        allalerts.write('As of ' + end.strftime(fmt) + ':\n')
-        allalerts.write('l3: ' + ','.join(sorted(l3_alert)) + '\n')
-        allalerts.write('l2: ' + ','.join(sorted(l2_alert)) + '\n')
-        allalerts.write('\n')
-        with open(output_file_path+rainfall_alert) as rainfallalert:
-            n = 0
-            for line in rainfallalert:
-                if n == 0 or n == 3 or n == 4:
-                    allalerts.write(line)
-                n += 1
-            allalerts.write('\n')
-        with open(output_file_path+eq_summary) as eqsummary:
-            for line in eqsummary:
-                allalerts.write(line)
-
-if PrintGSMAlert:
-    with open(output_file_path+gsm_alert, 'wb') as gsmalert:
-        if len(l3_alert) != 0:
-            gsmalert.write('l3: ' + ','.join(sorted(l3_alert)) + '\n')
-        if len(l2_alert) != 0:
-            gsmalert.write('l2: ' + ','.join(sorted(l2_alert)) + '\n')
-        with open(output_file_path+rainfall_alert) as rainfallalert:
-            n = 0
-            for line in rainfallalert:
-                if n == 3 or n == 4:
-                    if len(line) > 6:
-                        gsmalert.write(line)
-                n += 1
-        with open(output_file_path+eq_summaryGSM) as eqsummary:
-            n = 0            
-            for line in eqsummary:
-                if n == 0:
-                    eqalert = line[6:25]
-                    if end - pd.to_datetime(eqalert) > timedelta(hours = 0.5):
-                        break
-                else:
-                    gsmalert.write(line)
-                n += 1
-
-if PrintGSMAlert:                        
-    f = open(output_file_path+gsm_alert)
-    text = f.read()
-    f.close()
-    if os.stat(output_file_path+gsm_alert).st_size != 0:
-        f = open(output_file_path+gsm_alert, 'w')
-        f.write('As of ' + end.strftime(fmt) + ':\n')
-        f.write(text)
-        f.close()
-
-#name = []
-#nos = []
-#for col in sensorlist:
-#    name += [col.name]
-#    nos += [col.nos]
-#sensors = pd.DataFrame(data=None)
-#sensors['name']=name
-#sensors['nos']=nos
-#sensors=sensors.set_index('name')
-#
-## gets list of working sites
-#working_sites = []
-#with open('working_sites.txt', 'r') as SQLsites:
-#    for line in SQLsites:
-#        working_sites += [line.split('\n')[0]]
-#        
-#
-## creates list of sites with no data and classifies whether its raw or filtered
-#if PrintND:
-#    with open(output_file_path+NDlog, 'ab') as ND:
-#        if len(l0_alert) == 0 and len(l2_alert) == 0 and len(l3_alert) == 0:
-#            ND.write(end.strftime(fmt) + ',D,')
-#            ND.write("ND on all sites,")
-#            ND.write(',\n')
-#    if len(l0_alert) != 0 or len(l2_alert) != 0 or len(l3_alert) != 0:
-#        with open(output_file_path+NDlog, 'ab') as ND:
-#            try:
-#                ND.write(end.strftime(fmt) + ',D,')
-#                for colname in nd_alert:
-#                    filtered = pd.read_csv(proc_file_path+colname+"/"+colname+" "+"alert"+CSVFormat, names=alert_headers,parse_dates='ts',index_col='ts')
-#                    filtered = filtered[(filtered.index>=end)]
-#                    print 'filtered'            
-#                    print filtered
-#                    raw = GetFilledAccelData(colname, end - timedelta(hours=0.5))
-#                    raw = raw.set_index('ts')
-#                    raw = raw[(raw.index>=end)]
-#                    print 'raw'            
-#                    print raw
-#                    filteredND = []
-#                    rawND = []
-#                    for i in filtered.loc[filtered['node_alert']=='nd', ['id']].values:
-#                        if i[0] in raw['id'].values:
-#                            filteredND += [str(i[0])]
-#                        else:
-#                            rawND += [str(i[0])]
-#                    print 'filtered nodes'
-#                    print filteredND
-#                    print 'raw nodes'            
-#                    print rawND
-#                    num_nodes = str(sensors.loc[sensors.index==colname, ['nos']].values[0][0])
-#                    print num_nodes
-#                    if len(filteredND) != 0 and colname in working_sites:
-#                        ND.write(colname + '(f-' + str(len(filteredND)) + '/' + num_nodes + ');')
-#                    if len(rawND) != 0 and colname in working_sites:
-#                        ND.write(colname + '(r-' + str(len(rawND)) + '/' + num_nodes + ');')
-#                ND.write(',\n')
-#            except:
-#                pass
-#
-## creates list of site with no data for 7 consecutive times
-#    with open(output_file_path + ND7x, 'ab') as ND7x:
-#        try:
-#            NDlog = pd.read_csv(output_file_path + NDlog, names = ['ts', 'R or A or D', 'description', 'responder'], parse_dates = 'ts', index_col = 'ts')
-#            NDlog = NDlog[(NDlog.index>=end-timedelta(hours=3))]
-#            if len(NDlog.loc[NDlog['R or A or D']=='R']) != 0 and len(NDlog.loc[NDlog['R or A or D']=='D']) < 7:
-#                ND7x.write('')
-#            else:    
-#                NDlog = NDlog.loc[NDlog['R or A or D']=='D']
-#                NDcolumns = NDlog['description'].values
-#                for s in range(len(NDcolumns)):
-#                    NDcolumns[s] = NDcolumns[s].split(';')
-#                    NDs = []
-#                    for n in NDcolumns[s]:
-#                        ND = ''
-#                        for i in n:
-#                            if i != '(':
-#                                ND += i
-#                            else:
-#                                NDs += [ND]
-#                    NDcolumns[s] = NDs
-#                NDlog['description'] = NDcolumns
-#            ND7 = []
-#            for n in NDlog['description'].values[-1]:
-#                if n in NDlog['description'].values[0] and NDlog['description'].values[1] and \
-#                NDlog['description'].values[2] and NDlog['description'].values[3] and NDlog['description'].values[4] \
-#                and NDlog['description'].values[5]:
-#                    ND7 += [n]
-#            if len(ND7) != 0:
-#                ND7x.write(end.strftime(fmt) + ',')
-#                ND7x.write(';'.join(ND7))
-#                ND7x.write('\n')
-#        except:
-#            pass
 
 # records the number of minutes the code runs
 if PrintTimer:
     end_time = datetime.now() - start_time
-    with open (output_file_path+timer, 'ab') as p:
-        p.write (start_time.strftime(fmt) + ": " + str(end_time) + '\n')
-        print 'run time =', end_time
-    
-#Printing of JSON format:
-if set_json:
-#create data frame for easy JSON format printing
-    dfa = pd.DataFrame(alert_df,columns = ['timestamp','site','s alert'])
-
-#convert data frame to JSON format
-    dfajson = dfa.to_json(orient="records",date_format='iso')
-#ensuring proper datetime format
-    i = 0
-    while i <= len(dfajson):
-        if dfajson[i:i+9] == 'timestamp':
-            dfajson = dfajson[:i] + dfajson[i:i+36].replace("T"," ").replace("Z","").replace(".000","") + dfajson[i+36:]
-            i += 1
-        else:
-            i += 1
-    print dfajson
-
+    print 'run time =', end_time
