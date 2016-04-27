@@ -54,6 +54,7 @@ end=datetime.combine(date(end_Year,end_month,end_day),time(end_hour,end_minute,0
 
 #alert container
 alerts = {}
+all_alerts = {}
 
 #Get the sitelist from database
 sitelist = []
@@ -97,20 +98,20 @@ with open (output_file_path+rainfallalert) as rainalert:
         pass
         
 #Step 2: Collect eq alerts
-with open (output_file_path+eqsummary) as eqalert:
-    n = 0
-    for line in eqalert:
-        if n == 0:
-            timestamp = line.split('of')[1][1:-2]
-        elif n == 1 and line[-2:] == 'E0':
-            for e in sitelist:
-                alerts[e] = alerts[e] + ('E0',timestamp)
-        elif line.split('of')[-1][-2:] == 'E1':
-                alerts[e] = alerts[e] + ('E1',timestamp)
-        else:
-            n+=1
-            continue
-        n+=1
+#with open (output_file_path+eqsummary) as eqalert:
+#    n = 0
+#    for line in eqalert:
+#        if n == 0:
+#            timestamp = line.split('of')[1][1:-2]
+#        elif n == 1 and line[-2:] == 'E0':
+#            for e in sitelist:
+#                alerts[e] = alerts[e] + ('E0',timestamp)
+#        elif line.split('of')[-1][-2:] == 'E1':
+#                alerts[e] = alerts[e] + ('E1',timestamp)
+#        else:
+#            n+=1
+#            continue
+#        n+=1
 
 #Step 3: Collect sensor alerts
 with open (output_file_path+textalert) as txtalert_output:
@@ -122,7 +123,7 @@ with open (output_file_path+textalert) as txtalert_output:
             timestamp = line.split('of')[1][1:-2]
         else:
             sensor,salert = line.split(':')
-            sensor_alerts.update({sensor:salert.replace('\n',"")})
+            sensor_alerts.update({sensor:salert.replace('\n',"").upper()})
         n+=1
     for s in sensor_alerts.keys():
         if s == 'mesta' or s == 'messb':
@@ -135,11 +136,11 @@ with open (output_file_path+textalert) as txtalert_output:
                 site_sensor_alert.update({site:(s,sensor_alerts[s])})
     for s in alerts.keys():
         try:
-            if 'l3' in site_sensor_alert[s]:
+            if 'L3' in site_sensor_alert[s]:
                 alerts[s] = alerts[s] + ((site_sensor_alert[s] + ('L3s',timestamp)),)
-            elif 'l2' in site_sensor_alert[s]:
+            elif 'L2' in site_sensor_alert[s]:
                 alerts[s] = alerts[s] + ((site_sensor_alert[s] + ('L2s',timestamp)),)
-            elif 'l0' in site_sensor_alert[s]:
+            elif 'L0' in site_sensor_alert[s]:
                 alerts[s] = alerts[s] + ((site_sensor_alert[s] + ('L0s',timestamp)),)
             else:
                 alerts[s] = alerts[s] + ((site_sensor_alert[s] + ('NDs',timestamp)),)
@@ -164,6 +165,41 @@ with open (output_file_path+groundalert) as groundalert_output:
                 pass
         n+=1
 
+#Step 5: Collating all alerts, arranging them using timestamp
+all_alerts = []
+for site in alerts.keys():
+    site_alert = {}
+    site_alert.update({'site':site})
+    for i in range(len(alerts[site])):
+        if i == 0:
+            site_alert.update({'rain_alert':alerts[site][i]})
+        if i == 1:
+            site_alert.update({'rain_ts':alerts[site][i]})
+        if i == 2:
+            for k in range(len(alerts[site][i])):
+                if k < len(alerts[site][i])-2:
+                    if k%2 == 0:
+                        site_alert.update({'sensor_{}'.format(int(0.5*k+1)):alerts[site][i][k]})
+                    else:
+                        site_alert.update({'sensor_{}_alert'.format(int(0.5*(k+1))):alerts[site][i][k]})
+                elif k == len(alerts[site][i])-2:
+                    site_alert.update({'sensor_all_alert':alerts[site][i][k]})
+                else:
+                    site_alert.update({'sensor_ts':alerts[site][i][k]})
+        if i == 3:
+            site_alert.update({'ground_alert':alerts[site][i]})
+        if i == 4:
+            site_alert.update({'ground_ts':alerts[site][i]})
+    all_alerts.append(site_alert)
+
+df_all_alerts = pd.DataFrame(all_alerts)
+
+#Get the latest public alert from database for each site
+
+
+
+
+
 #Step 5: Create json ready format
 alerts_release = sorted(alerts.items())
 for i in range(len(alerts_release)): alerts_release[i] = (end,) + alerts_release[i]
@@ -181,3 +217,4 @@ while i <= len(dfajson):
     else:
         i += 1
 print dfajson
+print end
