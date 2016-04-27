@@ -284,7 +284,14 @@ def downloadLatestGndMeas(sitecode,fromDate='',toDate='',crackId=''):
     try:
         jsonData = pd.read_json(url, orient='columns')
         df = pd.DataFrame(jsonData)
+        isDFempty = df.empty
+        
+        # Check if there is no data
+        if isDFempty == True:
+            return pd.DataFrame()
+            
         df = df.set_index(['timestamp','meas_type','site_id','crack_id'])
+        
 #        conv = StringIO(s)
 #        df = pd.DataFrame.from_csv(conv, sep=',', parse_dates=False)
         print "downloadLatestGndMeas done. Number of rows: %s" % (len(df))
