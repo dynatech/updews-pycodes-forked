@@ -70,35 +70,41 @@ ND7x = ND7x.csv
 #############################
 ###    ALERT CONSTANTS    ###
 #############################
-T_disp=0.05 			;Treshold displacement value for alert 1 (in meters)
-T_velL2=0.005			;Treshold velocity value for alert level 1 (in meters/day)
-T_velL3=0.5 			;Treshold velocity value for alert level 2 (in meters/day)
-k_ac_ax=0.1			;minimum value velocity of axis across maximum velocity to consider movement as valid (in percent)
-num_nodes_to_check=5		;number of nodes to check before calling column alert level 1 or 2
+T_disp = 0.05 			;Treshold displacement value for alert 1 (in meters)
+T_velL2 = 0.005			;Treshold velocity value for alert level 1 (in meters/day)
+T_velL3 = 0.5 			;Treshold velocity value for alert level 2 (in meters/day)
+k_ac_ax = 0.1			;minimum value velocity of axis across maximum velocity to consider movement as valid (in percent)
+num_nodes_to_check = 5	;number of nodes to check before calling column alert level 1 or 2
 
 ############################
 ###     FILE HEADERS     ###
 ############################
 
-columnproperties_headers=colname,num_nodes,seg_len,col_length
-purged_file_headers=ts,id,x,y,z,m
-monitoring_file_headers=ts,id,x,y,z,m
-LastGoodData_file_headers=ts,id,x,y,z,m
-proc_monitoring_file_headers=ts,id,xz,xy,m
-alerteval_colarrange=id,ND,xz_disp,xy_disp,disp_alert,min_vel,max_vel,vel_alert,node_alert
-alertgen_headers=ND,xz_disp,xy_disp,disp_alert,min_vel,max_vel,vel_alert,node_alert,col_alert
-alert_headers=ts,id,ND,xz_disp,xy_disp,disp_alert,min_vel,max_vel,vel_alert,node_alert,col_alert,trending_col
+columnproperties_headers = colname,num_nodes,seg_len,col_length
+purged_file_headers = ts,id,x,y,z,m
+monitoring_file_headers = ts,id,x,y,z,m
+LastGoodData_file_headers = ts,id,x,y,z,m
+proc_monitoring_file_headers = ts,id,xz,xy,m
+alerteval_colarrange = id,ND,xz_disp,xy_disp,disp_alert,min_vel,max_vel,vel_alert,node_alert
+alertgen_headers = ND,xz_disp,xy_disp,disp_alert,min_vel,max_vel,vel_alert,node_alert,col_alert
+alert_headers = ts,id,ND,xz_disp,xy_disp,disp_alert,min_vel,max_vel,vel_alert,node_alert,col_alert,trending_col
  
 ############################
 ###        OTHERS        ###
 ############################
-data_dt=0.5			;time interval between data points, in hours
-rt_window_length=15.		;length of real-time monitoring window, in days
-roll_window_length=3.		;length of rolling/moving window operations in hours
-num_roll_window_ops=2		;number of rolling window operations in the whole monitoring analysis
-col_pos_interval='4H'    	; string expression indicating interval between two adjacent column position dates ex: '1D'= 1 day
-num_col_pos=7            	; number of column position dates to plot 
-alert_time_int=30 		;timeframe of alert files to be saved, in days
+data_dt = 0.5				;time interval between data points, in hours
+rt_window_length = 3.		;length of real-time monitoring window, in days
+roll_window_length = 3.		;length of rolling/moving window operations in hours
+num_roll_window_ops = 2		;number of rolling window operations in the whole monitoring analysis
+col_pos_interval = '4H'   	;string expression indicating interval between two adjacent column position dates ex: '1D'= 1 day
+num_col_pos = 7            	;number of column position dates to plot 
+alert_time_int = 30 		;timeframe of alert files to be saved, in days
+to_fill = 1					;to forward fill (1 or 0)
+to_smooth = 1				;to smooth xz and xy through moving average (1 or 0)
+
+with_TrendingNodeAlert = False
+test_sites = nagsa,nagtb,lunsa,luntb,luntc
+test_specific_sites = False
 
 PlotColPos = True
 PlotDispVel = True

@@ -109,12 +109,12 @@ def node_alert(colname, xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_v
     cond = np.asarray((np.abs(alert['xz_disp'].values)>T_disp, np.abs(alert['xy_disp'].values)>T_disp))
     alert['disp_alert']=np.where(np.any(cond, axis=0),
 
-                                 #disp alert=1
+                                 #disp alert=2
                                  np.where(min_disp/max_disp<k_ac_ax,
                                           np.zeros(len(alert)),
                                           np.ones(len(alert))),
 
-                                 #disp alert=l0
+                                 #disp alert=0
                                  np.zeros(len(alert)))
     
     #getting minimum axis velocity value
@@ -142,18 +142,18 @@ def node_alert(colname, xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_v
                                          #checking if max node velocity exceeds threshold velocity for alert 2
                                          np.where(alert['max_vel'].values<=T_vell3,         
 
-                                                  #vel alert=1
+                                                  #vel alert=2
                                                   np.ones(len(alert)),
 
-                                                  #vel alert=2
+                                                  #vel alert=3
                                                   np.ones(len(alert))*2)))
     
     alert['node_alert']=np.where(alert['vel_alert'].values==0,
 
-                                 # node alert = displacement alert (0 or 1) if velocity alert is l0 
+                                 # node alert = displacement alert (0 or 2) if velocity alert is 0 
                                  alert['disp_alert'].values,                                
 
-                                 # node alert = velocity alert if displacement alert = 1 
+                                 # node alert = velocity alert if displacement alert = 2 
                                  np.where(alert['disp_alert'].values==1,
                                           alert['vel_alert'].values,
                                           alert['disp_alert'].values))
@@ -199,7 +199,7 @@ def column_alert(alert, num_nodes_to_check, k_ac_ax):
             col_node.append(i-1)
             col_alert.append(-1)
     
-        #checking if current node alert is 1 or 2
+        #checking if current node alert is 2 or 3
         elif alert['node_alert'].values[i-1]!=0:
             
             #defining indices of adjacent nodes
