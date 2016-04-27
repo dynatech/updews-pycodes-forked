@@ -814,11 +814,12 @@ for s in sensorlist:
     
 ###############################################################################
     
+    # without trending_node_alert
     trending_col_alerts = []
     
     try:
         for n in working_nodes.get(colname):
-            trending_col_alerts += [df.loc[df.id == n]['alerts'].values[0]]
+            trending_col_alerts += [pd.Series.tolist(alert_out.col_alert)[n-1]]
     except TypeError:
         continue
     
