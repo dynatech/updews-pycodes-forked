@@ -123,7 +123,6 @@ def create_fill_smooth_df(series_list,num_nodes,monwin, roll_window_numpts, to_f
     if to_fill:
         #filling NAN values
         df=df.fillna(method='pad')
-        df=df.fillna(method='bfill')
  
     #dropping rows outside monitoring window
     df=df[(df.index>=monwin.index[0])&(df.index<=monwin.index[-1])]
@@ -430,6 +429,7 @@ def plot_column_positions(colname,x,xz,xy):
 
         ax_xz=nonrepeat_colors(ax_xz,len(cs_x))
         ax_xy=nonrepeat_colors(ax_xy,len(cs_x))        
+
         for i in cs_x.index:
             curcolpos_x=x[(x.index==i)].values
     
@@ -1156,5 +1156,4 @@ if set_json:
         else:
             i += 1
     print dfajson
-
 
