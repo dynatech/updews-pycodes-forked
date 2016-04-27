@@ -123,7 +123,6 @@ def create_fill_smooth_df(series_list,num_nodes,monwin, roll_window_numpts, to_f
     if to_fill:
         #filling NAN values
         df=df.fillna(method='pad')
-        df=df.fillna(method='bfill')
  
     #dropping rows outside monitoring window
     df=df[(df.index>=monwin.index[0])&(df.index<=monwin.index[-1])]
@@ -205,13 +204,13 @@ def compute_node_inst_vel(xz,xy,roll_window_numpts):
     ##OUTPUT:
     ##np.round(vel_xz,4), np.round(vel_xy,4)
 
-#    trimming xz and xy for a more efficient run
-    end_xz = xz.index[-1]
-    end_xy = xy.index[-1]
-    start_xz = end_xz - timedelta(days=1)    
-    start_xy = end_xy - timedelta(days=1)
-    xz = xz.loc[start_xz:end_xz]
-    xy = xy.loc[start_xy:end_xy]    
+##    uncomment to trim xz and xy for a more efficient run
+#    end_xz = xz.index[-1]
+#    end_xy = xy.index[-1]
+#    start_xz = end_xz - timedelta(days=1)    
+#    start_xy = end_xy - timedelta(days=1)
+#    xz = xz.loc[start_xz:end_xz]
+#    xy = xy.loc[start_xy:end_xy]    
     
     #setting up time units in days
     td=xz.index.values-xz.index.values[0]
@@ -404,6 +403,10 @@ def alert_summary(alert_out,alert_list):
                 print checklist[c].set_index(['ts','id']).drop(['disp_alert','min_vel','max_vel','vel_alert'], axis=1)
                 break
                 
+def nonrepeat_colors(ax,NUM_COLORS,color='gist_rainbow'):
+    cm = plt.get_cmap(color)
+    ax.set_color_cycle([cm(1.*(NUM_COLORS-i-1)/NUM_COLORS) for i in range(NUM_COLORS)])
+    return ax
     
     
 def plot_column_positions(colname,x,xz,xy):
@@ -423,7 +426,10 @@ def plot_column_positions(colname,x,xz,xy):
         plt.suptitle(colname+" absolute position", fontsize = 12)
         ax_xz=fig.add_subplot(121)
         ax_xy=fig.add_subplot(122,sharex=ax_xz,sharey=ax_xz)
-        print 'plot_column_positions 1'
+
+        ax_xz=nonrepeat_colors(ax_xz,len(cs_x))
+        ax_xy=nonrepeat_colors(ax_xy,len(cs_x))        
+
         for i in cs_x.index:
             curcolpos_x=x[(x.index==i)].values
     
@@ -480,6 +486,11 @@ def plot_disp_vel(colname, xz,xy,xz_vel,xy_vel):
     
         ax_xzv=fig.add_subplot(143)
         ax_xyv=fig.add_subplot(144,sharex=ax_xzv,sharey=ax_xzv)
+        
+        ax_xzd=nonrepeat_colors(ax_xzd,len(xz.columns))
+        ax_xyd=nonrepeat_colors(ax_xyd,len(xz.columns))
+        ax_xzv=nonrepeat_colors(ax_xzv,len(xz.columns))
+        ax_xyv=nonrepeat_colors(ax_xyv,len(xz.columns))
     
         curax=ax_xzd
         plt.sca(curax)
@@ -648,6 +659,14 @@ k_ac_ax = cfg.getfloat('I/O','k_ac_ax')
 num_nodes_to_check = cfg.getint('I/O','num_nodes_to_check')
 alert_file_length=cfg.getint('I/O','alert_time_int') # in days
 
+to_fill = cfg.get('I/O','to_fill')
+to_smooth = cfg.get('I/O','to_smooth')
+
+with_TrendingNodeAlert = cfg.getboolean('I/O','with_TrendingNodeAlert')
+test_specific_sites = cfg.getboolean('I/O','test_specific_sites')
+test_sites = cfg.get('I/O','test_sites').split(',')
+
+
 
 #To Output File or not
 PrintProc = cfg.getboolean('I/O','PrintProc')
@@ -661,6 +680,11 @@ PrintND = cfg.getboolean('I/O','PrintND')
 PrintTimer = cfg.getboolean('I/O','PrintTimer')
 PrintAAlert = cfg.getboolean('I/O','PrintAAlert')
 PrintGSMAlert = cfg.getboolean('I/O', 'PrintGSMAlert')
+
+#if PrintColPos or PrintTrendAlerts:
+#    import matplotlib.pyplot as plt
+#    plt.ioff()
+
 
 #MAIN
 
@@ -699,7 +723,7 @@ hr = end - timedelta(hours=3)
 
 with open(output_file_path+webtrends, 'ab') as w, open (output_file_path+textalert, 'wb') as t:
     t.write('As of ' + end.strftime(fmt) + ':\n')
-    w.write(end.strftime(fmt) + ',')
+    w.write(end.strftime(fmt) + ';')
 
 
 CreateColAlertsTable('col_alerts', Namedb)
@@ -708,6 +732,10 @@ CreateColAlertsTable('col_alerts', Namedb)
 sensorlist = GetSensorList()
 
 for s in sensorlist:
+
+    if test_specific_sites:
+        if s.name not in test_sites:
+            continue
 
     last_col=sensorlist[-1:]
     last_col=last_col[0]
@@ -723,15 +751,15 @@ for s in sensorlist:
         print proc_monitoring
         print "\n", colname
     except:
-        print "     ",colname, "ERROR...missing/empty proc monitoring csv"
+        print "     ",colname, "ERROR...missing/empty proc monitoring"
         continue
 
     # creating series lists per node
     xz_series_list,xy_series_list = create_series_list(proc_monitoring,monwin,colname,num_nodes)
 
     # create, fill and smooth dataframes from series lists
-    xz=create_fill_smooth_df(xz_series_list,num_nodes,monwin, roll_window_numpts,1,1)
-    xy=create_fill_smooth_df(xy_series_list,num_nodes,monwin, roll_window_numpts,1,1)
+    xz=create_fill_smooth_df(xz_series_list,num_nodes,monwin, roll_window_numpts,to_fill,to_smooth)
+    xy=create_fill_smooth_df(xy_series_list,num_nodes,monwin, roll_window_numpts,to_fill,to_smooth)
     
     # computing instantaneous velocity
     vel_xz, vel_xy = compute_node_inst_vel(xz,xy,roll_window_numpts)
@@ -747,10 +775,6 @@ for s in sensorlist:
                                                                                                                CSVFormat)
                                                                                                                           
     # Alert generation
-    xz=xz[(xz.index>=end-timedelta(days=3))]
-    xy=xy[(xy.index>=end-timedelta(days=3))]
-    vel_xz=vel_xz[(vel_xz.index>=end-timedelta(days=3))]
-    vel_xy=vel_xy[(vel_xy.index>=end-timedelta(days=3))]
     alert_out=alert_generation(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velL2, T_velL3, k_ac_ax,
                                num_nodes_to_check,end,proc_file_path,CSVFormat)
     print alert_out
@@ -789,6 +813,15 @@ for s in sensorlist:
     db.close()
     
 ###############################################################################
+    
+    # without trending_node_alert
+    trending_col_alerts = []
+    
+    try:
+        for n in working_nodes.get(colname):
+            trending_col_alerts += [pd.Series.tolist(alert_out.col_alert)[n-1]]
+    except TypeError:
+        continue
     
     # trending node alert for all nodes
     trending_node_alerts = []
@@ -837,45 +870,63 @@ for s in sensorlist:
          print line, # standard output is now redirected to the file
     
     # writes sensor name and sensor alerts alphabetically, one sensor per row, in textalert
-    if working_node_alerts.count('l3') != 0:
-        if PrintTAlert:
-            with open (output_file_path+textalert, 'ab') as t:
-                t.write (colname + ":" + 'l3' + '\n')
-        l3_alert.append(colname)
-        alert_df.append((end,colname,'l3'))                
-    elif working_node_alerts.count('l2') != 0:
-        if PrintTAlert:
-            with open (output_file_path+textalert, 'ab') as t:
-                t.write (colname + ":" + 'l2' + '\n')
-        l2_alert.append(colname)
-        alert_df.append((end,colname,'l2'))
-    elif (colname == 'sinb') or (colname == 'blcb'):
-        if working_node_alerts.count('l0') > 0:
+    # WITH TRENDING NODE ALERT
+    if with_TrendingNodeAlert:        
+        if working_node_alerts.count('l3') != 0:
             if PrintTAlert:
                 with open (output_file_path+textalert, 'ab') as t:
-                    t.write (colname + ":" + 'l0' + '\n')
-            l0_alert.append(colname)
-            alert_df.append((end,colname,'l0'))
+                    t.write (colname + ":" + 'l3' + '\n')
+            l3_alert.append(colname)
+            alert_df.append((end,colname,'l3'))                
+        elif working_node_alerts.count('l2') != 0:
+            if PrintTAlert:
+                with open (output_file_path+textalert, 'ab') as t:
+                    t.write (colname + ":" + 'l2' + '\n')
+            l2_alert.append(colname)
+            alert_df.append((end,colname,'l2'))
         else:
+            working_node_alerts_count = Counter(working_node_alerts)  
             if PrintTAlert:
                 with open (output_file_path+textalert, 'ab') as t:
-                    t.write (colname + ":" + 'nd' + '\n')
-            nd_alert.append(colname)
-            alert_df.append((end,colname,'nd'))
+                    t.write (colname + ":" + (working_node_alerts_count.most_common(1)[0][0]) + '\n')
+            if (working_node_alerts_count.most_common(1)[0][0] == 'l0'):
+                l0_alert.append(colname)
+                alert_df.append((end,colname,'l0'))
+            else:
+                nd_alert.append(colname)
+                alert_df.append((end,colname,'nd'))
+    #        
+            if len(calert.index)<7:
+                print 'Trending alert note: less than 6 data points for ' + colname
+    
+    # TRENDING COLUMN ALERT ONLY
     else:
-        working_node_alerts_count = Counter(working_node_alerts)  
-        if PrintTAlert:
-            with open (output_file_path+textalert, 'ab') as t:
-                t.write (colname + ":" + (working_node_alerts_count.most_common(1)[0][0]) + '\n')
-        if (working_node_alerts_count.most_common(1)[0][0] == 'l0'):
-            l0_alert.append(colname)
-            alert_df.append((end,colname,'l0'))
+        if trending_col_alerts.count('l3') != 0:
+            if PrintTAlert:
+                with open (output_file_path+textalert, 'ab') as t:
+                    t.write (colname + ":" + 'l3' + '\n')
+            l3_alert.append(colname)
+            alert_df.append((end,colname,'l3'))                
+        elif trending_col_alerts.count('l2') != 0:
+            if PrintTAlert:
+                with open (output_file_path+textalert, 'ab') as t:
+                    t.write (colname + ":" + 'l2' + '\n')
+            l2_alert.append(colname)
+            alert_df.append((end,colname,'l2'))
         else:
-            nd_alert.append(colname)
-            alert_df.append((end,colname,'nd'))
-#        
-        if len(calert.index)<7:
-            print 'Trending alert note: less than 6 data points for ' + colname
+            trending_col_alerts_count = Counter(trending_col_alerts)  
+            if PrintTAlert:
+                with open (output_file_path+textalert, 'ab') as t:
+                    t.write (colname + ":" + (trending_col_alerts_count.most_common(1)[0][0]) + '\n')
+            if (trending_col_alerts_count.most_common(1)[0][0] == 'l0'):
+                l0_alert.append(colname)
+                alert_df.append((end,colname,'l0'))
+            else:
+                nd_alert.append(colname)
+                alert_df.append((end,colname,'nd'))
+    #        
+            if len(calert.index)<7:
+                print 'Trending alert note: less than 6 data points for ' + colname        
     
     # writes sensor alerts in one row in webtrends
     if PrintWAlert:
@@ -913,14 +964,10 @@ for s in sensorlist:
 
 #    #11. Plotting column positions
     if PrintColPos:
-        print 'printcolpos 1'
         plot_column_positions(colname,cs_x,cs_xz_0,cs_xy_0)
-        print 'printcolpos 2'
         plot_column_positions(colname,cs_x,cs_xz,cs_xy)
-        print 'printcolpos 3'
         plt.savefig(output_file_path+colname+' colpos ',
                     dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
-        print 'printcolpos 4'
 #
     #12. Plotting displacement and velocity
     if PrintDispVel:
@@ -1110,5 +1157,4 @@ if set_json:
         else:
             i += 1
     print dfajson
-
 
