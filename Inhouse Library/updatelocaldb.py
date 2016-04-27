@@ -9,4 +9,3 @@ import updateLocalDbLib as updatedb
 
 #update the site tables for accelerometer data
 updatedb.updateAccelData()
-updatedb.updateNodeStatusTable()
