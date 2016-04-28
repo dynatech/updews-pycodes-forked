@@ -915,13 +915,13 @@ for time_analyze in range(7):
         if end == event_timestamp:
             plot_column_positions(colname,cs_x,cs_xz_0,cs_xy_0)
             plot_column_positions(colname,cs_x,cs_xz,cs_xy)
-            plt.savefig(output_file_path+colname+' colpos '+end.strftime(fig_fmt),
+            plt.savefig(output_file_path+colname+' colpos '+end.strftime(fig_fmt) + ' without smoothing',
                         dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
     #
         #12. Plotting displacement and velocity
         if end == event_timestamp:
             plot_disp_vel(colname, xz_0off,xy_0off, vel_xz_0off, vel_xy_0off)
-            plt.savefig(output_file_path+colname+' disp_vel '+end.strftime(fig_fmt),
+            plt.savefig(output_file_path+colname+' disp_vel '+end.strftime(fig_fmt) + ' without smoothing',
                         dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
     
         plt.close()
