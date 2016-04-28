@@ -4,20 +4,22 @@ host = 127.0.0.1
 password = irc311
 dbname = senslopedb
 
+[GSMDB]
+username = root
+host = 127.0.0.1
+password = irc311
+dbname = senslopedb
+
 [I/O]
-writetodb = True
-deleteafterread = True
-savetofile = True
-fileinput = False
-consoleoutput = False
-inputfile = backup.txt
+writetodb = true
+savetofile = False
 
 [Serial]
 baudrate = 57600
-sunport = 16
-globeport = 16
+sunport = COM16
+globeport = COM16
 timeout = 5
-smartport = 17
+smartport = COM17
 
 [SMSAlert]
 sunnumbers = 09228412065,09228120490,09253120491
@@ -26,7 +28,6 @@ globenumbers=09166685391,09054537225,09068386258,09178825084,09163938789
 csvinputfile = Node-level_alerts.csv
 smartnumbers=09288263063,09984405687
 alertflags = 12
-directory = D:\Dropbox\Senslope Data\Proc\csv
 alertreportinterval = 30
 SMSgndmeasfile = C:\Users\windows user\Desktop\Ground Measurement Backup\smsbackup.txt
 gndmeasfilesdir = C:\Users\windows user\Desktop\Ground Measurement Backup\
@@ -52,5 +53,9 @@ inboxdir = D:\Server Files\Consolidated\Inbox\
 unknownsenderfile = D:\Server Files\Consolidated\Unknown-sender.txt
 allalertsfile = D:\Server Files\Consolidated\DYNA\all_alerts.txt
 gndmeasfilesdir = C:\Users\windows user\Desktop\Ground Measurement Backup\
+
+[simprefix]
+smart = 07,08,09,10,12,18,19,20,21,28,29,30,38,29,30,38,39,46,47,48,49,89,98,99,22,23,32,33,34,25,42,43
+globe = 05,15,16,17,18,25,26,27,35,36,35,37,94,96,97,77 
 
 

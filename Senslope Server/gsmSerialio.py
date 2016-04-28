@@ -1,5 +1,6 @@
 import serial, datetime, ConfigParser, time, re
 from datetime import datetime as dt
+from senslopedbio import * 
 
 cfg = ConfigParser.ConfigParser()
 cfg.read('senslope-server-config.txt')
@@ -7,8 +8,8 @@ cfg.read('senslope-server-config.txt')
 gsm = serial.Serial()
 Baudrate = cfg.getint('Serial', 'Baudrate')
 Timeout = cfg.getint('Serial', 'Timeout')
-ConsoleOutput = cfg.getboolean('I/O','consoleoutput')
-SaveToFile = cfg.getboolean('I/O','savetofile')
+Namedb = cfg.get('LocalDB', 'DBName')
+SaveToFile = cfg.get('I/O', 'savetofile')
 
 class sms:
     def __init__(self,num,sender,data,dt):
@@ -17,17 +18,21 @@ class sms:
        self.data = data
        self.dt = dt
        
-def gsmInit(port):
-    print 'Connecting to GSM modem at COM',
-    gsm.port = port
+def gsmInit(network):
+    Port = cfg.get('Serial', network+'port')
+    print 'Connecting to GSM modem at', Port
+    
+    if Port.find("COM")>0:
+        gsm.port = int(re.search("\d+").group(0)) - 1
+    else:
+        gsm.port = Port
     gsm.baudrate = Baudrate
     gsm.timeout = Timeout
     gsm.open()
     #gsmflush()
-    print port+1
     print 'Switching to no-echo mode', gsmcmd('ATE0').strip('\r\n')
     print 'Switching to text mode', gsmcmd('AT+CMGF=1').rstrip('\r\n')
-
+    
 def gsmflush():
     """Removes any pending inputs from the GSM modem and checks if it is alive."""
     try:
@@ -40,9 +45,6 @@ def gsmflush():
             gsm.flushOutput()
             ghost = gsm.read(gsm.inWaiting())
             stat = gsmcmd('\x1a\rAT\r')
-        if ConsoleOutput:
-            print '>> Flushing GSM buffer:', ghost
-            print '>> Modem status: ', stat
     except serial.SerialException:
         print "NO SERIAL COMMUNICATION (gsmflush)"
         RunSenslopeServer(gsm_network)
@@ -74,51 +76,52 @@ def gsmcmd(cmd):
         print "NO SERIAL COMMUNICATION (gsmcmd)"
         # RunSenslopeServer(gsm_network)
         
-def sendMsg(alert_msg, number):
+def sendMsg(msg, number):
     """
     Sends a command 'cmd' to GSM Module
     Returns the reply of the module
     Usage: str = gsmcmd()
     """
+    # under development
+    # return
     try: 
-        gsm.flushInput()
-        gsm.flushOutput()
         a = ''
         now = time.time()
         preamble = "AT+CMGS=\""+number+"\""
-        print "\nMSG:"+alert_msg
-        print "NUM:"+number
+        print "\nMSG:", msg
+        print "NUM:", number
         gsm.write(preamble+"\r")
-        while a.find('>')<0 and time.time()<now+30:
-                #print cmd
-                #gsm.write(cmd+'\r\n')
-                a += gsm.read(gsm.inWaiting())
-                #a += gsm.read()
-                #print '+' + a
-                #print a
-                time.sleep(0.5)
+        now = time.time()
+        while a.find('>')<0 and a.find("ERROR")<0 and time.time()<now+20:
+            a += gsm.read(gsm.inWaiting())
+            time.sleep(0.5)
+            print '.',
 
-        if time.time()>now+30:  
-                a = '>> Error: GSM Unresponsive'
+        if time.time()>now+3 or a.find("ERROR") > -1:  
+            print '>> Error: GSM Unresponsive at finding >'
+            print a
+            print '^^ a ^^'
+            return -1
+        else:
+            print '>'
         
-        gsm.flushInput()
-        gsm.flushOutput()
         a = ''
         now = time.time()
-        gsm.write(alert_msg+chr(26))
-        while a.find('OK\r\n')<0 and time.time()<now+30:
-                #print cmd
-                #gsm.write(cmd+'\r\n')
+        gsm.write(msg+chr(26))
+        while a.find('OK')<0 and a.find("ERROR")<0 and time.time()<now+60:
                 a += gsm.read(gsm.inWaiting())
-                #a += gsm.read()
-                #print '+' + a
-                #print a
                 time.sleep(0.5)
-        if time.time()>now+30:
-                a = '>> Error: GSM Unresponsive'
+                print ':',
+        if time.time()-60>now:
+            print '>> Error: timeout reached'
+            return -1
+        elif a.find('ERROR')>-1:
+            print '>> Error: GSM reported ERROR in SMS reading'
+            return -1
         else:
             print ">> Message sent!"
-        return a
+            return 0
+            
     except serial.SerialException:
         print "NO SERIAL COMMUNICATION (sendmsg)"
         RunSenslopeServer(gsm_network)	
@@ -169,11 +172,11 @@ def getAllSms(network):
     msglist = []
     
     for msg in allmsgs:
-        if SaveToFile:
-            mon = dt.now().strftime("-%Y-%B-")
-            f = open("D:\\Server Files\\Consolidated\\"+network+mon+'backup.txt','a')
-            f.write(msg)
-            f.close()
+        # if SaveToFile:
+            # mon = dt.now().strftime("-%Y-%B-")
+            # f = open("D:\\Server Files\\Consolidated\\"+network+mon+'backup.txt','a')
+            # f.write(msg)
+            # f.close()
                 
         msg = msg.replace('\n','').split("\r")
         try:
@@ -200,5 +203,6 @@ def getAllSms(network):
         
         msglist.append(smsItem)
         
+    
     return msglist
         
