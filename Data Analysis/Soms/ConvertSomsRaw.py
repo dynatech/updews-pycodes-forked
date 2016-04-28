@@ -50,9 +50,8 @@ def getsomsrawdata(column="", gid=0, fdate="", tdate=""):
 
     elif column.lower() in v3: # if version 3
         sraw=df.mval1[(df.msgid==110)]
-    else:
+    else: # for returning null series if not in version 2 or 3
         sraw=pd.Series()
-        pass
     
     return sraw
 

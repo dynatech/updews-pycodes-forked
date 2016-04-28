@@ -61,6 +61,7 @@ try:
                 node = nodeData[0]
                 print "%s: %s" % (columnName, node)
                 
+#                test = soms.getsomscaldata(columnName, node, fdate, tdate)
                 test = soms.getsomsrawdata(columnName, node, fdate, tdate)
                 #print test
                 print "row count: %s" % (len(test.index))
