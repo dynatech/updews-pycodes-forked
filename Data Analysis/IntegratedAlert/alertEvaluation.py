@@ -155,11 +155,11 @@ def node_alert(colname, xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_v
 
                                  # node alert = velocity alert if displacement alert = 2 
                                  np.where(alert['disp_alert'].values==1,
-                                          alert['vel_alert'].values,
-                                          alert['disp_alert'].values))
+                                          alert['disp_alert'].values,
+                                          alert['vel_alert'].values))
 
 
-    alert['ND']=alert['ND']*alert['disp_alert']
+#    alert['ND']=alert['ND']*alert['disp_alert']
     alert['disp_alert']=alert['ND']*alert['disp_alert']
     alert['vel_alert']=alert['ND']*alert['vel_alert']
     alert['node_alert']=alert['ND']*alert['node_alert']
