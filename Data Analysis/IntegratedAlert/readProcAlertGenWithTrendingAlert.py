@@ -14,6 +14,7 @@ from collections import Counter
 import csv
 import fileinput
 import sys
+import time
 
 import generic_functions as gf
 import generateProcMonitoring as genproc
@@ -28,9 +29,11 @@ del path
 from querySenslopeDb import *
 from filterSensorData import *
 
-
-
-
+#Generate Last Good Data Table if it doesn't exist yet
+lgdExistence = DoesTableExist("lastgooddata")
+if lgdExistence == False:
+    print "Generate Last Good Data Table"
+    GenerateLastGoodData()
 
 def set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_window_ops):
     

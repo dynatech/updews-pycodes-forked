@@ -739,6 +739,24 @@ def GetLastGoodDataFromDb(col):
     
     return df
     
+#GetSingleLGDPM
+#   This function returns the last good data prior to the monitoring window
+#   Inputs:
+#       site (e.g. sinb, mamb, agbsb)
+#       node (e.g. 1,2...15...30)
+#       startTS (e.g. 2016-04-25 15:00:00, 2016-02-01 05:00:00, 
+#                YYYY-MM-DD HH:mm:SS)
+#   Output:
+#       returns the dataframe for the last good data prior to the monitoring window
+    
+def GetSingleLGDPM(site, node, startTS):
+    query = "SELECT timestamp, xvalue, yvalue, zvalue from %s " % (site)
+    query = query + "WHERE id = %s and timestamp < '%s' " % (node, startTS)
+    query = query + "ORDER BY timestamp DESC LIMIT 1"
+    
+    lgdpm = GetDBDataFrame(query)
+    return lgdpm
+    
 #PushLastGoodData(df,name):
 #    writes a dataframe of the last good data to the database table lastgooddata
 #    
@@ -777,8 +795,12 @@ def GenerateLastGoodData():
     cur = db.cursor()
     #cur.execute("CREATE DATABASE IF NOT EXISTS %s" %nameDB)
     
-    query = """    DROP TABLE IF EXISTS `senslopedb`.`lastgooddata`;
-        CREATE TABLE  `senslopedb`.`lastgooddata` (
+    #Separated the consecutive drop table and create table in one query in
+    #   order to fix "commands out of sync" error
+    query = "DROP TABLE IF EXISTS `senslopedb`.`lastgooddata`;"
+    cur.execute(query)
+    
+    query = """ CREATE TABLE  `senslopedb`.`lastgooddata` (
           `name` varchar(8) NOT NULL DEFAULT '',
           `id` int(11) NOT NULL DEFAULT '0',
           `timestamp` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
@@ -787,8 +809,8 @@ def GenerateLastGoodData():
           `zvalue` int(11) DEFAULT NULL,
           PRIMARY KEY (`name`,`id`)
           ); """
-    
     cur.execute(query)
+    
     db.close()
     
     slist = GetSensorList()
