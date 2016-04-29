@@ -394,6 +394,35 @@ def alert_generation(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velL2, T_v
 
     
     return alert_out
+
+def alert_summary(alert_out,alert_list):		
+		
+    ##DESCRIPTION:		
+    ##creates list of sites per alert level		
+		
+    ##INPUT:		
+    ##alert_out; array		
+    ##alert_list; array		
+		
+		
+    		
+    nd_check=alert_out.loc[(alert_out['node_alert']=='nd')|(alert_out['col_alert']=='nd')]		
+    if len(nd_check)>(num_nodes/2):		
+        nd_alert.append(colname)		
+        		
+    else:		
+        l3_check=alert_out.loc[(alert_out['node_alert']=='l3')|(alert_out['col_alert']=='l3')]		
+        l2_check=alert_out.loc[(alert_out['node_alert']=='l2')|(alert_out['col_alert']=='l2')]		
+        l0_check=alert_out.loc[(alert_out['node_alert']=='l0')]		
+        checklist=[l3_check,l2_check,l0_check]		
+        		
+        for c in range(len(checklist)):		
+            if len(checklist[c])!=0:		
+                checklist[c]=checklist[c].reset_index()		
+                alert_list[c].append(colname + str(checklist[c]['id'].values[0]))		
+                if c==2: continue		
+                print checklist[c].set_index(['ts','id']).drop(['disp_alert','min_vel','max_vel','vel_alert'], axis=1)		
+                break
                 
 def nonrepeat_colors(ax,NUM_COLORS,color='gist_rainbow'):
     cm = plt.get_cmap(color)
@@ -600,13 +629,14 @@ output_file_path = output_path + cfg.get('I/O','OutputFilePath')
 proc_file_path = output_path + cfg.get('I/O','ProcFilePath')
 ColAlerts_file_path = output_path + cfg.get('I/O','ColAlertsFilePath')
 TrendAlerts_file_path = output_path + cfg.get('I/O','TrendAlertsFilePath')
+AlertAnalysisPath = output_path + cfg.get('I/O','AlertAnalysisPath')
 
 #Create filepaths if it does not exists
 def create_dir(p):
     if not os.path.exists(p):
         os.makedirs(p)
 
-directories = [ND_path,output_file_path,proc_file_path,ColAlerts_file_path,TrendAlerts_file_path]
+directories = [ND_path,output_file_path,proc_file_path,ColAlerts_file_path,TrendAlerts_file_path,AlertAnalysisPath]
 for p in directories:
     create_dir(p)
 
@@ -893,13 +923,13 @@ for time_analyze in range(7):
         if end == event_timestamp:
             plot_column_positions(colname,cs_x,cs_xz_0,cs_xy_0)
             plot_column_positions(colname,cs_x,cs_xz,cs_xy)
-            plt.savefig(output_file_path+'Alert/'+colname+' colpos '+end.strftime(fig_fmt),
+            plt.savefig(AlertAnalysisPath+colname+' colpos '+end.strftime(fig_fmt),
                         dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
     #
         #12. Plotting displacement and velocity
         if end == event_timestamp:
             plot_disp_vel(colname, xz_0off,xy_0off, vel_xz_0off, vel_xy_0off)
-            plt.savefig(output_file_path+'Alert/'+colname+' disp_vel '+end.strftime(fig_fmt),
+            plt.savefig(AlertAnalysisPath+colname+' disp_vel '+end.strftime(fig_fmt),
                         dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
     
         plt.close()
@@ -922,6 +952,5 @@ print 'L3: ', ','.join(L3_alert)
 
 
 # records the number of minutes the code runs
-if PrintTimer:
-    end_time = datetime.now() - start_time
-    print 'run time =', end_time
+end_time = datetime.now() - start_time
+print 'run time =', end_time
