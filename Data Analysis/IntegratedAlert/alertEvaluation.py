@@ -54,7 +54,7 @@ valid_data = end - timedelta(hours=3)
 
 
 
-def node_alert(colname, xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_vell2, T_vell3, k_ac_ax):
+def node_alert(colname, xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_velL2, T_velL3, k_ac_ax):
 
     #DESCRIPTION
     #Evaluates node-level alerts from node tilt and velocity data
@@ -62,7 +62,7 @@ def node_alert(colname, xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_v
     #INPUT
     #xz_tilt,xy_tilt, xz_vel, xy_vel:   Pandas DataFrame objects, with length equal to real-time window size, and columns for timestamp and individual node values
     #num_nodes:                         integer; number of nodes in a column
-    #T_disp, Tvell2, Tvell3:            floats; threshold values for displacement, and velocities correspoding to alert levels l2 and l3
+    #T_disp, TvelL2, TvelL3:            floats; threshold values for displacement, and velocities correspoding to alert levels L2 and L3
     #k_ac_ax:                           float; minimum value of (minimum velocity / maximum velocity) required to consider movement as valid
 
     #OUTPUT:
@@ -134,13 +134,13 @@ def node_alert(colname, xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_v
                                 np.zeros(len(alert)),    
 
                                 #checking if max node velocity exceeds threshold velocity for alert 1
-                                np.where(alert['max_vel'].values<=T_vell2,                  
+                                np.where(alert['max_vel'].values<=T_velL2,                  
 
                                          #vel alert=0
                                          np.zeros(len(alert)),
 
                                          #checking if max node velocity exceeds threshold velocity for alert 2
-                                         np.where(alert['max_vel'].values<=T_vell3,         
+                                         np.where(alert['max_vel'].values<=T_velL3,         
 
                                                   #vel alert=2
                                                   np.ones(len(alert)),
@@ -217,8 +217,8 @@ def column_alert(alert, num_nodes_to_check, k_ac_ax):
             
     alert['col_alert']=np.asarray(col_alert)
 
-    alert['node_alert']=alert['node_alert'].map({-1:'nd',0:'l0',1:'l2',2:'l3'})
-    alert['col_alert']=alert['col_alert'].map({-1:'nd',0:'l0',1:'l2',2:'l3'})
+    alert['node_alert']=alert['node_alert'].map({-1:'ND',0:'L0',1:'L2',2:'L3'})
+    alert['col_alert']=alert['col_alert'].map({-1:'ND',0:'L0',1:'L2',2:'L3'})
 
     return alert
 

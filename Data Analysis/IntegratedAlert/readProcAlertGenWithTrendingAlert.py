@@ -385,15 +385,15 @@ def alert_summary(alert_out,alert_list):
 
 
     
-    nd_check=alert_out.loc[(alert_out['node_alert']=='nd')|(alert_out['col_alert']=='nd')]
-    if len(nd_check)>(num_nodes/2):
-        nd_alert.append(colname)
+    ND_check=alert_out.loc[(alert_out['node_alert']=='ND')|(alert_out['col_alert']=='ND')]
+    if len(ND_check)>(num_nodes/2):
+        ND_alert.append(colname)
         
     else:
-        l3_check=alert_out.loc[(alert_out['node_alert']=='l3')|(alert_out['col_alert']=='l3')]
-        l2_check=alert_out.loc[(alert_out['node_alert']=='l2')|(alert_out['col_alert']=='l2')]
-        l0_check=alert_out.loc[(alert_out['node_alert']=='l0')]
-        checklist=[l3_check,l2_check,l0_check]
+        L3_check=alert_out.loc[(alert_out['node_alert']=='L3')|(alert_out['col_alert']=='L3')]
+        L2_check=alert_out.loc[(alert_out['node_alert']=='L2')|(alert_out['col_alert']=='L2')]
+        L0_check=alert_out.loc[(alert_out['node_alert']=='L0')]
+        checklist=[L3_check,L2_check,L0_check]
         
         for c in range(len(checklist)):
             if len(checklist[c])!=0:
@@ -603,7 +603,7 @@ col_pos_num= cfg.getfloat('I/O','num_col_pos')
 
 output_path = up_one(up_one(up_one(os.path.dirname(__file__))))
 
-nd_path = output_path + cfg.get('I/O', 'NDFilePath')
+ND_path = output_path + cfg.get('I/O', 'NDFilePath')
 output_file_path = output_path + cfg.get('I/O','OutputFilePath')
 proc_file_path = output_path + cfg.get('I/O','ProcFilePath')
 ColAlerts_file_path = output_path + cfg.get('I/O','ColAlertsFilePath')
@@ -614,7 +614,7 @@ def create_dir(p):
     if not os.path.exists(p):
         os.makedirs(p)
 
-directories = [nd_path,output_file_path,proc_file_path,ColAlerts_file_path,TrendAlerts_file_path]
+directories = [ND_path,output_file_path,proc_file_path,ColAlerts_file_path,TrendAlerts_file_path]
 for p in directories:
     create_dir(p)
 
@@ -696,13 +696,13 @@ set_json = False
 roll_window_numpts, end, start, offsetstart, monwin = set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_window_ops)
 
 # creating summary of alerts
-nd_alert=[]
-l0_alert=[]
-l2_alert=[]
-l3_alert=[]
+ND_alert=[]
+L0_alert=[]
+L2_alert=[]
+L3_alert=[]
 alert_df = []
-alert_list=[l3_alert,l2_alert,l0_alert,nd_alert]
-alert_names=['l3: ','l2: ','l0: ','ND: ']
+alert_list=[L3_alert,L2_alert,L0_alert,ND_alert]
+alert_names=['L3: ','L2: ','L0: ','ND: ']
 
 print "Generating plots and alerts for:"
 
@@ -829,14 +829,14 @@ for s in sensorlist:
         counter = Counter(node_trend)
         max_count = max(counter.values())
         mode = [k for k,v in counter.items() if v == max_count]
-        if 'l3' in mode:
-            mode = ['l3']
-        elif 'l2' in mode:
-            mode = ['l2']
-        elif 'nd' in mode:
-            mode = ['nd']   
-        elif 'l0' in mode:
-            mode = ['l0']
+        if 'L3' in mode:
+            mode = ['L3']
+        elif 'L2' in mode:
+            mode = ['L2']
+        elif 'ND' in mode:
+            mode = ['ND']   
+        elif 'L0' in mode:
+            mode = ['L0']
         else:
             print "No node data for node " + str(n) + " in" + colname
         trending_node_alerts.extend(mode)
@@ -870,81 +870,75 @@ for s in sensorlist:
     # writes sensor name and sensor alerts alphabetically, one sensor per row, in textalert
     # WITH TRENDING NODE ALERT
     if with_TrendingNodeAlert:        
-        if working_node_alerts.count('l3') != 0:
+        if working_node_alerts.count('L3') != 0:
             if PrintTAlert:
                 with open (output_file_path+textalert, 'ab') as t:
-                    t.write (colname + ":" + 'l3' + '\n')
-            l3_alert.append(colname)
-            alert_df.append((end,colname,'l3'))                
-        elif working_node_alerts.count('l2') != 0:
+                    t.write (colname + ":" + 'L3' + '\n')
+            L3_alert.append(colname)
+            alert_df.append((end,colname,'L3'))                
+        elif working_node_alerts.count('L2') != 0:
             if PrintTAlert:
                 with open (output_file_path+textalert, 'ab') as t:
-                    t.write (colname + ":" + 'l2' + '\n')
-            l2_alert.append(colname)
-            alert_df.append((end,colname,'l2'))
+                    t.write (colname + ":" + 'L2' + '\n')
+            L2_alert.append(colname)
+            alert_df.append((end,colname,'L2'))
         else:
             working_node_alerts_count = Counter(working_node_alerts)  
             if PrintTAlert:
                 with open (output_file_path+textalert, 'ab') as t:
                     t.write (colname + ":" + (working_node_alerts_count.most_common(1)[0][0]) + '\n')
-            if (working_node_alerts_count.most_common(1)[0][0] == 'l0'):
-                l0_alert.append(colname)
-                alert_df.append((end,colname,'l0'))
+            if (working_node_alerts_count.most_common(1)[0][0] == 'L0'):
+                L0_alert.append(colname)
+                alert_df.append((end,colname,'L0'))
             else:
-                nd_alert.append(colname)
-                alert_df.append((end,colname,'nd'))
+                ND_alert.append(colname)
+                alert_df.append((end,colname,'ND'))
     #        
             if len(calert.index)<7:
                 print 'Trending alert note: less than 6 data points for ' + colname
     
     # TRENDING COLUMN ALERT ONLY
     else:
-        if trending_col_alerts.count('l3') != 0:
+        if trending_col_alerts.count('L3') != 0:
             if PrintTAlert:
                 with open (output_file_path+textalert, 'ab') as t:
-                    t.write (colname + ":" + 'l3' + '\n')
-            l3_alert.append(colname)
-            alert_df.append((end,colname,'l3'))                
-        elif trending_col_alerts.count('l2') != 0:
+                    t.write (colname + ":" + 'L3' + '\n')
+            L3_alert.append(colname)
+            alert_df.append((end,colname,'L3'))                
+        elif trending_col_alerts.count('L2') != 0:
             if PrintTAlert:
                 with open (output_file_path+textalert, 'ab') as t:
-                    t.write (colname + ":" + 'l2' + '\n')
-            l2_alert.append(colname)
-            alert_df.append((end,colname,'l2'))
+                    t.write (colname + ":" + 'L2' + '\n')
+            L2_alert.append(colname)
+            alert_df.append((end,colname,'L2'))
         else:
             trending_col_alerts_count = Counter(trending_col_alerts)  
             if PrintTAlert:
                 with open (output_file_path+textalert, 'ab') as t:
                     t.write (colname + ":" + (trending_col_alerts_count.most_common(1)[0][0]) + '\n')
-            if (trending_col_alerts_count.most_common(1)[0][0] == 'l0'):
-                l0_alert.append(colname)
-                alert_df.append((end,colname,'l0'))
+            if (trending_col_alerts_count.most_common(1)[0][0] == 'L0'):
+                L0_alert.append(colname)
+                alert_df.append((end,colname,'L0'))
             else:
-                nd_alert.append(colname)
-                alert_df.append((end,colname,'nd'))
-    #        
-            if len(calert.index)<7:
-                print 'Trending alert note: less than 6 data points for ' + colname        
+                ND_alert.append(colname)
+                alert_df.append((end,colname,'ND'))
     
     # writes sensor alerts in one row in webtrends
     if PrintWAlert:
         with open(output_file_path+webtrends, 'ab') as w:
-                if working_node_alerts.count('l3') != 0:
-                    w.write ('l3' + ',')
-                elif working_node_alerts.count('l2') != 0:
-                    w.write ('l2' + ',')
+                if trending_col_alerts.count('L3') != 0:
+                    w.write ('L3' + ',')
+                elif trending_col_alerts.count('L2') != 0:
+                    w.write ('L2' + ',')
                 elif (colname == 'sinb') or (colname == 'blcb'):
-                    if working_node_alerts.count('l0') > 0:
-                        w.write ('l0' + ',')
+                    if trending_col_alerts.count('L0') > 0:
+                        w.write ('L0' + ',')
                     else:
-                        w.write ('nd' + ',')       
+                        w.write ('ND' + ',')       
                 else:
-                    working_node_alerts = Counter(working_node_alerts)  
-                    w.write ((working_node_alerts.most_common(1)[0][0]) + ',')
-        #        
-                if len(calert.index)<7:
-                    print 'Trending alert note: less than 6 data points for ' + colname
-                
+                    trending_col_alerts = Counter(trending_col_alerts)  
+                    w.write ((trending_col_alerts.most_common(1)[0][0]) + ',')
+                                
                 if colname == last_col:
                            w.seek(-1, os.SEEK_END)
                            w.truncate()
@@ -954,11 +948,11 @@ for s in sensorlist:
   
 #    prints to csv: node alert, column alert and trending alert of sites with nd alert
     if PrintND:
-        for colname in nd_alert:
-            if os.path.exists(nd_path + colname + CSVFormat):
-                alert_out[['node_alert', 'col_alert', 'trending_alert']].to_csv(nd_path + colname + CSVFormat, sep=',', header=False, mode='a')
+        for colname in ND_alert:
+            if os.path.exists(ND_path + colname + CSVFormat):
+                alert_out[['node_alert', 'col_alert', 'trending_alert']].to_csv(ND_path + colname + CSVFormat, sep=',', header=False, mode='a')
             else:
-                alert_out[['node_alert', 'col_alert', 'trending_alert']].to_csv(nd_path + colname + CSVFormat, sep=',', header=True, mode='w')
+                alert_out[['node_alert', 'col_alert', 'trending_alert']].to_csv(ND_path + colname + CSVFormat, sep=',', header=True, mode='w')
 
 #    #11. Plotting column positions
     if PrintColPos:
@@ -980,18 +974,18 @@ for s in sensorlist:
 if PrintTAlert2:
     with open (output_file_path+textalert2, 'wb') as t:
         t.write('As of ' + end.strftime(fmt) + ':\n')
-        t.write ('l0: ' + ','.join(sorted(l0_alert)) + '\n')
-        t.write ('nd: ' + ','.join(sorted(nd_alert)) + '\n')
-        t.write ('l2: ' + ','.join(sorted(l2_alert)) + '\n')
-        t.write ('l3: ' + ','.join(sorted(l3_alert)) + '\n')
+        t.write ('L0: ' + ','.join(sorted(L0_alert)) + '\n')
+        t.write ('ND: ' + ','.join(sorted(ND_alert)) + '\n')
+        t.write ('L2: ' + ','.join(sorted(L2_alert)) + '\n')
+        t.write ('L3: ' + ','.join(sorted(L3_alert)) + '\n')
 
 
 #Prints rainfall alerts, text alert and eq summary in one file
 if PrintAAlert:
     with open(output_file_path+all_alerts, 'wb') as allalerts:
         allalerts.write('As of ' + end.strftime(fmt) + ':\n')
-        allalerts.write('l3: ' + ','.join(sorted(l3_alert)) + '\n')
-        allalerts.write('l2: ' + ','.join(sorted(l2_alert)) + '\n')
+        allalerts.write('L3: ' + ','.join(sorted(L3_alert)) + '\n')
+        allalerts.write('L2: ' + ','.join(sorted(L2_alert)) + '\n')
         allalerts.write('\n')
         with open(output_file_path+rainfall_alert) as rainfallalert:
             n = 0
@@ -1006,10 +1000,10 @@ if PrintAAlert:
 
 if PrintGSMAlert:
     with open(output_file_path+gsm_alert, 'wb') as gsmalert:
-        if len(l3_alert) != 0:
-            gsmalert.write('l3: ' + ','.join(sorted(l3_alert)) + '\n')
-        if len(l2_alert) != 0:
-            gsmalert.write('l2: ' + ','.join(sorted(l2_alert)) + '\n')
+        if len(L3_alert) != 0:
+            gsmalert.write('L3: ' + ','.join(sorted(L3_alert)) + '\n')
+        if len(L2_alert) != 0:
+            gsmalert.write('L2: ' + ','.join(sorted(L2_alert)) + '\n')
         with open(output_file_path+rainfall_alert) as rainfallalert:
             n = 0
             for line in rainfallalert:
@@ -1058,15 +1052,15 @@ if PrintGSMAlert:
 ## creates list of sites with no data and classifies whether its raw or filtered
 #if PrintND:
 #    with open(output_file_path+NDlog, 'ab') as ND:
-#        if len(l0_alert) == 0 and len(l2_alert) == 0 and len(l3_alert) == 0:
+#        if len(L0_alert) == 0 and len(L2_alert) == 0 and len(L3_alert) == 0:
 #            ND.write(end.strftime(fmt) + ',D,')
 #            ND.write("ND on all sites,")
 #            ND.write(',\n')
-#    if len(l0_alert) != 0 or len(l2_alert) != 0 or len(l3_alert) != 0:
+#    if len(L0_alert) != 0 or len(L2_alert) != 0 or len(L3_alert) != 0:
 #        with open(output_file_path+NDlog, 'ab') as ND:
 #            try:
 #                ND.write(end.strftime(fmt) + ',D,')
-#                for colname in nd_alert:
+#                for colname in ND_alert:
 #                    filtered = pd.read_csv(proc_file_path+colname+"/"+colname+" "+"alert"+CSVFormat, names=alert_headers,parse_dates='ts',index_col='ts')
 #                    filtered = filtered[(filtered.index>=end)]
 #                    print 'filtered'            
@@ -1078,7 +1072,7 @@ if PrintGSMAlert:
 #                    print raw
 #                    filteredND = []
 #                    rawND = []
-#                    for i in filtered.loc[filtered['node_alert']=='nd', ['id']].values:
+#                    for i in filtered.loc[filtered['node_alert']=='ND', ['id']].values:
 #                        if i[0] in raw['id'].values:
 #                            filteredND += [str(i[0])]
 #                        else:
