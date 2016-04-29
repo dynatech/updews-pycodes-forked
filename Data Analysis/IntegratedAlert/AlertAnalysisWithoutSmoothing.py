@@ -394,35 +394,6 @@ def alert_generation(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velL2, T_v
 
     
     return alert_out
-
-def alert_summary(alert_out,alert_list):
-
-    ##DESCRIPTION:
-    ##creates list of sites per alert level
-
-    ##INPUT:
-    ##alert_out; array
-    ##alert_list; array
-
-
-    
-    nd_check=alert_out.loc[(alert_out['node_alert']=='nd')|(alert_out['col_alert']=='nd')]
-    if len(nd_check)>(num_nodes/2):
-        nd_alert.append(colname)
-        
-    else:
-        l3_check=alert_out.loc[(alert_out['node_alert']=='l3')|(alert_out['col_alert']=='l3')]
-        l2_check=alert_out.loc[(alert_out['node_alert']=='l2')|(alert_out['col_alert']=='l2')]
-        l0_check=alert_out.loc[(alert_out['node_alert']=='l0')]
-        checklist=[l3_check,l2_check,l0_check]
-        
-        for c in range(len(checklist)):
-            if len(checklist[c])!=0:
-                checklist[c]=checklist[c].reset_index()
-                alert_list[c].append(colname + str(checklist[c]['id'].values[0]))
-                if c==2: continue
-                print checklist[c].set_index(['ts','id']).drop(['disp_alert','min_vel','max_vel','vel_alert'], axis=1)
-                break
                 
 def nonrepeat_colors(ax,NUM_COLORS,color='gist_rainbow'):
     cm = plt.get_cmap(color)
@@ -624,7 +595,7 @@ col_pos_num= cfg.getfloat('I/O','num_col_pos')
 
 output_path = up_one(up_one(up_one(os.path.dirname(__file__))))
 
-nd_path = output_path + cfg.get('I/O', 'NDFilePath')
+ND_path = output_path + cfg.get('I/O', 'NDFilePath')
 output_file_path = output_path + cfg.get('I/O','OutputFilePath')
 proc_file_path = output_path + cfg.get('I/O','ProcFilePath')
 ColAlerts_file_path = output_path + cfg.get('I/O','ColAlertsFilePath')
@@ -635,7 +606,7 @@ def create_dir(p):
     if not os.path.exists(p):
         os.makedirs(p)
 
-directories = [nd_path,output_file_path,proc_file_path,ColAlerts_file_path,TrendAlerts_file_path]
+directories = [ND_path,output_file_path,proc_file_path,ColAlerts_file_path,TrendAlerts_file_path]
 for p in directories:
     create_dir(p)
 
@@ -723,7 +694,7 @@ n = 0
 for line in f:
     if n == 0:
         event_timestamp = line[6:22]
-    if line[0:2] == 'l2' or line[0:2] == 'l3':
+    if line[0:2] == 'L2' or line[0:2] == 'L3':
         if len(line) > 5:
             positive_l[line[0:2]] = line[4:len(line) - 1].split(',')
     n += 1
@@ -731,7 +702,7 @@ for line in f:
 analyze_sites = []
 for positive_alert in positive_l.keys():
     analyze_sites += positive_l.get(positive_alert)
-
+    
 event_timestamp = pd.to_datetime(event_timestamp)
 
 ##round down event time to the nearest HH:00 or HH:30 time value
@@ -745,6 +716,11 @@ else:end_minute=30
 from datetime import time
 event_timestamp=datetime.combine(date(end_Year,end_month,end_day),time(end_hour,end_minute,0))
 
+# creating summary of alerts
+ND_alert=[]
+L0_alert=[]
+L2_alert=[]
+L3_alert=[]
 
 for time_analyze in range(7):
     end_timestamp = event_timestamp - timedelta(hours = 0.5*(6-time_analyze))
@@ -753,20 +729,7 @@ for time_analyze in range(7):
     roll_window_numpts, end, start, offsetstart, monwin = set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_window_ops, end_timestamp)
     
     hr = end - timedelta(hours=3)     
-    
-    # creating summary of alerts
-    nd_alert=[]
-    l0_alert=[]
-    l2_alert=[]
-    l3_alert=[]
-    alert_df = []
-    alert_list=[l3_alert,l2_alert,l0_alert,nd_alert]
-    alert_names=['l3: ','l2: ','l0: ','ND: ']
-    
-    print "Generating plots and alerts for:"
-    
-    print colname
-        
+                
     for s in sensorlist:
     
         if s.name not in analyze_sites:
@@ -779,6 +742,11 @@ for time_analyze in range(7):
         # getting current column properties
         colname,num_nodes,seg_len= s.name,s.nos,s.seglen
         print colname, num_nodes, seg_len
+        
+        print "Generating plots and alerts for:"
+    
+        print colname
+
     
         # list of working nodes     
         node_list = range(1, num_nodes + 1)
@@ -864,14 +832,14 @@ for time_analyze in range(7):
             counter = Counter(node_trend)
             max_count = max(counter.values())
             mode = [k for k,v in counter.items() if v == max_count]
-            if 'l3' in mode:
-                mode = ['l3']
-            elif 'l2' in mode:
-                mode = ['l2']
-            elif 'nd' in mode:
-                mode = ['nd']   
-            elif 'l0' in mode:
-                mode = ['l0']
+            if 'L3' in mode:
+                mode = ['L3']
+            elif 'L2' in mode:
+                mode = ['L2']
+            elif 'ND' in mode:
+                mode = ['ND']   
+            elif 'L0' in mode:
+                mode = ['L0']
             else:
                 print "No node data for node " + str(n) + " in" + colname
             trending_node_alerts.extend(mode)
@@ -888,48 +856,69 @@ for time_analyze in range(7):
         #adding trending node alerts to alert output table 
         alert_out['trending_alert']=trending_node_alerts
         print alert_out
+
+        if PrintTrendAlerts:    
+            with open(TrendAlerts_file_path+colname+CSVFormat, "ab") as c:
+                trending_node_alerts.insert(0, end.strftime(fmt))
+                wr = csv.writer(c, quoting=False)
+                wr.writerows([trending_node_alerts])   
+            
+            seen = set() # set for fast O(1) amortized lookup
+            for line in fileinput.FileInput(TrendAlerts_file_path+colname+CSVFormat, inplace=1):
+             if line in seen: continue # skip duplicate
         
+             seen.add(line)
+             print line, # standard output is now redirected to the file
+            
         # alert per column
         # WITH TRENDING NODE ALERT
-        if working_node_alerts.count('l3') != 0:
-            l3_alert.append(colname)
-            alert_df.append((end,colname,'l3'))                
-        elif working_node_alerts.count('l2') != 0:
-            l2_alert.append(colname)
-            alert_df.append((end,colname,'l2'))
-        else:
-            working_node_alerts_count = Counter(working_node_alerts)  
-            if (working_node_alerts_count.most_common(1)[0][0] == 'l0'):
-                l0_alert.append(colname)
-                alert_df.append((end,colname,'l0'))
+        if end == event_timestamp:
+            if working_node_alerts.count('L3') != 0:
+                L3_alert.append(colname)
+            elif working_node_alerts.count('L2') != 0:
+                L2_alert.append(colname)
             else:
-                nd_alert.append(colname)
-                alert_df.append((end,colname,'nd'))
-    #        
-            if len(calert.index)<7:
-                print 'Trending alert note: less than 6 data points for ' + colname
-            
+                working_node_alerts_count = Counter(working_node_alerts)  
+                if (working_node_alerts_count.most_common(1)[0][0] == 'L0'):
+                    L0_alert.append(colname)
+                else:
+                    ND_alert.append(colname)
+                
+                if len(calert.index)<7:
+                    print 'Trending alert note: less than 6 data points for ' + colname
+                                            
         print alert_out
       
     #    #11. Plotting column positions
         if end == event_timestamp:
             plot_column_positions(colname,cs_x,cs_xz_0,cs_xy_0)
             plot_column_positions(colname,cs_x,cs_xz,cs_xy)
-            plt.savefig(output_file_path+colname+' colpos '+end.strftime(fig_fmt) + ' without smoothing',
+            plt.savefig(output_file_path+'Alert/'+colname+' colpos '+end.strftime(fig_fmt)+' withoutSmoothing',
                         dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
     #
         #12. Plotting displacement and velocity
         if end == event_timestamp:
             plot_disp_vel(colname, xz_0off,xy_0off, vel_xz_0off, vel_xy_0off)
-            plt.savefig(output_file_path+colname+' disp_vel '+end.strftime(fig_fmt) + ' without smoothing',
+            plt.savefig(output_file_path+'Alert/'+colname+' disp_vel '+end.strftime(fig_fmt)+' withoutSmoothing',
                         dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
     
         plt.close()
+
+
+# writes list of site per alert level in textalert2
+if PrintTAlert2:
+    with open (output_file_path+'textalert2_withTNLwithoutSmoothing' + CSVFormat, 'wb') as t:
+        t.write('As of ' + end.strftime(fmt) + ':\n')
+        t.write ('L0: ' + ','.join(sorted(L0_alert)) + '\n')
+        t.write ('ND: ' + ','.join(sorted(ND_alert)) + '\n')
+        t.write ('L2: ' + ','.join(sorted(L2_alert)) + '\n')
+        t.write ('L3: ' + ','.join(sorted(L3_alert)) + '\n')
+
     
-print 'nd: ', ','.join(nd_alert)
-print 'l0: ', ','.join(l0_alert)
-print 'l1: ', ','.join(l2_alert)
-print 'l2: ', ','.join(l3_alert)
+print 'ND: ', ','.join(ND_alert)
+print 'L0: ', ','.join(L0_alert)
+print 'L2: ', ','.join(L2_alert)
+print 'L3: ', ','.join(L3_alert)
 
 
 # records the number of minutes the code runs
