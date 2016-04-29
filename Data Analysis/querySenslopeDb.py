@@ -750,7 +750,7 @@ def GetLastGoodDataFromDb(col):
 #       returns the dataframe for the last good data prior to the monitoring window
     
 def GetSingleLGDPM(site, node, startTS):
-    query = "SELECT timestamp, xvalue, yvalue, zvalue from %s " % (site)
+    query = "SELECT timestamp, id, xvalue, yvalue, zvalue from %s " % (site)
     query = query + "WHERE id = %s and timestamp < '%s' " % (node, startTS)
     query = query + "ORDER BY timestamp DESC LIMIT 1"
     

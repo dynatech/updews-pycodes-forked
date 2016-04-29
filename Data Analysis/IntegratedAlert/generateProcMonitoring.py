@@ -97,11 +97,15 @@ def generate_proc(site):
             #3.1 identify the node ids with no data at start of monitoring window
             NodesNoInitVal=GetNodesWithNoInitialData(monitoring,num_nodes,offsetstart)
             
-            #TODO: get last good data prior to the monitoring window (LGDOM)
+            #4: get last good data prior to the monitoring window (LGDPM)
+            lgdpm = pd.DataFrame()
+            for node in NodesNoInitVal:
+                temp = GetSingleLGDPM(site, node, start.strftime("%Y-%m-%d %H:%M"))
+                lgdpm = lgdpm.append(temp,ignore_index=True)
  
-            #TODO: Resample the dataframe together with the LGDOM
+            #5 TODO: Resample the dataframe together with the LGDOM
     
-            #4. evaluating which data needs to be filtered
+            #6. evaluating which data needs to be filtered
             try:
                 monitoring=applyFilters(monitoring)
                 LastGoodData=GetLastGoodData(monitoring,num_nodes)
