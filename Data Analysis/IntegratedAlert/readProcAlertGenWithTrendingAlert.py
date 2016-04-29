@@ -821,107 +821,30 @@ for s in sensorlist:
     except TypeError:
         continue
     
-    # trending node alert for all nodes
-    trending_node_alerts = []
-    for n in range(1,1+num_nodes): 
-        calert = df.loc[df['id'] == n]        
-        node_trend = pd.Series.tolist(calert.alerts)
-        counter = Counter(node_trend)
-        max_count = max(counter.values())
-        mode = [k for k,v in counter.items() if v == max_count]
-        if 'L3' in mode:
-            mode = ['L3']
-        elif 'L2' in mode:
-            mode = ['L2']
-        elif 'ND' in mode:
-            mode = ['ND']   
-        elif 'L0' in mode:
-            mode = ['L0']
-        else:
-            print "No node data for node " + str(n) + " in" + colname
-        trending_node_alerts.extend(mode)
-
-    # trending node alert for working nodes
-    working_node_alerts = []
-
-    try:
-        for n in node_list:
-            working_node_alerts += [trending_node_alerts[n-1]]
-    except TypeError:
-        continue
-        
-    #adding trending node alerts to alert output table 
-    alert_out['trending_alert']=trending_node_alerts
-    print alert_out
-
-    if PrintTrendAlerts:    
-        with open(TrendAlerts_file_path+colname+CSVFormat, "ab") as c:
-            trending_node_alerts.insert(0, end.strftime(fmt))
-            wr = csv.writer(c, quoting=False)
-            wr.writerows([trending_node_alerts])   
-        
-        seen = set() # set for fast O(1) amortized lookup
-        for line in fileinput.FileInput(TrendAlerts_file_path+colname+CSVFormat, inplace=1):
-         if line in seen: continue # skip duplicate
-    
-         seen.add(line)
-         print line, # standard output is now redirected to the file
-    
-    # writes sensor name and sensor alerts alphabetically, one sensor per row, in textalert
-    # WITH TRENDING NODE ALERT
-    if with_TrendingNodeAlert:        
-        if working_node_alerts.count('L3') != 0:
-            if PrintTAlert:
-                with open (output_file_path+textalert, 'ab') as t:
-                    t.write (colname + ":" + 'L3' + '\n')
-            L3_alert.append(colname)
-            alert_df.append((end,colname,'L3'))                
-        elif working_node_alerts.count('L2') != 0:
-            if PrintTAlert:
-                with open (output_file_path+textalert, 'ab') as t:
-                    t.write (colname + ":" + 'L2' + '\n')
-            L2_alert.append(colname)
-            alert_df.append((end,colname,'L2'))
-        else:
-            working_node_alerts_count = Counter(working_node_alerts)  
-            if PrintTAlert:
-                with open (output_file_path+textalert, 'ab') as t:
-                    t.write (colname + ":" + (working_node_alerts_count.most_common(1)[0][0]) + '\n')
-            if (working_node_alerts_count.most_common(1)[0][0] == 'L0'):
-                L0_alert.append(colname)
-                alert_df.append((end,colname,'L0'))
-            else:
-                ND_alert.append(colname)
-                alert_df.append((end,colname,'ND'))
-    #        
-            if len(calert.index)<7:
-                print 'Trending alert note: less than 6 data points for ' + colname
-    
     # TRENDING COLUMN ALERT ONLY
+    if trending_col_alerts.count('L3') != 0:
+        if PrintTAlert:
+            with open (output_file_path+textalert, 'ab') as t:
+                t.write (colname + ":" + 'L3' + '\n')
+        L3_alert.append(colname)
+        alert_df.append((end,colname,'L3'))                
+    elif trending_col_alerts.count('L2') != 0:
+        if PrintTAlert:
+            with open (output_file_path+textalert, 'ab') as t:
+                t.write (colname + ":" + 'L2' + '\n')
+        L2_alert.append(colname)
+        alert_df.append((end,colname,'L2'))
     else:
-        if trending_col_alerts.count('L3') != 0:
-            if PrintTAlert:
-                with open (output_file_path+textalert, 'ab') as t:
-                    t.write (colname + ":" + 'L3' + '\n')
-            L3_alert.append(colname)
-            alert_df.append((end,colname,'L3'))                
-        elif trending_col_alerts.count('L2') != 0:
-            if PrintTAlert:
-                with open (output_file_path+textalert, 'ab') as t:
-                    t.write (colname + ":" + 'L2' + '\n')
-            L2_alert.append(colname)
-            alert_df.append((end,colname,'L2'))
+        trending_col_alerts_count = Counter(trending_col_alerts)  
+        if PrintTAlert:
+            with open (output_file_path+textalert, 'ab') as t:
+                t.write (colname + ":" + (trending_col_alerts_count.most_common(1)[0][0]) + '\n')
+        if (trending_col_alerts_count.most_common(1)[0][0] == 'L0'):
+            L0_alert.append(colname)
+            alert_df.append((end,colname,'L0'))
         else:
-            trending_col_alerts_count = Counter(trending_col_alerts)  
-            if PrintTAlert:
-                with open (output_file_path+textalert, 'ab') as t:
-                    t.write (colname + ":" + (trending_col_alerts_count.most_common(1)[0][0]) + '\n')
-            if (trending_col_alerts_count.most_common(1)[0][0] == 'L0'):
-                L0_alert.append(colname)
-                alert_df.append((end,colname,'L0'))
-            else:
-                ND_alert.append(colname)
-                alert_df.append((end,colname,'ND'))
+            ND_alert.append(colname)
+            alert_df.append((end,colname,'ND'))
     
     # writes sensor alerts in one row in webtrends
     if PrintWAlert:
