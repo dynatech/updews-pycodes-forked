@@ -532,6 +532,7 @@ def writeAccelToLocalDB(col,df,fromDate='',numDays=30):
     try:
         df.to_sql(con=dbc, name=col, if_exists='append', flavor='mysql')
         dbc.close()
+        print 'DONE!!!!'
     except OperationalError as e:
         if 'MySQL server has gone away' in str(e):
             #limit the number of days to reduce size of update data
@@ -547,6 +548,7 @@ def writeAccelToLocalDB(col,df,fromDate='',numDays=30):
             
             time.sleep(3)
         else:
+            print e
             raise e()
 
     print "writeAccelToLocalDB done"
@@ -604,23 +606,35 @@ def updateSomsData():
     for index, row in somsList.iterrows():
         soms = row['name'] + 'm'
         #print soms
-        
+        downloadMore=True
         if soms in somsListWeb.index:
             print "%s exists on the web!!!" % (soms)
-
-            ts = getLatestTimestamp(soms)
-            if ts == 0:
-                print 'There is no table named: ' + soms
-                createSensorTable(soms,"soms")
-                ts2 = "2000-01-01+00:00:00"
-                continue
-            elif ts == None:
-            	ts2 = "2000-01-01+00:00:00"
-            else:
-            	ts2 = ts.strftime("%Y-%m-%d+%H:%M:%S")
-             
-            df = downloadSoilMoistureData(soms,ts2)
-            print df
+            
+            while downloadMore:
+                ts = getLatestTimestamp(soms)
+                if ts == 0:
+                    print 'There is no table named: ' + soms
+                    createSensorTable(soms,"soms")
+                    ts2 = "2000-01-01+00:00:00"
+                    continue
+                elif ts == None:
+                	ts2 = "2000-01-01+00:00:00"
+                else:
+                	ts2 = ts.strftime("%Y-%m-%d+%H:%M:%S")
+                
+                df = downloadSoilMoistureData(soms,ts2)
+    #            print df
+                try:
+                    numElements = len(df.index)
+                    print "Number of dataframe elements: %s" % (numElements)
+                    #print df
+                    writeAccelToLocalDB(soms,df,ts2)
+#                    if ts2. != str(datetime.datetime.now().strftime("%Y-%m-%d"))
+                    if numElements < entryLimit:
+                        downloadMore = False     
+                except:
+                    print "No additional data downloaded for %s" % (soms)
+                    downloadMore = False
 '''
     		ts = getLatestTimestamp(col)
     		if ts == 0:
