@@ -14,11 +14,12 @@ from collections import Counter
 import csv
 import fileinput
 import sys
+import time
 
+from scipy import stats
 import generic_functions as gf
 import generateProcMonitoring as genproc
 import alertEvaluation as alert
-from scipy import stats
 
 #include the path of "Data Analysis" folder for the python scripts searching
 path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -29,9 +30,11 @@ del path
 from querySenslopeDb import *
 from filterSensorData import *
 
-
-
-
+#Generate Last Good Data Table if it doesn't exist yet
+lgdExistence = DoesTableExist("lastgooddata")
+if lgdExistence == False:
+    print "Generate Last Good Data Table"
+    GenerateLastGoodData()
 
 def set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_window_ops):
     
@@ -53,16 +56,6 @@ def set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_w
     monwin=pd.DataFrame(data=np.nan*np.ones(len(monwin_time)), index=monwin_time)
     return roll_window_numpts, end, start, offsetstart, monwin
     
-def compute_rolling_velocity(ii,df):
-    in_df = df.iloc[map(int,ii)]
-    m,b,r,p,s = stats.linregress(in_df['time'],in_df['disp'])
-    return m
-    
-def compute_rolling_p_value(ii,df):
-    in_df = df.iloc[map(int,ii)]
-    m,b,r,p,s = stats.linregress(in_df['time'],in_df['disp'])
-    return p
-        
 def create_series_list(input_df,monwin,colname,num_nodes):
     
     ##DESCRIPTION:
@@ -144,6 +137,16 @@ def create_fill_smooth_df(series_list,num_nodes,monwin, roll_window_numpts, to_f
 
     #returning rounded-off values within monitoring window
     return np.round(df[(df.index>=monwin.index[0])&(df.index<=monwin.index[-1])],4)
+    
+def compute_rolling_velocity(ii,df):
+    in_df = df.iloc[map(int,ii)]
+    m,b,r,p,s = stats.linregress(in_df['time'],in_df['disp'])
+    return m
+    
+def compute_rolling_p_value(ii,df):
+    in_df = df.iloc[map(int,ii)]
+    m,b,r,p,s = stats.linregress(in_df['time'],in_df['disp'])
+    return p
 
 def compute_col_pos(xz,xy,col_pos_end, col_pos_interval, col_pos_number):
 
@@ -201,7 +204,8 @@ def compute_col_pos(xz,xy,col_pos_end, col_pos_interval, col_pos_number):
 
     
     return np.round(cs_x,4), np.round(cs_xz,4), np.round(cs_xy,4)
-    
+
+
 def compute_node_inst_vel(xz,xy,roll_window_numpts): 
 
     ##DESCRIPTION:
@@ -235,6 +239,55 @@ def compute_node_inst_vel(xz,xy,roll_window_numpts):
     num_nodes=len(xz.columns.tolist())
     for n in range(1,1+num_nodes):
         try:
+            lr_xz=ols(y=xz[n],x=td,window=roll_window_numpts,intercept=True)
+            lr_xy=ols(y=xy[n],x=td,window=roll_window_numpts,intercept=True)
+    
+            vel_xz[n]=np.round(lr_xz.beta.x.values,4)
+            vel_xy[n]=np.round(lr_xy.beta.x.values,4)
+
+        except:
+            print " ERROR in computing velocity" 
+            vel_xz[n]=np.zeros(len(vel_xz.index))
+            vel_xy[n]=np.zeros(len(vel_xy.index))
+
+    #returning rounded-off values
+    return np.round(vel_xz,4), np.round(vel_xy,4)
+
+def compute_node_inst_vel_2(xz,xy,roll_window_numpts): 
+
+    ##DESCRIPTION:
+    ##returns rounded-off values of velocity of xz and xy
+
+    ##INPUT:
+    ##xz; dataframe; horizontal linear displacements along the planes defined by xa-za
+    ##xy; dataframe; horizontal linear displacements along the planes defined by xa-ya
+    ##roll_window_numpts; integer; number of data points per rolling window
+
+    ##OUTPUT:
+    ##np.round(vel_xz,4), np.round(vel_xy,4)
+
+##    uncomment to trim xz and xy for a more efficient run
+#    end_xz = xz.index[-1]
+#    end_xy = xy.index[-1]
+#    start_xz = end_xz - timedelta(days=1)    
+#    start_xy = end_xy - timedelta(days=1)
+#    xz = xz.loc[start_xz:end_xz]
+#    xy = xy.loc[start_xy:end_xy]    
+    
+    #setting up time units in days
+    td=xz.index.values-xz.index.values[0]
+    td=pd.Series(td/np.timedelta64(1,'D'),index=xz.index)
+
+    #setting up dataframe for velocity values
+    vel_xz=pd.DataFrame(data=None, index=xz.index[roll_window_numpts-1:])
+    vel_xy=pd.DataFrame(data=None, index=xy.index[roll_window_numpts-1:])
+    p_xz_df = pd.DataFrame(data=None, index=xz.index[roll_window_numpts-1:])
+    p_xy_df = pd.DataFrame(data=None, index=xy.index[roll_window_numpts-1:])
+ 
+    #performing moving window linear regression
+    num_nodes=len(xz.columns.tolist())
+    for n in range(1,1+num_nodes):
+        try:
             #Create data frames for rolling computation
             xz_data = pd.DataFrame()
             xy_data = pd.DataFrame()
@@ -249,20 +302,22 @@ def compute_node_inst_vel(xz,xy,roll_window_numpts):
             xy_data_roll = xy_data.ii.rolling(window = roll_window_numpts)
          
             #scipy.stats.linregress to obtain slope
-            vel_xz[n] = xz_data_roll.apply(lambda x: compute_rolling_velocity(x,xz_data)).values
-            vel_xy[n] = xy_data_roll.apply(lambda x: compute_rolling_velocity(x,xy_data)).values
+            vel_xz[n] = xz_data_roll.apply(lambda x: compute_rolling_velocity(x,xz_data)).dropna().values
+            vel_xy[n] = xy_data_roll.apply(lambda x: compute_rolling_velocity(x,xy_data)).dropna().values
             
             #Computation of p-values
-            p_xz = xz_data_roll.apply(lambda x: compute_rolling_p_value(x,xz_data)).values
-            p_xy = xy_data_roll.apply(lambda x: compute_rolling_p_value(x,xy_data)).values
+            p_xz = xz_data_roll.apply(lambda x: compute_rolling_p_value(x,xz_data)).dropna().values
+            p_xy = xy_data_roll.apply(lambda x: compute_rolling_p_value(x,xy_data)).dropna().values
+            p_xz_df[n] = p_xz
+            p_xy_df[n] = p_xy
+            print p_xz, vel_xz[n]
+            print p_xy, vel_xy[n]
             
             #Reject velocity values for p-values < 0.05 and round values to 4 decimal places
             p_xz_filter = np.where(p_xz < 0.05, np.ones(len(p_xz)), np.zeros(len(p_xz)))
             p_xy_filter = np.where(p_xy < 0.05, np.ones(len(p_xy)), np.zeros(len(p_xy)))
             vel_xz[n] = vel_xz[n].values*p_xz_filter
             vel_xy[n] = vel_xy[n].values*p_xy_filter
-            
-            
         except:
             print " ERROR in computing velocity" 
             vel_xz[n]=np.zeros(len(vel_xz.index))
@@ -271,7 +326,7 @@ def compute_node_inst_vel(xz,xy,roll_window_numpts):
     #returning rounded-off values
     print np.round(vel_xz,4)
     print np.round(vel_xy,4)
-    return np.round(vel_xz,4), np.round(vel_xy,4)
+    return np.round(vel_xz,4), np.round(vel_xy,4), np.round(p_xz_df,4), np.round(p_xy_df,4)
 
 def df_to_out(colname,xz,xy,
               vel_xz,vel_xy,
@@ -420,15 +475,15 @@ def alert_summary(alert_out,alert_list):
 
 
     
-    nd_check=alert_out.loc[(alert_out['node_alert']=='nd')|(alert_out['col_alert']=='nd')]
-    if len(nd_check)>(num_nodes/2):
-        nd_alert.append(colname)
+    ND_check=alert_out.loc[(alert_out['node_alert']=='ND')|(alert_out['col_alert']=='ND')]
+    if len(ND_check)>(num_nodes/2):
+        ND_alert.append(colname)
         
     else:
-        l3_check=alert_out.loc[(alert_out['node_alert']=='l3')|(alert_out['col_alert']=='l3')]
-        l2_check=alert_out.loc[(alert_out['node_alert']=='l2')|(alert_out['col_alert']=='l2')]
-        l0_check=alert_out.loc[(alert_out['node_alert']=='l0')]
-        checklist=[l3_check,l2_check,l0_check]
+        L3_check=alert_out.loc[(alert_out['node_alert']=='L3')|(alert_out['col_alert']=='L3')]
+        L2_check=alert_out.loc[(alert_out['node_alert']=='L2')|(alert_out['col_alert']=='L2')]
+        L0_check=alert_out.loc[(alert_out['node_alert']=='L0')]
+        checklist=[L3_check,L2_check,L0_check]
         
         for c in range(len(checklist)):
             if len(checklist[c])!=0:
@@ -638,7 +693,7 @@ col_pos_num= cfg.getfloat('I/O','num_col_pos')
 
 output_path = up_one(up_one(up_one(os.path.dirname(__file__))))
 
-nd_path = output_path + cfg.get('I/O', 'NDFilePath')
+ND_path = output_path + cfg.get('I/O', 'NDFilePath')
 output_file_path = output_path + cfg.get('I/O','OutputFilePath')
 proc_file_path = output_path + cfg.get('I/O','ProcFilePath')
 ColAlerts_file_path = output_path + cfg.get('I/O','ColAlertsFilePath')
@@ -649,7 +704,7 @@ def create_dir(p):
     if not os.path.exists(p):
         os.makedirs(p)
 
-directories = [nd_path,output_file_path,proc_file_path,ColAlerts_file_path,TrendAlerts_file_path]
+directories = [ND_path,output_file_path,proc_file_path,ColAlerts_file_path,TrendAlerts_file_path]
 for p in directories:
     create_dir(p)
 
@@ -694,8 +749,8 @@ k_ac_ax = cfg.getfloat('I/O','k_ac_ax')
 num_nodes_to_check = cfg.getint('I/O','num_nodes_to_check')
 alert_file_length=cfg.getint('I/O','alert_time_int') # in days
 
-to_fill = cfg.get('I/O','to_fill')
-to_smooth = cfg.get('I/O','to_smooth')
+to_fill = cfg.getint('I/O','to_fill')
+to_smooth = cfg.getint('I/O','to_smooth')
 
 with_TrendingNodeAlert = cfg.getboolean('I/O','with_TrendingNodeAlert')
 test_specific_sites = cfg.getboolean('I/O','test_specific_sites')
@@ -731,24 +786,13 @@ set_json = False
 roll_window_numpts, end, start, offsetstart, monwin = set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_window_ops)
 
 # creating summary of alerts
-nd_alert=[]
-l0_alert=[]
-l2_alert=[]
-l3_alert=[]
+ND_alert=[]
+L0_alert=[]
+L2_alert=[]
+L3_alert=[]
 alert_df = []
-alert_list=[l3_alert,l2_alert,l0_alert,nd_alert]
-alert_names=['l3: ','l2: ','l0: ','ND: ']
-
-# creating dictionary of working nodes per site
-wn = open('working_nodes.txt', 'r')
-working_nodes = {}
-for line in wn:
-    lst = line.split(',')
-    site = lst[0]
-    for i in range(1,len(lst)):
-        lst[i] = int(lst[i])
-    nodes = lst[1:len(lst)]
-    working_nodes[site] = nodes
+alert_list=[L3_alert,L2_alert,L0_alert,ND_alert]
+alert_names=['L3: ','L2: ','L0: ','ND: ']
 
 print "Generating plots and alerts for:"
 
@@ -760,11 +804,10 @@ with open(output_file_path+webtrends, 'ab') as w, open (output_file_path+textale
     t.write('As of ' + end.strftime(fmt) + ':\n')
     w.write(end.strftime(fmt) + ';')
 
-
-CreateColAlertsTable('col_alerts', Namedb)
-
 # getting list of sensors
 sensorlist = GetSensorList()
+
+node_status = GetNodeStatus(1)
 
 for s in sensorlist:
 
@@ -780,7 +823,14 @@ for s in sensorlist:
     colname,num_nodes,seg_len= s.name,s.nos,s.seglen
     print colname, num_nodes, seg_len
 
-    # importing proc_monitoring csv file of current column to dataframe
+    # list of working nodes     
+    node_list = range(1, num_nodes + 1)
+    not_working = node_status.loc[(node_status.site == colname) & (node_status.node <= num_nodes)]
+    not_working_nodes = not_working['node'].values        
+    for i in not_working_nodes:
+        node_list.remove(i)
+
+    # importing proc_monitoring file of current column to dataframe
     try:
         proc_monitoring=genproc.generate_proc(colname)
         print proc_monitoring
@@ -796,9 +846,18 @@ for s in sensorlist:
     xz=create_fill_smooth_df(xz_series_list,num_nodes,monwin, roll_window_numpts,to_fill,to_smooth)
     xy=create_fill_smooth_df(xy_series_list,num_nodes,monwin, roll_window_numpts,to_fill,to_smooth)
     
-    # computing instantaneous velocity
+    # computing instantaneous velocity with and without p value filtering
     vel_xz, vel_xy = compute_node_inst_vel(xz,xy,roll_window_numpts)
+    vel_xz_2, vel_xy_2, p_xz, p_xy = compute_node_inst_vel_2(xz,xy,roll_window_numpts)
     
+    #print the velocity data to csv    
+    
+    vel_xz.tail(1).to_csv(output_file_path+'/p-value-filtering/'+colname+'xz_velocities_unfiltered.csv', mode='a', header=False)
+    vel_xy.tail(1).to_csv(output_file_path+'/p-value-filtering/'+colname+'xy_velocities_unfiltered.csv', mode='a', header=False)
+    vel_xz_2.tail(1).to_csv(output_file_path+'/p-value-filtering/'+colname+'xz_velocities_p_value_filtered.csv', mode='a', header=False)
+    vel_xy_2.tail(1).to_csv(output_file_path+'/p-value-filtering/'+colname+'_xy_velocities_p_value_filtered.csv', mode='a', header=False)    
+    p_xz.tail(1).to_csv(output_file_path+'/p-value-filtering/'+colname+'_xz_velocities_p_values.csv', mode='a', header=False)    
+    p_xy.tail(1).to_csv(output_file_path+'/p-value-filtering/'+colname+'_xy_velocities_p_values.csv', mode='a', header=False)
     # computing cumulative displacements
     cs_x, cs_xz, cs_xy=compute_col_pos(xz,xy,monwin.index[-1], col_pos_interval, col_pos_num)
 
@@ -853,135 +912,52 @@ for s in sensorlist:
     trending_col_alerts = []
     
     try:
-        for n in working_nodes.get(colname):
+        for n in node_list:
             trending_col_alerts += [pd.Series.tolist(alert_out.col_alert)[n-1]]
     except TypeError:
         continue
     
-    # trending node alert for all nodes
-    trending_node_alerts = []
-    for n in range(1,1+num_nodes): 
-        calert = df.loc[df['id'] == n]        
-        node_trend = pd.Series.tolist(calert.alerts)
-        counter = Counter(node_trend)
-        max_count = max(counter.values())
-        mode = [k for k,v in counter.items() if v == max_count]
-        if 'l3' in mode:
-            mode = ['l3']
-        elif 'l2' in mode:
-            mode = ['l2']
-        elif 'nd' in mode:
-            mode = ['nd']   
-        elif 'l0' in mode:
-            mode = ['l0']
-        else:
-            print "No node data for node " + str(n) + " in" + colname
-        trending_node_alerts.extend(mode)
-
-    # trending node alert for working nodes
-    working_node_alerts = []
-
-    try:
-        for n in working_nodes.get(colname):
-            working_node_alerts += [trending_node_alerts[n-1]]
-    except TypeError:
-        continue
-        
-    #adding trending node alerts to alert output table 
-    alert_out['trending_alert']=trending_node_alerts
-    print alert_out
-
-    if PrintTrendAlerts:    
-        with open(TrendAlerts_file_path+colname+CSVFormat, "ab") as c:
-            trending_node_alerts.insert(0, end.strftime(fmt))
-            wr = csv.writer(c, quoting=False)
-            wr.writerows([trending_node_alerts])   
-        
-        seen = set() # set for fast O(1) amortized lookup
-        for line in fileinput.FileInput(TrendAlerts_file_path+colname+CSVFormat, inplace=1):
-         if line in seen: continue # skip duplicate
-    
-         seen.add(line)
-         print line, # standard output is now redirected to the file
-    
-    # writes sensor name and sensor alerts alphabetically, one sensor per row, in textalert
-    # WITH TRENDING NODE ALERT
-    if with_TrendingNodeAlert:        
-        if working_node_alerts.count('l3') != 0:
-            if PrintTAlert:
-                with open (output_file_path+textalert, 'ab') as t:
-                    t.write (colname + ":" + 'l3' + '\n')
-            l3_alert.append(colname)
-            alert_df.append((end,colname,'l3'))                
-        elif working_node_alerts.count('l2') != 0:
-            if PrintTAlert:
-                with open (output_file_path+textalert, 'ab') as t:
-                    t.write (colname + ":" + 'l2' + '\n')
-            l2_alert.append(colname)
-            alert_df.append((end,colname,'l2'))
-        else:
-            working_node_alerts_count = Counter(working_node_alerts)  
-            if PrintTAlert:
-                with open (output_file_path+textalert, 'ab') as t:
-                    t.write (colname + ":" + (working_node_alerts_count.most_common(1)[0][0]) + '\n')
-            if (working_node_alerts_count.most_common(1)[0][0] == 'l0'):
-                l0_alert.append(colname)
-                alert_df.append((end,colname,'l0'))
-            else:
-                nd_alert.append(colname)
-                alert_df.append((end,colname,'nd'))
-    #        
-            if len(calert.index)<7:
-                print 'Trending alert note: less than 6 data points for ' + colname
-    
     # TRENDING COLUMN ALERT ONLY
+    if trending_col_alerts.count('L3') != 0:
+        if PrintTAlert:
+            with open (output_file_path+textalert, 'ab') as t:
+                t.write (colname + ":" + 'L3' + '\n')
+        L3_alert.append(colname)
+        alert_df.append((end,colname,'L3'))                
+    elif trending_col_alerts.count('L2') != 0:
+        if PrintTAlert:
+            with open (output_file_path+textalert, 'ab') as t:
+                t.write (colname + ":" + 'L2' + '\n')
+        L2_alert.append(colname)
+        alert_df.append((end,colname,'L2'))
     else:
-        if trending_col_alerts.count('l3') != 0:
-            if PrintTAlert:
-                with open (output_file_path+textalert, 'ab') as t:
-                    t.write (colname + ":" + 'l3' + '\n')
-            l3_alert.append(colname)
-            alert_df.append((end,colname,'l3'))                
-        elif trending_col_alerts.count('l2') != 0:
-            if PrintTAlert:
-                with open (output_file_path+textalert, 'ab') as t:
-                    t.write (colname + ":" + 'l2' + '\n')
-            l2_alert.append(colname)
-            alert_df.append((end,colname,'l2'))
+        trending_col_alerts_count = Counter(trending_col_alerts)  
+        if PrintTAlert:
+            with open (output_file_path+textalert, 'ab') as t:
+                t.write (colname + ":" + (trending_col_alerts_count.most_common(1)[0][0]) + '\n')
+        if (trending_col_alerts_count.most_common(1)[0][0] == 'L0'):
+            L0_alert.append(colname)
+            alert_df.append((end,colname,'L0'))
         else:
-            trending_col_alerts_count = Counter(trending_col_alerts)  
-            if PrintTAlert:
-                with open (output_file_path+textalert, 'ab') as t:
-                    t.write (colname + ":" + (trending_col_alerts_count.most_common(1)[0][0]) + '\n')
-            if (trending_col_alerts_count.most_common(1)[0][0] == 'l0'):
-                l0_alert.append(colname)
-                alert_df.append((end,colname,'l0'))
-            else:
-                nd_alert.append(colname)
-                alert_df.append((end,colname,'nd'))
-    #        
-            if len(calert.index)<7:
-                print 'Trending alert note: less than 6 data points for ' + colname        
+            ND_alert.append(colname)
+            alert_df.append((end,colname,'ND'))
     
     # writes sensor alerts in one row in webtrends
     if PrintWAlert:
         with open(output_file_path+webtrends, 'ab') as w:
-                if working_node_alerts.count('l3') != 0:
-                    w.write ('l3' + ',')
-                elif working_node_alerts.count('l2') != 0:
-                    w.write ('l2' + ',')
+                if trending_col_alerts.count('L3') != 0:
+                    w.write ('L3' + ',')
+                elif trending_col_alerts.count('L2') != 0:
+                    w.write ('L2' + ',')
                 elif (colname == 'sinb') or (colname == 'blcb'):
-                    if working_node_alerts.count('l0') > 0:
-                        w.write ('l0' + ',')
+                    if trending_col_alerts.count('L0') > 0:
+                        w.write ('L0' + ',')
                     else:
-                        w.write ('nd' + ',')       
+                        w.write ('ND' + ',')       
                 else:
-                    working_node_alerts = Counter(working_node_alerts)  
-                    w.write ((working_node_alerts.most_common(1)[0][0]) + ',')
-        #        
-                if len(calert.index)<7:
-                    print 'Trending alert note: less than 6 data points for ' + colname
-                
+                    trending_col_alerts = Counter(trending_col_alerts)  
+                    w.write ((trending_col_alerts.most_common(1)[0][0]) + ',')
+                                
                 if colname == last_col:
                            w.seek(-1, os.SEEK_END)
                            w.truncate()
@@ -991,11 +967,11 @@ for s in sensorlist:
   
 #    prints to csv: node alert, column alert and trending alert of sites with nd alert
     if PrintND:
-        for colname in nd_alert:
-            if os.path.exists(nd_path + colname + CSVFormat):
-                alert_out[['node_alert', 'col_alert', 'trending_alert']].to_csv(nd_path + colname + CSVFormat, sep=',', header=False, mode='a')
+        for colname in ND_alert:
+            if os.path.exists(ND_path + colname + CSVFormat):
+                alert_out[['node_alert', 'col_alert', 'trending_alert']].to_csv(ND_path + colname + CSVFormat, sep=',', header=False, mode='a')
             else:
-                alert_out[['node_alert', 'col_alert', 'trending_alert']].to_csv(nd_path + colname + CSVFormat, sep=',', header=True, mode='w')
+                alert_out[['node_alert', 'col_alert', 'trending_alert']].to_csv(ND_path + colname + CSVFormat, sep=',', header=True, mode='w')
 
 #    #11. Plotting column positions
     if PrintColPos:
@@ -1017,18 +993,18 @@ for s in sensorlist:
 if PrintTAlert2:
     with open (output_file_path+textalert2, 'wb') as t:
         t.write('As of ' + end.strftime(fmt) + ':\n')
-        t.write ('l0: ' + ','.join(sorted(l0_alert)) + '\n')
-        t.write ('nd: ' + ','.join(sorted(nd_alert)) + '\n')
-        t.write ('l2: ' + ','.join(sorted(l2_alert)) + '\n')
-        t.write ('l3: ' + ','.join(sorted(l3_alert)) + '\n')
+        t.write ('L0: ' + ','.join(sorted(L0_alert)) + '\n')
+        t.write ('ND: ' + ','.join(sorted(ND_alert)) + '\n')
+        t.write ('L2: ' + ','.join(sorted(L2_alert)) + '\n')
+        t.write ('L3: ' + ','.join(sorted(L3_alert)) + '\n')
 
 
 #Prints rainfall alerts, text alert and eq summary in one file
 if PrintAAlert:
     with open(output_file_path+all_alerts, 'wb') as allalerts:
         allalerts.write('As of ' + end.strftime(fmt) + ':\n')
-        allalerts.write('l3: ' + ','.join(sorted(l3_alert)) + '\n')
-        allalerts.write('l2: ' + ','.join(sorted(l2_alert)) + '\n')
+        allalerts.write('L3: ' + ','.join(sorted(L3_alert)) + '\n')
+        allalerts.write('L2: ' + ','.join(sorted(L2_alert)) + '\n')
         allalerts.write('\n')
         with open(output_file_path+rainfall_alert) as rainfallalert:
             n = 0
@@ -1043,10 +1019,10 @@ if PrintAAlert:
 
 if PrintGSMAlert:
     with open(output_file_path+gsm_alert, 'wb') as gsmalert:
-        if len(l3_alert) != 0:
-            gsmalert.write('l3: ' + ','.join(sorted(l3_alert)) + '\n')
-        if len(l2_alert) != 0:
-            gsmalert.write('l2: ' + ','.join(sorted(l2_alert)) + '\n')
+        if len(L3_alert) != 0:
+            gsmalert.write('L3: ' + ','.join(sorted(L3_alert)) + '\n')
+        if len(L2_alert) != 0:
+            gsmalert.write('L2: ' + ','.join(sorted(L2_alert)) + '\n')
         with open(output_file_path+rainfall_alert) as rainfallalert:
             n = 0
             for line in rainfallalert:
@@ -1075,35 +1051,35 @@ if PrintGSMAlert:
         f.write(text)
         f.close()
 
-name = []
-nos = []
-for col in sensorlist:
-    name += [col.name]
-    nos += [col.nos]
-sensors = pd.DataFrame(data=None)
-sensors['name']=name
-sensors['nos']=nos
-sensors=sensors.set_index('name')
-
-# gets list of working sites
-working_sites = []
-with open('working_sites.txt', 'r') as SQLsites:
-    for line in SQLsites:
-        working_sites += [line.split('\n')[0]]
-        
-
+#name = []
+#nos = []
+#for col in sensorlist:
+#    name += [col.name]
+#    nos += [col.nos]
+#sensors = pd.DataFrame(data=None)
+#sensors['name']=name
+#sensors['nos']=nos
+#sensors=sensors.set_index('name')
+#
+## gets list of working sites
+#working_sites = []
+#with open('working_sites.txt', 'r') as SQLsites:
+#    for line in SQLsites:
+#        working_sites += [line.split('\n')[0]]
+#        
+#
 ## creates list of sites with no data and classifies whether its raw or filtered
 #if PrintND:
 #    with open(output_file_path+NDlog, 'ab') as ND:
-#        if len(l0_alert) == 0 and len(l2_alert) == 0 and len(l3_alert) == 0:
+#        if len(L0_alert) == 0 and len(L2_alert) == 0 and len(L3_alert) == 0:
 #            ND.write(end.strftime(fmt) + ',D,')
 #            ND.write("ND on all sites,")
 #            ND.write(',\n')
-#    if len(l0_alert) != 0 or len(l2_alert) != 0 or len(l3_alert) != 0:
+#    if len(L0_alert) != 0 or len(L2_alert) != 0 or len(L3_alert) != 0:
 #        with open(output_file_path+NDlog, 'ab') as ND:
 #            try:
 #                ND.write(end.strftime(fmt) + ',D,')
-#                for colname in nd_alert:
+#                for colname in ND_alert:
 #                    filtered = pd.read_csv(proc_file_path+colname+"/"+colname+" "+"alert"+CSVFormat, names=alert_headers,parse_dates='ts',index_col='ts')
 #                    filtered = filtered[(filtered.index>=end)]
 #                    print 'filtered'            
@@ -1115,7 +1091,7 @@ with open('working_sites.txt', 'r') as SQLsites:
 #                    print raw
 #                    filteredND = []
 #                    rawND = []
-#                    for i in filtered.loc[filtered['node_alert']=='nd', ['id']].values:
+#                    for i in filtered.loc[filtered['node_alert']=='ND', ['id']].values:
 #                        if i[0] in raw['id'].values:
 #                            filteredND += [str(i[0])]
 #                        else:
