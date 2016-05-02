@@ -105,7 +105,7 @@ to_smooth = 1				;to smooth xz and xy through moving average (1 or 0)
 
 with_TrendingNodeAlert = False
 test_sites = magtb
-test_specific_sites = True
+test_specific_sites = False
 
 PlotColPos = True
 PlotDispVel = True

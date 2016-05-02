@@ -706,7 +706,7 @@ PrintGSMAlert = cfg.getboolean('I/O', 'PrintGSMAlert')
 
 names = ['ts','col_a']
 fmt = '%Y-%m-%d %H:%M'
-fig_fmt = '%Y-%m-%d %H-%M'  
+fig_fmt = '%Y-%m-%d_%H-%M'  
 
 CreateColAlertsTable('col_alerts', Namedb)
 
@@ -950,6 +950,13 @@ print 'L0: ', ','.join(L0_alert)
 print 'L2: ', ','.join(L2_alert)
 print 'L3: ', ','.join(L3_alert)
 
+# deletes plots older than a day
+for dirpath, dirnames, filenames in os.walk(AlertAnalysisPath):
+    for file in filenames:
+        curpath = os.path.join(dirpath, file)
+        file_modified = datetime.fromtimestamp(os.path.getmtime(curpath))
+        if datetime.now() - file_modified > timedelta(1):
+            os.remove(curpath)
 
 # records the number of minutes the code runs
 end_time = datetime.now() - start_time
