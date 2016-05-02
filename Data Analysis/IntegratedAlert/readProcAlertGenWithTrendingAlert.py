@@ -717,9 +717,6 @@ with open(output_file_path+webtrends, 'ab') as w, open (output_file_path+textale
     t.write('As of ' + end.strftime(fmt) + ':\n')
     w.write(end.strftime(fmt) + ';')
 
-
-CreateColAlertsTable('col_alerts', Namedb)
-
 # getting list of sensors
 sensorlist = GetSensorList()
 

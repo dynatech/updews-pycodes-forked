@@ -105,8 +105,12 @@ def CreateAccelTable(table_name, nameDB):
 def CreateColAlertsTable(table_name, nameDB):
     db = MySQLdb.connect(host = Hostdb, user = Userdb, passwd = Passdb)
     cur = db.cursor()
-    #cur.execute("CREATE DATABASE IF NOT EXISTS %s" %nameDB)
+
     cur.execute("USE %s"%nameDB)
+    
+    query = "DROP TABLE IF EXISTS `senslopedb`.%s;" %table_name
+    cur.execute(query)
+    
     cur.execute("CREATE TABLE IF NOT EXISTS %s(sitecode varchar(8), timestamp datetime, id int, alerts varchar(8), PRIMARY KEY (sitecode, timestamp, id))" %table_name)
     db.close()
 	
