@@ -746,7 +746,7 @@ for s in sensorlist:
     for i in not_working_nodes:
         node_list.remove(i)
 
-    # importing proc_monitoring csv file of current column to dataframe
+    # importing proc_monitoring file of current column to dataframe
     try:
         proc_monitoring=genproc.generate_proc(colname)
         print proc_monitoring

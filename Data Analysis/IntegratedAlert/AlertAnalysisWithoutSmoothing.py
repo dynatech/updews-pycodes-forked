@@ -701,9 +701,6 @@ PrintTimer = cfg.getboolean('I/O','PrintTimer')
 PrintAAlert = cfg.getboolean('I/O','PrintAAlert')
 PrintGSMAlert = cfg.getboolean('I/O', 'PrintGSMAlert')
 
-#if PrintColPos or PrintTrendAlerts:
-#    import matplotlib.pyplot as plt
-#    plt.ioff()
 
 #MAIN
 
@@ -751,6 +748,9 @@ ND_alert=[]
 L0_alert=[]
 L2_alert=[]
 L3_alert=[]
+alert_df = []
+alert_list=[L3_alert,L2_alert,L0_alert,ND_alert]
+alert_names=['L3: ','L2: ','L0: ','ND: ']
 
 for time_analyze in range(7):
     end_timestamp = event_timestamp - timedelta(hours = 0.5*(6-time_analyze))
@@ -888,7 +888,7 @@ for time_analyze in range(7):
         print alert_out
 
         if PrintTrendAlerts:    
-            with open(TrendAlerts_file_path+colname+CSVFormat, "ab") as c:
+            with open(TrendAlerts_file_path+colname+'WithoutSmoothing'+CSVFormat, "ab") as c:
                 trending_node_alerts.insert(0, end.strftime(fmt))
                 wr = csv.writer(c, quoting=False)
                 wr.writerows([trending_node_alerts])   
@@ -916,20 +916,20 @@ for time_analyze in range(7):
                 
                 if len(calert.index)<7:
                     print 'Trending alert note: less than 6 data points for ' + colname
-                                            
+                    
         print alert_out
       
     #    #11. Plotting column positions
         if end == event_timestamp:
             plot_column_positions(colname,cs_x,cs_xz_0,cs_xy_0)
             plot_column_positions(colname,cs_x,cs_xz,cs_xy)
-            plt.savefig(AlertAnalysisPath+colname+' colpos '+end.strftime(fig_fmt)+' withoutSmoothing',
+            plt.savefig(AlertAnalysisPath+colname+'ColPos'+end.strftime(fig_fmt)+'WithoutSmoothing',
                         dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
     #
         #12. Plotting displacement and velocity
         if end == event_timestamp:
             plot_disp_vel(colname, xz_0off,xy_0off, vel_xz_0off, vel_xy_0off)
-            plt.savefig(AlertAnalysisPath+colname+' disp_vel '+end.strftime(fig_fmt)+' withoutSmoothing',
+            plt.savefig(AlertAnalysisPath+colname+'Disp_Vel'+end.strftime(fig_fmt)+'WithoutSmoothing',
                         dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
     
         plt.close()
@@ -937,7 +937,7 @@ for time_analyze in range(7):
 
 # writes list of site per alert level in textalert2
 if PrintTAlert2:
-    with open (output_file_path+'textalert2_withTNLwithoutSmoothing' + CSVFormat, 'wb') as t:
+    with open (output_file_path+'textalert2_withTNLwithSmoothing' + '.txt', 'wb') as t:
         t.write('As of ' + end.strftime(fmt) + ':\n')
         t.write ('L0: ' + ','.join(sorted(L0_alert)) + '\n')
         t.write ('ND: ' + ','.join(sorted(ND_alert)) + '\n')
