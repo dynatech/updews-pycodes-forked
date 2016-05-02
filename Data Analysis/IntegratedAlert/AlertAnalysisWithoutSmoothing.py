@@ -708,7 +708,7 @@ names = ['ts','col_a']
 fmt = '%Y-%m-%d %H:%M'
 fig_fmt = '%Y-%m-%d_%H-%M'  
 
-CreateColAlertsTable('col_alerts', Namedb)
+CreateColAlertsTable('col_alerts_NoSmoothing', Namedb)
 
 # getting list of sensors
 sensorlist = GetSensorList()
@@ -829,18 +829,18 @@ for time_analyze in range(7):
     
         #writes col_alert to csv    
         for s in range(len(pd.Series.tolist(alert_out.col_alert))):
-            query = """INSERT IGNORE INTO col_alerts (sitecode, timestamp, id, alerts) VALUES """
+            query = """INSERT IGNORE INTO col_alerts_NoSmoothing (sitecode, timestamp, id, alerts) VALUES """
             query = query + str((str(colname), str(end), str(s+1), str(pd.Series.tolist(alert_out.col_alert)[s])))
             cur.execute(query)
             db.commit()
     
-        #deletes col_alerts older than 3 hrs
-        query = """DELETE FROM col_alerts WHERE timestamp < TIMESTAMP('%s')""" % hr
+        #deletes col_alerts_NoSmoothing older than 3 hrs
+        query = """DELETE FROM col_alerts_NoSmoothing WHERE timestamp < TIMESTAMP('%s')""" % hr
         cur.execute(query)
         db.commit()  
         
-        #selects and otputs to dataframe col_alerts from the last 3hrs
-        query = "select sitecode, timestamp, id, alerts from senslopedb.col_alerts where timestamp >= timestamp('%s')" % hr
+        #selects and otputs to dataframe col_alerts_NoSmoothing from the last 3hrs
+        query = "select sitecode, timestamp, id, alerts from senslopedb.col_alerts_NoSmoothing where timestamp >= timestamp('%s')" % hr
         query = query + " and timestamp <= timestamp('%s')" % end
         query = query + " and id >= 1 and id <= %s" % num_nodes
         query = query + " and sitecode = '%s' ;" % colname
@@ -894,7 +894,7 @@ for time_analyze in range(7):
                 wr.writerows([trending_node_alerts])   
             
             seen = set() # set for fast O(1) amortized lookup
-            for line in fileinput.FileInput(TrendAlerts_file_path+colname+CSVFormat, inplace=1):
+            for line in fileinput.FileInput(TrendAlerts_file_path+colname+'WithoutSmoothing'+CSVFormat, inplace=1):
              if line in seen: continue # skip duplicate
         
              seen.add(line)
@@ -937,7 +937,7 @@ for time_analyze in range(7):
 
 # writes list of site per alert level in textalert2
 if PrintTAlert2:
-    with open (output_file_path+'textalert2_withTNLwithSmoothing' + '.txt', 'wb') as t:
+    with open (output_file_path+'textalert2_withTNLwithoutSmoothing' + '.txt', 'wb') as t:
         t.write('As of ' + end.strftime(fmt) + ':\n')
         t.write ('L0: ' + ','.join(sorted(L0_alert)) + '\n')
         t.write ('ND: ' + ','.join(sorted(ND_alert)) + '\n')
