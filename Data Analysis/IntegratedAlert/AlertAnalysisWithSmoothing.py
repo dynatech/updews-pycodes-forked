@@ -144,6 +144,7 @@ def create_fill_smooth_df(series_list,num_nodes,monwin, roll_window_numpts, to_f
     if to_fill:
         #filling NAN values
         df=df.fillna(method='pad')
+        df=df.fillna(method='bfill')
  
     #dropping rows outside monitoring window
     df=df[(df.index>=monwin.index[0])&(df.index<=monwin.index[-1])]
