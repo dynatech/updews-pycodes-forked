@@ -777,43 +777,8 @@ for s in sensorlist:
     alert_out=alert_generation(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velL2, T_velL3, k_ac_ax,
                                num_nodes_to_check,end,proc_file_path,CSVFormat)
     print alert_out
-
-########################################################################
-
-    #connecting to localdb
-    db = MySQLdb.connect(host = Hostdb, user = Userdb, passwd = Passdb)
-    cur = db.cursor()
-    cur.execute("USE %s"%Namedb)
-
-
-    #writes col_alert to csv    
-    for s in range(len(pd.Series.tolist(alert_out.col_alert))):
-        query = """INSERT IGNORE INTO col_alerts (sitecode, timestamp, id, alerts) VALUES """
-        query = query + str((str(colname), str(end), str(s+1), str(pd.Series.tolist(alert_out.col_alert)[s])))
-        cur.execute(query)
-        db.commit()
-
-    #deletes col_alerts older than 3 hrs
-    query = """DELETE FROM col_alerts WHERE timestamp < TIMESTAMP('%s')""" % hr
-    cur.execute(query)
-    db.commit()  
     
-    #selects and otputs to dataframe col_alerts from the last 3hrs
-    query = "select sitecode, timestamp, id, alerts from senslopedb.col_alerts where timestamp >= timestamp('%s')" % hr
-    query = query + " and timestamp <= timestamp('%s')" % end
-    query = query + " and id >= 1 and id <= %s" % num_nodes
-    query = query + " and sitecode = '%s' ;" % colname
-    df =  GetDBDataFrame(query)   
-    df.columns = ['sitecode', 'timestamp', 'id', 'alerts']
-    df.timestamp = pd.to_datetime(df.timestamp)
-    df = df[['timestamp', 'id', 'alerts']]
-    print df
-    
-    db.close()
-    
-###############################################################################
-    
-    # without trending_node_alert
+    # without trending_node_alert (col_alerts to trending column)
     trending_col_alerts = []
     
     try:
