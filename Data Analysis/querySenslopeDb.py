@@ -319,6 +319,8 @@ def fill_axel_data(df, drop_msgid = 1):
     # create a dataframe with all timestamps present in df1 and df2
     dfts = pd.merge(df1,df2, how='outer')
     
+    dfts = dfts.drop_duplicates(['ts','id'])
+    
     dfts = filters_magnitude(dfts)
     
     dfts = resample_df(dfts)   
