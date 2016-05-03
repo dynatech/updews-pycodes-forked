@@ -328,6 +328,8 @@ def fill_axel_data(df, drop_msgid = 1):
     
     dfm = pd.merge(dfts,df1, how = 'outer')
     
+    dfm = filters_magnitude(dfm)
+    
     dfm = dfm.set_index('ts')
     #start filling id,x,y,z YEY!
     dfm.id.fillna(df2.id, inplace=True)
@@ -408,7 +410,6 @@ def condition_df(df, resample=1):
     df = df[df.ts.notnull()] # filters timestamp
     if resample:
         df = resample_df(df)
-    df = filters_magnitude(df)
     return df
 
 def resample_df(df):
