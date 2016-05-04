@@ -307,30 +307,6 @@ def df_to_out(colname,xz,xy,
     cs_xz_0=df_zero_initial_row(cs_xz)
     cs_xy_0=df_zero_initial_row(cs_xy)
 
-    #writing to csv
-    if PrintProc:
-        df_list=np.asarray([[xz,'xz'],
-                 [xy,'xy'],
-                 [xz_0off,'xz_0off'],
-                 [xy_0off,'xy_0off'],
-                 [vel_xz,'xz_vel'],
-                 [vel_xy,'xy_vel'],
-                 [vel_xz_0off,'xz_vel_0off'],
-                 [vel_xy_0off,'xy_vel_0off'],
-                 [cs_x,'x_cs'],
-                 [cs_xz,'xz_cs'],
-                 [cs_xy,'xy_cs'],
-                 [cs_xz_0,'xz_cs_0'],
-                 [cs_xy_0,'xy_cs_0']])
-        
-        for d in range(len(df_list)):
-            df=df_list[d,0]
-            fname=df_list[d,1]
-            if not os.path.exists(proc_file_path+colname+"/"):
-                os.makedirs(proc_file_path+colname+"/")
-            df.to_csv(proc_file_path+colname+"/"+colname+" "+fname+CSVFormat,
-                      sep=',', header=False,mode='w')
-
     return xz,xy,   xz_0off,xy_0off,   vel_xz,vel_xy, vel_xz_0off, vel_xy_0off, cs_x,cs_xz,cs_xy,   cs_xz_0,cs_xy_0
 
 def alert_generation(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velL2, T_velL3, k_ac_ax,
@@ -376,19 +352,19 @@ def alert_generation(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velL2, T_v
     #checks if file exist, append latest alert; else, write new file
     if PrintProc:
         try:
-            if os.path.exists(proc_file_path+colname+"/"+colname+" "+"alert"+CSVFormat) and os.stat(proc_file_path+colname+"/"+colname+" "+"alert"+CSVFormat).st_size != 0:
-                alert_monthly=pd.read_csv(proc_file_path+colname+"/"+colname+" "+"alert"+CSVFormat,names=alert_headers,parse_dates='ts',index_col='ts')
+            if os.path.exists(proc_file_path+colname+"/"+colname+" "+"alert"+"NoSmoothing"+CSVFormat) and os.stat(proc_file_path+colname+"/"+colname+" "+"alert"+"NoSmoothing"+CSVFormat).st_size != 0:
+                alert_monthly=pd.read_csv(proc_file_path+colname+"/"+colname+" "+"alert"+"NoSmoothing"+CSVFormat,names=alert_headers,parse_dates='ts',index_col='ts')
                 alert_monthly=alert_monthly[(alert_monthly.index>=end-timedelta(days=alert_file_length))]
                 alert_monthly=alert_monthly.reset_index()
                 alert_monthly=alert_monthly.set_index(['ts','id'])
                 alert_monthly=alert_monthly.append(alert_out)
                 alert_monthly=alert_monthly[alertgen_headers]
-                alert_monthly.to_csv(proc_file_path+colname+"/"+colname+" "+"alert"+CSVFormat,
+                alert_monthly.to_csv(proc_file_path+colname+"/"+colname+" "+"alert"+"NoSmoothing"+CSVFormat,
                                      sep=',', header=False,mode='w')
             else:
                 if not os.path.exists(proc_file_path+colname+"/"):
                     os.makedirs(proc_file_path+colname+"/")
-                alert_out.to_csv(proc_file_path+colname+"/"+colname+" "+"alert"+CSVFormat,
+                alert_out.to_csv(proc_file_path+colname+"/"+colname+" "+"alert"+"NoSmoothing"+CSVFormat,
                                  sep=',', header=False,mode='w')
         except:
             print "Error in Printing Proc"
