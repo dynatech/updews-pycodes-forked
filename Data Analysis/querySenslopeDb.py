@@ -274,9 +274,9 @@ def GetFilledAccelData(siteid = "", fromTime = "", toTime = "", drop_msgid = 1 ,
     PrintOut(query)
  
     df =  GetDBDataFrame(query)
+    # for version 2 and version 3 sensors
     if (len(siteid) == 5):
         if len(df) > 0:
-            #df = fill_axel_data(df, drop_msgid)
             df = df.groupby([df['id']]).apply(fill_axel_data)
             if drop_msgid:
                 df.columns = ['ts','id','x','y','z']
@@ -284,6 +284,7 @@ def GetFilledAccelData(siteid = "", fromTime = "", toTime = "", drop_msgid = 1 ,
                 df.columns = ['ts','id','msgid','x','y','z']
             # change ts column to datetime
             df.ts = pd.to_datetime(df.ts)
+    # for version 1 sensors
     elif (len(siteid) == 4):
         df.columns = ['ts','id','x','y','z']
         # change ts column to datetime
@@ -305,12 +306,13 @@ def GetFilledAccelData(siteid = "", fromTime = "", toTime = "", drop_msgid = 1 ,
 def fill_axel_data(df, drop_msgid = 1):
     #we need to rename the column 'timestamp' to 'ts'
     df.columns = ['ts','id','msgid','x','y','z']
+    
+
     #let's clean up the data a bit
-    #df = df.groupby([df['id']]).apply(condition_df)
-    #print df
+    df = condition_df(df,resample=0)
+    #let's split the data per accelerometer
     df1 = df[(df.msgid == 32) | (df.msgid == 11)]
     df2 = df[(df.msgid == 33) | (df.msgid == 12)]
-    #print df1
     df1 = condition_df(df1)
     df2 = condition_df(df2)
     df1 = df1.reset_index(level = 1) 
@@ -318,10 +320,9 @@ def fill_axel_data(df, drop_msgid = 1):
     
     # create a dataframe with all timestamps present in df1 and df2
     dfts = pd.merge(df1,df2, how='outer')
-    
     dfts = dfts.drop_duplicates(['ts','id'])
     
-    dfts = filters_magnitude(dfts)
+#    dfts = filters_magnitude(dfts) # moved inside condition_df
     
     dfts = resample_df(dfts)   
     # at this point, dfts has all the timestamps available on both df1 and df2
@@ -349,48 +350,6 @@ def fill_axel_data(df, drop_msgid = 1):
         
     dfm = dfm.sort('ts')
     return dfm
-#    df.columns = ['ts','id','msgid','x','y','z']
-#    #let's clean up the data a bit
-#    df = condition_df(df,resample=0)
-#    
-#    df1 = df[(df.msgid == 32) | (df.msgid == 11)]
-#    df2 = df[(df.msgid == 33) | (df.msgid == 12)]
-#    
-#    df1 = condition_df(df1)
-#    df2 = condition_df(df2)
-#    
-#    df1 = df1.reset_index(level = 1) 
-#    df2 = df2.reset_index(level = 1)    
-#    
-#    # create a dataframe with all timestamps present in df1 and df2
-#    dfts = pd.merge(df1,df2, how='outer')
-#    
-#    dfts = resample_df(dfts)   
-#    # at this point, dfts has all the timestamps available on both df1 and df2
-#    
-#    dfts = dfts.reset_index(level = 1)
-#    
-#    df2 = df2.set_index('ts')
-#    
-#    dfm = pd.merge(dfts,df1, how = 'outer')
-#    
-#    dfm = dfm.set_index('ts')
-#    #start filling id,x,y,z YEY!
-#    dfm.id.fillna(df2.id, inplace=True)
-#    dfm.x.fillna(df2.x, inplace=True)
-#    dfm.y.fillna(df2.y, inplace=True)
-#    dfm.z.fillna(df2.z, inplace=True)
-#    
-#    dfm = dfm[np.isfinite(dfm.id)] #removes all rows with NaNs in id
-#    # rows removed this way are rows with no data from either axel 1 or axel 2
-#    dfm = dfm.reset_index(level = 1)   
-#    if drop_msgid:
-#        dfm = dfm[['ts','id','x','y','z']]
-#    elif drop_msgid == 0:
-#        dfm = dfm[['ts','id','msgid','x','y','z']]
-#        
-#    dfm = dfm.sort('ts')
-#    return dfm
 
     
 #condition_df()
@@ -410,6 +369,7 @@ def fill_axel_data(df, drop_msgid = 1):
 def condition_df(df, resample=1):
     df = df[(df.id > 0) & (df.id <= 40)] # filters id
     df = df[df.ts.notnull()] # filters timestamp
+    df = filters_magnitude(df) # filter based on magnitude
     if resample:
         df = resample_df(df)
     return df
