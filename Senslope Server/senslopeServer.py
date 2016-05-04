@@ -108,9 +108,9 @@ def SendAlertGsm(network,alertmsg):
 
 def UnexpectedCharactersLog(msg, network):
     print ">> Error: Unexpected characters/s detected in ", msg.data
-    f = open(unexpectedchardir+network+'Nonalphanumeric_errorlog.txt','a')
-    f.write(msg.dt + ',' + msg.simnum + ',' + msg.data+ '\n')
-    f.close()
+    # f = open(unexpectedchardir+network+'Nonalphanumeric_errorlog.txt','a')
+    # f.write(msg.dt + ',' + msg.simnum + ',' + msg.data+ '\n')
+    # f.close()
 
 def WriteRawSmsToDb(msglist):
     query = "INSERT INTO smsinbox (timestamp,sim_num,sms_msg,read_status) VALUES "
@@ -246,7 +246,7 @@ def RunSenslopeServer(network):
             else:
                 checkIfActive = True
                 
-            SendMessagesFromDb(network)
+            # SendMessagesFromDb(network)
                 
         elif m == -1:
             print'GSM MODULE MAYBE INACTIVE'

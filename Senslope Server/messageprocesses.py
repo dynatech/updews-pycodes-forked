@@ -595,18 +595,18 @@ def ProcessAllMessages(allmsgs,network):
                 g.write(msg.simnum+',')
                 g.write(msg.data+'\n')
                 g.close()
-        elif re.search("[A-Z]{4,5}\*[xyabc]\*[A-F0-9]+\*[0-9]+T?$",msg.data):
+        elif re.search("^[A-Z]{4,5}\*[xyabc]\*[A-F0-9]+\*[0-9]+T?$",msg.data):
             try:
-                if re.findall('[^A-Z]', msg.data.split("*")[0]):
-                    UnexpectedCharactersLog(msg, network)
-                else:    
-                    dlist = ProcTwoAccelColData(msg.data,msg.simnum,msg.dt)
-                    #print dlist
-                    if dlist:
-                        if len(dlist[0][0]) == 6:
-                            WriteSomsDataToDb(dlist,msg.dt)
-                        else:
-                            WriteTwoAccelDataToDb(dlist,msg.dt)
+                # if re.findall('[^A-Z]', msg.data.split("*")[0]):
+                    # UnexpectedCharactersLog(msg, network)
+                # else:    
+                dlist = ProcTwoAccelColData(msg.data,msg.simnum,msg.dt)
+                #print dlist
+                if dlist:
+                    if len(dlist[0][0]) == 6:
+                        WriteSomsDataToDb(dlist,msg.dt)
+                    else:
+                        WriteTwoAccelDataToDb(dlist,msg.dt)
             except IndexError:
                 print "\n\n>> Error: Possible data type error"
                 print msg.data
@@ -614,7 +614,7 @@ def ProcessAllMessages(allmsgs,network):
             #ProcessColumn(msg.data)
             ProcessColumn(msg.data,msg.dt,msg.simnum)
         #check if message is from rain gauge
-        elif re.search("\w{4},[\d\/:,]+,[\d,\.]+$",msg.data):
+        elif re.search("^\w{4},[\d\/:,]+,[\d,\.]+$",msg.data):
             ProcessRain(msg.data,msg.simnum)
         elif re.search(r'(\w{4})[-](\d{1,2}[.]\d{02}),(\d{01}),(\d{1,2})/(\d{1,2}),#(\d),(\d),(\d{1,2}),(\d)[*](\d{10})',msg.data):
             ProcessStats(msg.data,msg.dt)
