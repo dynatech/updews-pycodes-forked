@@ -341,6 +341,7 @@ def fill_axel_data(df, drop_msgid = 1):
     dfm.z.fillna(df2.z, inplace=True)
     
     dfm = dfm[np.isfinite(dfm.id)] #removes all rows with NaNs in id
+    dfm = dfm[np.isfinite(dfm.msgid)] #removes all rows with NaNs in msgid
     # rows removed this way are rows with no data from either axel 1 or axel 2
     dfm = dfm.reset_index(level = 1)   
     if drop_msgid:
