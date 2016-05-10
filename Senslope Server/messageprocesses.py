@@ -711,6 +711,9 @@ def ProcessCoordinatorMsg(coordsms, num):
     except IndexError:
         print "IndexError: list index out of range"
     
+cfg = ConfigParser.ConfigParser()
+cfg.read(sys.path[0] + '/' + "senslope-server-config.txt")
+
 inboxdir = cfg.get('FileIO','inboxdir')
 unexpectedchardir = cfg.get('FileIO','unexpectedchardir')
 unknownsenderfile = cfg.get('FileIO','unknownsenderfile')

@@ -1,4 +1,4 @@
-import os,time,serial,re,sys
+import os,time,re,sys
 import MySQLdb
 import datetime
 import ConfigParser

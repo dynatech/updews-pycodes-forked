@@ -3,7 +3,7 @@ from datetime import datetime as dt
 from senslopedbio import * 
 
 cfg = ConfigParser.ConfigParser()
-cfg.read('senslope-server-config.txt')
+cfg.read(sys.path[0] + '/' + 'senslope-server-config.txt')
 
 gsm = serial.Serial()
 Baudrate = cfg.getint('Serial', 'Baudrate')

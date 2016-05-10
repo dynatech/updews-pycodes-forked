@@ -1,9 +1,9 @@
-import ConfigParser, MySQLdb, time
+import ConfigParser, MySQLdb, time, sys
 from senslopedbio import *
 from datetime import datetime as dt
 
 cfg = ConfigParser.ConfigParser()
-cfg.read("senslope-server-config.txt")
+cfg.read(sys.path[0] + "/senslope-server-config.txt")
 
 class dbInstance:
     def __init__(self,name,host,user,password):
@@ -35,6 +35,7 @@ def createTable(table_name, type):
     db, cur = SenslopeDBConnect('local')
     # cur.execute("CREATE DATABASE IF NOT EXISTS %s" %Namedb)
     # cur.execute("USE %s"%Namedb)
+    table_name = table_name.lower()
     
     if type == "sensor v1":
         cur.execute("CREATE TABLE IF NOT EXISTS %s(timestamp datetime, id int, xvalue int, yvalue int, zvalue int, mvalue int, PRIMARY KEY (timestamp, id))" %table_name)
@@ -129,7 +130,7 @@ def commitToDb(query, identifier, instance='local'):
         retry = 0
         while True:
             try:
-                a = cur.execute(query)
+                a = cur.execute(query.lower())
                 # db.commit()
                 if a:
                     db.commit()
