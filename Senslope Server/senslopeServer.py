@@ -131,7 +131,7 @@ def WriteOutboxMessageToDb(message,recepients,send_status='UNSENT'):
     
     print query
     
-    commitToDb(query, "WriteOutboxMessageToDb")
+    commitToDb(query, "WriteOutboxMessageToDb", 'gsm')
     
 def CheckAlertMessages():
     alllines = ''
