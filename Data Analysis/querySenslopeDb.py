@@ -720,11 +720,31 @@ def GetLastGoodDataFromDb(col):
 #       returns the dataframe for the last good data prior to the monitoring window
     
 def GetSingleLGDPM(site, node, startTS):
-    query = "SELECT timestamp, id, xvalue, yvalue, zvalue from %s " % (site)
-    query = query + "WHERE id = %s and timestamp < '%s' " % (node, startTS)
-    query = query + "ORDER BY timestamp DESC LIMIT 1"
+    query = "SELECT timestamp, id, xvalue, yvalue, zvalue"
+    if len(site) == 5:
+        query = query + ", msgid"
+    query = query + " from %s WHERE id = %s and timestamp < '%s' " % (site, node, startTS)
+    if len(site) == 5:
+        query = query + "ORDER BY timestamp DESC LIMIT 2"
+    else:
+        query = query + "ORDER BY timestamp DESC LIMIT 1"
     
     lgdpm = GetDBDataFrame(query)
+
+    if len(site) == 5:
+        if len(set(lgdpm.timestamp)) == 1:
+            lgdpm.loc[(lgdpm.msgid == 11) | (lgdpm.msgid == 32)]
+        else:
+            try:
+                lgdpm = lgdpm.loc[lgdpm.timestamp == lgdpm.timestamp[0]]
+            except:
+                print 'no data for node ' + str(node) + ' of ' + site
+    
+    if len(site) == 5:
+        lgdpm.columns = ['ts','id','x','y','z', 'msgid']
+    else:
+        lgdpm.columns = ['ts','id','x','y','z']
+    lgdpm = lgdpm[['ts', 'id', 'x', 'y', 'z']]
     return lgdpm
     
 #PushLastGoodData(df,name):
@@ -828,7 +848,8 @@ except:
     #default values are used for missing configuration files or for cases when
     #sensitive info like db access credentials must not be viewed using a browser
     #print "No file named: %s. Trying Default Configuration" % (configFile)
-    Hostdb = "127.0.0.1"
+#    Hostdb = "127.0.0.1"    
+    Hostdb = "192.168.1.102"
     Userdb = "root"
     Passdb = "senslope"
     Namedb = "senslopedb"
