@@ -332,6 +332,8 @@ def fill_axel_data(df, drop_msgid = 1):
     df2 = df2.set_index('ts')
     
     dfm = pd.merge(dfts,df1, how = 'outer')
+	# added this drop duplicates because of merge
+    dfm= dfm.drop_duplicates(['ts','id'])
     
     dfm = dfm.set_index('ts')
     #start filling id,x,y,z YEY!
