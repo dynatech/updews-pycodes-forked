@@ -203,10 +203,10 @@ def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid
     if not fromTime:
         fromTime = "2010-01-01"
         
-    query = query + " where timestamp > '%s'" % fromTime
+    query = query + " where timestamp >= '%s'" % fromTime
     
     if toTime != '':
-        query = query + " and timestamp < '%s'" % toTime
+        query = query + " and timestamp <= '%s'" % toTime
 
     if len(siteid) == 5:
         query = query + " and (msgid & 1) = (%s & 1)" % (msgid);
@@ -561,20 +561,21 @@ def GetSingleLGDPM(site, node, startTS):
         query = query + ", msgid"
     query = query + " from %s WHERE id = %s and timestamp < '%s' " % (site, node, startTS)
     if len(site) == 5:
-        query = query + "ORDER BY timestamp DESC LIMIT 2"
-    else:
-        query = query + "ORDER BY timestamp DESC LIMIT 1"
+        query = query + "and (msgid = 32 or msgid = 11) "
+#        query = query + "ORDER BY timestamp DESC LIMIT 2"
+#    else:
+    query = query + "ORDER BY timestamp DESC LIMIT 1"
     
     lgdpm = GetDBDataFrame(query)
 
-    if len(site) == 5:
-        if len(set(lgdpm.timestamp)) == 1:
-            lgdpm.loc[(lgdpm.msgid == 11) | (lgdpm.msgid == 32)]
-        else:
-            try:
-                lgdpm = lgdpm.loc[lgdpm.timestamp == lgdpm.timestamp[0]]
-            except:
-                print 'no data for node ' + str(node) + ' of ' + site
+#    if len(site) == 5:
+#        if len(set(lgdpm.timestamp)) == 1:
+#            lgdpm.loc[(lgdpm.msgid == 11) | (lgdpm.msgid == 32)]
+#        else:
+#            try:
+#                lgdpm = lgdpm.loc[lgdpm.timestamp == lgdpm.timestamp[0]]
+#            except:
+#                print 'no data for node ' + str(node) + ' of ' + site
     
     if len(site) == 5:
         lgdpm.columns = ['ts','id','x','y','z', 'msgid']

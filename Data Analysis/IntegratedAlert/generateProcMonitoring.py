@@ -100,7 +100,7 @@ def generate_proc(site):
             #4: get last good data prior to the monitoring window (LGDPM)
             lgdpm = pd.DataFrame()
             for node in NodesNoInitVal:
-                temp = GetSingleLGDPM(site, node, start.strftime("%Y-%m-%d %H:%M"))
+                temp = GetSingleLGDPM(site, node, offsetstart.strftime("%Y-%m-%d %H:%M"))
                 lgdpm = lgdpm.append(temp,ignore_index=True)
  
             #5 TODO: Resample the dataframe together with the LGDOM
@@ -117,6 +117,7 @@ def generate_proc(site):
             
             #9. removing unnecessary columns x,y,z
             monitoring=monitoring.drop(['x','y','z'],axis=1)
+            monitoring = monitoring.drop_duplicates(['ts', 'id'])
     
             #10. setting ts as index
     #        monitoring['id']=monitoring.index.values

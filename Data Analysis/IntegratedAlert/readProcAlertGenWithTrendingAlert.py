@@ -126,7 +126,6 @@ def create_fill_smooth_df(series_list,num_nodes,monwin, roll_window_numpts, to_f
     if to_fill:
         #filling NAN values
         df=df.fillna(method='pad')
-        df=df.fillna(method='bfill')
  
     #dropping rows outside monitoring window
     df=df[(df.index>=monwin.index[0])&(df.index<=monwin.index[-1])]
@@ -872,6 +871,7 @@ if PrintTAlert2:
 #Prints rainfall alerts, text alert and eq summary in one file
 if PrintAAlert:
     with open(output_file_path+all_alerts, 'wb') as allalerts:
+        allalerts.write('ALERTSMS\n')
         allalerts.write('As of ' + end.strftime(fmt) + ':\n')
         allalerts.write('L3: ' + ','.join(sorted(L3_alert)) + '\n')
         allalerts.write('L2: ' + ','.join(sorted(L2_alert)) + '\n')
