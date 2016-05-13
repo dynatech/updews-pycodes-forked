@@ -91,7 +91,7 @@ def generate_proc(site):
             print seg_len
                 
             #3. getting accelerometer data for site 'colname'
-            monitoring=GetFilledAccelData(colname,offsetstart)
+            monitoring=GetRawAccelData(colname,offsetstart)
             
              
             #3.1 identify the node ids with no data at start of monitoring window
