@@ -871,7 +871,6 @@ if PrintTAlert2:
 #Prints rainfall alerts, text alert and eq summary in one file
 if PrintAAlert:
     with open(output_file_path+all_alerts, 'wb') as allalerts:
-        allalerts.write('ALERTSMS\n')
         allalerts.write('As of ' + end.strftime(fmt) + ':\n')
         allalerts.write('L3: ' + ','.join(sorted(L3_alert)) + '\n')
         allalerts.write('L2: ' + ','.join(sorted(L2_alert)) + '\n')
@@ -917,6 +916,7 @@ if PrintGSMAlert:
     f.close()
     if os.stat(output_file_path+gsm_alert).st_size != 0:
         f = open(output_file_path+gsm_alert, 'w')
+        f.write('ALERTSMS\n')
         f.write('As of ' + end.strftime(fmt) + ':\n')
         f.write(text)
         f.close()
