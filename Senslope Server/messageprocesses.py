@@ -386,6 +386,8 @@ def ProcessARQWeather(line,sender):
 
     print 'ARQ Weather data: ' + line
 
+    line = re.sub("(?<=,)((?=$)|(?=,))","NULL",line)
+
     try:
     # ARQ+1+3+4.143+4.128+0.0632+5.072+0.060+0000+13+28.1+75.0+55+150727/160058
         #table name
@@ -453,6 +455,8 @@ def ProcessRain(line,sender):
     #msg = message
 
     print 'Weather data: ' + line
+
+    line = re.sub("(?<=,)((?=$)|(?=,))","NULL",line)
 
     try:
     
@@ -564,6 +568,7 @@ def ProcessAllMessages(allmsgs,network):
         print '\n\n*******************************************************'
         #gets per text message
         msg = allmsgs.pop(0)
+        msg.data = msg.data.upper()
                      
         msgname = checkNameOfNumber(msg.simnum)
         ##### Added for V1 sensors removes unnecessary characters pls see function PreProcessColumnV1(data)
@@ -581,7 +586,7 @@ def ProcessAllMessages(allmsgs,network):
                 WriteOutboxMessageToDb("READ-FAIL: \n" + msg.data, communityphonenumber)
                 WriteOutboxMessageToDb(str(e), msg.simnum)
 
-        elif re.search("^[A-Z]{4,5}\*[xyabc]\*[A-F0-9]+\*[0-9]+T?$",msg.data):
+        elif re.search("^[A-Z]{4,5}\*[xyabcXYABC]\*[A-F0-9]+\*[0-9]+T?$",msg.data):
             try:
                 dlist = ProcTwoAccelColData(msg.data,msg.simnum,msg.dt)
                 if dlist:

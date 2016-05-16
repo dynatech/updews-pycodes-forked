@@ -86,6 +86,8 @@ def getGndMeas(text):
   # clean the message
   cleanText = re.sub(" +"," ",text.upper())
   cleanText = re.sub("\.+",".",cleanText)
+  cleanText = re.sub(";",":",cleanText)
+  cleanText = cleanText.strip()
   sms_list = re.split(" ",re.sub("\W"," ",cleanText))
   
   sms_date = ""
