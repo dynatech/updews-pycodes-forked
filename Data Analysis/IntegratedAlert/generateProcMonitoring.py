@@ -92,7 +92,7 @@ def generate_proc(site):
                 
             #3. getting accelerometer data for site 'colname'
             monitoring=GetRawAccelData(colname,offsetstart)
-            
+            monitoring = monitoring.loc[(monitoring.ts >= offsetstart) & (monitoring.ts <= end)]
              
             #3.1 identify the node ids with no data at start of monitoring window
             NodesNoInitVal=GetNodesWithNoInitialData(monitoring,num_nodes,offsetstart)
@@ -107,7 +107,24 @@ def generate_proc(site):
             monitoring=monitoring.append(lgdpm)
     
             #6. evaluating which data needs to be filtered
-            monitoring=applyFilters(monitoring)
+            try:
+                monitoring=applyFilters(monitoring)		
+                LastGoodData=GetLastGoodData(monitoring,num_nodes)		
+                PushLastGoodData(LastGoodData,colname)		
+                LastGoodData = GetLastGoodDataFromDb(colname)		
+                print 'Done'		
+            except:		
+                LastGoodData = GetLastGoodDataFromDb(colname)		
+                print 'error'		
+		
+            if len(LastGoodData)<num_nodes: print colname, " Missing nodes in LastGoodData"		
+    		
+            #5. extracting last data outside monitoring window		
+            LastGoodData=LastGoodData[(LastGoodData.ts<offsetstart)]		
+    		
+            #6. appending LastGoodData to monitoring		
+            monitoring=monitoring.append(LastGoodData)    
+
             
             #7. replacing date of data outside monitoring window with first date of monitoring window
             monitoring.loc[monitoring.ts < offsetstart, ['ts']] = offsetstart
