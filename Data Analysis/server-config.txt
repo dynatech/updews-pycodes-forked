@@ -104,8 +104,10 @@ to_fill = 1					;to forward fill (1 or 0)
 to_smooth = 1				;to smooth xz and xy through moving average (1 or 0)
 
 with_TrendingNodeAlert = False
-test_sites = magtb
-test_specific_sites = False
+test_sites = barsc
+test_specific_sites = True
+
+test_specific_time = 2016-05-16 14:30:00
 
 PlotColPos = True
 PlotDispVel = True
