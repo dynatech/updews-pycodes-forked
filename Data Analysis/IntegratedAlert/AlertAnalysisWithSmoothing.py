@@ -927,6 +927,41 @@ print 'L0: ', ','.join(L0_alert)
 print 'L2: ', ','.join(L2_alert)
 print 'L3: ', ','.join(L3_alert)
 
+if PrintGSMAlert:
+    with open(output_file_path+gsm_alert, 'wb') as gsmalert:
+        if len(L3_alert) != 0:
+            gsmalert.write('L3: ' + ','.join(sorted(L3_alert)) + '\n')
+        if len(L2_alert) != 0:
+            gsmalert.write('L2: ' + ','.join(sorted(L2_alert)) + '\n')
+        with open(output_file_path+rainfall_alert) as rainfallalert:
+            n = 0
+            for line in rainfallalert:
+                if n == 3 or n == 4:
+                    if len(line) > 6:
+                        gsmalert.write(line)
+                n += 1
+        with open(output_file_path+eq_summaryGSM) as eqsummary:
+            n = 0            
+            for line in eqsummary:
+                if n == 0:
+                    eqalert = line[6:25]
+                    if end - pd.to_datetime(eqalert) > timedelta(hours = 0.5):
+                        break
+                else:
+                    gsmalert.write(line)
+                n += 1
+
+if PrintGSMAlert:                        
+    f = open(output_file_path+gsm_alert)
+    text = f.read()
+    f.close()
+    if os.stat(output_file_path+gsm_alert).st_size != 0:
+        f = open(output_file_path+gsm_alert, 'w')
+        f.write('ALERTSMS\n')
+        f.write('As of ' + end.strftime(fmt) + ':\n')
+        f.write(text)
+        f.close()
+
 # deletes plots older than a day
 for dirpath, dirnames, filenames in os.walk(AlertAnalysisPath):
     for file in filenames:

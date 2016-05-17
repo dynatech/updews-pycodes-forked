@@ -67,7 +67,7 @@ if PrintProc:
         
 def GetNodesWithNoInitialData(df,num_nodes,offsetstart):
     allnodes=np.arange(1,num_nodes+1)*1.
-    with_init_val=df[df.ts==offsetstart]['id'].values
+    with_init_val=df[df.ts<offsetstart+timedelta(hours=0.5)]['id'].values
     no_init_val=allnodes[np.in1d(allnodes, with_init_val, invert=True)]
     return no_init_val
 
