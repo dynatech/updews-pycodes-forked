@@ -655,23 +655,23 @@ to_fill = cfg.getint('I/O','to_fill')
 to_smooth = cfg.getint('I/O','to_smooth')
 
 with_TrendingNodeAlert = cfg.getboolean('I/O','with_TrendingNodeAlert')
-test_specific_sites = cfg.getboolean('I/O','test_specific_sites')
-test_sites = cfg.get('I/O','test_sites').split(',')
+realtime_test_specific_sites = cfg.getboolean('I/O','realtime_test_specific_sites')
+realtime_specific_sites = cfg.get('I/O','realtime_specific_sites').split(',')
 
 
 
 #To Output File or not
-PrintProc = cfg.getboolean('I/O','PrintProc')
+#PrintProc = cfg.getboolean('I/O','PrintProc')
 PrintColPos = cfg.getboolean('I/O','PlotColPos')
 PrintDispVel = cfg.getboolean('I/O','PlotDispVel')
-PrintTrendAlerts = cfg.getboolean('I/O','PrintTrendAlerts')
-PrintTAlert = cfg.getboolean('I/O','PrintTAlert')
-PrintTAlert2 = cfg.getboolean('I/O','PrintTAlert2')
-PrintWAlert = cfg.getboolean('I/O','PrintWAlert')
-PrintND = cfg.getboolean('I/O','PrintND')
-PrintTimer = cfg.getboolean('I/O','PrintTimer')
-PrintAAlert = cfg.getboolean('I/O','PrintAAlert')
-PrintGSMAlert = cfg.getboolean('I/O', 'PrintGSMAlert')
+#PrintTrendAlerts = cfg.getboolean('I/O','PrintTrendAlerts')
+#PrintTAlert = cfg.getboolean('I/O','PrintTAlert')
+#PrintTAlert2 = cfg.getboolean('I/O','PrintTAlert2')
+#PrintWAlert = cfg.getboolean('I/O','PrintWAlert')
+#PrintND = cfg.getboolean('I/O','PrintND')
+#PrintTimer = cfg.getboolean('I/O','PrintTimer')
+#PrintAAlert = cfg.getboolean('I/O','PrintAAlert')
+#PrintGSMAlert = cfg.getboolean('I/O', 'PrintGSMAlert')
 
 TestSpecificTime = cfg.getboolean('I/O', 'test_specific_time')
 #if PrintColPos or PrintTrendAlerts:
@@ -718,8 +718,8 @@ node_status = GetNodeStatus(1)
 
 for s in sensorlist:
 
-    if test_specific_sites:
-        if s.name not in test_sites:
+    if realtime_test_specific_sites:
+        if s.name not in realtime_specific_sites:
             continue
 
     last_col=sensorlist[-1:]
