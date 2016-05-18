@@ -46,7 +46,14 @@ num_roll_window_ops = cfg.getfloat('I/O','num_roll_window_ops')
 
 #file headers
 colarrange = cfg.get('I/O','alerteval_colarrange').split(',')
-end = pd.to_datetime(cfg.get('I/O','test_specific_time'))
+TestSpecificTime = cfg.getboolean('I/O', 'test_specific_time')
+
+
+
+if TestSpecificTime:
+    end = pd.to_datetime(cfg.get('I/O','use_specific_time'))
+else:
+    end = datetime.now()
 
 
 roll_window_numpts=int(1+roll_window_length/data_dt)

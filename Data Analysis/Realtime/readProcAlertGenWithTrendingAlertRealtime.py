@@ -604,7 +604,7 @@ output_path = up_one(up_one(up_one(os.path.dirname(__file__))))
 
 #ND_path = output_path + cfg.get('I/O', 'NDFilePath')
 output_file_path = output_path + cfg.get('I/O','OutputFilePath')
-#proc_file_path = output_path + cfg.get('I/O','ProcFilePath')
+proc_file_path = output_path + cfg.get('I/O','ProcFilePath')
 #ColAlerts_file_path = output_path + cfg.get('I/O','ColAlertsFilePath')
 #TrendAlerts_file_path = output_path + cfg.get('I/O','TrendAlertsFilePath')
 
@@ -673,15 +673,18 @@ PrintTimer = cfg.getboolean('I/O','PrintTimer')
 PrintAAlert = cfg.getboolean('I/O','PrintAAlert')
 PrintGSMAlert = cfg.getboolean('I/O', 'PrintGSMAlert')
 
+TestSpecificTime = cfg.getboolean('I/O', 'test_specific_time')
 #if PrintColPos or PrintTrendAlerts:
 #    import matplotlib.pyplot as plt
 #    plt.ioff()
 
 
 #MAIN
+if TestSpecificTime:
+    end = pd.to_datetime(cfg.get('I/O','use_specific_time'))
 
-end = pd.to_datetime(cfg.get('I/O','test_specific_time'))
-
+else:
+    end = datetime.now()
 #Set as true if printing by JSON would be done
 set_json = False
 
