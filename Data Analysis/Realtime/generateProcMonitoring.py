@@ -79,16 +79,16 @@ def generate_proc(site,end):
     sensorlist=GetSensorList()
 
     # generating proc monitoring data for each site
-    print "Generating PROC monitoring data for:"
+#    print "Generating PROC monitoring data for:"
     for s in sensorlist:
         
         if site == s.name:
         
             #2. getting current column properties
             colname,num_nodes,seg_len= s.name,s.nos,s.seglen
-            print colname
-            print num_nodes
-            print seg_len
+#            print colname
+#            print num_nodes
+#            print seg_len
                 
             #3. getting accelerometer data for site 'colname'
             monitoring=GetRawAccelData(colname,offsetstart)
@@ -112,7 +112,7 @@ def generate_proc(site,end):
                 LastGoodData=GetLastGoodData(monitoring,num_nodes)		
                 PushLastGoodData(LastGoodData,colname)		
                 LastGoodData = GetLastGoodDataFromDb(colname)		
-                print 'Done'		
+#                print 'Done'		
             except:		
                 LastGoodData = GetLastGoodDataFromDb(colname)		
                 print 'error'		

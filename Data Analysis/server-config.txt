@@ -109,7 +109,7 @@ test_specific_sites = True
 
 test_specific_time = False
 use_specific_time = 2016-05-12 11:30:00
-realtime_specific_sites = barsc
+realtime_specific_sites = lpasa,barsc
 realtime_test_specific_sites = True
 
 PlotColPos = True

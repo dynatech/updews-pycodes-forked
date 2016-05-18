@@ -197,7 +197,7 @@ def column_alert(alert, num_nodes_to_check, k_ac_ax):
     #OUTPUT:
     #alert:                             Pandas DataFrame object; same as input dataframe "alert" with additional column for column-level alert
 
-    print alert
+#    print alert
     col_alert=[]
     col_node=[]
     #looping through each node

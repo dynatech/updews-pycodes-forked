@@ -520,7 +520,7 @@ def GetLastGoodData(df, nos, fillMissing=False):
     else:
         dflgd = dfa.sort(['id']).reset_index(level=1,drop=True)
         
-    print dflgd
+#    print dflgd
     
     return dflgd
     

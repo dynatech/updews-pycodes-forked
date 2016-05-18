@@ -28,7 +28,7 @@ from filterSensorData import *
 #Generate Last Good Data Table if it doesn't exist yet
 lgdExistence = DoesTableExist("lastgooddata")
 if lgdExistence == False:
-    print "Generate Last Good Data Table"
+#    print "Generate Last Good Data Table"
     GenerateLastGoodData()
 
 def set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_window_ops,end):
@@ -368,7 +368,7 @@ def alert_generation(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velL2, T_v
                 alert_out.to_csv(proc_file_path+colname+"/"+colname+" "+"alert"+CSVFormat,
                                  sep=',', header=False,mode='w')
         except:
-            print "Error in Printing Proc"
+            print "\n"
 
     
     return alert_out
@@ -399,7 +399,7 @@ def alert_summary(alert_out,alert_list):
                 checklist[c]=checklist[c].reset_index()
                 alert_list[c].append(colname + str(checklist[c]['id'].values[0]))
                 if c==2: continue
-                print checklist[c].set_index(['ts','id']).drop(['disp_alert','min_vel','max_vel','vel_alert'], axis=1)
+#                print checklist[c].set_index(['ts','id']).drop(['disp_alert','min_vel','max_vel','vel_alert'], axis=1)
                 break
                 
 def nonrepeat_colors(ax,NUM_COLORS,color='gist_rainbow'):
@@ -420,8 +420,8 @@ def plot_column_positions(colname,x,xz,xy):
     ##xy; dataframe; horizontal linear displacements along the planes defined by xa-ya
 
     try:
-        fig=plt.figure(1)
-        plt.clf()
+        fig=plt.figure()
+#        plt.clf()
         plt.suptitle(colname+" absolute position", fontsize = 12)
         ax_xz=fig.add_subplot(121)
         ax_xy=fig.add_subplot(122,sharex=ax_xz,sharey=ax_xz)
@@ -478,8 +478,8 @@ def plot_disp_vel(colname, xz,xy,xz_vel,xy_vel):
     ##xy_vel; array of floats; velocity along the planes defined by xa-ya
 
     try:
-        fig=plt.figure(2)
-        plt.clf()
+        fig=plt.figure()
+#        plt.clf()
         ax_xzd=fig.add_subplot(141)
         ax_xyd=fig.add_subplot(142,sharex=ax_xzd,sharey=ax_xzd)
     
@@ -661,7 +661,7 @@ realtime_specific_sites = cfg.get('I/O','realtime_specific_sites').split(',')
 
 
 #To Output File or not
-#PrintProc = cfg.getboolean('I/O','PrintProc')
+PrintProc = cfg.getboolean('I/O','PrintProc')
 PrintColPos = cfg.getboolean('I/O','PlotColPos')
 PrintDispVel = cfg.getboolean('I/O','PlotDispVel')
 #PrintTrendAlerts = cfg.getboolean('I/O','PrintTrendAlerts')
@@ -669,7 +669,7 @@ PrintDispVel = cfg.getboolean('I/O','PlotDispVel')
 #PrintTAlert2 = cfg.getboolean('I/O','PrintTAlert2')
 #PrintWAlert = cfg.getboolean('I/O','PrintWAlert')
 #PrintND = cfg.getboolean('I/O','PrintND')
-#PrintTimer = cfg.getboolean('I/O','PrintTimer')
+PrintTimer = cfg.getboolean('I/O','PrintTimer')
 #PrintAAlert = cfg.getboolean('I/O','PrintAAlert')
 #PrintGSMAlert = cfg.getboolean('I/O', 'PrintGSMAlert')
 
@@ -680,6 +680,9 @@ TestSpecificTime = cfg.getboolean('I/O', 'test_specific_time')
 
 
 #MAIN
+
+sys.stdout = open(RTfilepath+'runresult.txt', 'w')
+
 if TestSpecificTime:
     end = pd.to_datetime(cfg.get('I/O','use_specific_time'))
 
@@ -701,7 +704,7 @@ alert_df = []
 alert_list=[L3_alert,L2_alert,L0_alert,ND_alert]
 alert_names=['L3: ','L2: ','L0: ','ND: ']
 
-print "Generating plots and alerts for:"
+#print "Generating plots and alerts for:"
 
 names = ['ts','col_a']
 fmt = '%Y-%m-%d %H:%M'
@@ -728,8 +731,8 @@ for s in sensorlist:
     
     # getting current column properties
     colname,num_nodes,seg_len= s.name,s.nos,s.seglen
-    print colname, num_nodes, seg_len
-
+#    print colname, num_nodes, seg_len
+    print 'RESULTS FOR SITE ' + colname
     # list of working nodes     
     node_list = range(1, num_nodes + 1)
     not_working = node_status.loc[(node_status.site == colname) & (node_status.node <= num_nodes)]
@@ -740,10 +743,10 @@ for s in sensorlist:
     # importing proc_monitoring file of current column to dataframe
     try:
         proc_monitoring=genproc.generate_proc(colname,end)
-        print proc_monitoring
-        print "\n", colname
+#        print proc_monitoring
+#        print "\n", colname
     except:
-        print "     ",colname, "ERROR...missing/empty proc monitoring"
+#        print "     ",colname, "ERROR...missing/empty proc monitoring"
         continue
 
     # creating series lists per node
@@ -771,10 +774,11 @@ for s in sensorlist:
                                num_nodes_to_check,end,proc_file_path,CSVFormat)
     
     print alert_out
+    print '\n\n\n\n'
   
 #    #11. Plotting column positions
     if PrintColPos:
-        plot_column_positions(colname,cs_x,cs_xz_0,cs_xy_0)
+#        plot_column_positions(colname,cs_x,cs_xz_0,cs_xy_0)
         plot_column_positions(colname,cs_x,cs_xz,cs_xy)
         plt.savefig(RTfilepath+colname+' colpos '+str(end),
                     dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
