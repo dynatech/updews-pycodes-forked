@@ -651,8 +651,8 @@ k_ac_ax = cfg.getfloat('I/O','k_ac_ax')
 num_nodes_to_check = cfg.getint('I/O','num_nodes_to_check')
 alert_file_length=cfg.getint('I/O','alert_time_int') # in days
 
-to_fill = cfg.getint('I/O','to_fill')
-to_smooth = cfg.getint('I/O','to_smooth')
+to_fill = cfg.getint('I/O','RT_to_fill')
+to_smooth = cfg.getint('I/O','RT_to_smooth')
 
 with_TrendingNodeAlert = cfg.getboolean('I/O','with_TrendingNodeAlert')
 realtime_test_specific_sites = cfg.getboolean('I/O','realtime_test_specific_sites')
@@ -780,13 +780,13 @@ for s in sensorlist:
     if PrintColPos:
 #        plot_column_positions(colname,cs_x,cs_xz_0,cs_xy_0)
         plot_column_positions(colname,cs_x,cs_xz,cs_xy)
-        plt.savefig(RTfilepath+colname+' colpos '+str(end),
+        plt.savefig(RTfilepath+colname+' colpos '+str(end.strftime('%Y-%m-%d %H-%M')),
                     dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
 #
     #12. Plotting displacement and velocity
     if PrintDispVel:
         plot_disp_vel(colname, xz_0off,xy_0off, vel_xz_0off, vel_xy_0off)
-        plt.savefig(RTfilepath+colname+' disp_vel '+str(end),
+        plt.savefig(RTfilepath+colname+' disp_vel '+str(end.strftime('%Y-%m-%d %H-%M')),
                     dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
 
 #    if PrintColPos or PrintDispVel:

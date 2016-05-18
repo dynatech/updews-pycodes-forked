@@ -107,10 +107,16 @@ with_TrendingNodeAlert = False
 test_sites = lpasa
 test_specific_sites = True
 
+##############################
+# REAL-TIME MODULE CONSTANTS #
+##############################
 test_specific_time = False
 use_specific_time = 2016-05-12 11:30:00
 realtime_specific_sites = lpasa,barsc
 realtime_test_specific_sites = True
+RT_to_fill = 1
+RT_to_smooth = 0
+
 
 PlotColPos = True
 PlotDispVel = True
