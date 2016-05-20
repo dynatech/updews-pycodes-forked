@@ -209,7 +209,7 @@ def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid
         query = query + " and timestamp <= '%s'" % toTime
 
     if len(siteid) == 5:
-        query = query + " and (msgid & 1) = (%s & 1)" % (msgid);
+        query = query + " and msgid in (%s,%s-21)" % (str(msgid), str(msgid));
     
     if targetnode <= 0:
         query = query + " and id >= 1 and id <= %s ;" % (str(maxnode))
