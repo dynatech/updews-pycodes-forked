@@ -27,7 +27,8 @@ def SenslopeDBConnect(instance):
             db = MySQLdb.connect(host = dbc.host, user = dbc.user, passwd = dbc.password, db = dbc.name)
             cur = db.cursor()
             return db, cur
-        except MySQLdb.OperationalError:
+        # except MySQLdb.OperationalError:
+    	except IndexError:
             print '6.',
             time.sleep(2)
             
@@ -138,10 +139,10 @@ def commitToDb(query, identifier, instance='local'):
                 else:
                     print '>> Warning: Query has no result set', identifier
                     db.commit()
-                    time.sleep(0.5)
+                    time.sleep(0.1)
                     break
-            except MySQLdb.OperationalError:
-            #except IndexError:
+            # except MySQLdb.OperationalError:
+            except IndexError:
                 print '5.',
                 #time.sleep(2)
                 if retry > 10:
