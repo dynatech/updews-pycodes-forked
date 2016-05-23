@@ -150,10 +150,10 @@ def node_alert(colname, xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_v
                                          #checking if max node velocity exceeds threshold velocity for alert 2
                                          np.where(alert['max_vel'].values<=T_velL3,         
 
-                                                  #vel alert=2
+                                                  #vel alert=1
                                                   np.ones(len(alert)),
 
-                                                  #vel alert=3
+                                                  #vel alert=2
                                                   np.ones(len(alert))*2)))
     
     alert['node_alert']=np.where(alert['vel_alert'].values >= alert['disp_alert'].values,
