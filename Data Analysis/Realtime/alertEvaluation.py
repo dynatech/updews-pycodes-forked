@@ -156,15 +156,12 @@ def node_alert(colname, xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_v
                                                   #vel alert=3
                                                   np.ones(len(alert))*2)))
     
-    alert['node_alert']=np.where(alert['vel_alert'].values==0,
+    alert['node_alert']=np.where(alert['vel_alert'].values >= alert['disp_alert'].values,
 
-                                 # node alert = displacement alert (0 or 2) if velocity alert is 0 
-                                 alert['disp_alert'].values,                                
+                                 #node alert takes the higher perceive risk between vel alert and disp alert
+                                 alert['vel_alert'].values,                                
 
-                                 # node alert = velocity alert if displacement alert = 2 
-                                 np.where(alert['disp_alert'].values==1,
-                                          alert['disp_alert'].values,
-                                          alert['vel_alert'].values))
+                                 alert['disp_alert'].values)
 
 
 #    alert['ND']=alert['ND']*alert['disp_alert']
