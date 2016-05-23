@@ -106,7 +106,7 @@ def create_series_list(input_df,monwin,colname,num_nodes):
             curxz=curxz.resample('30Min',how='mean',base=0)
             curxy=curxy.resample('30Min',how='mean',base=0)
         else:
-            print colname, n, "ERROR missing node data"
+#            print colname, n, "ERROR missing node data"
             #zeroing tilt data if node data is missing
             curxz=pd.DataFrame(data=np.zeros(len(monwin)), index=monwin.index)
             curxy=pd.DataFrame(data=np.zeros(len(monwin)), index=monwin.index)
@@ -398,7 +398,7 @@ def alert_summary(alert_out,alert_list):
                 checklist[c]=checklist[c].reset_index()		
                 alert_list[c].append(colname + str(checklist[c]['id'].values[0]))		
                 if c==2: continue		
-                print checklist[c].set_index(['ts','id']).drop(['disp_alert','min_vel','max_vel','vel_alert'], axis=1)		
+#                print checklist[c].set_index(['ts','id']).drop(['disp_alert','min_vel','max_vel','vel_alert'], axis=1)		
                 break
                 
 def nonrepeat_colors(ax,NUM_COLORS,color='gist_rainbow'):
@@ -748,9 +748,9 @@ for time_analyze in range(7):
         
         # getting current column properties
         colname,num_nodes,seg_len= s.name,s.nos,s.seglen
-        print colname, num_nodes, seg_len
+#        print colname, num_nodes, seg_len
         
-        print "Generating plots and alerts for:"
+#        print "Generating plots and alerts for:"
     
         print colname
 
@@ -765,8 +765,8 @@ for time_analyze in range(7):
         # importing proc_monitoring csv file of current column to dataframe
         try:
             proc_monitoring=genproc.generate_proc(colname)
-            print proc_monitoring
-            print "\n", colname
+#            print proc_monitoring
+#            print "\n", colname
         except:
             print "     ",colname, "ERROR...missing/empty proc monitoring"
             continue
@@ -794,7 +794,7 @@ for time_analyze in range(7):
         # Alert generation
         alert_out=alert_generation(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velL2, T_velL3, k_ac_ax,
                                    num_nodes_to_check,end,proc_file_path,CSVFormat)
-        print alert_out
+#        print alert_out
     
     ########################################################################
     
@@ -806,8 +806,9 @@ for time_analyze in range(7):
     
         #writes col_alert to csv    
         for s in range(len(pd.Series.tolist(alert_out.col_alert))):
-            query = """INSERT IGNORE INTO col_alerts (sitecode, timestamp, id, alerts) VALUES """
+            query = """INSERT IGNORE INTO %s.col_alerts (sitecode, timestamp, id, alerts) VALUES """ % (Namedb)
             query = query + str((str(colname), str(end), str(s+1), str(pd.Series.tolist(alert_out.col_alert)[s])))
+#            print query
             cur.execute(query)
             db.commit()
     
@@ -825,7 +826,7 @@ for time_analyze in range(7):
         df.columns = ['sitecode', 'timestamp', 'id', 'alerts']
         df.timestamp = pd.to_datetime(df.timestamp)
         df = df[['timestamp', 'id', 'alerts']]
-        print df
+#        print df
         
         db.close()
         
@@ -862,7 +863,7 @@ for time_analyze in range(7):
             
         #adding trending node alerts to alert output table 
         alert_out['trending_alert']=trending_node_alerts
-        print alert_out
+#        print alert_out
 
         if PrintTrendAlerts:    
             with open(TrendAlerts_file_path+colname+CSVFormat, "ab") as c:
@@ -927,6 +928,8 @@ print 'L0: ', ','.join(L0_alert)
 print 'L2: ', ','.join(L2_alert)
 print 'L3: ', ','.join(L3_alert)
 
+
+#TEMPORARILY COMMENT-ED OUT DUE TO SLOW RUN
 if PrintGSMAlert:
     with open(output_file_path+gsm_alert, 'wb') as gsmalert:
         if len(L3_alert) != 0:

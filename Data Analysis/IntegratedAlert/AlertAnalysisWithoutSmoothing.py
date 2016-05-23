@@ -398,7 +398,7 @@ def alert_summary(alert_out,alert_list):
                 checklist[c]=checklist[c].reset_index()		
                 alert_list[c].append(colname + str(checklist[c]['id'].values[0]))		
                 if c==2: continue		
-                print checklist[c].set_index(['ts','id']).drop(['disp_alert','min_vel','max_vel','vel_alert'], axis=1)		
+#                print checklist[c].set_index(['ts','id']).drop(['disp_alert','min_vel','max_vel','vel_alert'], axis=1)		
                 break
                 
 def nonrepeat_colors(ax,NUM_COLORS,color='gist_rainbow'):
@@ -750,9 +750,9 @@ for time_analyze in range(7):
         colname,num_nodes,seg_len= s.name,s.nos,s.seglen
         print colname, num_nodes, seg_len
         
-        print "Generating plots and alerts for:"
+#        print "Generating plots and alerts for:"
     
-        print colname
+#        print colname
 
     
         # list of working nodes     
@@ -765,8 +765,8 @@ for time_analyze in range(7):
         # importing proc_monitoring csv file of current column to dataframe
         try:
             proc_monitoring=genproc.generate_proc(colname)
-            print proc_monitoring
-            print "\n", colname
+#            print proc_monitoring
+#            print "\n", colname
         except:
             print "     ",colname, "ERROR...missing/empty proc monitoring"
             continue
@@ -862,7 +862,7 @@ for time_analyze in range(7):
             
         #adding trending node alerts to alert output table 
         alert_out['trending_alert']=trending_node_alerts
-        print alert_out
+#        print alert_out
 
         if PrintTrendAlerts:    
             with open(TrendAlerts_file_path+colname+'WithoutSmoothing'+CSVFormat, "ab") as c:
@@ -926,6 +926,41 @@ print 'ND: ', ','.join(ND_alert)
 print 'L0: ', ','.join(L0_alert)
 print 'L2: ', ','.join(L2_alert)
 print 'L3: ', ','.join(L3_alert)
+#
+#if PrintGSMAlert:
+#    with open(output_file_path+gsm_alert, 'wb') as gsmalert:
+#        if len(L3_alert) != 0:
+#            gsmalert.write('L3: ' + ','.join(sorted(L3_alert)) + '\n')
+#        if len(L2_alert) != 0:
+#            gsmalert.write('L2: ' + ','.join(sorted(L2_alert)) + '\n')
+#        with open(output_file_path+rainfall_alert) as rainfallalert:
+#            n = 0
+#            for line in rainfallalert:
+#                if n == 3 or n == 4:
+#                    if len(line) > 6:
+#                        gsmalert.write(line)
+#                n += 1
+#        with open(output_file_path+eq_summaryGSM) as eqsummary:
+#            n = 0            
+#            for line in eqsummary:
+#                if n == 0:
+#                    eqalert = line[6:25]
+#                    if end - pd.to_datetime(eqalert) > timedelta(hours = 0.5):
+#                        break
+#                else:
+#                    gsmalert.write(line)
+#                n += 1
+#
+#if PrintGSMAlert:                        
+#    f = open(output_file_path+gsm_alert)
+#    text = f.read()
+#    f.close()
+#    if os.stat(output_file_path+gsm_alert).st_size != 0:
+#        f = open(output_file_path+gsm_alert, 'w')
+#        f.write('ALERTSMS\n')
+#        f.write('As of ' + end.strftime(fmt) + ':\n')
+#        f.write(text)
+#        f.close()
 
 # deletes plots older than a day
 for dirpath, dirnames, filenames in os.walk(AlertAnalysisPath):

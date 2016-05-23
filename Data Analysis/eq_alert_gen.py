@@ -18,7 +18,8 @@ cfg = ConfigParser.ConfigParser()
 cfg.read(configFile)
 
 #local file paths
-output_file_path = cfg.get('I/O','OutputFilePath')
+output_file_path_2 = cfg.get('I/O','OutputFilePath')
+output_file_path = '/home/dynaslope/Desktop' + output_file_path_2
 
 #file names
 eqsummary = cfg.get('I/O', 'eqsummary')
@@ -88,10 +89,10 @@ try:
         x+=1
     
 #    uncomment if testing a user-specified quake
-#    mag= 6.7
-#    lat= 07.17
-#    lon= 125.54
-#    ts = end-timedelta(minutes=15)
+    mag= 3.5
+    lat= 9.77
+    lon= 125.51
+    ts = end-timedelta(minutes=15)
     
     with open(output_file_path+eqsummary, 'w') as z, open(output_file_path+eq_summaryGSM, 'w') as g:
         z.write (('as of ') + str(end) + ':\n')

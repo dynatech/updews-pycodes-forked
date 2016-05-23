@@ -10,7 +10,7 @@ AlertFileName = Node-level_alerts.csv
 ColumnPropertiesFile = column_properties.csv
 
 [DB I/O]
-Hostdb = 192.168.1.102
+Hostdb = 127.0.0.1
 Userdb = root
 Passdb = senslope
 Namedb = senslopedb
@@ -105,15 +105,15 @@ to_smooth = 1				;to smooth xz and xy through moving average (1 or 0)
 
 with_TrendingNodeAlert = False
 test_sites = lpasa
-test_specific_sites = True
+test_specific_sites = False
 
 ##############################
 # REAL-TIME MODULE CONSTANTS #
 ##############################
 test_specific_time = False
-use_specific_time = 2016-05-12 11:30:00
-realtime_specific_sites = lpasa,barsc
-realtime_test_specific_sites = True
+use_specific_time = 2016-05-20 11:30:00
+realtime_specific_sites = gaasb
+realtime_test_specific_sites = True 
 RT_to_fill = 1
 RT_to_smooth = 0
 

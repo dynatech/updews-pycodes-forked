@@ -775,7 +775,7 @@ for s in sensorlist:
     # Alert generation
     alert_out=alert_generation(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velL2, T_velL3, k_ac_ax,
                                num_nodes_to_check,end,proc_file_path,CSVFormat)
-    print alert_out
+#    print alert_out
     
     # without trending_node_alert (col_alerts to trending column)
     trending_col_alerts = []
