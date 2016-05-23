@@ -1,0 +1,7 @@
+[SpecialCase]
+
+SCnodes = carsb07,dadtb04,dadtb07,lpasa11,luntb09,magtb03,magtb11,magtb21,magtc04,magtc05,magtc06,magtc07,magtc08,magtc09,magtc10,magtc11,tuetb32
+
+[Version]
+Version2 = agbsb,agbta,baysb,bayta,baytc,blcsa,carsb,carta,cudta,cudtb,dadta,dadtb,lunsa,luntb,luntc,magta,magtb,magtc,magtd,mcasb,mcata,messb,mesta,nagsa,nagtb,nurta,nurtb,pepsb,pepta,peptc,sagta,sagtb,sibta,sibtb,sumta,sumtb,tueta,tuetb
+Version3 = banta,bantb,barsc,barta,bartb,gaasa,gaasb,hinsa,hinsb,imesb,imeta,inata,inatb,inatc,jorta,laysa,laysb,lpasa,lpasb,marta,martb,mngsa,mngtb,parta,partb,pngta,pngtb,talsa,taltb,bakta,baktb,baktc
