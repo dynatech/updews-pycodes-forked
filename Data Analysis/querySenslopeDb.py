@@ -227,7 +227,71 @@ def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid
     df.ts = pd.to_datetime(df.ts)
     
     return df
-
+#def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid = 32, targetnode ="", batt=0):
+#    start = dtm.now()
+#    if not siteid:
+#        raise ValueError('no site id entered')
+#        
+#    if printtostdout:
+#        PrintOut('Querying database ...')
+#        
+#    if (len(siteid) == 5):
+#        query = "SELECT timestamp,id,xvalue,yvalue,zvalue,batt FROM %s"  %siteid
+#        
+#        targetnode_query = " WHERE id IN (SELECT node_id FROM node_accel_table WHERE site_name = '%s' and accel = 1)" %siteid 
+#        if targetnode != '':
+#            targetnode_query = " WHERE is IN ('%d')" %targetnode
+#        query = query + targetnode_query
+#    
+#        query = query + " AND msgid in (11, 32)"
+#        if not fromTime:
+#            fromTime = "2010-01-01"
+#        query = query + " AND timestamp > '%s'" %fromTime
+#        
+#        toTime_query = ''
+#        if toTime != '':
+#            toTime_query =  " AND timestamp < '%s'" %toTime
+#        elif toTime:
+#            toTime_query = ''
+#            
+#        query = query + toTime_query
+#        query = query + " UNION ALL"
+#        query = query + " SELECT timestamp,id,xvalue,yvalue,zvalue,batt FROM %s"  %siteid
+#
+#        targetnode_query = " WHERE id IN (SELECT node_id FROM node_accel_table WHERE site_name = '%s' and accel = 2)" %siteid 
+#        if targetnode != '':
+#            targetnode_query = " WHERE is IN ('%d')" %targetnode
+#        query = query + targetnode_query
+#
+#        query = query + " AND msgid in (12, 33)"
+#        query = query+ " AND timestamp > '%s'" %fromTime
+#        query = query + toTime_query
+#    
+#    elif (len(siteid) == 4):
+#        query = "select timestamp,id,xvalue,yvalue,zvalue from senslopedb.%s " % (siteid)
+#        
+#        if not fromTime:
+#            fromTime = "2010-01-01"
+#            
+#        query = query + " where timestamp > '%s'" % fromTime
+#        
+#        if toTime != '':
+#            query = query + " and timestamp < '%s'" % toTime
+#        
+#        if targetnode != '':
+#            query = query + " and id = %s;" % (targetnode)
+#        else:
+#            query = query + " and id >= 1 and id <= %s ;" % (str(maxnode))
+#        
+#    df =  GetDBDataFrame(query)
+#    if (len(siteid) == 5):
+#        df.columns = ['ts','id','x','y','z','v']
+#    elif(len(siteid) == 4):
+#        df.columns = ['ts','id','x','y','z']
+#        
+#    df.ts = pd.to_datetime(df.ts)
+#    print dtm.now() - start
+#    return df
 
 #TODO: This code should have the GID as input and part of the query to make -> used targetnode and edited ConvertSomsRaw.py
 #   the processing time faster
