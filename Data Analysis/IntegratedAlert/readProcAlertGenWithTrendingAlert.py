@@ -734,7 +734,6 @@ for s in sensorlist:
     
     # getting current column properties
     colname,num_nodes,seg_len= s.name,s.nos,s.seglen
-    print colname, num_nodes, seg_len
 
     # list of working nodes     
     node_list = range(1, num_nodes + 1)
@@ -745,9 +744,8 @@ for s in sensorlist:
 
     # importing proc_monitoring file of current column to dataframe
     try:
-        proc_monitoring=genproc.generate_proc(colname)
+        proc_monitoring=genproc.generate_proc(colname, num_nodes, seg_len)
         print proc_monitoring
-        print "\n", colname
     except:
         print "     ",colname, "ERROR...missing/empty proc monitoring"
         continue

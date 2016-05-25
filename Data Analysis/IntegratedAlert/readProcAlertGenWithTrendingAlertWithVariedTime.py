@@ -754,7 +754,7 @@ for s in sensorlist:
 
     # importing proc_monitoring csv file of current column to dataframe
     try:
-        proc_monitoring=genproc.generate_proc(colname)
+        proc_monitoring=genproc.generate_proc(colname, num_nodes, seg_len)
         print proc_monitoring
         print "\n", colname
     except:

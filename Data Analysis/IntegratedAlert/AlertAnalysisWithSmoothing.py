@@ -748,12 +748,6 @@ for time_analyze in range(7):
         
         # getting current column properties
         colname,num_nodes,seg_len= s.name,s.nos,s.seglen
-#        print colname, num_nodes, seg_len
-        
-#        print "Generating plots and alerts for:"
-    
-        print colname
-
     
         # list of working nodes     
         node_list = range(1, num_nodes + 1)
@@ -764,9 +758,8 @@ for time_analyze in range(7):
     
         # importing proc_monitoring csv file of current column to dataframe
         try:
-            proc_monitoring=genproc.generate_proc(colname)
-#            print proc_monitoring
-#            print "\n", colname
+            proc_monitoring=genproc.generate_proc(colname, num_nodes, seg_len)
+
         except:
             print "     ",colname, "ERROR...missing/empty proc monitoring"
             continue
@@ -794,7 +787,6 @@ for time_analyze in range(7):
         # Alert generation
         alert_out=alert_generation(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velL2, T_velL3, k_ac_ax,
                                    num_nodes_to_check,end,proc_file_path,CSVFormat)
-#        print alert_out
     
     ########################################################################
     
@@ -808,7 +800,6 @@ for time_analyze in range(7):
         for s in range(len(pd.Series.tolist(alert_out.col_alert))):
             query = """INSERT IGNORE INTO %s.col_alerts (sitecode, timestamp, id, alerts) VALUES """ % (Namedb)
             query = query + str((str(colname), str(end), str(s+1), str(pd.Series.tolist(alert_out.col_alert)[s])))
-#            print query
             cur.execute(query)
             db.commit()
     
