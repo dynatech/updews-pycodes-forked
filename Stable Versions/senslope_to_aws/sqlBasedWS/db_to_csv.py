@@ -302,6 +302,7 @@ def extract_db():
         awsOld = cur.fetchall()
 
         for table in awsOld:
+            print table[0]
             extractDBToSQL(table[0], "senslope")
             
         #get rain_arq items
@@ -316,6 +317,7 @@ def extract_db():
         awsArq = cur.fetchall()
 
         for table in awsArq:
+            print table[0]
             extractDBToSQL(table[0], "arq")
             
         pass
