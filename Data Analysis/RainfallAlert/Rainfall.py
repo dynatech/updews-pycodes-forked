@@ -1,8 +1,13 @@
+##### IMPORTANT matplotlib declarations must always be FIRST to make sure that matplotlib works with cron-based automation
+import matplotlib as mpl
+mpl.use('Agg')
+import matplotlib.pyplot as plt
+plt.ioff()
+
 import os
 from datetime import datetime, timedelta, date, time
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 import ConfigParser
 import math
 import sys
@@ -18,9 +23,6 @@ if not path in sys.path:
 del path   
 
 from querySenslopeDb import *
-
-
-plt.ioff()
 
 ############################################################
 ##      TIME FUNCTIONS                                    ##    

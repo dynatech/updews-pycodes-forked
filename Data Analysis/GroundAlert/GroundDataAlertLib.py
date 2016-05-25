@@ -53,7 +53,7 @@ def GenerateGroundDataAlert():
     
 #    Use this so set the end time    
 #    end = datetime(2016,04,27,12,00,00)
-    
+#    
     #Set the container of the date of measurements
     measurement_dates = []
     

@@ -1,9 +1,9 @@
-import ConfigParser, MySQLdb, time
+import ConfigParser, MySQLdb, time, sys
 from senslopedbio import *
 from datetime import datetime as dt
 
 cfg = ConfigParser.ConfigParser()
-cfg.read("senslope-server-config.txt")
+cfg.read(sys.path[0] + "/senslope-server-config.txt")
 
 class dbInstance:
     def __init__(self,name,host,user,password):
@@ -27,7 +27,8 @@ def SenslopeDBConnect(instance):
             db = MySQLdb.connect(host = dbc.host, user = dbc.user, passwd = dbc.password, db = dbc.name)
             cur = db.cursor()
             return db, cur
-        except MySQLdb.OperationalError:
+        # except MySQLdb.OperationalError:
+    	except IndexError:
             print '6.',
             time.sleep(2)
             
@@ -35,6 +36,7 @@ def createTable(table_name, type):
     db, cur = SenslopeDBConnect('local')
     # cur.execute("CREATE DATABASE IF NOT EXISTS %s" %Namedb)
     # cur.execute("USE %s"%Namedb)
+    table_name = table_name.lower()
     
     if type == "sensor v1":
         cur.execute("CREATE TABLE IF NOT EXISTS %s(timestamp datetime, id int, xvalue int, yvalue int, zvalue int, mvalue int, PRIMARY KEY (timestamp, id))" %table_name)
@@ -83,7 +85,7 @@ def setSendStatus(send_status,sms_id_list):
         
     now = dt.today().strftime("%Y-%m-%d %H:%M:%S")
 
-    query = "update %s.smsoutbox set send_status = '%s', timestamp_written ='%s' where sms_id in (%s) " % (Namedb, send_status, now, str(sms_id_list)[1:-1].replace("L",""))
+    query = "update %s.smsoutbox set send_status = '%s', timestamp_written ='%s' where sms_id in (%s) " % (gsmdbinstance.name, send_status, now, str(sms_id_list)[1:-1].replace("L",""))
     commitToDb(query,"setSendStatus", instance='GSM')
     
 def getAllSmsFromDb(read_status):
@@ -129,7 +131,7 @@ def commitToDb(query, identifier, instance='local'):
         retry = 0
         while True:
             try:
-                a = cur.execute(query)
+                a = cur.execute(query.lower())
                 # db.commit()
                 if a:
                     db.commit()
@@ -137,10 +139,10 @@ def commitToDb(query, identifier, instance='local'):
                 else:
                     print '>> Warning: Query has no result set', identifier
                     db.commit()
-                    time.sleep(0.5)
+                    time.sleep(0.1)
                     break
-            except MySQLdb.OperationalError:
-            #except IndexError:
+            # except MySQLdb.OperationalError:
+            except IndexError:
                 print '5.',
                 #time.sleep(2)
                 if retry > 10:

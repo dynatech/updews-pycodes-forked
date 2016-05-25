@@ -1,16 +1,16 @@
-import re
+import re, sys
 from datetime import datetime as dt
 import ConfigParser
 
-cfg = ConfigParser.ConfigParser()
-cfg.read('senslope-server-config.txt')
+# cfg = ConfigParser.ConfigParser()
+# cfg.read(sys.path[0] + '/' + "senslope-server-config.txt")
 
-# print '\n\n*******************************************************'  
-faildateen = cfg.get('ReplyMessages','FailDateEN')
-failtimeen = cfg.get('ReplyMessages','FailTimeEN')
-failmeasen = cfg.get('ReplyMessages','FailMeasEN')
-failweaen = cfg.get('ReplyMessages','FailWeaEN')
-failobven = cfg.get('ReplyMessages','FailObvEN')
+# # print '\n\n*******************************************************'  
+# faildateen = cfg.get('ReplyMessages','FailDateEN')
+# failtimeen = cfg.get('ReplyMessages','FailTimeEN')
+# failmeasen = cfg.get('ReplyMessages','FailMeasEN')
+# failweaen = cfg.get('ReplyMessages','FailWeaEN')
+# failobven = cfg.get('ReplyMessages','FailObvEN')
 
 
 def getTimeFromSms(text):
@@ -72,7 +72,7 @@ def getDateFromSms(text):
 def getGndMeas(text):
 
   cfg = ConfigParser.ConfigParser()
-  cfg.read('senslope-server-config.txt')
+  cfg.read(sys.path[0] + '/' + "senslope-server-config.txt")
 
   print '\n\n*******************************************************'  
   faildateen = cfg.get('ReplyMessages','FailDateEN')
@@ -86,6 +86,8 @@ def getGndMeas(text):
   # clean the message
   cleanText = re.sub(" +"," ",text.upper())
   cleanText = re.sub("\.+",".",cleanText)
+  cleanText = re.sub(";",":",cleanText)
+  cleanText = cleanText.strip()
   sms_list = re.split(" ",re.sub("\W"," ",cleanText))
   
   sms_date = ""

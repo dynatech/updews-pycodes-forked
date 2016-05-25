@@ -1,4 +1,4 @@
-import os,time,serial,re,sys
+import os,time,re,sys
 import MySQLdb
 import datetime
 import ConfigParser
@@ -37,11 +37,11 @@ def main():
             sleeptime = 5
         else:
             sleeptime = 60
-            print '>> Checking for alert sms'
-            alertmsg = CheckAlertMessages()
-            if alertmsg:
-                WriteOutboxMessageToDb(alertmsg,smartnumbers)
-                WriteOutboxMessageToDb(alertmsg,globenumbers)
+            # print '>> Checking for alert sms'
+            # alertmsg = CheckAlertMessages()
+            # if alertmsg:
+            #     WriteOutboxMessageToDb(alertmsg,smartnumbers)
+            #     WriteOutboxMessageToDb(alertmsg,globenumbers)
         
         logRuntimeStatus("procfromdb","alive")
         print dt.today().strftime("\nServer active as of %A, %B %d, %Y, %X")

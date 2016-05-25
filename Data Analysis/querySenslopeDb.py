@@ -105,8 +105,12 @@ def CreateAccelTable(table_name, nameDB):
 def CreateColAlertsTable(table_name, nameDB):
     db = MySQLdb.connect(host = Hostdb, user = Userdb, passwd = Passdb)
     cur = db.cursor()
-    #cur.execute("CREATE DATABASE IF NOT EXISTS %s" %nameDB)
+
     cur.execute("USE %s"%nameDB)
+    
+    query = "DROP TABLE IF EXISTS `senslopedb`.%s;" %table_name
+    cur.execute(query)
+    
     cur.execute("CREATE TABLE IF NOT EXISTS %s(sitecode varchar(8), timestamp datetime, id int, alerts varchar(8), PRIMARY KEY (sitecode, timestamp, id))" %table_name)
     db.close()
 	
@@ -183,245 +187,111 @@ def PushDBDataFrame(df,table_name):
 #    Returns:
 #        df: dataframe object 
 #            dataframe object of the result set 
-def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid = 32, targetnode = -1, batt=0):
-
-    if not siteid:
-        raise ValueError('no site id entered')
-    
-    if printtostdout:
-        PrintOut('Querying database ...')
-    # added getting battery data (v2&v3)
-    if batt == 1:
-        query = "select timestamp,id,xvalue,yvalue,zvalue,batt from senslopedb.%s " % (siteid) 
-    else:
-        query = "select timestamp,id,xvalue,yvalue,zvalue from senslopedb.%s " % (siteid) 
-
-    if not fromTime:
-        fromTime = "2010-01-01"
-        
-    query = query + " where timestamp > '%s'" % fromTime
-    
-    if toTime != '':
-        query = query + " and timestamp < '%s'" % toTime
-
-    if len(siteid) == 5:
-        query = query + " and (msgid & 1) = (%s & 1)" % (msgid);
-    
-    if targetnode <= 0:
-        query = query + " and id >= 1 and id <= %s ;" % (str(maxnode))
-    else:
-        query = query + " and id = %s;" % (targetnode)
-    
-    PrintOut(query)
-    
-    df =  GetDBDataFrame(query)
-    if batt == 1:
-        df.columns = ['ts','id','x','y','z','v']
-    else:
-        df.columns = ['ts','id','x','y','z']
-    # change ts column to datetime
-    df.ts = pd.to_datetime(df.ts)
-    
-    return df
-
-#GetFilledAccelData(siteid = "", fromTime = "", maxnode = 40): 
-#    retrieves filled accel data from database
+#def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid = 32, targetnode = -1, batt=0):
+#
+#    if not siteid:
+#        raise ValueError('no site id entered')
 #    
-#    Parameters:
-#        siteid: str
-#            sitename or column name of the sensor column
-#        fromTime: str 
-#            starting time of the query that needs to be retrieved
-#        maxnode: int, default 40
-#            maximum node expected from this particular sensor column. Used
-#            to remove extraneous node ids which may not belong to the sensor column
-#            
-#    Returns:
-#        dfm: dataframe object 
-#            dataframe object of the result set 
-    
-def GetFilledAccelData(siteid = "", fromTime = "", toTime = "", drop_msgid = 1 ,maxnode = 40, targetnode = -1):
-
-    if not siteid:
-        raise ValueError('no site id entered')
-    
-    if printtostdout:
-        PrintOut('Querying database ...')
-        
-    # take into account old sites ( version 1)
-    if (len(siteid) == 5):
-        query = "select timestamp,id,msgid,xvalue,yvalue,zvalue from senslopedb.%s " % (siteid)
-    else:
-        query = "select timestamp,id,xvalue,yvalue,zvalue from senslopedb.%s " % (siteid) 
-
-    if not fromTime:
-        fromTime = "2010-01-01"
-        
-    query = query + " where timestamp > '%s'" % fromTime
-    
-    if toTime:
-        query = query + " and timestamp < '%s'" % toTime
-    
-    if targetnode <= 0:  
-        query = query + " and id >= 1 and id <= %s ;" % (str(maxnode))
-    else:
-        query = query + " and id = %s;" % (targetnode)
-    
-    PrintOut(query)
- 
-    df =  GetDBDataFrame(query)
-    if (len(siteid) == 5):
-        if len(df) > 0:
-            #df = fill_axel_data(df, drop_msgid)
-            df = df.groupby([df['id']]).apply(fill_axel_data)
-            if drop_msgid:
-                df.columns = ['ts','id','x','y','z']
-            elif drop_msgid == 0:
-                df.columns = ['ts','id','msgid','x','y','z']
-            # change ts column to datetime
-            df.ts = pd.to_datetime(df.ts)
-    elif (len(siteid) == 4):
-        df.columns = ['ts','id','x','y','z']
-        # change ts column to datetime
-        df.ts = pd.to_datetime(df.ts)  
-    return df
-
-#fill_axel_data(df)
-##    Summary: 
-#        fill in missing axel 1 data ( x,y,z ) with axel2 data 
-##    inputs:
-#        df is a dataframe containing a column named msgid with values 11,12,32 and 33
-#        df has a column ts ( timestamp)
-#        df returns a dataframe dfm with columns ts,id,x,y,z
-##    Others:
-#        if df is a dataframe for multiple node ids use groupby
-#        Example:
-#            df = df.groupby([df['id']]).apply(fill_axel_data)
-
-def fill_axel_data(df, drop_msgid = 1):
-    #we need to rename the column 'timestamp' to 'ts'
-    df.columns = ['ts','id','msgid','x','y','z']
-    #let's clean up the data a bit
-    #df = df.groupby([df['id']]).apply(condition_df)
-    #print df
-    df1 = df[(df.msgid == 32) | (df.msgid == 11)]
-    df2 = df[(df.msgid == 33) | (df.msgid == 12)]
-    #print df1
-    df1 = condition_df(df1)
-    df2 = condition_df(df2)
-    df1 = df1.reset_index(level = 1) 
-    df2 = df2.reset_index(level = 1)    
-    
-    # create a dataframe with all timestamps present in df1 and df2
-    dfts = pd.merge(df1,df2, how='outer')
-    
-    dfts = resample_df(dfts)   
-    # at this point, dfts has all the timestamps available on both df1 and df2
-    
-    dfts = dfts.reset_index(level = 1)
-    
-    df2 = df2.set_index('ts')
-    
-    dfm = pd.merge(dfts,df1, how = 'outer')
-    
-    dfm = dfm.set_index('ts')
-    #start filling id,x,y,z YEY!
-    dfm.id.fillna(df2.id, inplace=True)
-    dfm.x.fillna(df2.x, inplace=True)
-    dfm.y.fillna(df2.y, inplace=True)
-    dfm.z.fillna(df2.z, inplace=True)
-    
-    dfm = dfm[np.isfinite(dfm.id)] #removes all rows with NaNs in id
-    # rows removed this way are rows with no data from either axel 1 or axel 2
-    dfm = dfm.reset_index(level = 1)   
-    if drop_msgid:
-        dfm = dfm[['ts','id','x','y','z']]
-    elif drop_msgid == 0:
-        dfm = dfm[['ts','id','msgid','x','y','z']]
-        
-    dfm = dfm.sort('ts')
-    return dfm
-#    df.columns = ['ts','id','msgid','x','y','z']
-#    #let's clean up the data a bit
-#    df = condition_df(df,resample=0)
-#    
-#    df1 = df[(df.msgid == 32) | (df.msgid == 11)]
-#    df2 = df[(df.msgid == 33) | (df.msgid == 12)]
-#    
-#    df1 = condition_df(df1)
-#    df2 = condition_df(df2)
-#    
-#    df1 = df1.reset_index(level = 1) 
-#    df2 = df2.reset_index(level = 1)    
-#    
-#    # create a dataframe with all timestamps present in df1 and df2
-#    dfts = pd.merge(df1,df2, how='outer')
-#    
-#    dfts = resample_df(dfts)   
-#    # at this point, dfts has all the timestamps available on both df1 and df2
-#    
-#    dfts = dfts.reset_index(level = 1)
-#    
-#    df2 = df2.set_index('ts')
-#    
-#    dfm = pd.merge(dfts,df1, how = 'outer')
-#    
-#    dfm = dfm.set_index('ts')
-#    #start filling id,x,y,z YEY!
-#    dfm.id.fillna(df2.id, inplace=True)
-#    dfm.x.fillna(df2.x, inplace=True)
-#    dfm.y.fillna(df2.y, inplace=True)
-#    dfm.z.fillna(df2.z, inplace=True)
-#    
-#    dfm = dfm[np.isfinite(dfm.id)] #removes all rows with NaNs in id
-#    # rows removed this way are rows with no data from either axel 1 or axel 2
-#    dfm = dfm.reset_index(level = 1)   
-#    if drop_msgid:
-#        dfm = dfm[['ts','id','x','y','z']]
-#    elif drop_msgid == 0:
-#        dfm = dfm[['ts','id','msgid','x','y','z']]
+#    if printtostdout:
+#        PrintOut('Querying database ...')
+#    # added getting battery data (v2&v3)
+#    if batt == 1:
+#        query = "select timestamp,id,xvalue,yvalue,zvalue,batt from senslopedb.%s " % (siteid) 
+#    else:
+#        query = "select timestamp,id,xvalue,yvalue,zvalue from senslopedb.%s " % (siteid) 
+#
+#    if not fromTime:
+#        fromTime = "2010-01-01"
 #        
-#    dfm = dfm.sort('ts')
-#    return dfm
-
+#    query = query + " where timestamp >= '%s'" % fromTime
+#    
+#    if toTime != '':
+#        query = query + " and timestamp <= '%s'" % toTime
+#
+#    if len(siteid) == 5:
+#        query = query + " and msgid in (%s,%s-21)" % (str(msgid), str(msgid));
+#    
+#    if targetnode <= 0:
+#        query = query + " and id >= 1 and id <= %s ;" % (str(maxnode))
+#    else:
+#        query = query + " and id = %s;" % (targetnode)
+#    
+#    PrintOut(query)
+#    
+#    df =  GetDBDataFrame(query)
+#    if batt == 1:
+#        df.columns = ['ts','id','x','y','z','v']
+#    else:
+#        df.columns = ['ts','id','x','y','z']
+#    # change ts column to datetime
+#    df.ts = pd.to_datetime(df.ts)
+#    
+#    return df
+def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid = 32, targetnode ="", batt=0):
+    start = dtm.now()
+    if not siteid:
+        raise ValueError('no site id entered')
+        
+    if printtostdout:
+        PrintOut('Querying database ...')
+        
+    if (len(siteid) == 5):
+        query = "SELECT timestamp,id,xvalue,yvalue,zvalue,batt FROM %s"  %siteid
+        
+        targetnode_query = " WHERE id IN (SELECT node_id FROM node_accel_table WHERE site_name = '%s' and accel = 1)" %siteid 
+        if targetnode != '':
+            targetnode_query = " WHERE is IN ('%d')" %targetnode
+        query = query + targetnode_query
     
-#condition_df()
-#    Summary:
-#        filters ids > 40 and < 1 from input dataframe df
-#    inputs:
-#        df is a dataframe with a column ts ( timestamp )
-#        resample is either 1 or 0:
-#            resample 1: df returned is resampled every 30 mins
-#            resample 0: df returned is not resampled
-#    returns:
-#        df
-#        df is a dataframe
-#        filters NaT ( not a timestamp values)
-#        filters magnitude
+        query = query + " AND msgid in (11, 32)"
+        if not fromTime:
+            fromTime = "2010-01-01"
+        query = query + " AND timestamp > '%s'" %fromTime
+        
+        toTime_query = ''
+        if toTime != '':
+            toTime_query =  " AND timestamp < '%s'" %toTime
+        elif toTime:
+            toTime_query = ''
+            
+        query = query + toTime_query
+        query = query + " UNION ALL"
+        query = query + " SELECT timestamp,id,xvalue,yvalue,zvalue,batt FROM %s"  %siteid
 
-def condition_df(df, resample=1):
-    df = df[(df.id > 0) & (df.id <= 40)] # filters id
-    df = df[df.ts.notnull()] # filters timestamp
-    if resample:
-        df = resample_df(df)
-    df = filters_magnitude(df)
+        targetnode_query = " WHERE id IN (SELECT node_id FROM node_accel_table WHERE site_name = '%s' and accel = 2)" %siteid 
+        if targetnode != '':
+            targetnode_query = " WHERE is IN ('%d')" %targetnode
+        query = query + targetnode_query
+
+        query = query + " AND msgid in (12, 33)"
+        query = query+ " AND timestamp > '%s'" %fromTime
+        query = query + toTime_query
+    
+    elif (len(siteid) == 4):
+        query = "select timestamp,id,xvalue,yvalue,zvalue from senslopedb.%s " % (siteid)
+        
+        if not fromTime:
+            fromTime = "2010-01-01"
+            
+        query = query + " where timestamp > '%s'" % fromTime
+        
+        if toTime != '':
+            query = query + " and timestamp < '%s'" % toTime
+        
+        if targetnode != '':
+            query = query + " and id = %s;" % (targetnode)
+        else:
+            query = query + " and id >= 1 and id <= %s ;" % (str(maxnode))
+        
+    df =  GetDBDataFrame(query)
+    if (len(siteid) == 5):
+        df.columns = ['ts','id','x','y','z','v']
+    elif(len(siteid) == 4):
+        df.columns = ['ts','id','x','y','z']
+        
+    df.ts = pd.to_datetime(df.ts)
+    print dtm.now() - start
     return df
-
-def resample_df(df):
-    df.ts = pd.to_datetime(df['ts'], unit = 's')
-    df = df.set_index('ts')
-    df = df.resample('30min').first() 
-    return df
-    
-#filter_magnitude()
-#  filters frames whose magnitude exceed the set tolerance t
-#  df must have x y z columns
-def filters_magnitude(df , t=0.05, init_mag = 1024.0):
-    
-    dfo = df[['x','y','z']]/init_mag
-    mag = (dfo.x*dfo.x + dfo.y*dfo.y + dfo.z*dfo.z).apply(np.sqrt)
-    
-    return df[((mag>(1-t)) & (mag<(1+t)))]
 
 #TODO: This code should have the GID as input and part of the query to make -> used targetnode and edited ConvertSomsRaw.py
 #   the processing time faster
@@ -714,7 +584,7 @@ def GetLastGoodData(df, nos, fillMissing=False):
     else:
         dflgd = dfa.sort(['id']).reset_index(level=1,drop=True)
         
-    print dflgd
+#    print dflgd
     
     return dflgd
     
@@ -750,11 +620,32 @@ def GetLastGoodDataFromDb(col):
 #       returns the dataframe for the last good data prior to the monitoring window
     
 def GetSingleLGDPM(site, node, startTS):
-    query = "SELECT timestamp, id, xvalue, yvalue, zvalue from %s " % (site)
-    query = query + "WHERE id = %s and timestamp < '%s' " % (node, startTS)
+    query = "SELECT timestamp, id, xvalue, yvalue, zvalue"
+    if len(site) == 5:
+        query = query + ", msgid"
+    query = query + " from %s WHERE id = %s and timestamp < '%s' " % (site, node, startTS)
+    if len(site) == 5:
+        query = query + "and (msgid = 32 or msgid = 11) "
+#        query = query + "ORDER BY timestamp DESC LIMIT 2"
+#    else:
     query = query + "ORDER BY timestamp DESC LIMIT 1"
     
     lgdpm = GetDBDataFrame(query)
+
+#    if len(site) == 5:
+#        if len(set(lgdpm.timestamp)) == 1:
+#            lgdpm.loc[(lgdpm.msgid == 11) | (lgdpm.msgid == 32)]
+#        else:
+#            try:
+#                lgdpm = lgdpm.loc[lgdpm.timestamp == lgdpm.timestamp[0]]
+#            except:
+#                print 'no data for node ' + str(node) + ' of ' + site
+    
+    if len(site) == 5:
+        lgdpm.columns = ['ts','id','x','y','z', 'msgid']
+    else:
+        lgdpm.columns = ['ts','id','x','y','z']
+    lgdpm = lgdpm[['ts', 'id', 'x', 'y', 'z']]
     return lgdpm
     
 #PushLastGoodData(df,name):
@@ -858,7 +749,8 @@ except:
     #default values are used for missing configuration files or for cases when
     #sensitive info like db access credentials must not be viewed using a browser
     #print "No file named: %s. Trying Default Configuration" % (configFile)
-    Hostdb = "127.0.0.1"
+#    Hostdb = "127.0.0.1"    
+    Hostdb = "192.168.1.102"
     Userdb = "root"
     Passdb = "senslope"
     Namedb = "senslopedb"

@@ -13,12 +13,6 @@ import SomsServerParser as SSP
 import math
 from senslopeServer import *
 
-def LogUnrecognizedMessage(msg, network):
-    # print ">> Error: Unexpected characters/s detected in ", msg.data
-    f = open(unexpectedchardir+network+'-unrecognized-messages.txt','a')
-    f.write(msg.dt + ',' + msg.simnum + ',' + msg.data+ '\n')
-    f.close()
-    
 def updateLastMsgReceivedTable(txtdatetime,name,sim_num,msg):
     query = """insert into senslopedb.last_msg_received
                 (timestamp,name,sim_num,last_msg)
@@ -392,6 +386,8 @@ def ProcessARQWeather(line,sender):
 
     print 'ARQ Weather data: ' + line
 
+    line = re.sub("(?<=,)((?=$)|(?=,))","NULL",line)
+
     try:
     # ARQ+1+3+4.143+4.128+0.0632+5.072+0.060+0000+13+28.1+75.0+55+150727/160058
         #table name
@@ -459,6 +455,8 @@ def ProcessRain(line,sender):
     #msg = message
 
     print 'Weather data: ' + line
+
+    line = re.sub("(?<=,)((?=$)|(?=,))","NULL",line)
 
     try:
     
@@ -570,6 +568,7 @@ def ProcessAllMessages(allmsgs,network):
         print '\n\n*******************************************************'
         #gets per text message
         msg = allmsgs.pop(0)
+        msg.data = msg.data.upper()
                      
         msgname = checkNameOfNumber(msg.simnum)
         ##### Added for V1 sensors removes unnecessary characters pls see function PreProcessColumnV1(data)
@@ -580,33 +579,21 @@ def ProcessAllMessages(allmsgs,network):
             try:
                 gm = getGndMeas(msg.data)
                 RecordGroundMeasurements(gm)
-                # a = sendMsg(successen, msg.simnum)
+                WriteOutboxMessageToDb("READ-SUCCESS: \n" + msg.data, communityphonenumber)
                 WriteOutboxMessageToDb(successen, msg.simnum)
             except ValueError as e:
                 print ">> Error in manual ground measurement SMS"
-                f = open(gndmeasfilesdir + "gnd_measuremenst_w_errors.txt","a")
-                f.write(msg.data.upper())
-                f.close()
-                # sendMsg(str(e), msg.simnum)
+                WriteOutboxMessageToDb("READ-FAIL: \n" + msg.data, communityphonenumber)
                 WriteOutboxMessageToDb(str(e), msg.simnum)
-            finally:
-                g = open(smsgndfile, 'a')
-                g.write(msg.dt+',')
-                g.write(msg.simnum+',')
-                g.write(msg.data+'\n')
-                g.close()
-        elif re.search("[A-Z]{4,5}\*[xyabc]\*[A-F0-9]+\*[0-9]+T?$",msg.data):
+
+        elif re.search("^[A-Z]{4,5}\*[xyabcXYABC]\*[A-F0-9]+\*[0-9]+T?$",msg.data):
             try:
-                if re.findall('[^A-Z]', msg.data.split("*")[0]):
-                    UnexpectedCharactersLog(msg, network)
-                else:    
-                    dlist = ProcTwoAccelColData(msg.data,msg.simnum,msg.dt)
-                    #print dlist
-                    if dlist:
-                        if len(dlist[0][0]) == 6:
-                            WriteSomsDataToDb(dlist,msg.dt)
-                        else:
-                            WriteTwoAccelDataToDb(dlist,msg.dt)
+                dlist = ProcTwoAccelColData(msg.data,msg.simnum,msg.dt)
+                if dlist:
+                    if len(dlist[0][0]) == 6:
+                        WriteSomsDataToDb(dlist,msg.dt)
+                    else:
+                        WriteTwoAccelDataToDb(dlist,msg.dt)
             except IndexError:
                 print "\n\n>> Error: Possible data type error"
                 print msg.data
@@ -614,7 +601,7 @@ def ProcessAllMessages(allmsgs,network):
             #ProcessColumn(msg.data)
             ProcessColumn(msg.data,msg.dt,msg.simnum)
         #check if message is from rain gauge
-        elif re.search("\w{4},[\d\/:,]+,[\d,\.]+$",msg.data):
+        elif re.search("^\w{4},[\d\/:,]+,[\d,\.]+$",msg.data):
             ProcessRain(msg.data,msg.simnum)
         elif re.search(r'(\w{4})[-](\d{1,2}[.]\d{02}),(\d{01}),(\d{1,2})/(\d{1,2}),#(\d),(\d),(\d{1,2}),(\d)[*](\d{10})',msg.data):
             ProcessStats(msg.data,msg.dt)
@@ -629,31 +616,12 @@ def ProcessAllMessages(allmsgs,network):
             print 'NUM: ' , msg.simnum
             print 'MSG: ' , msg.data
             isMsgProcSuccess = False
-            LogUnrecognizedMessage(msg, network)
-        
+            
         if isMsgProcSuccess:
             read_success_list.append(msg.num)
         else:
             read_fail_list.append(msg.num)
         
-        # msgname = checkNameOfNumber(msg.simnum) 
-        # if msgname:
-            # updateLastMsgReceivedTable(msg.dt,msgname,msg.simnum,msg.data)
-            # if SaveToFile:
-                # dir = inboxdir+msgname + "\\"
-                # if not os.path.exists(dir):
-                    # os.makedirs(dir)
-                # inbox = open(dir+msgname+'-backup.txt','a')
-                # inbox.write(msg.dt+',')
-                # inbox.write(msg.data+'\n')
-                # inbox.close()
-        # else:
-            # unk = open(unknownsenderfile,'a')
-            # unk.write(msg.dt+',')
-            # unk.write(msg.simnum+',')
-            # unk.write(msg.data+'\n')
-            # unk.close()
-            
     return read_success_list, read_fail_list
     
 def RecordGroundMeasurements(gnd_meas):
@@ -711,6 +679,9 @@ def ProcessCoordinatorMsg(coordsms, num):
     except IndexError:
         print "IndexError: list index out of range"
     
+cfg = ConfigParser.ConfigParser()
+cfg.read(sys.path[0] + '/' + "senslope-server-config.txt")
+
 inboxdir = cfg.get('FileIO','inboxdir')
 unexpectedchardir = cfg.get('FileIO','unexpectedchardir')
 unknownsenderfile = cfg.get('FileIO','unknownsenderfile')
@@ -718,3 +689,4 @@ smsgndfile = cfg.get('SMSAlert','SMSgndmeasfile')
 gndmeasfilesdir= cfg.get('SMSAlert','gndmeasfilesdir')
 WriteToDB = cfg.get('I/O','writetodb')
 successen = cfg.get('ReplyMessages','SuccessEN')
+communityphonenumber = cfg.get('SMSAlert','communityphonenumber')

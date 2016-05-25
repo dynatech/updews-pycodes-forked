@@ -14,6 +14,14 @@ def up_one(p):
     out = os.path.abspath(os.path.join(p, '..'))
     return out
 
+def CreateAllAlertsTable(table_name, nameDB):
+    db = MySQLdb.connect(host = Hostdb, user = Userdb, passwd = Passdb)
+    cur = db.cursor()
+    #cur.execute("CREATE DATABASE IF NOT EXISTS %s" %nameDB)
+    cur.execute("USE %s"%nameDB)
+    cur.execute("CREATE TABLE IF NOT EXISTS %s(timestamp datetime, id int, xvalue int, yvalue int, zvalue int, mvalue int, PRIMARY KEY (timestamp, id))" %table_name)
+    db.close()
+
 #Step 0: File path and initializations
 cfg = ConfigParser.ConfigParser()
 cfg.read('server-config.txt')  
@@ -137,13 +145,13 @@ with open (output_file_path+textalert) as txtalert_output:
     for s in alerts.keys():
         try:
             if 'L3' in site_sensor_alert[s]:
-                alerts[s] = alerts[s] + ((site_sensor_alert[s] + ('L3s',timestamp)),)
+                alerts[s] = alerts[s] + ((site_sensor_alert[s] + ('L3',timestamp)),)
             elif 'L2' in site_sensor_alert[s]:
-                alerts[s] = alerts[s] + ((site_sensor_alert[s] + ('L2s',timestamp)),)
+                alerts[s] = alerts[s] + ((site_sensor_alert[s] + ('L2',timestamp)),)
             elif 'L0' in site_sensor_alert[s]:
-                alerts[s] = alerts[s] + ((site_sensor_alert[s] + ('L0s',timestamp)),)
+                alerts[s] = alerts[s] + ((site_sensor_alert[s] + ('L0',timestamp)),)
             else:
-                alerts[s] = alerts[s] + ((site_sensor_alert[s] + ('NDs',timestamp)),)
+                alerts[s] = alerts[s] + ((site_sensor_alert[s] + ('ND',timestamp)),)
         except KeyError:
             alerts[s] = alerts[s] + (('No Sensor Installed',timestamp),)
 #Step 4: Collect Ground Alerts
@@ -158,9 +166,9 @@ with open (output_file_path+groundalert) as groundalert_output:
             try:
                 galert = galert[0:2]
                 if site == 'Mesta' or site == 'Messb':
-                    alerts[site] = alerts[site] + (galert+'g',timestamp)
+                    alerts[site] = alerts[site] + (galert,timestamp)
                 else:
-                    alerts[site[0:3].title()] = alerts[site[0:3].title()] + (galert+'g',timestamp)
+                    alerts[site[0:3].title()] = alerts[site[0:3].title()] + (galert,timestamp)
             except:
                 pass
         n+=1
@@ -193,10 +201,47 @@ for site in alerts.keys():
     all_alerts.append(site_alert)
 
 df_all_alerts = pd.DataFrame(all_alerts)
+df_all_alerts = df_all_alerts[['site','rain_ts','rain_alert','sensor_ts','sensor_1','sensor_1_alert','sensor_2','sensor_2_alert','sensor_3','sensor_3_alert','sensor_all_alert','ground_ts','ground_alert']]
+
+#Evaluate Landslide Alert
+sensor_all_alert = df_all_alerts['sensor_all_alert'].values
+ground_alert = df_all_alerts['ground_alert'].values
+landslide_alert = []
+for g_alert,s_alert in zip(ground_alert,sensor_all_alert):
+    if g_alert == 'L3' or s_alert == 'L3':
+        landslide_alert.append('L3')
+    elif g_alert == 'L2' or s_alert == 'L2':
+        landslide_alert.append('L2')
+    elif g_alert == 'L0' or s_alert == 'L0' or g_alert == 'L0p':
+        landslide_alert.append('L0')
+    else:
+        landslide_alert.append('ND')
+
+df_all_alerts['landslide_alert'] = landslide_alert
+
+#Evaluate Current Public Alert
+
+#Get array of operational triggers
+rain_alert = df_all_alerts['rain_alert'].values
+landslide_alert = df_all_alerts['landslide_alert'].values
+public_alert = []
+for r_alert,l_alert in zip(rain_alert,landslide_alert):
+    if l_alert == 'L3':
+        public_alert.append('A3')
+    elif l_alert == 'L2':
+        public_alert.append('A2')
+    elif r_alert == 'R1':
+        public_alert.append('A1')
+    else:
+        public_alert.append('A0')
+
+df_all_alerts['public_alert'] = public_alert
+
+
 
 #Get the latest public alert from database for each site
 
-
+#Create Database table if all_alerts does not exists
 
 
 

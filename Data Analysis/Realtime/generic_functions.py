@@ -29,7 +29,7 @@ rad=math.radians
 ##      TIME FUNCTIONS                                    ##    
 ############################################################
 
-def get_rt_window(rt_window_length,roll_window_size,num_roll_window_ops):
+def get_rt_window(rt_window_length,roll_window_size,num_roll_window_ops,end=datetime.now()):
     
     ##DESCRIPTION:
     ##returns the time interval for real-time monitoring
@@ -41,10 +41,8 @@ def get_rt_window(rt_window_length,roll_window_size,num_roll_window_ops):
     ##OUTPUT: 
     ##end, start, offsetstart; datetimes; dates for the end, start and offset-start of the real-time monitoring window 
 
-#    set current time as endpoint of the interval
-    end=datetime.now()
-#    end = datetime(2016,5,16,15,00)
-
+    ##set current time as endpoint of the interval
+    
     ##round down current time to the nearest HH:00 or HH:30 time value
     end_Year=end.year
     end_month=end.month

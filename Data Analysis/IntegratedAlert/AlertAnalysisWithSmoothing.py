@@ -106,7 +106,7 @@ def create_series_list(input_df,monwin,colname,num_nodes):
             curxz=curxz.resample('30Min',how='mean',base=0)
             curxy=curxy.resample('30Min',how='mean',base=0)
         else:
-            print colname, n, "ERROR missing node data"
+#            print colname, n, "ERROR missing node data"
             #zeroing tilt data if node data is missing
             curxz=pd.DataFrame(data=np.zeros(len(monwin)), index=monwin.index)
             curxy=pd.DataFrame(data=np.zeros(len(monwin)), index=monwin.index)
@@ -144,6 +144,7 @@ def create_fill_smooth_df(series_list,num_nodes,monwin, roll_window_numpts, to_f
     if to_fill:
         #filling NAN values
         df=df.fillna(method='pad')
+        df=df.fillna(method='bfill')
  
     #dropping rows outside monitoring window
     df=df[(df.index>=monwin.index[0])&(df.index<=monwin.index[-1])]
@@ -306,30 +307,6 @@ def df_to_out(colname,xz,xy,
     cs_xz_0=df_zero_initial_row(cs_xz)
     cs_xy_0=df_zero_initial_row(cs_xy)
 
-    #writing to csv
-    if PrintProc:
-        df_list=np.asarray([[xz,'xz'],
-                 [xy,'xy'],
-                 [xz_0off,'xz_0off'],
-                 [xy_0off,'xy_0off'],
-                 [vel_xz,'xz_vel'],
-                 [vel_xy,'xy_vel'],
-                 [vel_xz_0off,'xz_vel_0off'],
-                 [vel_xy_0off,'xy_vel_0off'],
-                 [cs_x,'x_cs'],
-                 [cs_xz,'xz_cs'],
-                 [cs_xy,'xy_cs'],
-                 [cs_xz_0,'xz_cs_0'],
-                 [cs_xy_0,'xy_cs_0']])
-        
-        for d in range(len(df_list)):
-            df=df_list[d,0]
-            fname=df_list[d,1]
-            if not os.path.exists(proc_file_path+colname+"/"):
-                os.makedirs(proc_file_path+colname+"/")
-            df.to_csv(proc_file_path+colname+"/"+colname+" "+fname+CSVFormat,
-                      sep=',', header=False,mode='w')
-
     return xz,xy,   xz_0off,xy_0off,   vel_xz,vel_xy, vel_xz_0off, vel_xy_0off, cs_x,cs_xz,cs_xy,   cs_xz_0,cs_xy_0
 
 def alert_generation(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velL2, T_velL3, k_ac_ax,
@@ -373,21 +350,21 @@ def alert_generation(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velL2, T_v
     
 
     #checks if file exist, append latest alert; else, write new file
-    if PrintProc:
+    if PrintProc:        
         try:
-            if os.path.exists(proc_file_path+colname+"/"+colname+" "+"alert"+CSVFormat) and os.stat(proc_file_path+colname+"/"+colname+" "+"alert"+CSVFormat).st_size != 0:
-                alert_monthly=pd.read_csv(proc_file_path+colname+"/"+colname+" "+"alert"+CSVFormat,names=alert_headers,parse_dates='ts',index_col='ts')
+            if os.path.exists(proc_file_path+colname+"/"+colname+" "+"alert"+"WithSmoothing"+CSVFormat) and os.stat(proc_file_path+colname+"/"+colname+" "+"alert"+"WithSmoothing"+CSVFormat).st_size != 0:
+                alert_monthly=pd.read_csv(proc_file_path+colname+"/"+colname+" "+"alert"+"WithSmoothing"+CSVFormat,names=alert_headers,parse_dates='ts',index_col='ts')
                 alert_monthly=alert_monthly[(alert_monthly.index>=end-timedelta(days=alert_file_length))]
                 alert_monthly=alert_monthly.reset_index()
                 alert_monthly=alert_monthly.set_index(['ts','id'])
                 alert_monthly=alert_monthly.append(alert_out)
                 alert_monthly=alert_monthly[alertgen_headers]
-                alert_monthly.to_csv(proc_file_path+colname+"/"+colname+" "+"alert"+CSVFormat,
+                alert_monthly.to_csv(proc_file_path+colname+"/"+colname+" "+"alert"+"WithSmoothing"+CSVFormat,
                                      sep=',', header=False,mode='w')
             else:
                 if not os.path.exists(proc_file_path+colname+"/"):
                     os.makedirs(proc_file_path+colname+"/")
-                alert_out.to_csv(proc_file_path+colname+"/"+colname+" "+"alert"+CSVFormat,
+                alert_out.to_csv(proc_file_path+colname+"/"+colname+" "+"alert"+"WithSmoothing"+CSVFormat,
                                  sep=',', header=False,mode='w')
         except:
             print "Error in Printing Proc"
@@ -421,7 +398,7 @@ def alert_summary(alert_out,alert_list):
                 checklist[c]=checklist[c].reset_index()		
                 alert_list[c].append(colname + str(checklist[c]['id'].values[0]))		
                 if c==2: continue		
-                print checklist[c].set_index(['ts','id']).drop(['disp_alert','min_vel','max_vel','vel_alert'], axis=1)		
+#                print checklist[c].set_index(['ts','id']).drop(['disp_alert','min_vel','max_vel','vel_alert'], axis=1)		
                 break
                 
 def nonrepeat_colors(ax,NUM_COLORS,color='gist_rainbow'):
@@ -701,15 +678,12 @@ PrintTimer = cfg.getboolean('I/O','PrintTimer')
 PrintAAlert = cfg.getboolean('I/O','PrintAAlert')
 PrintGSMAlert = cfg.getboolean('I/O', 'PrintGSMAlert')
 
-#if PrintColPos or PrintTrendAlerts:
-#    import matplotlib.pyplot as plt
-#    plt.ioff()
 
 #MAIN
 
 names = ['ts','col_a']
 fmt = '%Y-%m-%d %H:%M'
-fig_fmt = '%Y-%m-%d %H-%M'  
+fig_fmt = '%Y-%m-%d_%H-%M'  
 
 CreateColAlertsTable('col_alerts', Namedb)
 
@@ -751,6 +725,9 @@ ND_alert=[]
 L0_alert=[]
 L2_alert=[]
 L3_alert=[]
+alert_df = []
+alert_list=[L3_alert,L2_alert,L0_alert,ND_alert]
+alert_names=['L3: ','L2: ','L0: ','ND: ']
 
 for time_analyze in range(7):
     end_timestamp = event_timestamp - timedelta(hours = 0.5*(6-time_analyze))
@@ -771,12 +748,6 @@ for time_analyze in range(7):
         
         # getting current column properties
         colname,num_nodes,seg_len= s.name,s.nos,s.seglen
-        print colname, num_nodes, seg_len
-        
-        print "Generating plots and alerts for:"
-    
-        print colname
-
     
         # list of working nodes     
         node_list = range(1, num_nodes + 1)
@@ -787,9 +758,8 @@ for time_analyze in range(7):
     
         # importing proc_monitoring csv file of current column to dataframe
         try:
-            proc_monitoring=genproc.generate_proc(colname)
-            print proc_monitoring
-            print "\n", colname
+            proc_monitoring=genproc.generate_proc(colname, num_nodes, seg_len)
+
         except:
             print "     ",colname, "ERROR...missing/empty proc monitoring"
             continue
@@ -817,7 +787,6 @@ for time_analyze in range(7):
         # Alert generation
         alert_out=alert_generation(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velL2, T_velL3, k_ac_ax,
                                    num_nodes_to_check,end,proc_file_path,CSVFormat)
-        print alert_out
     
     ########################################################################
     
@@ -829,7 +798,7 @@ for time_analyze in range(7):
     
         #writes col_alert to csv    
         for s in range(len(pd.Series.tolist(alert_out.col_alert))):
-            query = """INSERT IGNORE INTO col_alerts (sitecode, timestamp, id, alerts) VALUES """
+            query = """INSERT IGNORE INTO %s.col_alerts (sitecode, timestamp, id, alerts) VALUES """ % (Namedb)
             query = query + str((str(colname), str(end), str(s+1), str(pd.Series.tolist(alert_out.col_alert)[s])))
             cur.execute(query)
             db.commit()
@@ -848,7 +817,7 @@ for time_analyze in range(7):
         df.columns = ['sitecode', 'timestamp', 'id', 'alerts']
         df.timestamp = pd.to_datetime(df.timestamp)
         df = df[['timestamp', 'id', 'alerts']]
-        print df
+#        print df
         
         db.close()
         
@@ -885,7 +854,7 @@ for time_analyze in range(7):
             
         #adding trending node alerts to alert output table 
         alert_out['trending_alert']=trending_node_alerts
-        print alert_out
+#        print alert_out
 
         if PrintTrendAlerts:    
             with open(TrendAlerts_file_path+colname+CSVFormat, "ab") as c:
@@ -923,13 +892,13 @@ for time_analyze in range(7):
         if end == event_timestamp:
             plot_column_positions(colname,cs_x,cs_xz_0,cs_xy_0)
             plot_column_positions(colname,cs_x,cs_xz,cs_xy)
-            plt.savefig(AlertAnalysisPath+colname+' colpos '+end.strftime(fig_fmt),
+            plt.savefig(AlertAnalysisPath+colname+'ColPos'+end.strftime(fig_fmt),
                         dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
     #
         #12. Plotting displacement and velocity
         if end == event_timestamp:
             plot_disp_vel(colname, xz_0off,xy_0off, vel_xz_0off, vel_xy_0off)
-            plt.savefig(AlertAnalysisPath+colname+' disp_vel '+end.strftime(fig_fmt),
+            plt.savefig(AlertAnalysisPath+colname+'Disp_Vel'+end.strftime(fig_fmt),
                         dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
     
         plt.close()
@@ -937,7 +906,7 @@ for time_analyze in range(7):
 
 # writes list of site per alert level in textalert2
 if PrintTAlert2:
-    with open (output_file_path+'textalert2_withTNLwithSmoothing' + CSVFormat, 'wb') as t:
+    with open (output_file_path+'textalert2_withTNLwithSmoothing' + '.txt', 'wb') as t:
         t.write('As of ' + end.strftime(fmt) + ':\n')
         t.write ('L0: ' + ','.join(sorted(L0_alert)) + '\n')
         t.write ('ND: ' + ','.join(sorted(ND_alert)) + '\n')
@@ -950,6 +919,50 @@ print 'L0: ', ','.join(L0_alert)
 print 'L2: ', ','.join(L2_alert)
 print 'L3: ', ','.join(L3_alert)
 
+
+#TEMPORARILY COMMENT-ED OUT DUE TO SLOW RUN
+if PrintGSMAlert:
+    with open(output_file_path+gsm_alert, 'wb') as gsmalert:
+        if len(L3_alert) != 0:
+            gsmalert.write('L3: ' + ','.join(sorted(L3_alert)) + '\n')
+        if len(L2_alert) != 0:
+            gsmalert.write('L2: ' + ','.join(sorted(L2_alert)) + '\n')
+        with open(output_file_path+rainfall_alert) as rainfallalert:
+            n = 0
+            for line in rainfallalert:
+                if n == 3 or n == 4:
+                    if len(line) > 6:
+                        gsmalert.write(line)
+                n += 1
+        with open(output_file_path+eq_summaryGSM) as eqsummary:
+            n = 0            
+            for line in eqsummary:
+                if n == 0:
+                    eqalert = line[6:25]
+                    if end - pd.to_datetime(eqalert) > timedelta(hours = 0.5):
+                        break
+                else:
+                    gsmalert.write(line)
+                n += 1
+
+if PrintGSMAlert:                        
+    f = open(output_file_path+gsm_alert)
+    text = f.read()
+    f.close()
+    if os.stat(output_file_path+gsm_alert).st_size != 0:
+        f = open(output_file_path+gsm_alert, 'w')
+        f.write('ALERTSMS\n')
+        f.write('As of ' + end.strftime(fmt) + ':\n')
+        f.write(text)
+        f.close()
+
+# deletes plots older than a day
+for dirpath, dirnames, filenames in os.walk(AlertAnalysisPath):
+    for file in filenames:
+        curpath = os.path.join(dirpath, file)
+        file_modified = datetime.fromtimestamp(os.path.getmtime(curpath))
+        if datetime.now() - file_modified > timedelta(1):
+            os.remove(curpath)
 
 # records the number of minutes the code runs
 end_time = datetime.now() - start_time

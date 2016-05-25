@@ -67,81 +67,78 @@ if PrintProc:
         
 def GetNodesWithNoInitialData(df,num_nodes,offsetstart):
     allnodes=np.arange(1,num_nodes+1)*1.
-    with_init_val=df[df.ts==offsetstart]['id'].values
+    with_init_val=df[df.ts<offsetstart+timedelta(hours=0.5)]['id'].values
     no_init_val=allnodes[np.in1d(allnodes, with_init_val, invert=True)]
     return no_init_val
 
-def generate_proc(site):
+def generate_proc(colname, num_nodes, seg_len):
     
     #1. setting date boundaries for real-time monitoring window
     roll_window_numpts=int(1+roll_window_length/data_dt)
     end, start, offsetstart=gf.get_rt_window(rt_window_length,roll_window_numpts,num_roll_window_ops)
-    sensorlist=GetSensorList()
 
     # generating proc monitoring data for each site
     print "Generating PROC monitoring data for:"
-    for s in sensorlist:
-        
-        if site == s.name:
-        
-            #2. getting current column properties
-            colname,num_nodes,seg_len= s.name,s.nos,s.seglen
-            print colname
-            print num_nodes
-            print seg_len
-                
-            #3. getting accelerometer data for site 'colname'
-            monitoring=GetFilledAccelData(colname,offsetstart)
-            
-             
-            #3.1 identify the node ids with no data at start of monitoring window
-            NodesNoInitVal=GetNodesWithNoInitialData(monitoring,num_nodes,offsetstart)
-            
-            #4: get last good data prior to the monitoring window (LGDPM)
-            lgdpm = pd.DataFrame()
-            for node in NodesNoInitVal:
-                temp = GetSingleLGDPM(site, node, start.strftime("%Y-%m-%d %H:%M"))
-                lgdpm = lgdpm.append(temp,ignore_index=True)
- 
-            #5 TODO: Resample the dataframe together with the LGDOM
-    
-            #6. evaluating which data needs to be filtered
-            try:
-                monitoring=applyFilters(monitoring)
-                LastGoodData=GetLastGoodData(monitoring,num_nodes)
-                PushLastGoodData(LastGoodData,colname)
-                LastGoodData = GetLastGoodDataFromDb(colname)
-                print 'Done'
-            except:
-                LastGoodData = GetLastGoodDataFromDb(colname)
-                print 'error'
 
-            if len(LastGoodData)<num_nodes: print colname, " Missing nodes in LastGoodData"
+    print colname
+    print num_nodes
+    print seg_len
+        
+    #3. getting accelerometer data for site 'colname'
+    monitoring=GetRawAccelData(colname,offsetstart)
+    monitoring = monitoring.loc[(monitoring.ts >= offsetstart) & (monitoring.ts <= end)]
+     
+    #3.1 identify the node ids with no data at start of monitoring window
+    NodesNoInitVal=GetNodesWithNoInitialData(monitoring,num_nodes,offsetstart)
     
-            #5. extracting last data outside monitoring window
-            LastGoodData=LastGoodData[(LastGoodData.ts<offsetstart)]
+    #4: get last good data prior to the monitoring window (LGDPM)
+    lgdpm = pd.DataFrame()
+    for node in NodesNoInitVal:
+        temp = GetSingleLGDPM(colname, node, offsetstart.strftime("%Y-%m-%d %H:%M"))
+        lgdpm = lgdpm.append(temp,ignore_index=True)
+ 
+    #5 TODO: Resample the dataframe together with the LGDOM
+    monitoring=monitoring.append(lgdpm)
+
+    #6. evaluating which data needs to be filtered
+    try:
+        monitoring=applyFilters(monitoring)		
+        LastGoodData=GetLastGoodData(monitoring,num_nodes)		
+        PushLastGoodData(LastGoodData,colname)		
+        LastGoodData = GetLastGoodDataFromDb(colname)		
+        print 'Done'		
+    except:		
+        LastGoodData = GetLastGoodDataFromDb(colname)		
+        print 'error'		
+		
+    if len(LastGoodData)<num_nodes: print colname, " Missing nodes in LastGoodData"		
+		
+    #5. extracting last data outside monitoring window		
+    LastGoodData=LastGoodData[(LastGoodData.ts<offsetstart)]		
+		
+    #6. appending LastGoodData to monitoring		
+    monitoring=monitoring.append(LastGoodData)    
+
     
-            #6. appending LastGoodData to monitoring
-            monitoring=monitoring.append(LastGoodData)
-            
-            #7. replacing date of data outside monitoring window with first date of monitoring window
-            monitoring.loc[monitoring.ts < offsetstart, ['ts']] = offsetstart
+    #7. replacing date of data outside monitoring window with first date of monitoring window
+    monitoring.loc[monitoring.ts < offsetstart, ['ts']] = offsetstart
+
+    #8. computing corresponding horizontal linear displacements (xz,xy), and appending as columns to dataframe
+    monitoring['xz'],monitoring['xy']=gf.accel_to_lin_xz_xy(seg_len,monitoring.x.values,monitoring.y.values,monitoring.z.values)
     
-            #8. computing corresponding horizontal linear displacements (xz,xy), and appending as columns to dataframe
-            monitoring['xz'],monitoring['xy']=gf.accel_to_lin_xz_xy(seg_len,monitoring.x.values,monitoring.y.values,monitoring.z.values)
-            
-            #9. removing unnecessary columns x,y,z
-            monitoring=monitoring.drop(['x','y','z'],axis=1)
+    #9. removing unnecessary columns x,y,z
+    monitoring=monitoring.drop(['x','y','z'],axis=1)
+    monitoring = monitoring.drop_duplicates(['ts', 'id'])
+
+    #10. setting ts as index
+#        monitoring['id']=monitoring.index.values
+    monitoring=monitoring.set_index('ts')
+
+    #11. reordering columns
+    monitoring=monitoring[['id','xz','xy']]
     
-            #10. setting ts as index
-    #        monitoring['id']=monitoring.index.values
-            monitoring=monitoring.set_index('ts')
-    
-            #11. reordering columns
-            monitoring=monitoring[['id','xz','xy']]
-            
-            #12. saving proc monitoring data
-            if PrintProc:
-                monitoring.to_csv(proc_monitoring_path+colname+proc_monitoring_file,sep=',', header=False,mode='w')
-                
-            return monitoring
+    #12. saving proc monitoring data
+    if PrintProc:
+        monitoring.to_csv(proc_monitoring_path+colname+proc_monitoring_file,sep=',', header=False,mode='w')
+        
+    return monitoring

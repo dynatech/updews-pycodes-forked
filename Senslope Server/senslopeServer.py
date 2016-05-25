@@ -108,9 +108,9 @@ def SendAlertGsm(network,alertmsg):
 
 def UnexpectedCharactersLog(msg, network):
     print ">> Error: Unexpected characters/s detected in ", msg.data
-    f = open(unexpectedchardir+network+'Nonalphanumeric_errorlog.txt','a')
-    f.write(msg.dt + ',' + msg.simnum + ',' + msg.data+ '\n')
-    f.close()
+    # f = open(unexpectedchardir+network+'Nonalphanumeric_errorlog.txt','a')
+    # f.write(msg.dt + ',' + msg.simnum + ',' + msg.data+ '\n')
+    # f.close()
 
 def WriteRawSmsToDb(msglist):
     query = "INSERT INTO smsinbox (timestamp,sim_num,sms_msg,read_status) VALUES "
@@ -131,7 +131,7 @@ def WriteOutboxMessageToDb(message,recepients,send_status='UNSENT'):
     
     print query
     
-    commitToDb(query, "WriteOutboxMessageToDb")
+    commitToDb(query, "WriteOutboxMessageToDb", 'gsm')
     
 def CheckAlertMessages():
     alllines = ''
@@ -246,7 +246,7 @@ def RunSenslopeServer(network):
             else:
                 checkIfActive = True
                 
-            SendMessagesFromDb(network)
+            # SendMessagesFromDb(network)
                 
         elif m == -1:
             print'GSM MODULE MAYBE INACTIVE'
@@ -275,7 +275,7 @@ checkIfActive = True
 anomalysave = ''
 
 cfg = ConfigParser.ConfigParser()
-cfg.read('senslope-server-config.txt')
+cfg.read(sys.path[0] + '/' + "senslope-server-config.txt")
 
 # gsm = serial.Serial() 
 Baudrate = cfg.getint('Serial', 'Baudrate')

@@ -16,6 +16,7 @@ import fileinput
 import sys
 import time
 
+from scipy import stats
 import generic_functions as gf
 import generateProcMonitoring as genproc
 import alertEvaluation as alert
@@ -136,6 +137,16 @@ def create_fill_smooth_df(series_list,num_nodes,monwin, roll_window_numpts, to_f
 
     #returning rounded-off values within monitoring window
     return np.round(df[(df.index>=monwin.index[0])&(df.index<=monwin.index[-1])],4)
+    
+def compute_rolling_velocity(ii,df):
+    in_df = df.iloc[map(int,ii)]
+    m,b,r,p,s = stats.linregress(in_df['time'],in_df['disp'])
+    return m
+    
+def compute_rolling_p_value(ii,df):
+    in_df = df.iloc[map(int,ii)]
+    m,b,r,p,s = stats.linregress(in_df['time'],in_df['disp'])
+    return p
 
 def compute_col_pos(xz,xy,col_pos_end, col_pos_interval, col_pos_number):
 
@@ -193,7 +204,8 @@ def compute_col_pos(xz,xy,col_pos_end, col_pos_interval, col_pos_number):
 
     
     return np.round(cs_x,4), np.round(cs_xz,4), np.round(cs_xy,4)
-    
+
+
 def compute_node_inst_vel(xz,xy,roll_window_numpts): 
 
     ##DESCRIPTION:
@@ -229,7 +241,7 @@ def compute_node_inst_vel(xz,xy,roll_window_numpts):
         try:
             lr_xz=ols(y=xz[n],x=td,window=roll_window_numpts,intercept=True)
             lr_xy=ols(y=xy[n],x=td,window=roll_window_numpts,intercept=True)
-
+    
             vel_xz[n]=np.round(lr_xz.beta.x.values,4)
             vel_xy[n]=np.round(lr_xy.beta.x.values,4)
 
@@ -240,6 +252,81 @@ def compute_node_inst_vel(xz,xy,roll_window_numpts):
 
     #returning rounded-off values
     return np.round(vel_xz,4), np.round(vel_xy,4)
+
+def compute_node_inst_vel_2(xz,xy,roll_window_numpts): 
+
+    ##DESCRIPTION:
+    ##returns rounded-off values of velocity of xz and xy
+
+    ##INPUT:
+    ##xz; dataframe; horizontal linear displacements along the planes defined by xa-za
+    ##xy; dataframe; horizontal linear displacements along the planes defined by xa-ya
+    ##roll_window_numpts; integer; number of data points per rolling window
+
+    ##OUTPUT:
+    ##np.round(vel_xz,4), np.round(vel_xy,4)
+
+##    uncomment to trim xz and xy for a more efficient run
+#    end_xz = xz.index[-1]
+#    end_xy = xy.index[-1]
+#    start_xz = end_xz - timedelta(days=1)    
+#    start_xy = end_xy - timedelta(days=1)
+#    xz = xz.loc[start_xz:end_xz]
+#    xy = xy.loc[start_xy:end_xy]    
+    
+    #setting up time units in days
+    td=xz.index.values-xz.index.values[0]
+    td=pd.Series(td/np.timedelta64(1,'D'),index=xz.index)
+
+    #setting up dataframe for velocity values
+    vel_xz=pd.DataFrame(data=None, index=xz.index[roll_window_numpts-1:])
+    vel_xy=pd.DataFrame(data=None, index=xy.index[roll_window_numpts-1:])
+    p_xz_df = pd.DataFrame(data=None, index=xz.index[roll_window_numpts-1:])
+    p_xy_df = pd.DataFrame(data=None, index=xy.index[roll_window_numpts-1:])
+ 
+    #performing moving window linear regression
+    num_nodes=len(xz.columns.tolist())
+    for n in range(1,1+num_nodes):
+        try:
+            #Create data frames for rolling computation
+            xz_data = pd.DataFrame()
+            xy_data = pd.DataFrame()
+            xz_data['disp'] = xz[n]
+            xz_data['time'] = td
+            xz_data['ii'] = range(len(xz_data))
+            xy_data['disp'] = xy[n]
+            xy_data['time'] = td        
+            xy_data['ii'] = range(len(xy_data))
+            #Creating rolling index accessory
+            xz_data_roll = xz_data.ii.rolling(window = roll_window_numpts)
+            xy_data_roll = xy_data.ii.rolling(window = roll_window_numpts)
+         
+            #scipy.stats.linregress to obtain slope
+            vel_xz[n] = xz_data_roll.apply(lambda x: compute_rolling_velocity(x,xz_data)).dropna().values
+            vel_xy[n] = xy_data_roll.apply(lambda x: compute_rolling_velocity(x,xy_data)).dropna().values
+            
+            #Computation of p-values
+            p_xz = xz_data_roll.apply(lambda x: compute_rolling_p_value(x,xz_data)).dropna().values
+            p_xy = xy_data_roll.apply(lambda x: compute_rolling_p_value(x,xy_data)).dropna().values
+            p_xz_df[n] = p_xz
+            p_xy_df[n] = p_xy
+            print p_xz, vel_xz[n]
+            print p_xy, vel_xy[n]
+            
+            #Reject velocity values for p-values < 0.05 and round values to 4 decimal places
+            p_xz_filter = np.where(p_xz < 0.05, np.ones(len(p_xz)), np.zeros(len(p_xz)))
+            p_xy_filter = np.where(p_xy < 0.05, np.ones(len(p_xy)), np.zeros(len(p_xy)))
+            vel_xz[n] = vel_xz[n].values*p_xz_filter
+            vel_xy[n] = vel_xy[n].values*p_xy_filter
+        except:
+            print " ERROR in computing velocity" 
+            vel_xz[n]=np.zeros(len(vel_xz.index))
+            vel_xy[n]=np.zeros(len(vel_xy.index))
+
+    #returning rounded-off values
+    print np.round(vel_xz,4)
+    print np.round(vel_xy,4)
+    return np.round(vel_xz,4), np.round(vel_xy,4), np.round(p_xz_df,4), np.round(p_xy_df,4)
 
 def df_to_out(colname,xz,xy,
               vel_xz,vel_xy,
@@ -734,6 +821,7 @@ for s in sensorlist:
     
     # getting current column properties
     colname,num_nodes,seg_len= s.name,s.nos,s.seglen
+    print colname, num_nodes, seg_len
 
     # list of working nodes     
     node_list = range(1, num_nodes + 1)
@@ -746,6 +834,7 @@ for s in sensorlist:
     try:
         proc_monitoring=genproc.generate_proc(colname, num_nodes, seg_len)
         print proc_monitoring
+        print "\n", colname
     except:
         print "     ",colname, "ERROR...missing/empty proc monitoring"
         continue
@@ -757,9 +846,18 @@ for s in sensorlist:
     xz=create_fill_smooth_df(xz_series_list,num_nodes,monwin, roll_window_numpts,to_fill,to_smooth)
     xy=create_fill_smooth_df(xy_series_list,num_nodes,monwin, roll_window_numpts,to_fill,to_smooth)
     
-    # computing instantaneous velocity
+    # computing instantaneous velocity with and without p value filtering
     vel_xz, vel_xy = compute_node_inst_vel(xz,xy,roll_window_numpts)
+    vel_xz_2, vel_xy_2, p_xz, p_xy = compute_node_inst_vel_2(xz,xy,roll_window_numpts)
     
+    #print the velocity data to csv    
+    
+    vel_xz.tail(1).to_csv(output_file_path+'/p-value-filtering/'+colname+'xz_velocities_unfiltered.csv', mode='a', header=False)
+    vel_xy.tail(1).to_csv(output_file_path+'/p-value-filtering/'+colname+'xy_velocities_unfiltered.csv', mode='a', header=False)
+    vel_xz_2.tail(1).to_csv(output_file_path+'/p-value-filtering/'+colname+'xz_velocities_p_value_filtered.csv', mode='a', header=False)
+    vel_xy_2.tail(1).to_csv(output_file_path+'/p-value-filtering/'+colname+'_xy_velocities_p_value_filtered.csv', mode='a', header=False)    
+    p_xz.tail(1).to_csv(output_file_path+'/p-value-filtering/'+colname+'_xz_velocities_p_values.csv', mode='a', header=False)    
+    p_xy.tail(1).to_csv(output_file_path+'/p-value-filtering/'+colname+'_xy_velocities_p_values.csv', mode='a', header=False)
     # computing cumulative displacements
     cs_x, cs_xz, cs_xy=compute_col_pos(xz,xy,monwin.index[-1], col_pos_interval, col_pos_num)
 
@@ -773,9 +871,44 @@ for s in sensorlist:
     # Alert generation
     alert_out=alert_generation(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velL2, T_velL3, k_ac_ax,
                                num_nodes_to_check,end,proc_file_path,CSVFormat)
-#    print alert_out
+    print alert_out
+
+########################################################################
+
+    #connecting to localdb
+    db = MySQLdb.connect(host = Hostdb, user = Userdb, passwd = Passdb)
+    cur = db.cursor()
+    cur.execute("USE %s"%Namedb)
+
+
+    #writes col_alert to csv    
+    for s in range(len(pd.Series.tolist(alert_out.col_alert))):
+        query = """INSERT IGNORE INTO col_alerts (sitecode, timestamp, id, alerts) VALUES """
+        query = query + str((str(colname), str(end), str(s+1), str(pd.Series.tolist(alert_out.col_alert)[s])))
+        cur.execute(query)
+        db.commit()
+
+    #deletes col_alerts older than 3 hrs
+    query = """DELETE FROM col_alerts WHERE timestamp < TIMESTAMP('%s')""" % hr
+    cur.execute(query)
+    db.commit()  
     
-    # without trending_node_alert (col_alerts to trending column)
+    #selects and otputs to dataframe col_alerts from the last 3hrs
+    query = "select sitecode, timestamp, id, alerts from senslopedb.col_alerts where timestamp >= timestamp('%s')" % hr
+    query = query + " and timestamp <= timestamp('%s')" % end
+    query = query + " and id >= 1 and id <= %s" % num_nodes
+    query = query + " and sitecode = '%s' ;" % colname
+    df =  GetDBDataFrame(query)   
+    df.columns = ['sitecode', 'timestamp', 'id', 'alerts']
+    df.timestamp = pd.to_datetime(df.timestamp)
+    df = df[['timestamp', 'id', 'alerts']]
+    print df
+    
+    db.close()
+    
+###############################################################################
+    
+    # without trending_node_alert
     trending_col_alerts = []
     
     try:
@@ -883,6 +1016,134 @@ if PrintAAlert:
         with open(output_file_path+eq_summary) as eqsummary:
             for line in eqsummary:
                 allalerts.write(line)
+
+if PrintGSMAlert:
+    with open(output_file_path+gsm_alert, 'wb') as gsmalert:
+        if len(L3_alert) != 0:
+            gsmalert.write('L3: ' + ','.join(sorted(L3_alert)) + '\n')
+        if len(L2_alert) != 0:
+            gsmalert.write('L2: ' + ','.join(sorted(L2_alert)) + '\n')
+        with open(output_file_path+rainfall_alert) as rainfallalert:
+            n = 0
+            for line in rainfallalert:
+                if n == 3 or n == 4:
+                    if len(line) > 6:
+                        gsmalert.write(line)
+                n += 1
+        with open(output_file_path+eq_summaryGSM) as eqsummary:
+            n = 0            
+            for line in eqsummary:
+                if n == 0:
+                    eqalert = line[6:25]
+                    if end - pd.to_datetime(eqalert) > timedelta(hours = 0.5):
+                        break
+                else:
+                    gsmalert.write(line)
+                n += 1
+
+if PrintGSMAlert:                        
+    f = open(output_file_path+gsm_alert)
+    text = f.read()
+    f.close()
+    if os.stat(output_file_path+gsm_alert).st_size != 0:
+        f = open(output_file_path+gsm_alert, 'w')
+        f.write('As of ' + end.strftime(fmt) + ':\n')
+        f.write(text)
+        f.close()
+
+#name = []
+#nos = []
+#for col in sensorlist:
+#    name += [col.name]
+#    nos += [col.nos]
+#sensors = pd.DataFrame(data=None)
+#sensors['name']=name
+#sensors['nos']=nos
+#sensors=sensors.set_index('name')
+#
+## gets list of working sites
+#working_sites = []
+#with open('working_sites.txt', 'r') as SQLsites:
+#    for line in SQLsites:
+#        working_sites += [line.split('\n')[0]]
+#        
+#
+## creates list of sites with no data and classifies whether its raw or filtered
+#if PrintND:
+#    with open(output_file_path+NDlog, 'ab') as ND:
+#        if len(L0_alert) == 0 and len(L2_alert) == 0 and len(L3_alert) == 0:
+#            ND.write(end.strftime(fmt) + ',D,')
+#            ND.write("ND on all sites,")
+#            ND.write(',\n')
+#    if len(L0_alert) != 0 or len(L2_alert) != 0 or len(L3_alert) != 0:
+#        with open(output_file_path+NDlog, 'ab') as ND:
+#            try:
+#                ND.write(end.strftime(fmt) + ',D,')
+#                for colname in ND_alert:
+#                    filtered = pd.read_csv(proc_file_path+colname+"/"+colname+" "+"alert"+CSVFormat, names=alert_headers,parse_dates='ts',index_col='ts')
+#                    filtered = filtered[(filtered.index>=end)]
+#                    print 'filtered'            
+#                    print filtered
+#                    raw = GetFilledAccelData(colname, end - timedelta(hours=0.5))
+#                    raw = raw.set_index('ts')
+#                    raw = raw[(raw.index>=end)]
+#                    print 'raw'            
+#                    print raw
+#                    filteredND = []
+#                    rawND = []
+#                    for i in filtered.loc[filtered['node_alert']=='ND', ['id']].values:
+#                        if i[0] in raw['id'].values:
+#                            filteredND += [str(i[0])]
+#                        else:
+#                            rawND += [str(i[0])]
+#                    print 'filtered nodes'
+#                    print filteredND
+#                    print 'raw nodes'            
+#                    print rawND
+#                    num_nodes = str(sensors.loc[sensors.index==colname, ['nos']].values[0][0])
+#                    print num_nodes
+#                    if len(filteredND) != 0 and colname in working_sites:
+#                        ND.write(colname + '(f-' + str(len(filteredND)) + '/' + num_nodes + ');')
+#                    if len(rawND) != 0 and colname in working_sites:
+#                        ND.write(colname + '(r-' + str(len(rawND)) + '/' + num_nodes + ');')
+#                ND.write(',\n')
+#            except:
+#                pass
+#
+## creates list of site with no data for 7 consecutive times
+#    with open(output_file_path + ND7x, 'ab') as ND7x:
+#        try:
+#            NDlog = pd.read_csv(output_file_path + NDlog, names = ['ts', 'R or A or D', 'description', 'responder'], parse_dates = 'ts', index_col = 'ts')
+#            NDlog = NDlog[(NDlog.index>=end-timedelta(hours=3))]
+#            if len(NDlog.loc[NDlog['R or A or D']=='R']) != 0 and len(NDlog.loc[NDlog['R or A or D']=='D']) < 7:
+#                ND7x.write('')
+#            else:    
+#                NDlog = NDlog.loc[NDlog['R or A or D']=='D']
+#                NDcolumns = NDlog['description'].values
+#                for s in range(len(NDcolumns)):
+#                    NDcolumns[s] = NDcolumns[s].split(';')
+#                    NDs = []
+#                    for n in NDcolumns[s]:
+#                        ND = ''
+#                        for i in n:
+#                            if i != '(':
+#                                ND += i
+#                            else:
+#                                NDs += [ND]
+#                    NDcolumns[s] = NDs
+#                NDlog['description'] = NDcolumns
+#            ND7 = []
+#            for n in NDlog['description'].values[-1]:
+#                if n in NDlog['description'].values[0] and NDlog['description'].values[1] and \
+#                NDlog['description'].values[2] and NDlog['description'].values[3] and NDlog['description'].values[4] \
+#                and NDlog['description'].values[5]:
+#                    ND7 += [n]
+#            if len(ND7) != 0:
+#                ND7x.write(end.strftime(fmt) + ',')
+#                ND7x.write(';'.join(ND7))
+#                ND7x.write('\n')
+#        except:
+#            pass
 
 # records the number of minutes the code runs
 if PrintTimer:

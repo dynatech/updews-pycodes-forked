@@ -46,10 +46,18 @@ num_roll_window_ops = cfg.getfloat('I/O','num_roll_window_ops')
 
 #file headers
 colarrange = cfg.get('I/O','alerteval_colarrange').split(',')
+TestSpecificTime = cfg.getboolean('I/O', 'test_specific_time')
+
+
+
+if TestSpecificTime:
+    end = pd.to_datetime(cfg.get('I/O','use_specific_time'))
+else:
+    end = datetime.now()
 
 
 roll_window_numpts=int(1+roll_window_length/data_dt)
-end, start, offsetstart=gf.get_rt_window(rt_window_length,roll_window_numpts,num_roll_window_ops)
+end, start, offsetstart=gf.get_rt_window(rt_window_length,roll_window_numpts,num_roll_window_ops,end)
 valid_data = end - timedelta(hours=3)
 
 
@@ -186,7 +194,7 @@ def column_alert(alert, num_nodes_to_check, k_ac_ax):
     #OUTPUT:
     #alert:                             Pandas DataFrame object; same as input dataframe "alert" with additional column for column-level alert
 
-    print alert
+#    print alert
     col_alert=[]
     col_node=[]
     #looping through each node
