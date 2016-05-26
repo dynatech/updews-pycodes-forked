@@ -844,13 +844,13 @@ for s in sensorlist:
     if PrintColPos:
         plot_column_positions(colname,cs_x,cs_xz_0,cs_xy_0)
         plot_column_positions(colname,cs_x,cs_xz,cs_xy)
-        plt.savefig(output_file_path+colname+' colpos ',
+        plt.savefig(output_file_path+colname+'ColPos',
                     dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
 #
     #12. Plotting displacement and velocity
     if PrintDispVel:
         plot_disp_vel(colname, xz_0off,xy_0off, vel_xz_0off, vel_xy_0off)
-        plt.savefig(output_file_path+colname+' disp_vel ',
+        plt.savefig(output_file_path+colname+'Disp_vel',
                     dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
 
     if PrintColPos or PrintDispVel:
