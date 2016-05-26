@@ -292,7 +292,8 @@ def extract_db():
 
         #get rain_senslope items
         queryAwsOld = 'SELECT DISTINCT rain_senslope FROM site_rain_props WHERE '
-        queryAwsOld = queryAwsOld + 'rain_senslope IS NOT NULL'
+        queryAwsOld = queryAwsOld + 'rain_senslope IS NOT NULL '
+        queryAwsOld = queryAwsOld + 'and char_length(rain_senslope) > 3'
         
         try:
             cur.execute(queryAwsOld)
@@ -302,11 +303,13 @@ def extract_db():
         awsOld = cur.fetchall()
 
         for table in awsOld:
+            print table[0]
             extractDBToSQL(table[0], "senslope")
             
         #get rain_arq items
         queryArq = 'SELECT DISTINCT rain_arq FROM site_rain_props WHERE '
-        queryArq = queryArq + 'rain_arq IS NOT NULL'
+        queryArq = queryArq + 'rain_arq IS NOT NULL '
+        queryArq = queryArq + 'and char_length(rain_arq) > 3'
         
         try:
             cur.execute(queryArq)
@@ -316,6 +319,7 @@ def extract_db():
         awsArq = cur.fetchall()
 
         for table in awsArq:
+            print table[0]
             extractDBToSQL(table[0], "arq")
             
         pass
