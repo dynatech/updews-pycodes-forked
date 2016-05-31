@@ -120,7 +120,7 @@ def GenerateGroundDataAlert():
                 PrintOut(feature_displacement)
                     
                 #Check if p value computation is needed
-                if feature_displacement <= 1:
+                if feature_displacement <= 1 and feature_displacement >= 0.5:
                     to_p_value = True
                 
             except IndexError:
