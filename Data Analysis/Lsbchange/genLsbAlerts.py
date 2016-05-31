@@ -1,13 +1,23 @@
+import os
+import sys
 import pandas as pd
 import numpy as np
-import outputFilteredData as ofd
+#import outputFilteredData as ofd
 from datetime import timedelta as td
 from datetime import datetime as dt
 from sqlalchemy import create_engine
-from querySenslopeDb import *
+
+#include the path of "Data Analysis" folder for the python scripts searching
+path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+if not path in sys.path:
+    sys.path.insert(1,path)
+del path   
+
+import querySenslopeDb as qs
+import outputFilteredData as ofd
 
 def GenLsbAlerts():
-    sites = GetSensorList()
+    sites = qs.GetSensorList()
     
     alertTxt = ""
     alertTxt2 = ""
