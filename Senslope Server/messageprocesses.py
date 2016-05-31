@@ -1,5 +1,5 @@
 import os,time,serial,re,sys
-import MySQLdb
+import MySQLdb, subprocess
 import datetime
 import ConfigParser
 from datetime import datetime as dt
@@ -404,7 +404,7 @@ def ProcessEarthquake(msg):
     if re.search("\d{1,2}:\d{1,2}[AP]M",msg.data):
         timestr = re.search("\d{1,2}:\d{1,2}[AP]M",msg.data).group(0)
         try:
-            timestr = dt.strptime(timestr,"%H:%M%p").strftime("%H:%M:00")
+            timestr = dt.strptime(timestr,"%I:%M%p").strftime("%H:%M:00")
         except:
             print ">> Error in datetime conversion"
             return
@@ -482,6 +482,8 @@ def ProcessEarthquake(msg):
     print query
 
     commitToDb(query, 'earthquake')
+
+    subprocess.Popen(["python","/home/dynaslope/Desktop/updews-pycodes/Data Analysis/eq_alert_gen.py"])
 
 
 def ProcessARQWeather(line,sender):
@@ -568,7 +570,6 @@ def ProcessRain(line,sender):
     try:
     
         msgtable = line.split(",")[0]
-        print msgtable
         msgdatetime = re.search("\d{02}\/\d{02}\/\d{02},\d{02}:\d{02}:\d{02}",line).group(0)
 
         txtdatetime = dt.strptime(msgdatetime,'%m/%d/%y,%H:%M:%S')
@@ -577,11 +578,20 @@ def ProcessRain(line,sender):
             txtdatetime = txtdatetime + td(days=1) # add one day
         elif msgtable=="PLAW":
             txtdatetime = txtdatetime + td(days=1)
+        
 
         txtdatetime = txtdatetime.strftime('%Y-%m-%d %H:%M:00')
         
         # data = items.group(3)
         data = line.split(",",3)[3]
+
+        if msgtable in ('MAGW','LUNW','BTOW'):
+            print '>> Adjusting rain value',
+            rain_val_str = data.split(',')[3]
+            rain_val_adj = float(rain_val_str) - 0.254
+            data = data.replace(rain_val_str,str(rain_val_adj))
+            print 'data adj >>', data
+
         
     except IndexError and AttributeError:
         print '\n>> Error: Rain message format is not recognized'
