@@ -1,4 +1,4 @@
-import MySQLdb
+#import MySQLdb
 import ConfigParser
 from datetime import datetime as dtm
 from datetime import timedelta as tda
@@ -8,6 +8,14 @@ import pandas as pd
 import numpy as np
 import StringIO
 import filterSensorData
+import platform
+
+curOS = platform.system()
+
+if curOS == "Windows":
+    import MySQLdb as mysqlDriver
+elif curOS == "Linux":
+    import pymysql as mysqlDriver
 
 # Scripts for connecting to local database
 # Needs config file: server-config.txt
@@ -37,10 +45,10 @@ class coordsArray:
 def SenslopeDBConnect(nameDB):
     while True:
         try:
-            db = MySQLdb.connect(host = Hostdb, user = Userdb, passwd = Passdb, db=nameDB)
+            db = mysqlDriver.connect(host = Hostdb, user = Userdb, passwd = Passdb, db=nameDB)
             cur = db.cursor()
             return db, cur
-        except MySQLdb.OperationalError:
+        except mysqlDriver.OperationalError:
             print '.',
 
 def PrintOut(line):
@@ -64,7 +72,7 @@ def DoesTableExist(table_name):
     
 
 def GetLatestTimestamp(nameDb, table):
-    db = MySQLdb.connect(host = Hostdb, user = Userdb, passwd = Passdb)
+    db = mysqlDriver.connect(host = Hostdb, user = Userdb, passwd = Passdb)
     cur = db.cursor()
     #cur.execute("CREATE DATABASE IF NOT EXISTS %s" %nameDB)
     try:
@@ -95,7 +103,7 @@ def GetLatestTimestamp2(table_name):
         return ''
 		
 def CreateAccelTable(table_name, nameDB):
-    db = MySQLdb.connect(host = Hostdb, user = Userdb, passwd = Passdb)
+    db = mysqlDriver.connect(host = Hostdb, user = Userdb, passwd = Passdb)
     cur = db.cursor()
     #cur.execute("CREATE DATABASE IF NOT EXISTS %s" %nameDB)
     cur.execute("USE %s"%nameDB)
@@ -103,7 +111,7 @@ def CreateAccelTable(table_name, nameDB):
     db.close()
 
 def CreateColAlertsTable(table_name, nameDB):
-    db = MySQLdb.connect(host = Hostdb, user = Userdb, passwd = Passdb)
+    db = mysqlDriver.connect(host = Hostdb, user = Userdb, passwd = Passdb)
     cur = db.cursor()
 
     cur.execute("USE %s"%nameDB)
@@ -682,7 +690,7 @@ def PushLastGoodData(df,name):
 #    last good data set to the database    
 def GenerateLastGoodData():
     
-    db = MySQLdb.connect(host = Hostdb, user = Userdb, passwd = Passdb)
+    db = mysqlDriver.connect(host = Hostdb, user = Userdb, passwd = Passdb)
     cur = db.cursor()
     #cur.execute("CREATE DATABASE IF NOT EXISTS %s" %nameDB)
     
@@ -750,7 +758,7 @@ except:
     #sensitive info like db access credentials must not be viewed using a browser
     #print "No file named: %s. Trying Default Configuration" % (configFile)
 #    Hostdb = "127.0.0.1"    
-    Hostdb = "192.168.1.102"
+    Hostdb = "127.0.0.1"
     Userdb = "root"
     Passdb = "senslope"
     Namedb = "senslopedb"
