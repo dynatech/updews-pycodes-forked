@@ -29,7 +29,7 @@ def GenLsbAlerts():
             isDFempty = df.empty
             
             if isDFempty == True:
-                PrintOut('No Data Available... for %s %s' % (site.name, nid))    
+                qs.PrintOut('No Data Available... for %s %s' % (site.name, nid))    
                 continue
             
             df = df.set_index(['ts'])
