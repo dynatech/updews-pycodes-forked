@@ -248,7 +248,7 @@ def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid
         
         targetnode_query = " WHERE id IN (SELECT node_id FROM node_accel_table WHERE site_name = '%s' and accel = 1)" %siteid 
         if targetnode != '':
-            targetnode_query = " WHERE is IN ('%d')" %targetnode
+            targetnode_query = " WHERE id IN ('%d')" %targetnode
         query = query + targetnode_query
     
         query = query + " AND msgid in (11, 32)"
@@ -268,13 +268,13 @@ def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid
 
         targetnode_query = " WHERE id IN (SELECT node_id FROM node_accel_table WHERE site_name = '%s' and accel = 2)" %siteid 
         if targetnode != '':
-            targetnode_query = " WHERE is IN ('%d')" %targetnode
+            targetnode_query = " WHERE id IN ('%d')" %targetnode
         query = query + targetnode_query
 
         query = query + " AND msgid in (12, 33)"
         query = query+ " AND timestamp > '%s'" %fromTime
         query = query + toTime_query
-    
+
     elif (len(siteid) == 4):
         query = "select timestamp,id,xvalue,yvalue,zvalue from senslopedb.%s " % (siteid)
         
