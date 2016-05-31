@@ -133,7 +133,7 @@ def ASTIplot(r,offsetstart,end,tsn, data):
         plt.plot(plot3.index,plot3,color="#0d90d0") # 72-hr cumulative rainfall
         plt.plot(plot4.index,plot4,color="#fbb714") # half of 2-yr max rainfall
         plt.plot(plot5.index,plot5,color="#963bd6")  # 2-yr max rainfall
-        plt.savefig(RainfallPlotsPath+tsn+" "+r,
+        plt.savefig(RainfallPlotsPath+tsn+"_"+r,
             dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
         plt.close()
     
@@ -394,7 +394,7 @@ for s in range(len(rainprops)):
                 plt.plot(plot3.index,plot3,color="#0d90d0") # 72-hr cumulative rainfall
                 plt.plot(plot4.index,plot4,color="#fbb714") # half of 2-yr max rainfall
                 plt.plot(plot5.index,plot5,color="#963bd6")  # 2-yr max rainfall
-                plt.savefig(RainfallPlotsPath+tsn+" "+r, dpi=160, 
+                plt.savefig(RainfallPlotsPath+tsn+"_"+r, dpi=160, 
                     facecolor='w', edgecolor='w',orientation='landscape',mode='w')
                 plt.close()
 
@@ -425,7 +425,7 @@ for s in range(len(rainprops)):
             
 #Writes dataframe containaining site codes with its corresponding one and three days cumulative sum, data source, alert level and advisory
 if PrintSummaryAlert:
-    summary.to_csv(RainfallPlotsPath+'Summary of Rainfall Alert Generation for '+tsn+CSVFormat,sep=',',mode='w')
+    summary.to_csv(RainfallPlotsPath+'SummaryOfRainfallAlertGenerationFor'+tsn+CSVFormat,sep=',',mode='w')
 print summary
 
 #Summarizing rainfall data to rainfallalerts.txt
@@ -456,13 +456,3 @@ if set_json:
         else:
             i += 1
     print dfajson
-
-
-# Deleting old data files (more than 10 days)
-if PrintPlot:
-    for dirpath, dirnames, filenames in os.walk(RainfallPlotsPath):
-        for file in filenames:
-            curpath = os.path.join(dirpath, file)
-            file_modified = datetime.fromtimestamp(os.path.getmtime(curpath))
-            if datetime.now() - file_modified > timedelta(days = 10):
-                os.remove(curpath)

@@ -380,6 +380,110 @@ def ProcessPiezometer(line,sender):
         
     print 'End of Process Piezometer data'
 
+def ProcessEarthquake(msg):
+    line = msg.data
+    print "Processing earthquake data"
+    print msg.data
+
+    createTable('earthquake', 'earthquake')
+
+    #find date
+    if re.search("\d{1,2}\w+201[6789]",msg.data):
+        datestr = re.search("\d{1,2}\w+201[6789]",msg.data).group(0)
+        print datestr
+        try:
+            datestr = dt.strptime(datestr,"%d%b%Y").strftime("%Y-%m-%d")
+        except:
+            print ">> Error in datetime conversion"
+            return
+    else:
+        print ">> No date string recognized"
+        return
+
+    #find time
+    if re.search("\d{1,2}:\d{1,2}[AP]M",msg.data):
+        timestr = re.search("\d{1,2}:\d{1,2}[AP]M",msg.data).group(0)
+        try:
+            timestr = dt.strptime(timestr,"%H:%M%p").strftime("%H:%M:00")
+        except:
+            print ">> Error in datetime conversion"
+            return
+    else:
+        print ">> No time string recognized"
+        return
+
+    datetimestr = datestr + ' ' + timestr
+    
+    #find magnitude
+    if re.search("(?<=MS\=)\d+\.\d+(?= )",msg.data):
+        magstr = re.search("(?<=MS\=)\d+\.\d+(?= )",msg.data).group(0)
+    else:
+        print ">> No magnitude string recognized"
+        magstr = 'NULL'
+
+    #find depth
+    if re.search("(?<=D\=)\d+(?=KM)",msg.data):
+        depthstr = re.search("(?<=D\=)\d+(?=KM)",msg.data).group(0)
+    else:
+        print ">> No depth string recognized"
+        depthstr = 'NULL'
+
+    #find latitude
+    if re.search("\d+\.\d+(?=N)",msg.data):
+        latstr = re.search("\d+\.\d+(?=N)",msg.data).group(0)
+    else:
+        print ">> No latitude string recognized"
+        latstr = 'NULL'
+
+    #find longitude
+    if re.search("\d+\.\d+(?=E)",msg.data):
+        longstr = re.search("\d+\.\d+(?=E)",msg.data).group(0)
+    else:
+        print ">> No longitude string recognized"
+        longstr = 'NULL'
+
+    #find epicenter distance
+    if re.search("(?<=OR )\d+(?=KM)",msg.data):
+        diststr = re.search("(?<=OR )\d+(?=KM)",msg.data).group(0)
+    else:
+        print ">> No distance string recognized"
+        diststr = 'NULL'
+
+    # find heading
+    if re.search("[NS]\d+[EW]",msg.data):
+        headstr = re.search("[NS]\d+[EW]",msg.data).group(0)
+    else:
+        print ">> No heading string recognized"
+        headstr = 'NULL'
+
+    # find Municipality
+    if re.search("(?<=OF )[A-Z ]+(?= \()",msg.data):
+        munistr = re.search("(?<=OF )[A-Z ]+(?= \()",msg.data).group(0)
+    else:
+        print ">> No municipality string recognized"
+        munistr = 'NULL'
+
+    # find province
+    if re.search("(?<=\()[A-Z ]+(?=\))",msg.data):
+        provistr = re.search("(?<=\()[A-Z ]+(?=\))",msg.data).group(0)
+    else:
+        print ">> No province string recognized"
+        provistr = 'NULL'
+
+    # find issuer
+    if re.search("(?<=\<)[A-Z]+(?=\>)",msg.data):
+        issuerstr = re.search("(?<=\<)[A-Z]+(?=\>)",msg.data).group(0)
+    else:
+        print ">> No issuer string recognized"
+        issuerstr = 'NULL'
+
+    query = "INSERT IGNORE INTO senslopedb.earthquake (timestamp, mag, depth, lat, longi, dist, heading, municipality, province, issuer) VALUES ('%s',%s,%s,%s,%s,%s,'%s','%s','%s','%s') " % (datetimestr,magstr,depthstr,latstr,longstr,diststr,headstr,munistr,provistr,issuerstr)
+
+    print query
+
+    commitToDb(query, 'earthquake')
+
+
 def ProcessARQWeather(line,sender):
     
     #msg = message
@@ -455,8 +559,11 @@ def ProcessRain(line,sender):
     #msg = message
 
     print 'Weather data: ' + line
-
-    line = re.sub("(?<=,)((?=$)|(?=,))","NULL",line)
+    
+    if len(line.split(',')) > 9:
+        line = re.sub(",(?=$)","",line)
+    line = re.sub("(?<=,)(?=(,|$))","NULL",line)
+    print line
 
     try:
     
@@ -611,6 +718,8 @@ def ProcessAllMessages(allmsgs,network):
             ProcessPiezometer(msg.data, msg.simnum)
         elif msg.data.split('*')[0] == 'COORDINATOR' or msg.data.split('*')[0] == 'GATEWAY':
             ProcessCoordinatorMsg(msg.data, msg.simnum)
+        elif re.search("EQINFO",msg.data):
+            ProcessEarthquake(msg)
         else:
             print '>> Unrecognized message format: '
             print 'NUM: ' , msg.simnum

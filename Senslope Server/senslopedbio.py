@@ -27,8 +27,8 @@ def SenslopeDBConnect(instance):
             db = MySQLdb.connect(host = dbc.host, user = dbc.user, passwd = dbc.password, db = dbc.name)
             cur = db.cursor()
             return db, cur
-        # except MySQLdb.OperationalError:
-    	except IndexError:
+        except MySQLdb.OperationalError:
+    	# except IndexError:
             print '6.',
             time.sleep(2)
             
@@ -62,6 +62,8 @@ def createTable(table_name, type):
         cur.execute("CREATE TABLE IF NOT EXISTS %s(sms_id int unsigned not null auto_increment, timestamp datetime, sim_num varchar(20), sms_msg varchar(255), read_status varchar(20), PRIMARY KEY (sms_id))" %table_name)
     elif type == "smsoutbox":
         cur.execute("CREATE TABLE IF NOT EXISTS %s(sms_id int unsigned not null auto_increment, timestamp_written datetime, timestamp_sent datetime, recepients varchar(255), sms_msg varchar(255), send_status varchar(20), PRIMARY KEY (sms_id))" %table_name)
+    elif type == "earthquake":
+        cur.execute("CREATE TABLE IF NOT EXISTS %s(e_id int unsigned not null auto_increment, timestamp datetime, mag float(6,2), depth float (6,2), lat float(6,2), longi float(6,2), dist tinyint unsigned, heading varchar(5), municipality varchar(50), province varchar(50), issuer varchar(10), PRIMARY KEY (e_id,timestamp))" %table_name)
     else:
         raise ValueError("ERROR: No option for creating table " + type)
    

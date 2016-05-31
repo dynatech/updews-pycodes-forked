@@ -1,185 +1,57 @@
-## SOEPD parser + earthquake alert gen
-# outputs eqsummary.txt - a summary of affected sites wrt to an earthquake event 
-# equation used is from first graph of fig 2 of "On far field occurence of seismically induced landslides"
-# equation of upper bound curve derived using G3Data
-
-import urllib
-from bs4 import BeautifulSoup
-import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
-import querySenslopeDb as q
-import ConfigParser
+import pandas as pd
+import sys
 
-# import values from config file
-configFile = "server-config.txt"
-cfg = ConfigParser.ConfigParser()
+from querySenslopeDb import *
 
-cfg.read(configFile)
-
-#local file paths
-output_file_path_2 = cfg.get('I/O','OutputFilePath')
-output_file_path = '/home/dynaslope/Desktop' + output_file_path_2
-
-#file names
-eqsummary = cfg.get('I/O', 'eqsummary')
-eq_summaryGSM = cfg.get('I/O','eqsummaryGSM')
-
-#Set True for JSON printing
-set_json = True
-
-#To output file
-PrintGSMAlert = cfg.getboolean('I/O', 'PrintGSMAlert')
-
-dataset =[None]*6
-end = datetime.now().replace(microsecond=0)
-
-#Get the sensor list and initialize the JSON df container
-alert_df = {}
-sensorlist = q.GetSensorList()
-for s in sensorlist:
-    alert_df.update({s.name:'e0'})
+sys.path.insert(0, '/home/dynaslope/Desktop/Senslope Server')
+from senslopedbio import *
+from senslopeServer import *
 
 
-try:
-    #url = 'not a url'    
-    url = 'http://www.phivolcs.dost.gov.ph/html/update_SOEPD/EQLatest.html'
-    html = urllib.urlopen(url).read()
-    soup = BeautifulSoup(html,'html.parser')
-    
-    #cleaning text input from phivolcs-soepd earthquake database
-    table = soup.find('table', {'class':'MsoNormalTable', 'border':'0'})
-    table = table.findNext('table') #first table is "seismicity maps"
-    header = table.find('tr', {'style':'mso-yfti-irow:0;mso-yfti-firstrow:yes;height:36.75pt'})
-    row = header.findNext('tr')#first <tr> is table headers
+def getCritDist(mag):
+    return (29.027 * (mag**2)) - (251.89*mag) + 547.97
 
-    x=0
-    for td in row.findChildren('td'):  
-        dataset[x]=td.text
-        dataset[x]=dataset[x].replace(u'\xa0', u' ')
-        dataset[x]=dataset[x].replace(u'\xb0', u'')
-        dataset[x]=dataset[x].replace(u'\xba', u'')
-        dataset[x]=dataset[x].replace(u'\r\n','\n')
-        dataset[x]=dataset[x].replace(u'\n','')
-        dataset[x]=dataset[x].replace(u'\t',' ')
-        dataset[x]=dataset[x].encode('utf8')
-        
-        if x==0:
-            dataset[x]=dataset[x].replace(u' ', '')
-            ts=datetime.strptime(dataset[x],'%d%b%Y-%I:%M%p')
-            
-        elif x==1:
-            dataset[x]=dataset[x].replace(u' ', '')
-            lat = float(dataset[x])
-            
-        elif x==2:
-            dataset[x]=dataset[x].replace(u' ', '')
-            lon = float(dataset[x])
-            
-        elif x==3:
-            dataset[x]=dataset[x].replace(u' ', '')
-            dep = float(dataset[x])
-            
-        elif x==4:
-            dataset[x]=dataset[x].replace(u' ', '')
-            mag= float(dataset[x])
-            
-        elif x==5:
-            rel=dataset[x]
-        x+=1
-    
-#    uncomment if testing a user-specified quake
-    mag= 3.5
-    lat= 9.77
-    lon= 125.51
-    ts = end-timedelta(minutes=15)
-    
-    with open(output_file_path+eqsummary, 'w') as z, open(output_file_path+eq_summaryGSM, 'w') as g:
-        z.write (('as of ') + str(end) + ':\n')
-        g.write('')
-        
-    #checks if quake is within last 30mins   
-        if ts > (end-timedelta(minutes=30)):
-            
-            if mag>=4:
-                    critdist= (29.027 * (mag**2)) - (251.89*mag) + 547.97
-                    if PrintGSMAlert:
-                        g.write( 'magnitude ' + str(mag) + 'EQ: ' )
-                    else:
-                        z.write( 'magnitude ' + str(mag) + ' earthquake at ' + str(lat) + 'N ' + str(lon) + 'E' + ' on ' + str(ts) + '\n')
-                        z.write('critical distance at ' + str(critdist) + ' km' + '\n')
-                        z.write("start monitoring for ff sites:" + '\n')
-                    cnt = 0
-                    
-                    sensors = q.GetCoordsList()                    
-                    coords = pd.DataFrame(columns=['name','lat','lon'])
+def getrowDistancetoEQ(df):#,eq_lat,eq_lon):   
+    dlon=eq_lon-df.lon
+    dlat=eq_lat-df.lat
+    dlon=np.radians(dlon)
+    dlat=np.radians(dlat)
+    a=(np.sin(dlat/2))**2 + ( np.cos(np.radians(eq_lat)) * np.cos(np.radians(df.lat)) * (np.sin(dlon/2))**2 )
+    c= 2 * np.arctan2(np.sqrt(a),np.sqrt(1-a))
+    d= 6371 * c
+    return d
 
-                    for s in sensors:
-                        coords.loc[s] = pd.Series({'name':s.name, 'lat':s.lat, 'lon':s.lon})
-                        
-                    for s in range(len(sensors)):
-                    #slon, slat -> site long and lat
-                    #dlon, dlat -> difference between site lon-lat and epicenter lon-lat
-                    #formula for distance is Haversine formula
-                       colname, slon, slat = coords['name'][s], coords['lon'][s],coords['lat'][s]     
-                       dlon=lon-slon
-                       dlat=lat-slat
-                       dlon=np.radians(dlon)
-                       dlat=np.radians(dlat)
-                       a=(np.sin(dlat/2))**2 + ( np.cos(np.radians(lat)) * np.cos(np.radians(slat)) * (np.sin(dlon/2))**2 )
-                       c= 2 * np.arctan2(np.sqrt(a),np.sqrt(1-a))
-                       d= 6371 * c
-                                      
-                       if d <= critdist:
-                           if PrintGSMAlert:
-                               g.write(colname + ',')
-                           else:
-                               z.write( colname + ': E1' + '\n')
-                               alert_df.update({colname:'e1'})
-                               cnt+=1
-                           
-                    if cnt==0: 
-                        if not PrintGSMAlert:
-                            z.write( 'all sites E0' + '\n')
-                
-            elif mag<4:
-                if not PrintGSMAlert:
-                    z.write('all sites E0')
-                    
-        else:
-            if not PrintGSMAlert:
-                z.write('all sites E0')
-#           z.write('-last earthquake out of time range. last earthquake was at ' + str(ts)+', ' + rel)
-           
-except:
-    end = datetime.now().replace(microsecond=0)
-    with open (output_file_path+eqsummary, 'w') as z:
-        z.write (('as of ') + str(end) + ':\n')
-        z.write('Error. Please check if SOEPD site is down or your internet connection. \n')
-        z.write('SOEPD site: http://www.phivolcs.dost.gov.ph/html/update_SOEPD/EQLatest.html')
-        
-print 'eqsummary done'
+def getEQ():    
+    query = """ SELECT * FROM %s.earthquake order by timestamp desc limit 1 """ % (Namedb)
+    dfeq =  GetDBDataFrame(query)
+    return dfeq.mag[0],dfeq.lat[0],dfeq.longi[0],dfeq.timestamp[0]
 
-#Printinf of JSON Format
-if set_json:
-    #create data frame as for easy conversion to JSON format
-    alert_df = sorted(alert_df.items())
-    for i in range(len(alert_df)): alert_df[i] = (end,) + alert_df[i]
-    
-    dfa = pd.DataFrame(alert_df,columns = ['timestamp','site','eq alert'])
-    
-    #converting the data frame to JSON format
-    dfajson = dfa.to_json(orient="records",date_format='iso')
-    
-    #ensuring proper datetime format
-    i = 0
-    while i <= len(dfajson):
-        if dfajson[i:i+9] == 'timestamp':
-            dfajson = dfajson[:i] + dfajson[i:i+36].replace("T"," ").replace("Z","").replace(".000","") + dfajson[i+36:]
-            i += 1
-        else:
-            i += 1
-    print dfajson
+def getSites():
+    query = """ SELECT * FROM %s.site_column """ % (Namedb)
+    df = GetDBDataFrame(query)
+    return df[['name','lat','lon']]
 
 
-    
+#MAIN
+
+mag,eq_lat,eq_lon,ts = getEQ()
+
+critdist = getCritDist(mag)
+#critdist = 100
+
+sites = getSites()
+dfg = sites.groupby('name')
+dist = dfg.apply(getrowDistancetoEQ)
+crits = dist[dist<critdist]
+
+crits = crits.reset_index()
+
+if len(crits.name.values) > 0:
+    message = "EQALERT\nAs of %s: \nE1: %s" % (str(ts),','.join(str(n) for n in crits.name.values))
+    print message
+    WriteOutboxMessageToDb(message,recepients,send_status='UNSENT')
+
+else:
+    print "No affected sites."
+

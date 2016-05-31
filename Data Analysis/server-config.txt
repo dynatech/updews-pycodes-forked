@@ -50,6 +50,7 @@ ProcFilePath = /MonitoringOutput/Proc/
 ColAlertsFilePath = /MonitoringOutput/ColAlerts/
 TrendAlertsFilePath = /MonitoringOutput/TrendAlerts/
 AlertAnalysisPath = /MonitoringOutput/Alerts/
+RainfallPlotsPath = /MonitoringOutput/RainfallPlots/
 
 ############################
 ###      FILE NAMES      ###
