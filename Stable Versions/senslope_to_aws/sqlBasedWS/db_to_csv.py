@@ -31,7 +31,7 @@ def InitLocalDB():
 def checkTableExistence(table):
     db, cur = SenslopeDBConnect()
     query = "SHOW TABLES LIKE '%s'" % table
-    #print query
+    print query
     ret = 0
     try:
         cur.execute(query)
@@ -46,7 +46,7 @@ def checkTableExistence(table):
 def checkSiteOnMarkerTable(siteName):
     db, cur = SenslopeDBConnect()
     query = "SELECT * FROM upload_marker_raingauge WHERE name = '%s'" % siteName
-    #print query
+    print query
     ret = 0
     try:
         cur.execute(query)
