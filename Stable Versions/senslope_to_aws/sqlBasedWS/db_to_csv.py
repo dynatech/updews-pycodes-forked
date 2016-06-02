@@ -304,8 +304,9 @@ def extract_db():
         awsOld = cur.fetchall()
 
         for table in awsOld:
-            print table[0]
-            extractDBToSQL(table[0], "senslope")
+            curSensor = table[0].replace(" ", "")
+            print curSensor
+            extractDBToSQL(curSensor, "senslope")
             
         #get rain_arq items
         queryArq = 'SELECT DISTINCT rain_arq FROM site_rain_props WHERE '
@@ -320,8 +321,9 @@ def extract_db():
         awsArq = cur.fetchall()
 
         for table in awsArq:
-            print table[0]
-            extractDBToSQL(table[0], "arq")
+            curSensor = table[0].replace(" ", "")
+            print curSensor
+            extractDBToSQL(curSensor, "arq")
             
         pass
 
