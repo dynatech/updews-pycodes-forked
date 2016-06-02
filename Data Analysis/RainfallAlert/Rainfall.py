@@ -28,9 +28,6 @@ from querySenslopeDb import *
 
 def get_rt_window(rt_window_length,roll_window_size,num_roll_window_ops):
     
-    ##DESCRIPTION:
-    ##returns the time interval for real-time monitoring
-
     ##INPUT:
     ##rt_window_length; float; length of real-time monitoring window in days
     ##roll_window_size; integer; number of data points to cover in moving window operations
@@ -60,9 +57,6 @@ def get_rt_window(rt_window_length,roll_window_size,num_roll_window_ops):
     return end, start, offsetstart
 
 def set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_window_ops):
-
-    ##DESCRIPTION:    
-    ##returns number of data points per rolling window, endpoint of interval, starting point of interval, starting point of interval with offset to account for moving window operations, empty dataframe
     
     ##INPUT:
     ##roll_window_length; float; length of rolling/moving window operations, in hours
@@ -71,7 +65,9 @@ def set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_w
     ##num_roll_window_ops; float; number of rolling window operations in the whole monitoring analysis
     
     ##OUTPUT:
-    ##roll_window_numpts, end, start, offsetstart, monwin
+    ##roll_window_numpts; number of data points per rolling window, end; endpoint of interval, 
+    ##start; starting point of interval, offsetstart; starting point of interval with offset to account for moving window operations,
+    ##monwin; empty dataframe with length of rt_window_length
     
     roll_window_numpts=int(1+roll_window_length/data_dt)
     end, start, offsetstart=get_rt_window(rt_window_length,roll_window_numpts,num_roll_window_ops)
@@ -82,12 +78,20 @@ def set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_w
 
 def GetResampledData(r, start, end):
     
-#    print "Generating Rainfall plots for "+r+" from rain gauge data"
-
+    ##INPUT:
+    ##r; str; site
+    ##start; datetime; start of rainfall data
+    ##end; datetime; end of rainfall data
+    
+    ##OUTPUT:
+    ##rainfall; dataframe containing start to end of rainfall data resampled to 15min
+    
+    #raw data from senslope rain gauge
     rainfall = GetRawRainData(r, start)
     rainfall = rainfall.set_index('ts')
     rainfall = rainfall.loc[rainfall['rain']>=0]
     
+    #data resampled to 15mins
     if rainfall.index[-1:]<end:
         blankdf_time=pd.date_range(start=start, end=end, freq='15Min',name='timestamp', closed=None)
         blankdf=pd.DataFrame(data=np.nan*np.ones(len(blankdf_time)), index=blankdf_time,columns=['rain'])
@@ -100,6 +104,20 @@ def GetResampledData(r, start, end):
     return rainfall
 
 def SensorPlot(r,offsetstart,end,tsn, data, halfmax, twoyrmax):
+    
+    ##INPUT:
+    ##r; str; site
+    ##offsetstart; datetime; starting point of interval with offset to account for moving window operations
+    ##end; datetime; end of rainfall data
+    ##tsn; str; time format acceptable as file name
+    ##data; dataframe; rainfall data
+    ##halfmax; float; half of 2yr max rainfall, one-day cumulative rainfall threshold
+    ##twoyrmax; float; 2yr max rainfall, three-day cumulative rainfall threshold
+    
+    ##OUTPUT:
+    ##rainfall2, rainfall3; dataframe containing one-day and three-day cumulative rainfall
+    ##also prints cumulative rainfall to csv & plots thresholds and cumulative rainfall
+        
     if PrintPlot:
         plt.xticks(rotation=70, size=5)       
         
@@ -131,11 +149,15 @@ def SensorPlot(r,offsetstart,end,tsn, data, halfmax, twoyrmax):
         plot4=sub['maxhalf']        # half of 2-yr max rainfall
         plot5=sub['max']            # 2-yr max rainfall
 
-        plt.plot(plot1.index,plot1,color='#db4429') # instantaneous rainfall data
-        plt.plot(plot2.index,plot2,color='#5ac126') # 24-hr cumulative rainfall
-        plt.plot(plot3.index,plot3,color="#0d90d0") # 72-hr cumulative rainfall
-        plt.plot(plot4.index,plot4,color="#fbb714") # half of 2-yr max rainfall
-        plt.plot(plot5.index,plot5,color="#963bd6")  # 2-yr max rainfall
+        #plots instantaneous rainfall data, 24-hr cumulative rainfall, 72-hr cumulative rainfall,
+        #half of 2-yr max rainfall, 2-yr max rainfall
+        plt.plot(plot1.index,plot1,color='#db4429', label = 'instantaneous rainfall') # instantaneous rainfall data
+        plt.plot(plot2.index,plot2,color='#5ac126', label = '24hr cumulative rainfall') # 24-hr cumulative rainfall
+        plt.plot(plot3.index,plot3,color='#0d90d0', label = '72hr cumulative rainfall') # 72-hr cumulative rainfall
+        plt.plot(plot4.index,plot4,color="#fbb714", label = 'half of 2yr max rainfall') # half of 2-yr max rainfall
+        plt.plot(plot5.index,plot5,color="#963bd6", label = '2yr max rainfall')  # 2-yr max rainfall
+        plt.legend(loc='upper left', fontsize = 8)        
+        plt.title(r)
         plt.savefig(RainfallPlotsPath+tsn+"_"+r, dpi=160, 
             facecolor='w', edgecolor='w',orientation='landscape',mode='w')
         plt.close()
@@ -144,6 +166,15 @@ def SensorPlot(r,offsetstart,end,tsn, data, halfmax, twoyrmax):
     
 def GetASTIdata(site, rain_noah, offsetstart):
 
+    ##INPUT:
+    ##site; str
+    ##offsetstart; datetime; starting point of interval with offset to account for moving window operations
+    ##rain_noah; float; rain noah id of noah rain gauge near the site
+    
+    ##OUTPUT:
+    ##df; dataframe; rainfall from noah rain gauge
+
+    #data from noah rain gauge saved at local database
     try:    
         if not math.isnan(rain_noah):
             rain_noah = int(rain_noah)
@@ -166,6 +197,17 @@ def GetASTIdata(site, rain_noah, offsetstart):
         return df
 
 def GetUnemptyASTIdata(r, rainprops, offsetstart):
+    
+    ##INPUT:
+    ##r; str; site
+    ##offsetstart; datetime; starting point of interval with offset to account for moving window operations
+    ##rainprops; dataframe; contains rain noah ids of noah rain gauge near the site
+    
+    ##OUTPUT:
+    ##df; dataframe; rainfall from noah rain gauge    
+    
+    #gets data from nearest noah rain gauge
+    #moves to next nearest until data is updated
     for n in range(1,4):            
         if n == 1:
             rain_noah = rainprops.loc[rainprops.site == r]['rain_noah'].values[0]
@@ -181,17 +223,21 @@ def GetUnemptyASTIdata(r, rainprops, offsetstart):
 
 def ASTIplot(r,offsetstart,end,tsn, data, halfmax, twoyrmax):
 
-    ##DESCRIPTION:
-    ##prints timestamp and intsantaneous rainfall
-    ##plots instantaneous rainfall data, 24-hr cumulative and 72-hr rainfall, and half of 2-yr max and 2-yr max rainfall for 10 days
-
     ##INPUT:
-    ##r; string; site code
+    ##r; str; site
     ##offsetstart; datetime; starting point of interval with offset to account for moving window operations
-    ##end; datetime; end of interval
-    ##tsn; string; datetime format allowed in savefig
+    ##end; datetime; end of rainfall data
+    ##tsn; str; time format acceptable as file name
+    ##data; dataframe; rainfall data
+    ##halfmax; float; half of 2yr max rainfall, one-day cumulative rainfall threshold
+    ##twoyrmax; float; 2yr max rainfall, three-day cumulative rainfall threshold
+    
+    ##OUTPUT:
+    ##rainfall2, rainfall3; dataframe containing one-day and three-day cumulative rainfall
+    ##also prints cumulative rainfall to csv & plots thresholds and cumulative rainfall
 
     try:
+        #data is resampled to 15mins
         rainfall = data
         rainfall = rainfall.loc[rainfall['rain']>=0]
         rainfall = rainfall[(rainfall.index>=offsetstart)]
@@ -205,6 +251,7 @@ def ASTIplot(r,offsetstart,end,tsn, data, halfmax, twoyrmax):
         rainfall2 = rainfall.rolling(min_periods=1,window=96,center=False).sum()
         rainfall2=np.round(rainfall2,4)
 
+        #prints rolling sum from 24hrs to csv file
         if PrintCumSum:
             rainfall2.to_csv(CumSum_file_path+r+' 1d'+CSVFormat,sep=',',mode='w')
         
@@ -212,6 +259,7 @@ def ASTIplot(r,offsetstart,end,tsn, data, halfmax, twoyrmax):
         rainfall3 = rainfall.rolling(min_periods=1,window=288,center=False).sum()
         rainfall3=np.round(rainfall3,4)
 
+        #prints rolling sum from 72hrs to csv file
         if PrintCumSum:
             rainfall3.to_csv(CumSum_file_path+r+' 3d'+CSVFormat,sep=',',mode='w')
         
@@ -227,12 +275,16 @@ def ASTIplot(r,offsetstart,end,tsn, data, halfmax, twoyrmax):
             plot3=rainfall3             # 72-hr cumulative rainfall
             plot4=sub['maxhalf']        # half of 2-yr max rainfall
             plot5=sub['max']            # 2-yr max rainfall
-                                
-            plt.plot(plot1.index,plot1,color='#db4429') # instantaneous rainfall data
-            plt.plot(plot2.index,plot2,color='#5ac126') # 24-hr cumulative rainfall
-            plt.plot(plot3.index,plot3,color="#0d90d0") # 72-hr cumulative rainfall
-            plt.plot(plot4.index,plot4,color="#fbb714") # half of 2-yr max rainfall
-            plt.plot(plot5.index,plot5,color="#963bd6")  # 2-yr max rainfall
+        
+            #plots instantaneous rainfall data, 24-hr cumulative rainfall, 72-hr cumulative rainfall,
+            #half of 2-yr max rainfall, 2-yr max rainfall
+            plt.plot(plot1.index,plot1,color='#db4429', label = 'instantaneous rainfall') # instantaneous rainfall data
+            plt.plot(plot2.index,plot2,color='#5ac126', label = '24hr cumulative rainfall') # 24-hr cumulative rainfall
+            plt.plot(plot3.index,plot3,color='#0d90d0', label = '72hr cumulative rainfall') # 72-hr cumulative rainfall
+            plt.plot(plot4.index,plot4,color="#fbb714", label = 'half of 2yr max rainfall') # half of 2-yr max rainfall
+            plt.plot(plot5.index,plot5,color="#963bd6", label = '2yr max rainfall')  # 2-yr max rainfall
+            plt.legend(loc='upper left', fontsize = 8)
+            plt.title(r)
             plt.savefig(RainfallPlotsPath+tsn+"_"+r,
                 dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
             plt.close()
@@ -245,32 +297,35 @@ def ASTIplot(r,offsetstart,end,tsn, data, halfmax, twoyrmax):
 
 def onethree_val_writer(colname, one, three):
 
-    ##DESCRIPTION:
-    ##returns cumulative sum for one day and three days
-
     ##INPUT:
     ##colname; string; site code
+    ##one; dataframe; one-day cumulative rainfall
+    ##three; dataframe; three-day cumulative rainfall
 
     ##OUTPUT:
-    ##one, three
+    ##one, three; float; cumulative sum for one day and three days
 
     try:
         one, three = one, three
         
+        #adds blank dataframe if last data is more than 3.5hrs
         if end - pd.to_datetime(one.index[-1:]) > timedelta(hours=3.5):
             blankdf_time=pd.date_range(start=start, end=end, freq='15Min',name='timestamp', closed=None)
             blankdf=pd.DataFrame(data=np.nan*np.ones(len(blankdf_time)), index=blankdf_time,columns=['rain'])
             blankdf=blankdf[-1:]
             one=one.append(blankdf)
-
+        
+        #returns null is last data is more than 3.5hrs
         one = float(one.rain[-1:])
      
+        #adds blank dataframe if last data is more than 3.5hrs
         if end - pd.to_datetime(three.index[-1:]) > timedelta(hours=3.5):
             blankdf_time=pd.date_range(start=start, end=end, freq='15Min',name='timestamp', closed=None)
             blankdf=pd.DataFrame(data=np.nan*np.ones(len(blankdf_time)), index=blankdf_time,columns=['rain'])
             blankdf=blankdf[-1:]
             three=three.append(blankdf)
 
+        #returns null is last data is more than 3.5hrs
         three = float(three.rain[-1:])
 
     except:
@@ -293,27 +348,36 @@ def summary_writer(sum_index,r,datasource,twoyrmax,halfmax,summary,alert,alert_d
     ##summary; dataframe; contains site codes with its corresponding one and three days cumulative sum, data source, alert level and advisory
     ##alert; array; alert summary container, r0 sites at alert[0], r1a sites at alert[1], r1b sites at alert[2],  nd sites at alert[3]
     ##alert_df;array of tuples; alert summary container; format: (site,alert)
+    ##one; dataframe; one-day cumulative rainfall
+    ##three; dataframe; three-day cumulative rainfall        
+    
     one,three = onethree_val_writer(r, one, three)
 
+    #threshold is reached
     if one>=halfmax or three>=twoyrmax:
         ralert='r1'
         advisory='Start/Continue monitoring'
+        #both threshholds are reached
         if one>=halfmax and three>=twoyrmax:
             alert[1].append(r+' ('+str(one)+')')
             alert[2].append(r+' ('+str(three)+')')
             alert_df.append((r,'r1a, r1b'))
+        #only one-day threshold is reached
         elif one>=halfmax:
             alert[1].append(r+' ('+str(one)+')')
             alert_df.append((r,'r1a'))
+        #only three-day threshold is reached
         else:
             alert[2].append(r+' ('+str(three)+')')
             alert_df.append((r,'r1b'))
+    #no data
     elif one==None or math.isnan(one):
         datasource="No Alert! No ASTI/SENSLOPE Data"
         ralert='nd'
         advisory='---'
         alert[3].append(r)
         alert_df.append((r,'nd'))
+    #rainfall below threshold
     else:
         ralert='r0'
         advisory='---'
@@ -322,17 +386,28 @@ def summary_writer(sum_index,r,datasource,twoyrmax,halfmax,summary,alert,alert_d
     summary.loc[sum_index]=[r,one,three,datasource,ralert,advisory]
 
 def RainfallAlert(siterainprops):
+
+    ##INPUT:
+    ##siterainprops; DataFrameGroupBy; contains rain noah ids of noah rain gauge near the site, one and three-day rainfall threshold
+    
+    ##OUTPUT:
+    ##evaluates rainfall alert
+    
+    #rainfall properties from siterainprops
     r,twoyrmax = siterainprops.site.values[0], siterainprops.max_rain_2year.values[0]
     halfmax=twoyrmax/2
     sum_index = rainprops.loc[rainprops.site == r].index[0]
-    print sum_index
 
     try:
+        #resampled data from senslope rain gauge
         rainfall = GetResampledData(r, start, end)
 
+        #data not more than a day from end
         rain_timecheck=rainfall[(rainfall.index>=end-timedelta(days=1))]
         
+        #if data from senslope rain gauge is not updated, data is gathered from noah
         if len(rain_timecheck.dropna())<1:
+            #from noah data, plots and alerts are processed
             ASTIdata, n = GetUnemptyASTIdata(r, rainprops, offsetstart)
             one, three = ASTIplot(r,offsetstart,end,tsn, ASTIdata, halfmax, twoyrmax)
             
@@ -341,6 +416,7 @@ def RainfallAlert(siterainprops):
 
                     
         else:
+            #plots and alerts are processed if senslope rain gauge data is updated
             one, three = SensorPlot(r, offsetstart, end, tsn, rainfall, halfmax, twoyrmax)
             
             datasource="SENSLOPE Rain Gauge"
@@ -348,6 +424,7 @@ def RainfallAlert(siterainprops):
 
 
     except:
+        #if no data from senslope rain gauge, data is gathered from noah then plots and alerts are processed
         ASTIdata, n = GetUnemptyASTIdata(r, rainprops, offsetstart)
         one, three = ASTIplot(r,offsetstart,end,tsn, ASTIdata, halfmax, twoyrmax)
         
@@ -407,17 +484,15 @@ PrintCumSum = cfg.getboolean('I/O','PrintCumSum')
 PrintRAlert = cfg.getboolean('I/O','PrintRAlert')
 PrintASTIdata = cfg.getboolean('I/O','PrintASTIdata')
 
+#creates directory if it doesn't exist
 if not os.path.exists(output_file_path):
     os.makedirs(output_file_path)
-    
 if PrintPlot or PrintSummaryAlert:
     if not os.path.exists(RainfallPlotsPath):
         os.makedirs(RainfallPlotsPath)
-
 if PrintCumSum:
     if not os.path.exists(CumSum_file_path):
         os.makedirs(CumSum_file_path)
-
 if PrintASTIdata:
     if not os.path.exists(ASTIpath):
         os.makedirs(ASTIpath)
@@ -433,6 +508,7 @@ base = pd.DataFrame(index=index, columns=columns)
 
 tsn=end.strftime("%Y-%m-%d %H-%M-%S")
 
+#rainprops containing noah id and threshold
 rainprops = GetRainProps()
 rainprops['rain_arq'] = rainprops['rain_arq'].fillna(rainprops['rain_senslope'])
 rainprops = rainprops[['name', 'rain_arq', 'max_rain_2year', 'rain_noah', 'rain_noah2', 'rain_noah3']]
@@ -456,6 +532,7 @@ set_json = False
 
 siterainprops = rainprops.groupby('site')
 
+### Processes Rainfall Alert ###
 siterainprops.apply(RainfallAlert)
 
 #Writes dataframe containaining site codes with its corresponding one and three days cumulative sum, data source, alert level and advisory
