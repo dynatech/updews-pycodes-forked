@@ -212,8 +212,9 @@ def extractDBToSQL(table, doesTableExist = 1, version = 3):
 
     #SQL creation is different for a site's first time upload of data
     if doesTableExist:
-        #WILL NOT Overwrite. Good for just updating your DB tables
-        winCmd = 'mysqldump -t -u %s -p%s senslopedb gndmeas' % (Userdb, Passdb)        
+        #WILL NOT Overwrite full table. Good for just updating your DB tables
+        #WILL Replace data in case of duplicate detection
+        winCmd = 'mysqldump -t --replace -u %s -p%s senslopedb gndmeas' % (Userdb, Passdb)        
     else:
         #Overwrites table if it exists on your database already
         winCmd = 'mysqldump -u %s -p%s senslopedb gndmeas' % (Userdb, Passdb)

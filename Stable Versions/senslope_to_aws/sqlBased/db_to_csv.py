@@ -258,8 +258,9 @@ def extractDBToSQL(table, version = 3):
         #Overwrites table if it exists on your database already
         winCmd = 'mysqldump -u %s -p%s senslopedb %s' % (Userdb, Passdb, table)
     else:
-        #WILL NOT Overwrite. Good for just updating your DB tables
-        winCmd = 'mysqldump -t -u %s -p%s senslopedb %s' % (Userdb, Passdb, table)
+        #WILL NOT Overwrite full table. Good for just updating your DB tables
+        #WILL Replace data in case of duplicate detection
+        winCmd = 'mysqldump -t --replace -u %s -p%s senslopedb %s' % (Userdb, Passdb, table)
         
     winCmd = winCmd + ' --where="timestamp > \'%s\' and timestamp <= \'%s\'" > ' % (TSstart, TSend) 
     winCmd = winCmd + fullPath

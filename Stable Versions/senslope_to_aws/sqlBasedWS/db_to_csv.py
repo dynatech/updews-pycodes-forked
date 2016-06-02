@@ -31,7 +31,7 @@ def InitLocalDB():
 def checkTableExistence(table):
     db, cur = SenslopeDBConnect()
     query = "SHOW TABLES LIKE '%s'" % table
-    #print query
+    print query
     ret = 0
     try:
         cur.execute(query)
@@ -46,7 +46,7 @@ def checkTableExistence(table):
 def checkSiteOnMarkerTable(siteName):
     db, cur = SenslopeDBConnect()
     query = "SELECT * FROM upload_marker_raingauge WHERE name = '%s'" % siteName
-    #print query
+    print query
     ret = 0
     try:
         cur.execute(query)
@@ -263,8 +263,9 @@ def extractDBToSQL(table, awsType = 'senslope'):
         #Overwrites table if it exists on your database already
         winCmd = 'mysqldump -u %s -p%s senslopedb %s' % (Userdb, Passdb, table)
     else:
-        #WILL NOT Overwrite. Good for just updating your DB tables
-        winCmd = 'mysqldump -t -u %s -p%s senslopedb %s' % (Userdb, Passdb, table)
+        #WILL NOT Overwrite full table. Good for just updating your DB tables
+        #WILL Replace data in case of duplicate detection
+        winCmd = 'mysqldump -t --replace -u %s -p%s senslopedb %s' % (Userdb, Passdb, table)
         
     winCmd = winCmd + ' --where="timestamp > \'%s\' and timestamp <= \'%s\'" > ' % (TSstart, TSend) 
     winCmd = winCmd + fullPath
