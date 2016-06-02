@@ -59,11 +59,12 @@ def put_entries(name,count,version,db,SC):
         vers = 1
     else:
         vers = 3 #default
+        
     query = query + "VALUES ('%s','%d','%d','%d','%s');" %(name,count,vers,accel,ts)
-    print query
     cursor = db.cursor()
     cursor.execute(query)
     db.commit()
+    print query
 
 def update_NodeAccelTable(df,db,SC):
     for name in SC.column.unique():
@@ -96,7 +97,6 @@ def get_SC(filename):
     SCnodes = SCnodes.split(',')
     sc = []
     for i in range (0,len(SCnodes)):
-#            sc.add((str(SCnodes[i])[0:5],int(str(SCnodes[i])[5:7])))
         sc_entry1 = str(SCnodes[i])[0:5]
         sc_entry2 = int(str(SCnodes[i])[5:7])
         sc.append([sc_entry1,sc_entry2])
@@ -109,8 +109,6 @@ def get_version(filename):
     configFile = filename
     cfg = ConfigParser.ConfigParser()
     cfg.read(configFile)
-#    version2=[]
-#    version3=[]
     section = 'Version'
     v2 = cfg.get(section,'Version2')
     v3 = cfg.get(section,'Version3')
@@ -123,9 +121,6 @@ def get_version(filename):
     for i in range (0,len(v3)):
         v_entry1 = str(v3[i])[0:5]
         version.append([v_entry1,3])
-#    SC = pd.DataFrame(sc)
-#    SC.columns = ('column','node')
-#    SC = SC.groupby('column')
     Version = pd.DataFrame(version)
     Version.columns = ('site','version')
     Version = Version.groupby('version')
@@ -134,8 +129,8 @@ def get_version(filename):
 
 configFile = "server-config.txt"
 cfg = ConfigParser.ConfigParser()
-try:
-        
+print ' Start'
+try:    
     cfg.read(configFile)
     
     DBIOSect = 'DB I/O'
@@ -147,9 +142,10 @@ try:
     	#db = sql.connect('localhost','root','senslope')
     try:
         db = sql.connect(host = Hostdb, user = Userdb, passwd = Passdb, db=Namedb)
+        print 'db done'
     except sql.OperationalError:
         print "Can't connect to Database"
-    cursor = db.cursor()
+
 except:
     print "Can't connect to Database"
     print "user = root"
@@ -160,18 +156,20 @@ except:
 
 	
 ## select senslopedb
+cursor = db.cursor()
 query = 'USE senslopedb;'
 cursor.execute(query)
 
 # get list of tables
 query = 'SELECT name,num_nodes FROM senslopedb.site_column_props'
 df = psql.read_sql(query,db)
+print query
 
 # get SC (SpecialCase)
 SC = get_SC("special_case_nodes.txt")
 version = get_version("special_case_nodes.txt")
 try:
-    query = """create table Node_Accel_Table (ac_id int auto_increment, site_name char(5) NOT NULL,node_id int,version int, accel int,last_changed datetime,primary key(ac_id));"""
+    query = """create table node_accel_table (ac_id int auto_increment, site_name char(5) NOT NULL,node_id int,version int, accel int,last_changed datetime,primary key(ac_id));"""
     print query
     cursor.execute(query)
     db.commit()
