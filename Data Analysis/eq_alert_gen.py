@@ -39,19 +39,21 @@ mag,eq_lat,eq_lon,ts = getEQ()
 
 critdist = getCritDist(mag)
 #critdist = 100
+print mag
+if mag >=4:
+    sites = getSites()
+    dfg = sites.groupby('name')
+    dist = dfg.apply(getrowDistancetoEQ)
+    crits = dist[dist<critdist]
+    crits = crits.reset_index()
 
-sites = getSites()
-dfg = sites.groupby('name')
-dist = dfg.apply(getrowDistancetoEQ)
-crits = dist[dist<critdist]
-
-crits = crits.reset_index()
-
-if len(crits.name.values) > 0:
-    message = "EQALERT\nAs of %s: \nE1: %s" % (str(ts),','.join(str(n) for n in crits.name.values))
-    print message
-    WriteOutboxMessageToDb(message,recepients,send_status='UNSENT')
+    if len(crits.name.values) > 0:
+        message = "EQALERT\nAs of %s: \nE1: %s" % (str(ts),','.join(str(n) for n in crits.name.values))
+        print message
+        WriteEQAlertMessageToDb(message)
+    else:
+        print "No affected sites."
 
 else:
-    print "No affected sites."
-
+    print '> Magnitude too small.'
+    pass

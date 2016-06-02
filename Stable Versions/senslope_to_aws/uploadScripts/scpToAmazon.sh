@@ -1,6 +1,7 @@
 #!/bin/bash
 
-cd /media/sf_dewslandslide
+#cd /media/sf_dewslandslide
+cd ~/Desktop/websiteUploads
 scp -i /keyPair/senslopeInstance.pem *.sql ubuntu@www.dewslandslide.com:~/sqldumps
 
 if [ $? -ne 0 ]

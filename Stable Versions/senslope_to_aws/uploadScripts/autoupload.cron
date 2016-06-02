@@ -21,12 +21,8 @@
 # 
 # m h  dom mon dow   command
 
-50 * * * * sh /media/sf_csvForUpload/wget_cron.sh > /media/sf_csvForUpload/log.txt
+#50 * * * * sh /media/sf_csvForUpload/wget_cron.sh > /media/sf_csvForUpload/log.txt
 #0 * * * * sh /media/sf_FiguresForUpload/wget_cron.sh > /media/sf_FiguresForUpload/log.txt
 #*/5 * * * * sh /media/sf_dewslandslide/wget_cron.sh > /media/sf_dewslandslide/log.txt
 
-*/15 * * * * sh /media/sf_dewslandslide/scpToAmazon.sh > /media/sf_dewslandslide/log.txt
-*/15 * * * * sh /media/sf_csvForUpload/scpToAmazon.sh > /media/sf_csvForUpload/log.txt
-*/15 * * * * sh /media/sf_dewslandslide/purged/scpToAmazonPurged.sh > /media/sf_dewslandslide/purged/log.txt
-
-*/5 * * * * sh /media/sf_dewslandslide/nodeStatus/scpFromAmazonPurged.sh > /media/sf_dewslandslide/nodeStatus/log.txt
+*/15 * * * * sh ~/Desktop/updews-pycodes/Stable\ Versions/senslope_to_aws/uploadScripts/scpToAmazon.sh > ~/Desktop/updews-pycodes/Stable\ Versions/senslope_to_aws/uploadScripts/log.txt

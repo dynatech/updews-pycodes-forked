@@ -357,7 +357,7 @@ def GetSomsData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid=0, 
 #    Returns:
 #        df: dataframe object 
 #            dataframe object of the result set 
-def GetRawRainData(siteid = "", fromTime = ""):
+def GetRawRainData(siteid = "", fromTime = "", toTime=""):
 
     if not siteid:
         raise ValueError('no site id entered')
@@ -385,6 +385,9 @@ def GetRawRainData(siteid = "", fromTime = ""):
             fromTime = "2010-01-01"
             
         query = query + " where timestamp > '%s'" % fromTime
+        
+        if toTime:
+            query = query + " and timestamp < '%s'" % toTime
     
         df =  GetDBDataFrame(query)
         

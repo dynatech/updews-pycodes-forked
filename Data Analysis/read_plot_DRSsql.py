@@ -33,6 +33,7 @@ def plot_cracks(which_site,zeroed=True):
 
     df=df[df['meas']!=np.nan]
     df=df[df['timestamp']!=' ']
+    df['timestamp'] = [d.strftime('%Y-%m-%d %H:%M:%S') if not pd.isnull(d) else '' for d in df['timestamp']]
     df=df[df['site_id']!=' ']
     df=df[df['crack_id']!=np.nan]
     df['timestamp']=pd.to_datetime(df['timestamp'])
@@ -48,7 +49,7 @@ def plot_cracks(which_site,zeroed=True):
 
     
     for s in range(len(sitelist)):
-        if sitelist[s] not in which_site:continue
+        if sitelist[s].upper() not in which_site:continue
         if len(which_site) != 1:
             curax=ax[ax_ind]
         else:
