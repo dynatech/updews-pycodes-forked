@@ -161,16 +161,16 @@ def GetASTIdata(site, rain_noah, offsetstart):
         df.set_index('timestamp', inplace = True)
         return df
     except:
-#        print 'Table senslopedb.rain_noah_' + str(rain_noah) + " doesn't exist"
+        print 'Table senslopedb.rain_noah_' + str(rain_noah) + " doesn't exist"
         df = pd.DataFrame(data=None)
         return df
 
 def GetUnemptyASTIdata(r, rainprops, offsetstart):
     for n in range(1,4):            
         if n == 1:
-            rain_noah = rainprops['rain_noah']
+            rain_noah = rainprops.loc[rainprops.site == r]['rain_noah'].values[0]
         else:
-            rain_noah = rainprops['rain_noah'+str(n)]
+            rain_noah = rainprops.loc[rainprops.site == r]['rain_noah'+str(n)].values[0]
         
         ASTIdata = GetASTIdata(r, rain_noah, offsetstart)
         if len(ASTIdata) != 0:
@@ -179,7 +179,7 @@ def GetUnemptyASTIdata(r, rainprops, offsetstart):
                 return ASTIdata, n
     return pd.DataFrame(data = None), n
 
-def ASTIplot(n,r,offsetstart,end,tsn, data):
+def ASTIplot(r,offsetstart,end,tsn, data, halfmax, twoyrmax):
 
     ##DESCRIPTION:
     ##prints timestamp and intsantaneous rainfall
@@ -204,12 +204,14 @@ def ASTIplot(n,r,offsetstart,end,tsn, data):
         #getting the rolling sum for the last24 hours
         rainfall2 = rainfall.rolling(min_periods=1,window=96,center=False).sum()
         rainfall2=np.round(rainfall2,4)
+
         if PrintCumSum:
             rainfall2.to_csv(CumSum_file_path+r+' 1d'+CSVFormat,sep=',',mode='w')
         
         #getting the rolling sum for the last 3 days
         rainfall3 = rainfall.rolling(min_periods=1,window=288,center=False).sum()
         rainfall3=np.round(rainfall3,4)
+
         if PrintCumSum:
             rainfall3.to_csv(CumSum_file_path+r+' 3d'+CSVFormat,sep=',',mode='w')
         
@@ -225,7 +227,7 @@ def ASTIplot(n,r,offsetstart,end,tsn, data):
             plot3=rainfall3             # 72-hr cumulative rainfall
             plot4=sub['maxhalf']        # half of 2-yr max rainfall
             plot5=sub['max']            # 2-yr max rainfall
-                    
+                                
             plt.plot(plot1.index,plot1,color='#db4429') # instantaneous rainfall data
             plt.plot(plot2.index,plot2,color='#5ac126') # 24-hr cumulative rainfall
             plt.plot(plot3.index,plot3,color="#0d90d0") # 72-hr cumulative rainfall
@@ -330,9 +332,9 @@ def RainfallAlert(siterainprops):
 
         rain_timecheck=rainfall[(rainfall.index>=end-timedelta(days=1))]
         
-        if len(rain_timecheck.dropna())<1:            
+        if len(rain_timecheck.dropna())<1:
             ASTIdata, n = GetUnemptyASTIdata(r, rainprops, offsetstart)
-            one, three = ASTIplot(n,r,offsetstart,end,tsn, ASTIdata)
+            one, three = ASTIplot(r,offsetstart,end,tsn, ASTIdata, halfmax, twoyrmax)
             
             datasource="ASTI" + str(n) + " (Empty Rain Gauge Data)"
             summary_writer(sum_index,r,datasource,twoyrmax,halfmax,summary,alert,alert_df,one,three)
@@ -347,7 +349,7 @@ def RainfallAlert(siterainprops):
 
     except:
         ASTIdata, n = GetUnemptyASTIdata(r, rainprops, offsetstart)
-        one, three = ASTIplot(n,r,offsetstart,end,tsn, ASTIdata)
+        one, three = ASTIplot(r,offsetstart,end,tsn, ASTIdata, halfmax, twoyrmax)
         
         datasource="ASTI" + str(n) + " (No Rain Gauge Data)"
         summary_writer(sum_index,r,datasource,twoyrmax,halfmax,summary,alert,alert_df,one,three)
