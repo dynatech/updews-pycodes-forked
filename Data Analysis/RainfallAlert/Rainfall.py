@@ -540,6 +540,15 @@ if PrintSummaryAlert:
     summary.to_csv(RainfallPlotsPath+'SummaryOfRainfallAlertGenerationFor'+tsn+CSVFormat,sep=',',mode='w')
 print summary
 
+#### writing to db ####
+from sqlalchemy import create_engine
+engine=create_engine('mysql://root:senslope@192.168.1.102:3306/senslopedb')
+
+#writes alert summary to db
+summary['ts'] = [str(end)]*len(summary)
+df_for_db = summary[['ts', 'site', 'DataSource', 'alert']]
+df_for_db.to_sql(name = 'rainfall_alert', con = engine, if_exists = 'append', schema = Namedb, index = False)
+
 #Summarizing rainfall data to rainfallalerts.txt
 if PrintRAlert:
     with open (output_file_path+rainfallalert, 'wb') as t:
