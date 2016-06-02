@@ -761,7 +761,7 @@ except:
     #sensitive info like db access credentials must not be viewed using a browser
     #print "No file named: %s. Trying Default Configuration" % (configFile)
 #    Hostdb = "127.0.0.1"    
-    Hostdb = "127.0.0.1"
+    Hostdb = "192.168.1.102"
     Userdb = "root"
     Passdb = "senslope"
     Namedb = "senslopedb"
