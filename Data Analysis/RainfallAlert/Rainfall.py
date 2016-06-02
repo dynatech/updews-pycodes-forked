@@ -12,8 +12,6 @@ import ConfigParser
 import math
 import sys
 
-import rainNOAH as rd
-
 output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
 
 #include the path of "Data Analysis" folder for the python scripts searching
@@ -82,7 +80,106 @@ def set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_w
 
     return roll_window_numpts, end, start, offsetstart, monwin
 
-def ASTIplot(r,offsetstart,end,tsn, data):
+def GetResampledData(r, start, end):
+    
+#    print "Generating Rainfall plots for "+r+" from rain gauge data"
+
+    rainfall = GetRawRainData(r, start)
+    rainfall = rainfall.set_index('ts')
+    rainfall = rainfall.loc[rainfall['rain']>=0]
+    
+    if rainfall.index[-1:]<end:
+        blankdf_time=pd.date_range(start=start, end=end, freq='15Min',name='timestamp', closed=None)
+        blankdf=pd.DataFrame(data=np.nan*np.ones(len(blankdf_time)), index=blankdf_time,columns=['rain'])
+        blankdf=blankdf[-1:]
+        rainfall=rainfall.append(blankdf)
+    rainfall=rainfall[(rainfall.index>=start)]
+    rainfall=rainfall[(rainfall.index<=end)]
+    rainfall=rainfall.resample('15min',how='sum')
+
+    return rainfall
+
+def SensorPlot(r,offsetstart,end,tsn, data, halfmax, twoyrmax):
+    if PrintPlot:
+        plt.xticks(rotation=70, size=5)       
+        
+    #getting the rolling sum for the last24 hours
+    rainfall2=pd.rolling_sum(data,96,min_periods=1)
+    rainfall2=np.round(rainfall2,4)
+
+    if PrintCumSum:
+        rainfall2.to_csv(CumSum_file_path+r+' 1d'+CSVFormat,sep=',',mode='w')
+    
+    #getting the rolling sum for the last 3 days
+    rainfall3=pd.rolling_sum(data,288,min_periods=1)
+    rainfall3=np.round(rainfall3,4)
+
+    if PrintCumSum:
+        rainfall3.to_csv(CumSum_file_path+r+' 3d'+CSVFormat,sep=',',mode='w')
+    
+    if PrintPlot:
+        #assigning the thresholds to their own columns for plotting 
+
+        sub=base
+        sub['maxhalf'] = halfmax  
+        sub['max'] = twoyrmax
+        
+        #assigning df to plot variables (to avoid caveats ? expressed from Spyder)
+        plot1=data.dropna()     # instantaneous rainfall data
+        plot2=rainfall2             # 24-hr cumulative rainfall
+        plot3=rainfall3             # 72-hr cumulative rainfall
+        plot4=sub['maxhalf']        # half of 2-yr max rainfall
+        plot5=sub['max']            # 2-yr max rainfall
+
+        plt.plot(plot1.index,plot1,color='#db4429') # instantaneous rainfall data
+        plt.plot(plot2.index,plot2,color='#5ac126') # 24-hr cumulative rainfall
+        plt.plot(plot3.index,plot3,color="#0d90d0") # 72-hr cumulative rainfall
+        plt.plot(plot4.index,plot4,color="#fbb714") # half of 2-yr max rainfall
+        plt.plot(plot5.index,plot5,color="#963bd6")  # 2-yr max rainfall
+        plt.savefig(RainfallPlotsPath+tsn+"_"+r, dpi=160, 
+            facecolor='w', edgecolor='w',orientation='landscape',mode='w')
+        plt.close()
+    
+    return rainfall2, rainfall3
+    
+def GetASTIdata(site, rain_noah, offsetstart):
+
+    try:    
+        if not math.isnan(rain_noah):
+            rain_noah = int(rain_noah)
+    
+        db, cur = SenslopeDBConnect(Namedb)
+        
+        query = "select timestamp,rval from senslopedb.rain_noah_%s" % str(rain_noah)
+        query = query + " where timestamp >= timestamp('%s')" % offsetstart
+        query = query + " order by timestamp desc"
+        df =  GetDBDataFrame(query)
+        df.columns = ['timestamp','rain']
+        df.timestamp = pd.to_datetime(df.timestamp)
+        if PrintASTIdata:
+            df.to_csv(ASTIpath + site + CSVFormat, sep = ',', mode = 'w', index = False, header = False)
+        df.set_index('timestamp', inplace = True)
+        return df
+    except:
+#        print 'Table senslopedb.rain_noah_' + str(rain_noah) + " doesn't exist"
+        df = pd.DataFrame(data=None)
+        return df
+
+def GetUnemptyASTIdata(r, rainprops, offsetstart):
+    for n in range(1,4):            
+        if n == 1:
+            rain_noah = rainprops['rain_noah']
+        else:
+            rain_noah = rainprops['rain_noah'+str(n)]
+        
+        ASTIdata = GetASTIdata(r, rain_noah, offsetstart)
+        if len(ASTIdata) != 0:
+            latest_ts = pd.to_datetime(ASTIdata.index.values[0])
+            if end - latest_ts < timedelta(hours=1):
+                return ASTIdata, n
+    return pd.DataFrame(data = None), n
+
+def ASTIplot(n,r,offsetstart,end,tsn, data):
 
     ##DESCRIPTION:
     ##prints timestamp and intsantaneous rainfall
@@ -94,54 +191,57 @@ def ASTIplot(r,offsetstart,end,tsn, data):
     ##end; datetime; end of interval
     ##tsn; string; datetime format allowed in savefig
 
-    rainfall = data
-    rainfall = rainfall.loc[rainfall['rain']>=0]
-    rainfall = rainfall[(rainfall.index>=offsetstart)]
-    rainfall = rainfall[(rainfall.index<=end)]
-    rainfall = rainfall.resample('15min',how='sum')
-
-    if PrintPlot:
-        plt.xticks(rotation=70, size=5)
+    try:
+        rainfall = data
+        rainfall = rainfall.loc[rainfall['rain']>=0]
+        rainfall = rainfall[(rainfall.index>=offsetstart)]
+        rainfall = rainfall[(rainfall.index<=end)]
+        rainfall = rainfall.resample('15min',how='sum')
     
-    #getting the rolling sum for the last24 hours
-    rainfall2 = rainfall.rolling(min_periods=1,window=96,center=False).sum()
-    rainfall2=np.round(rainfall2,4)
-    if PrintCumSum:
-        rainfall2.to_csv(CumSum_file_path+r+' 1d'+CSVFormat,sep=',',mode='w')
-    
-    #getting the rolling sum for the last 3 days
-    rainfall3 = rainfall.rolling(min_periods=1,window=288,center=False).sum()
-    rainfall3=np.round(rainfall3,4)
-    if PrintCumSum:
-        rainfall3.to_csv(CumSum_file_path+r+' 3d'+CSVFormat,sep=',',mode='w')
-    
-    if PrintPlot:
-        #assigning the thresholds to their own columns for plotting 
-        sub=base
-        sub['maxhalf'] = halfmax  
-        sub['max'] = twoyrmax
-    
-        #assigning df to plot variables (to avoid caveats ? expressed from Spyder)
-        plot1=rainfall              # instantaneous rainfall data
-        plot2=rainfall2             # 24-hr cumulative rainfall
-        plot3=rainfall3             # 72-hr cumulative rainfall
-        plot4=sub['maxhalf']        # half of 2-yr max rainfall
-        plot5=sub['max']            # 2-yr max rainfall
-                
-        plt.plot(plot1.index,plot1,color='#db4429') # instantaneous rainfall data
-        plt.plot(plot2.index,plot2,color='#5ac126') # 24-hr cumulative rainfall
-        plt.plot(plot3.index,plot3,color="#0d90d0") # 72-hr cumulative rainfall
-        plt.plot(plot4.index,plot4,color="#fbb714") # half of 2-yr max rainfall
-        plt.plot(plot5.index,plot5,color="#963bd6")  # 2-yr max rainfall
-        plt.savefig(RainfallPlotsPath+tsn+"_"+r,
-            dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
-        plt.close()
-    
-    print rainfall[-1:]
+        if PrintPlot:
+            plt.xticks(rotation=70, size=5)
+        
+        #getting the rolling sum for the last24 hours
+        rainfall2 = rainfall.rolling(min_periods=1,window=96,center=False).sum()
+        rainfall2=np.round(rainfall2,4)
+        if PrintCumSum:
+            rainfall2.to_csv(CumSum_file_path+r+' 1d'+CSVFormat,sep=',',mode='w')
+        
+        #getting the rolling sum for the last 3 days
+        rainfall3 = rainfall.rolling(min_periods=1,window=288,center=False).sum()
+        rainfall3=np.round(rainfall3,4)
+        if PrintCumSum:
+            rainfall3.to_csv(CumSum_file_path+r+' 3d'+CSVFormat,sep=',',mode='w')
+        
+        if PrintPlot:
+            #assigning the thresholds to their own columns for plotting 
+            sub=base
+            sub['maxhalf'] = halfmax  
+            sub['max'] = twoyrmax
+        
+            #assigning df to plot variables (to avoid caveats ? expressed from Spyder)
+            plot1=rainfall.dropna()     # instantaneous rainfall data
+            plot2=rainfall2             # 24-hr cumulative rainfall
+            plot3=rainfall3             # 72-hr cumulative rainfall
+            plot4=sub['maxhalf']        # half of 2-yr max rainfall
+            plot5=sub['max']            # 2-yr max rainfall
+                    
+            plt.plot(plot1.index,plot1,color='#db4429') # instantaneous rainfall data
+            plt.plot(plot2.index,plot2,color='#5ac126') # 24-hr cumulative rainfall
+            plt.plot(plot3.index,plot3,color="#0d90d0") # 72-hr cumulative rainfall
+            plt.plot(plot4.index,plot4,color="#fbb714") # half of 2-yr max rainfall
+            plt.plot(plot5.index,plot5,color="#963bd6")  # 2-yr max rainfall
+            plt.savefig(RainfallPlotsPath+tsn+"_"+r,
+                dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
+            plt.close()
+        
+    except:
+        rainfall2 = pd.DataFrame(data=None)
+        rainfall3 = pd.DataFrame(data=None)
     
     return rainfall2, rainfall3
 
-def onethree_val_writer(colname, data):
+def onethree_val_writer(colname, one, three):
 
     ##DESCRIPTION:
     ##returns cumulative sum for one day and three days
@@ -153,7 +253,7 @@ def onethree_val_writer(colname, data):
     ##one, three
 
     try:
-        one, three = ASTIplot(r, offsetstart, end, tsn, data)
+        one, three = one, three
         
         if end - pd.to_datetime(one.index[-1:]) > timedelta(hours=3.5):
             blankdf_time=pd.date_range(start=start, end=end, freq='15Min',name='timestamp', closed=None)
@@ -177,7 +277,7 @@ def onethree_val_writer(colname, data):
     
     return one,three
         
-def summary_writer(s,r,datasource,twoyrmax,halfmax,summary,alert,alert_df,data):
+def summary_writer(sum_index,r,datasource,twoyrmax,halfmax,summary,alert,alert_df,one,three):
 
     ##DESCRIPTION:
     ##inserts data to summary
@@ -191,7 +291,8 @@ def summary_writer(s,r,datasource,twoyrmax,halfmax,summary,alert,alert_df,data):
     ##summary; dataframe; contains site codes with its corresponding one and three days cumulative sum, data source, alert level and advisory
     ##alert; array; alert summary container, r0 sites at alert[0], r1a sites at alert[1], r1b sites at alert[2],  nd sites at alert[3]
     ##alert_df;array of tuples; alert summary container; format: (site,alert)
-    one,three = onethree_val_writer(r, data)
+    one,three = onethree_val_writer(r, one, three)
+
     if one>=halfmax or three>=twoyrmax:
         ralert='r1'
         advisory='Start/Continue monitoring'
@@ -216,8 +317,45 @@ def summary_writer(s,r,datasource,twoyrmax,halfmax,summary,alert,alert_df,data):
         advisory='---'
         alert[0].append(r)
         alert_df.append((r,'r0'))
-    summary.loc[s]=[r,one,three,datasource,ralert,advisory]
+    summary.loc[sum_index]=[r,one,three,datasource,ralert,advisory]
+
+def RainfallAlert(siterainprops):
+    r,twoyrmax = siterainprops.site.values[0], siterainprops.max_rain_2year.values[0]
+    halfmax=twoyrmax/2
+    sum_index = rainprops.loc[rainprops.site == r].index[0]
+    print sum_index
+
+    try:
+        rainfall = GetResampledData(r, start, end)
+
+        rain_timecheck=rainfall[(rainfall.index>=end-timedelta(days=1))]
+        
+        if len(rain_timecheck.dropna())<1:            
+            ASTIdata, n = GetUnemptyASTIdata(r, rainprops, offsetstart)
+            one, three = ASTIplot(n,r,offsetstart,end,tsn, ASTIdata)
             
+            datasource="ASTI" + str(n) + " (Empty Rain Gauge Data)"
+            summary_writer(sum_index,r,datasource,twoyrmax,halfmax,summary,alert,alert_df,one,three)
+
+                    
+        else:
+            one, three = SensorPlot(r, offsetstart, end, tsn, rainfall, halfmax, twoyrmax)
+            
+            datasource="SENSLOPE Rain Gauge"
+            summary_writer(sum_index,r,datasource,twoyrmax,halfmax,summary,alert,alert_df,one,three)
+
+
+    except:
+        ASTIdata, n = GetUnemptyASTIdata(r, rainprops, offsetstart)
+        one, three = ASTIplot(n,r,offsetstart,end,tsn, ASTIdata)
+        
+        datasource="ASTI" + str(n) + " (No Rain Gauge Data)"
+        summary_writer(sum_index,r,datasource,twoyrmax,halfmax,summary,alert,alert_df,one,three)
+
+###############################################################################
+
+start_time = datetime.now()
+
 cfg = ConfigParser.ConfigParser()
 cfg.read('IO-Config.txt')    
 
@@ -282,6 +420,7 @@ if PrintASTIdata:
     if not os.path.exists(ASTIpath):
         os.makedirs(ASTIpath)
     
+################################     MAIN     ################################
 
 #1. setting monitoring window
 roll_window_numpts, end, start, offsetstart, monwin = set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_window_ops)
@@ -313,116 +452,10 @@ alert_df = []
 #Set if JSON format will be printed
 set_json = False
 
-for s in range(len(rainprops)):    
-    
-    r,twoyrmax = rainprops['site'].values[s], rainprops['max_rain_2year'].values[s]
-    halfmax=twoyrmax/2
-    print r
-    
-#    if r != 'baytcw': continue    
-    
-    try:
-        print "Generating Rainfall plots for "+r+" from rain gauge data"
-    
-        rainfall = GetRawRainData(r, start)
-        rainfall = rainfall.set_index('ts')
-        rainfall = rainfall.loc[rainfall['rain']>=0]
-           
-        if rainfall.index[-1:]<end:
-            blankdf_time=pd.date_range(start=start, end=end, freq='15Min',name='timestamp', closed=None)
-            blankdf=pd.DataFrame(data=np.nan*np.ones(len(blankdf_time)), index=blankdf_time,columns=['rain'])
-            blankdf=blankdf[-1:]
-            rainfall=rainfall.append(blankdf)
-        rainfall=rainfall[(rainfall.index>=start)]
-        rainfall=rainfall[(rainfall.index<=end)]
-        rainfall=rainfall.resample('15min',how='sum')
-        print rainfall
-        
-        rain_timecheck=rainfall[(rainfall.index>=end-timedelta(days=1))]
-        
-        if len(rain_timecheck.dropna())<1:
-            print "No data within desired window"
-            print "Generating Rainfall ASTI plots for "+r+" due to lack of rain gauge data within desired window"
-            for n in range(1,4):            
-                if n == 1:
-                    rain_noah = rainprops['rain_noah'].values[s]
-                else:
-                    rain_noah = rainprops['rain_noah'+str(n)].values[s]
-                
-                ASTIdata = rd.getrain(r, n, rain_noah, offsetstart)
-                if len(ASTIdata) != 0:
-                    latest_ts = pd.to_datetime(ASTIdata.index.values[0])
-                    if end - latest_ts < timedelta(hours=1):
-                        break
-                    
-#            print ASTIdata[0]
-                
-            datasource="ASTI" + str(n) + " (Empty Rain Gauge Data)"
-            summary_writer(s,r,datasource,twoyrmax,halfmax,summary,alert,alert_df,ASTIdata)
-                    
-        else:
-            if PrintPlot:
-                plt.xticks(rotation=70, size=5)       
-                
-            #getting the rolling sum for the last24 hours
-            rainfall2=pd.rolling_sum(rainfall,96,min_periods=1)
-            rainfall2=np.round(rainfall2,4)
-            if PrintCumSum:
-                rainfall2.to_csv(CumSum_file_path+r+' 1d'+CSVFormat,sep=',',mode='w')
-            
-            #getting the rolling sum for the last 3 days
-            rainfall3=pd.rolling_sum(rainfall,288,min_periods=1)
-            rainfall3=np.round(rainfall3,4)
-            if PrintCumSum:
-                rainfall3.to_csv(CumSum_file_path+r+' 3d'+CSVFormat,sep=',',mode='w')
-            
-            if PrintPlot:
-                #assigning the thresholds to their own columns for plotting 
-                sub=base
-                sub['maxhalf'] = halfmax  
-                sub['max'] = twoyrmax
-        
-                #assigning df to plot variables (to avoid caveats ? expressed from Spyder)
-                plot1=rainfall              # instantaneous rainfall data
-                plot2=rainfall2             # 24-hr cumulative rainfall
-                plot3=rainfall3             # 72-hr cumulative rainfall
-                plot4=sub['maxhalf']        # half of 2-yr max rainfall
-                plot5=sub['max']            # 2-yr max rainfall
-        
-                plt.plot(plot1.index,plot1,color='#db4429') # instantaneous rainfall data
-                plt.plot(plot2.index,plot2,color='#5ac126') # 24-hr cumulative rainfall
-                plt.plot(plot3.index,plot3,color="#0d90d0") # 72-hr cumulative rainfall
-                plt.plot(plot4.index,plot4,color="#fbb714") # half of 2-yr max rainfall
-                plt.plot(plot5.index,plot5,color="#963bd6")  # 2-yr max rainfall
-                plt.savefig(RainfallPlotsPath+tsn+"_"+r, dpi=160, 
-                    facecolor='w', edgecolor='w',orientation='landscape',mode='w')
-                plt.close()
+siterainprops = rainprops.groupby('site')
 
-            print rainfall[-1:]           
-            
-            datasource="SENSLOPE Rain Gauge"
-            summary_writer(s,r,datasource,twoyrmax,halfmax,summary,alert,alert_df,rainfall)
+siterainprops.apply(RainfallAlert)
 
-    except:
-        print"\n"
-        print "Generating Rainfall ASTI plots for "+r+" due to lack of site table in SQL"
-        for n in range(1,4):            
-            if n == 1:
-                rain_noah = rainprops['rain_noah'].values[s]
-            else:
-                rain_noah = rainprops['rain_noah'+str(n)].values[s]
-            
-            ASTIdata = rd.getrain(r, n, rain_noah, offsetstart)
-            if len(ASTIdata) != 0:
-                latest_ts = pd.to_datetime(ASTIdata.index.values[0])
-                if end - latest_ts < timedelta(hours=1):
-                    break
-
-#        print ASTIdata[0]            
-        
-        datasource="ASTI" + str(n) + " (No Rain Gauge Data)"
-        summary_writer(s,r,datasource,twoyrmax,halfmax,summary,alert,alert_df,ASTIdata)
-            
 #Writes dataframe containaining site codes with its corresponding one and three days cumulative sum, data source, alert level and advisory
 if PrintSummaryAlert:
     summary.to_csv(RainfallPlotsPath+'SummaryOfRainfallAlertGenerationFor'+tsn+CSVFormat,sep=',',mode='w')
@@ -456,3 +489,7 @@ if set_json:
         else:
             i += 1
     print dfajson
+
+
+end_time = datetime.now()
+print "time = ", end_time - start_time
