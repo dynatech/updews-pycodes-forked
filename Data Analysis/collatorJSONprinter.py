@@ -97,9 +97,6 @@ with open (output_file_path+rainfallalert) as rainalert:
             n+=1
             continue
         n+=1
-    alerts['Lpa'] = alerts.pop('Lpt')
-    alerts['Messb'] = alerts['Nin']
-    alerts['Mesta'] = alerts['Nin']
     try:
         del alerts['']
     except:

@@ -506,7 +506,7 @@ index = pd.date_range(end-timedelta(10), periods=11, freq='D')
 columns=['maxhalf','max']
 base = pd.DataFrame(index=index, columns=columns)
 
-tsn=end.strftime("%Y-%m-%d %H-%M-%S")
+tsn=end.strftime("%Y-%m-%d_%H-%M-%S")
 
 #rainprops containing noah id and threshold
 rainprops = GetRainProps()
@@ -528,7 +528,7 @@ alert = [[],[],[],[]]
 alert_df = []
 
 #Set if JSON format will be printed
-set_json = False
+set_json = True
 
 siterainprops = rainprops.groupby('site')
 
@@ -547,6 +547,7 @@ engine=create_engine('mysql://root:senslope@192.168.1.102:3306/senslopedb')
 #writes alert summary to db
 summary['ts'] = [str(end)]*len(summary)
 df_for_db = summary[['ts', 'site', 'DataSource', 'alert']]
+df_for_db = df_for_db.dropna()
 df_for_db.to_sql(name = 'rainfall_alert', con = engine, if_exists = 'append', schema = Namedb, index = False)
 
 #Summarizing rainfall data to rainfallalerts.txt

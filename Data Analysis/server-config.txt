@@ -132,5 +132,5 @@ PrintTAlert = True
 PrintTAlert2 = True
 PrintAAlert = True
 PrintGSMAlert = True
-PrintJSON = False
+PrintJSON = True
 PrintGAlert = False
