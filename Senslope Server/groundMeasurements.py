@@ -141,13 +141,15 @@ def getGndMeas(text):
   gnd_records = ""
   for m in meas:
     try:
-        crid = m.split(" ")[0]
-        cm = m.split(" ")[1]
+        crid = m.split(" ",1)[0]
+        cm = m.split(" ",1)[1]
+        print cm
     except IndexError:
         crid = m[0]
         cm = m[1:]
+
     try:
-      re.search("\dCM",cm).group(0)
+      re.search("\d *CM",cm).group(0)
       cm = float(re.search("\d{1,3}\.*\d{0,2}",cm).group(0))
     except AttributeError:
       cm = float(re.search("\d{1,3}\.*\d{0,2}",cm).group(0))*100.0
