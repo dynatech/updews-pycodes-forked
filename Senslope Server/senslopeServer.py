@@ -123,6 +123,10 @@ def WriteRawSmsToDb(msglist):
     
     commitToDb(query, "WriteRawSmsToDb", instance='GSM')
 
+def WriteEQAlertMessageToDb(alertmsg):
+    WriteOutboxMessageToDb(alertmsg,globenumbers)
+    WriteOutboxMessageToDb(alertmsg,smartnumbers)
+
 def WriteOutboxMessageToDb(message,recepients,send_status='UNSENT'):
     query = "INSERT INTO smsoutbox (timestamp_written,recepients,sms_msg,send_status) VALUES "
     
