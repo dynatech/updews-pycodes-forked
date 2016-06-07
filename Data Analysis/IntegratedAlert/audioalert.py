@@ -20,7 +20,7 @@ if os.stat(output_file_path+gsm_alert).st_size != 0:
     start = datetime.now()
     audio_source = pyglet.media.load('alert.wav', streaming=False)
     looper = pyglet.media.SourceGroup(audio_source.audio_format, None)
-    looper.loop = True
+    looper.loop = False
     looper.queue(audio_source)
     player = pyglet.media.Player()
     player.queue(looper)
@@ -28,7 +28,6 @@ if os.stat(output_file_path+gsm_alert).st_size != 0:
     f = open(output_file_path+gsm_alert)
     text = f.read()
     f.close()
-    print text
-    while (datetime.now() - start) < (timedelta(hours = 0.01)):
-        continue
+    while (datetime.now() - start) <= (timedelta(hours = 0.005)):
+        print text
     

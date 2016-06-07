@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
 import sys
+from datetime import datetime
+from sqlalchemy import create_engine
 
 from querySenslopeDb import *
 
@@ -32,13 +34,18 @@ def getSites():
     df = GetDBDataFrame(query)
     return df[['name','lat','lon']]
 
+def uptoDB(df):
+    engine=create_engine('mysql://root:senslope@192.168.1.102:3306/senslopedb')
+    df.to_sql(name = 'earthquake_alerts', con = engine, if_exists = 'append', schema = Namedb, index = True)
 
 #MAIN
 
 mag,eq_lat,eq_lon,ts = getEQ()
 
+#mag, eq_lat, eq_lon, ts = 7.2, 14.1667,121.0536,datetime.datetime.now()
+
 critdist = getCritDist(mag)
-#critdist = 100
+
 print mag
 if mag >=4:
     sites = getSites()
@@ -51,8 +58,15 @@ if mag >=4:
         message = "EQALERT\nAs of %s: \nE1: %s" % (str(ts),','.join(str(n) for n in crits.name.values))
         print message
         WriteEQAlertMessageToDb(message)
+    
+        crits['timestamp']  = ts
+        crits['alert'] = 'E1'
+        crits = crits[['timestamp','name','alert']].set_index('timestamp')
+    
+        uptoDB(crits)
+    
     else:
-        print "No affected sites."
+        print "> No affected sites."
 
 else:
     print '> Magnitude too small.'
