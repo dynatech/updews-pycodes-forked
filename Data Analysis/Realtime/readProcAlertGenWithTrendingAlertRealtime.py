@@ -141,7 +141,8 @@ def create_fill_smooth_df(series_list,num_nodes,monwin, roll_window_numpts, to_f
                     print '     ',n, 'NaN 1st value'
                     df[n]=df[n].fillna(method='bfill')
                 else:
-                    print '     ',n, 'NaN some values'
+                    continue
+#                    print '     ',n, 'NaN some values'
         else: 
             print '     All numerical values.'
  
@@ -257,78 +258,6 @@ def compute_node_inst_vel(xz,xy,roll_window_numpts):
     #returning rounded-off values
     return np.round(vel_xz,4), np.round(vel_xy,4)
 
-def df_to_out(colname,xz,xy,
-              vel_xz,vel_xy,
-              cs_x,cs_xz,cs_xy,
-              proc_file_path,
-              CSVFormat):
-
-    ##DESCRIPTION:
-    ##writes to csv and returns:
-    ##horizontal linear displacements along the planes defined by xa-za, and xa-ya;
-    ##zeroed and offset dataframes of xz and xy;
-    ##velocities of xz and xy;
-    ##zeroed and offset dataframes of velocities of xz and xy;
-    ## resized dataframes of cumulative displacements;
-    ##zeroed and offset dataframes of cumulative displacements
-
-    ##INPUT:dfm = dfm.sort('ts')
-    ##colname; string; name of site   
-    ##xz; dataframe; horizontal linear displacements along the planes defined by xa-za
-    ##xy; dataframe; horizontal linear displacements along the planes defined by xa-ya
-    ##xz_vel; dataframe; velocity along the planes defined by xa-za
-    ##xy_vel; dataframe; velocity along the planes defined by xa-ya
-    ##cs_x; dataframe; cumulative vertical displacement
-    ##cs_xz; dataframe; cumulative vertical displacement horizontal linear displacements along the planes defined by xa-za
-    ##cs_xy; dataframe; cumulative vertical displacement horizontal linear displacements along the planes defined by xa-ya
-    ##proc_file_path; file path
-    ##CSVFormat; file type
-
-    ##OUTPUT:
-    ##xz,xy,   xz_0off,xy_0off,   vel_xz,vel_xy, vel_xz_0off, vel_xy_0off, cs_x,cs_xz,cs_xy,   cs_xz_0,cs_xy_0
-
-
-    #resizing dataframes
-#    xz=xz[(xz.index>=vel_xz.index[0])&(xz.index<=vel_xz.index[-1])]
-#    xy=xy[(xy.index>=vel_xz.index[0])&(xy.index<=vel_xz.index[-1])]
-#    cs_x=cs_x[(cs_x.index>=vel_xz.index[0])&(cs_x.index<=vel_xz.index[-1])]
-#    cs_xz=cs_xz[(cs_xz.index>=vel_xz.index[0])&(cs_xz.index<=vel_xz.index[-1])]
-#    cs_xy=cs_xy[(cs_xy.index>=vel_xz.index[0])&(cs_xy.index<=vel_xz.index[-1])]
-
-
-    #creating\ zeroed and offset dataframes
-    xz_0off=df_add_offset_col(df_zero_initial_row(xz),0.15)
-    xy_0off=df_add_offset_col(df_zero_initial_row(xy),0.15)
-    vel_xz_0off=df_add_offset_col(df_zero_initial_row(vel_xz),0.015)
-    vel_xy_0off=df_add_offset_col(df_zero_initial_row(vel_xy),0.015)
-    cs_xz_0=df_zero_initial_row(cs_xz)
-    cs_xy_0=df_zero_initial_row(cs_xy)
-
-    #writing to csv
-    if PrintProc:
-        df_list=np.asarray([[xz,'xz'],
-                 [xy,'xy'],
-                 [xz_0off,'xz_0off'],
-                 [xy_0off,'xy_0off'],
-                 [vel_xz,'xz_vel'],
-                 [vel_xy,'xy_vel'],
-                 [vel_xz_0off,'xz_vel_0off'],
-                 [vel_xy_0off,'xy_vel_0off'],
-                 [cs_x,'x_cs'],
-                 [cs_xz,'xz_cs'],
-                 [cs_xy,'xy_cs'],
-                 [cs_xz_0,'xz_cs_0'],
-                 [cs_xy_0,'xy_cs_0']])
-        
-        for d in range(len(df_list)):
-            df=df_list[d,0]
-            fname=df_list[d,1]
-            if not os.path.exists(proc_file_path+colname+"/"):
-                os.makedirs(proc_file_path+colname+"/")
-            df.to_csv(proc_file_path+colname+"/"+colname+" "+fname+CSVFormat,
-                      sep=',', header=False,mode='w')
-
-    return xz,xy,   xz_0off,xy_0off,   vel_xz,vel_xy, vel_xz_0off, vel_xy_0off, cs_x,cs_xz,cs_xy,   cs_xz_0,cs_xy_0
 
 def alert_generation(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velL2, T_velL3, k_ac_ax,
                      num_nodes_to_check,end,proc_file_path,CSVFormat):
@@ -429,62 +358,68 @@ def nonrepeat_colors(ax,NUM_COLORS,color='gist_rainbow'):
     
     
 def plot_column_positions(colname,x,xz,xy):
-
-    ##DESCRIPTION
-    ##returns plot of xz and xy absolute displacements of each node
-
-    ##INPUT
-    ##colname; array; list of sites
-    ##x; dataframe; vertical displacements
-    ##xz; dataframe; horizontal linear displacements along the planes defined by xa-za
-    ##xy; dataframe; horizontal linear displacements along the planes defined by xa-ya
+#==============================================================================
+# 
+#     DESCRIPTION
+#     returns plot of xz and xy absolute displacements of each node
+# 
+#     INPUT
+#     colname; array; list of sites
+#     x; dataframe; vertical displacements
+#     xz; dataframe; horizontal linear displacements along the planes defined by xa-za
+#     xy; dataframe; horizontal linear displacements along the planes defined by xa-ya
+#==============================================================================
 
     try:
         fig=plt.figure()
-#        plt.clf()
-        plt.suptitle(colname+" absolute position", fontsize = 12)
         ax_xz=fig.add_subplot(121)
         ax_xy=fig.add_subplot(122,sharex=ax_xz,sharey=ax_xz)
-
+        
         ax_xz=nonrepeat_colors(ax_xz,len(cs_x))
-        ax_xy=nonrepeat_colors(ax_xy,len(cs_x))        
-
+        ax_xy=nonrepeat_colors(ax_xy,len(cs_x))
+        
         for i in cs_x.index:
             curcolpos_x=x[(x.index==i)].values
-    
+
             curax=ax_xz
             curcolpos_xz=xz[(xz.index==i)].values
             curax.plot(curcolpos_xz[0],curcolpos_x[0],'.-')
             curax.set_xlabel('xz')
             curax.set_ylabel('x')
-    
+            
             curax=ax_xy
             curcolpos_xy=xy[(xy.index==i)].values
             curax.plot(curcolpos_xy[0],curcolpos_x[0],'.-', label=i)
             curax.set_xlabel('xy')
-    
+
         for tick in ax_xz.xaxis.get_minor_ticks():
             tick.label.set_rotation('vertical')
             tick.label.set_fontsize(10)
-    
+            
         for tick in ax_xy.xaxis.get_minor_ticks():
             tick.label.set_rotation('vertical')
             tick.label.set_fontsize(10)
-    
+       
         for tick in ax_xz.xaxis.get_major_ticks():
             tick.label.set_rotation('vertical')
             tick.label.set_fontsize(10)
-       
+            
         for tick in ax_xy.xaxis.get_major_ticks():
             tick.label.set_rotation('vertical')
             tick.label.set_fontsize(10)
+            
+       
+        
     
         fig.tight_layout()
+        fig.subplots_adjust(top=0.9)        
+        fig.suptitle(colname+" as of "+str(x.index[-1]),fontsize='medium')
+        
         plt.legend(fontsize='x-small')        
-
+    
     except:        
         print colname, "ERROR in plotting column position"
-    return
+    return ax_xz,ax_xy
     
 def vel_classify(vel):
     velplot=pd.DataFrame(index=vel.index)
@@ -643,7 +578,7 @@ def plot_disp_vel(colname, xz,xy,xz_vel,xy_vel,
         curax.set_ylabel('displacement scale, m', fontsize='small')
         y = xz.iloc[0].values
         x = xz.index[0]
-        z = xz.columns#np.arange(1,len(y)+1)
+        z = xz.columns
         for i,j in zip(y,z):
            curax.annotate(str(j),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')
         
@@ -656,12 +591,11 @@ def plot_disp_vel(colname, xz,xy,xz_vel,xy_vel,
         curax.set_title('3-day displacement\n XY axis',fontsize='small')
         y = xy.iloc[0].values
         x = xy.index[0]
-        z = xy.columns#np.arange(1,len(y)+1)
+        z = xy.columns
         for i,j in zip(y,z):
            curax.annotate(str(j),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')
         
         #plotting velocity for xz
-                
         curax=ax_xzv
         plt.sca(curax)
         try:        
@@ -672,15 +606,11 @@ def plot_disp_vel(colname, xz,xy,xz_vel,xy_vel,
             
             y = velplot.iloc[0].values
             x = velplot.index[0]
-            z = velplot.columns#np.arange(1,len(y)+1)
+            z = velplot.columns
             for i,j in zip(y,z):
                 curax.annotate(str(j),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')            
-            
             curax.set_ylabel('node ID', fontsize='small')
-#            curax.set_yticks(range(1,len(xz.columns)+1))
-#            curax.set_yticklabels(curax.get_yticks())
             curax.set_title('3-hr velocity alerts\n XZ axis',fontsize='small')
-            print "XZ Vel class plotted ################"
         except: 
             print "ERROR plotting xz velocity class"    
             
@@ -696,14 +626,10 @@ def plot_disp_vel(colname, xz,xy,xz_vel,xy_vel,
             
             y = velplot.iloc[0].values
             x = velplot.index[0]
-            z = velplot.columns#np.arange(1,len(y)+1)
+            z = velplot.columns
             for i,j in zip(y,z):
                 curax.annotate(str(j),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')            
-            
-#            curax.set_ylabel('node ID', fontsize='small')        
-#            curax.set_yticks(range(1,len(xz.columns)+1))
             curax.set_title('3-hr velocity alerts\n XY axis',fontsize='small')            
-            print "XY Vel class plotted ################"
         except:
             print "ERROR plotting xz velocity class"
             
@@ -746,7 +672,8 @@ def plot_disp_vel(colname, xz,xy,xz_vel,xy_vel,
         
         fig.subplots_adjust(top=0.85)        
         fig.suptitle(colname+" as of "+str(velplot.index[-1]),fontsize='medium')
-        
+        line=mpl.lines.Line2D((0.5,0.5),(0.1,0.8))
+        fig.lines=line,
         
     except:      
         print colname, "ERROR in plotting displacements and velocities"
@@ -904,21 +831,18 @@ alert_df = []
 alert_list=[L3_alert,L2_alert,L0_alert,ND_alert]
 alert_names=['L3: ','L2: ','L0: ','ND: ']
 
-#print "Generating plots and alerts for:"
 
 names = ['ts','col_a']
 fmt = '%Y-%m-%d %H:%M'
 hr = end - timedelta(hours=3)
 
-#with open(output_file_path+webtrends, 'ab') as w, open (output_file_path+textalert, 'wb') as t:
-#    t.write('As of ' + end.strftime(fmt) + ':\n')
-#    w.write(end.strftime(fmt) + ';')
 
 # getting list of sensors
 sensorlist = GetSensorList()
 
 node_status = GetNodeStatus(1)
 
+print datetime.now().strftime('%Y-%m-%d %H-%M')
 for s in sensorlist:
 
     if realtime_test_specific_sites:
@@ -931,8 +855,8 @@ for s in sensorlist:
     
     # getting current column properties
     colname,num_nodes,seg_len= s.name,s.nos,s.seglen
-#    print colname, num_nodes, seg_len
-    print 'RESULTS FOR SITE ' + colname
+    print colname, end
+
     # list of working nodes     
     node_list = range(1, num_nodes + 1)
     not_working = node_status.loc[(node_status.site == colname) & (node_status.node <= num_nodes)]
@@ -943,19 +867,15 @@ for s in sensorlist:
     # importing proc_monitoring file of current column to dataframe
     try:
         proc_monitoring=genproc.generate_proc(colname,end)
-#        print proc_monitoring
-#        print "\n", colname
     except:
-#        print "     ",colname, "ERROR...missing/empty proc monitoring"
         continue
 
     # creating series lists per node
     xz_series_list,xy_series_list = create_series_list(proc_monitoring,monwin,colname,num_nodes)
     
-    # create xz,xy dataframe for error analysis
+    # create xz,xy dataframe for error analysis, and analyze noise of unsmoothed data and the effect on column position    
     xz=create_fill_smooth_df(xz_series_list,num_nodes,monwin, roll_window_numpts,0,0)[0]
     xy=create_fill_smooth_df(xy_series_list,num_nodes,monwin, roll_window_numpts,0,0)[0] 
-    # analyze noise of unsmoothed data and the effect on column position    
     xz_mx,xz_mn,xy_mx,xy_mn, xz_mxc, xz_mnc, xy_mxc,xy_mnc=err.cml_noise_profiling(xz,xy)
 
     # create, fill and smooth dataframes from series lists
@@ -967,22 +887,35 @@ for s in sensorlist:
     
     # computing cumulative displacements
     cs_x, cs_xz, cs_xy=compute_col_pos(xz,xy,monwin.index[-1], col_pos_interval, col_pos_num)
-
                                                                                                                           
     # Alert generation
     alert_out=alert_generation(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velL2, T_velL3, k_ac_ax,
                                num_nodes_to_check,end,proc_file_path,CSVFormat)
     
-    print alert_out
-    print '\n\n\n\n'
+    print '\n',alert_out,'\n'
   
 #    #11. Plotting column positions
     if PrintColPos:
-        plot_column_positions(colname,cs_x,cs_xz,cs_xy)
+        ax=plot_column_positions(colname,cs_x,cs_xz,cs_xy)
+        
+        #plotting error band for column positions        
+        try:
+            xl=cs_x.mean().values               
+            ax[0].fill_betweenx(xl[::-1], xz_mxc, xz_mnc, where=xz_mxc >= xz_mnc, facecolor='0.7',linewidth=0)
+            ax[1].fill_betweenx(xl[::-1], xy_mxc, xy_mnc, where=xy_mxc >= xy_mnc, facecolor='0.7',linewidth=0)
+        except:
+            print 'no column position error band'
+        plt.savefig(RTfilepath+colname+' colpos '+str(end.strftime('%Y-%m-%d %H-%M')),
+                    dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
+
+
 #
     #12. Plotting displacement and velocity
     if PrintDispVel:
         plot_disp_vel(colname, xz,xy, vel_xz, vel_xy,xz_mx,xz_mn,xy_mx,xy_mn)
+        plt.savefig(RTfilepath+colname+' disp_vel '+str(end.strftime('%Y-%m-%d %H-%M')),
+                    dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
+
 
 
 
@@ -993,5 +926,7 @@ if PrintTimer:
     with open (output_file_path+timer, 'ab') as p:
         p.write (start_time.strftime(fmt) + ": " + str(end_time) + '\n')
         print 'run time =', end_time
+        
+
     
 
