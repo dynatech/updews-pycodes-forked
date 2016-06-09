@@ -13,12 +13,15 @@ import SomsServerParser as SSP
 import math
 from messageprocesses import *
 from senslopeServer import *
+import lockscript
 #---------------------------------------------------------------------------------------------------------------------------
 
 def main():
+
+    lockscript.get_lock('processmessages')
             
     createTable("runtimelog","runtime")
-    logRuntimeStatus("procfromdb","startup")
+    # logRuntimeStatus("procfromdb","startup")
 
     # force backup
     while True:
@@ -36,16 +39,17 @@ def main():
             setReadStatus("READ-FAIL",read_fail_list)
             sleeptime = 5
         else:
-            sleeptime = 60
+            # sleeptime = 60
             # print '>> Checking for alert sms'
             # alertmsg = CheckAlertMessages()
             # if alertmsg:
             #     WriteOutboxMessageToDb(alertmsg,smartnumbers)
             #     WriteOutboxMessageToDb(alertmsg,globenumbers)
         
-        logRuntimeStatus("procfromdb","alive")
-        print dt.today().strftime("\nServer active as of %A, %B %d, %Y, %X")
-        time.sleep(sleeptime)
+            logRuntimeStatus("procfromdb","alive")
+            print dt.today().strftime("\nServer active as of %A, %B %d, %Y, %X")
+            return
+            # time.sleep(sleeptime)
 
 if __name__ == "__main__":
     main()

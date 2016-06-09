@@ -392,13 +392,13 @@ def ProcessEarthquake(msg):
         datestr = re.search("\d{1,2}\w+201[6789]",msg.data).group(0)
         print datestr
         try:
-            datestr = dt.strptime(datestr,"%d%b%Y").strftime("%Y-%m-%d")
+            datestr = dt.strptime(datestr,"%d%B%Y").strftime("%Y-%m-%d")
         except:
-            print ">> Error in datetime conversion"
-            return
+            print ">> Error in datetime conversion", datestr
+            return False
     else:
         print ">> No date string recognized"
-        return
+        return False
 
     #find time
     if re.search("\d{1,2}:\d{1,2}[AP]M",msg.data):
@@ -406,24 +406,24 @@ def ProcessEarthquake(msg):
         try:
             timestr = dt.strptime(timestr,"%I:%M%p").strftime("%H:%M:00")
         except:
-            print ">> Error in datetime conversion"
-            return
+            print ">> Error in datetime conversion", timestr
+            return False
     else:
         print ">> No time string recognized"
-        return
+        return False
 
     datetimestr = datestr + ' ' + timestr
     
     #find magnitude
-    if re.search("(?<=MS\=)\d+\.\d+(?= )",msg.data):
-        magstr = re.search("(?<=MS\=)\d+\.\d+(?= )",msg.data).group(0)
+    if re.search("(?<=M[SB]\=)\d+\.\d+(?= )",msg.data):
+        magstr = re.search("(?<=M[SB]\=)\d+\.\d+(?= )",msg.data).group(0)
     else:
         print ">> No magnitude string recognized"
         magstr = 'NULL'
 
     #find depth
-    if re.search("(?<=D\=)\d+(?=KM)",msg.data):
-        depthstr = re.search("(?<=D\=)\d+(?=KM)",msg.data).group(0)
+    if re.search("(?<=D\=)\d+(?=K*M)",msg.data):
+        depthstr = re.search("(?<=D\=)\d+(?=K*M)",msg.data).group(0)
     else:
         print ">> No depth string recognized"
         depthstr = 'NULL'
@@ -477,13 +477,15 @@ def ProcessEarthquake(msg):
         print ">> No issuer string recognized"
         issuerstr = 'NULL'
 
-    query = "INSERT IGNORE INTO senslopedb.earthquake (timestamp, mag, depth, lat, longi, dist, heading, municipality, province, issuer) VALUES ('%s',%s,%s,%s,%s,%s,'%s','%s','%s','%s') " % (datetimestr,magstr,depthstr,latstr,longstr,diststr,headstr,munistr,provistr,issuerstr)
+    query = "INSERT INTO senslopedb.earthquake (timestamp, mag, depth, lat, longi, dist, heading, municipality, province, issuer) VALUES ('%s',%s,%s,%s,%s,%s,'%s','%s','%s','%s') ON DUPLICATE KEY UPDATE mag=mag, depth=depth, lat=lat, longi=longi, dist=dist, heading=heading, municipality=municipality, province=province, issuer=issuer;" % (datetimestr,magstr,depthstr,latstr,longstr,diststr,headstr,munistr,provistr,issuerstr)
 
     print query
 
     commitToDb(query, 'earthquake')
 
     subprocess.Popen(["python","/home/dynaslope/Desktop/updews-pycodes/Data Analysis/eq_alert_gen.py"])
+
+    return True
 
 
 def ProcessARQWeather(line,sender):
@@ -585,7 +587,7 @@ def ProcessRain(line,sender):
         # data = items.group(3)
         data = line.split(",",3)[3]
 
-        if msgtable in ('MAGW','LUNW','BTOW'):
+        if msgtable in ('MAGW','LUNW'):
             print '>> Adjusting rain value',
             rain_val_str = data.split(',')[3]
             rain_val_adj = float(rain_val_str) - 0.254
@@ -597,7 +599,7 @@ def ProcessRain(line,sender):
         print '\n>> Error: Rain message format is not recognized'
         print line
         return
-    except:
+    except KeyboardInterrupt:
         print '\n>>Error: Weather message format unknown ' + line
         return
         
@@ -727,9 +729,9 @@ def ProcessAllMessages(allmsgs,network):
         elif msg.data[4:7] == "PZ*":
             ProcessPiezometer(msg.data, msg.simnum)
         elif msg.data.split('*')[0] == 'COORDINATOR' or msg.data.split('*')[0] == 'GATEWAY':
-            ProcessCoordinatorMsg(msg.data, msg.simnum)
+            isMsgProcSuccess = ProcessCoordinatorMsg(msg.data, msg.simnum)
         elif re.search("EQINFO",msg.data):
-            ProcessEarthquake(msg)
+            isMsgProcSuccess = ProcessEarthquake(msg)            
         else:
             print '>> Unrecognized message format: '
             print 'NUM: ' , msg.simnum
@@ -748,7 +750,8 @@ def RecordGroundMeasurements(gnd_meas):
     
     createTable("gndmeas","gndmeas")
     
-    query = "INSERT IGNORE INTO gndmeas (timestamp, meas_type, site_id, observer_name, crack_id, meas, weather) VALUES " + gnd_meas
+    query = "INSERT INTO gndmeas (timestamp, meas_type, site_id, observer_name, crack_id, meas, weather) VALUES " + gnd_meas
+    query += "ON DUPLICATE KEY UPDATE meas = values(meas)"
     
     # print query
     
@@ -768,6 +771,8 @@ def ProcessCoordinatorMsg(coordsms, num):
     print coordsms
     
     createTable("coordrssi","coordrssi")
+
+    coordsms = re.sub("(?<=,)(?=(,|$))","NULL",coordsms)
     
     try:
         datafield = coordsms.split('*')[1]
@@ -791,12 +796,20 @@ def ProcessCoordinatorMsg(coordsms, num):
                 query += item.split(',')[1] + "),("
             
             query = query[:-2]
+
+            print query
             
             commitToDb(query, 'ProcessCoordinatorMsg')
+
+            return True
         else:
             print ">> Processing coordinator weather"
     except IndexError:
         print "IndexError: list index out of range"
+        return False
+    except:
+        print ">> Unknown Error", coordsms
+        return False
     
 cfg = ConfigParser.ConfigParser()
 cfg.read(sys.path[0] + '/' + "senslope-server-config.txt")
