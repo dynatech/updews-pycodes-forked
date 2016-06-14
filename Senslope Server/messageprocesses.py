@@ -30,7 +30,7 @@ def updateSimNumTable(name,sim_num,date_activated):
     while True:
         try:
             query = """select sim_num from senslopedb.site_column_sim_nums
-                where name = '%s' """ % (name)
+                where name = '%s' """ % (name.lower())
         
             a = cur.execute(query)
             if a:
@@ -50,7 +50,7 @@ def updateSimNumTable(name,sim_num,date_activated):
     
     query = """INSERT INTO senslopedb.site_column_sim_nums
                 (name,sim_num,date_activated)
-                VALUES ('%s','%s','%s')""" %(name,sim_num,date_activated)
+                VALUES ('%s','%s','%s')""" %(name.lower(),sim_num,date_activated)
 
     commitToDb(query, 'updateSimNumTable')
 
@@ -200,7 +200,7 @@ def ProcTwoAccelColData(msg,sender,txtdatetime):
     return outl
 
 def WriteTwoAccelDataToDb(dlist,msgtime):
-    query = """INSERT IGNORE INTO %s (timestamp,id,msgid,xvalue,yvalue,zvalue,batt) VALUES """ % str(dlist[0][0])
+    query = """INSERT IGNORE INTO %s (timestamp,id,msgid,xvalue,yvalue,zvalue,batt) VALUES """ % str(dlist[0][0].lower())
     
     if WriteToDB:
         createTable(dlist[0][0], "sensor v2")
@@ -214,7 +214,7 @@ def WriteTwoAccelDataToDb(dlist,msgtime):
     commitToDb(query, 'WriteTwoAccelDataToDb')
    
 def WriteSomsDataToDb(dlist,msgtime):
-    query = """INSERT IGNORE INTO %s (timestamp,id,msgid,mval1,mval2) VALUES """ % str(dlist[0][0])
+    query = """INSERT IGNORE INTO %s (timestamp,id,msgid,mval1,mval2) VALUES """ % str(dlist[0][0].lower())
     
     print "site_name", str(dlist[0][0])
     if WriteToDB:
@@ -270,7 +270,7 @@ def ProcessColumn(line,txtdatetime,sender):
         
     updateSimNumTable(msgtable,sender,msgdatetime[:10])
         
-    query = query = """INSERT IGNORE INTO %s (timestamp,id,xvalue,yvalue,zvalue,mvalue) VALUES """ % (str(msgtable))
+    query = query = """INSERT IGNORE INTO %s (timestamp,id,xvalue,yvalue,zvalue,mvalue) VALUES """ % (str(msgtable.lower()))
     
     try:    
         i = 0
@@ -340,7 +340,7 @@ def ProcessPiezometer(line,sender):
     try:
     #PUGBPZ*13173214*1511091800 
         linesplit = line.split('*')
-        msgname = linesplit[0]
+        msgname = linesplit[0].lower()
         print 'msg_name: '+msgname        
         data = linesplit[1]
         msgid = int(('0x'+data[:2]), 16)
@@ -501,11 +501,11 @@ def ProcessARQWeather(line,sender):
         #table name
         linesplit = line.split('+')
        
-        msgname = checkNameOfNumber(sender)
+        msgname = checkNameOfNumber(sender).lower()
         if msgname:
             print ">> Number registered as", msgname
             #updateSimNumTable(msgname,sender,txtdatetime[:10])
-            msgname = msgname + 'W'
+            msgname = msgname + 'w'
         # else:
             # print ">> New number", sender
             # msgname = ''
@@ -548,7 +548,8 @@ def ProcessARQWeather(line,sender):
             return
 
         try:
-            query = """INSERT INTO %s (timestamp,name,r15m, r24h, batv1, batv2, cur, boostv1, boostv2, charge, csq, temp, hum, flashp) VALUES ('%s','%s',%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""" %(msgname,txtdatetime,msgname,r15m, r24h, batv1, batv2, current, boostv1, boostv2, charge, csq, temp, hum, flashp)
+            query = """INSERT INTO %s (timestamp,name,r15m, r24h, batv1, batv2, cur, boostv1, boostv2, charge, csq, temp, hum, flashp) 
+            VALUES ('%s','%s',%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""" % (msgname,txtdatetime,msgname,r15m, r24h, batv1, batv2, current, boostv1, boostv2, charge, csq, temp, hum, flashp)
             # print query
         except ValueError:
             print '>> Error writing query string.', 
@@ -611,7 +612,7 @@ def ProcessRain(line,sender):
         createTable(str(msgtable),"weather")
 
         try:
-            query = """INSERT INTO %s (timestamp,name,temp,wspd,wdir,rain,batt,csq) VALUES ('%s','%s',%s)""" %(msgtable,txtdatetime,msgtable,data)
+            query = """INSERT INTO %s (timestamp,name,temp,wspd,wdir,rain,batt,csq) VALUES ('%s','%s',%s)""" %(msgtable.lower(),txtdatetime,msgtable,data)
                 
         except:
             print '>> Error writing weather data to database. ' +  line
@@ -820,11 +821,6 @@ def ProcessCoordinatorMsg(coordsms, num):
 cfg = ConfigParser.ConfigParser()
 cfg.read(sys.path[0] + '/' + "senslope-server-config.txt")
 
-inboxdir = cfg.get('FileIO','inboxdir')
-unexpectedchardir = cfg.get('FileIO','unexpectedchardir')
-unknownsenderfile = cfg.get('FileIO','unknownsenderfile')
-smsgndfile = cfg.get('SMSAlert','SMSgndmeasfile')
-gndmeasfilesdir= cfg.get('SMSAlert','gndmeasfilesdir')
 WriteToDB = cfg.get('I/O','writetodb')
 successen = cfg.get('ReplyMessages','SuccessEN')
 communityphonenumber = cfg.get('SMSAlert','communityphonenumber')
