@@ -16,7 +16,7 @@ import ConfigParser
 def getTimeFromSms(text):
   # timetxt = ""
   hm = "\d{1,2}"
-  sep = ":+ *"
+  sep = " *:+ *"
   day = " *[AP]\.*M\.*"
   
   time_format_dict = {
@@ -31,6 +31,7 @@ def getTimeFromSms(text):
     time_str_search = re.search(fmt,text)
     if time_str_search:
       time_str = time_str_search.group(0)
+      time_str = re.sub(";",":",time_str)
       time_str = re.sub("[^APM0-9:]","",time_str)
       time_str = dt.strptime(time_str,time_format_dict[fmt]).strftime("%H:%M:%S")
       break
@@ -47,7 +48,7 @@ def getDateFromSms(text):
 
   cur_year = str(dt.today().year)
 
-  separator = "[\. ]{0,1}"
+  separator = "[\. ,]{0,1}"
 
   date_format_dict = {
       mon_re1 + separator + day_re1 + separator + year_re1 : "%b%d%Y",

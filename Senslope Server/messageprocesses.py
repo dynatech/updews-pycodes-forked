@@ -561,6 +561,7 @@ def ProcessARQWeather(line,sender):
 def ProcessRain(line,sender):
     
     #msg = message
+    line = re.sub("[^A-Z0-9,\/:\.\-]","",line)
 
     print 'Weather data: ' + line
     
@@ -587,7 +588,7 @@ def ProcessRain(line,sender):
         # data = items.group(3)
         data = line.split(",",3)[3]
 
-        if msgtable in ('MAGW','LUNW'):
+        if msgtable in ('MAGW'):
             print '>> Adjusting rain value',
             rain_val_str = data.split(',')[3]
             rain_val_adj = float(rain_val_str) - 0.254
@@ -701,9 +702,13 @@ def ProcessAllMessages(allmsgs,network):
                 WriteOutboxMessageToDb("READ-SUCCESS: \n" + msg.data, communityphonenumber)
                 WriteOutboxMessageToDb(successen, msg.simnum)
             except ValueError as e:
+                print str(e)
                 print ">> Error in manual ground measurement SMS"
                 WriteOutboxMessageToDb("READ-FAIL: \n" + msg.data, communityphonenumber)
                 WriteOutboxMessageToDb(str(e), msg.simnum)
+            except:
+                WriteOutboxMessageToDb("READ-FAIL: \n" + msg.data, communityphonenumber)
+                WriteOutboxMessageToDb("Unhandled error. From previous message", communityphonenumber)
 
         elif re.search("^[A-Z]{4,5}\*[xyabcXYABC]\*[A-F0-9]+\*[0-9]+T?$",msg.data):
             try:
@@ -720,7 +725,8 @@ def ProcessAllMessages(allmsgs,network):
             #ProcessColumn(msg.data)
             ProcessColumn(msg.data,msg.dt,msg.simnum)
         #check if message is from rain gauge
-        elif re.search("^\w{4},[\d\/:,]+,[\d,\.]+$",msg.data):
+        # elif re.search("^\w{4},[\d\/:,]+,[\d,\.]+$",msg.data):
+        elif re.search("^\w{4},[\d\/:,]+",msg.data):
             ProcessRain(msg.data,msg.simnum)
         elif re.search(r'(\w{4})[-](\d{1,2}[.]\d{02}),(\d{01}),(\d{1,2})/(\d{1,2}),#(\d),(\d),(\d{1,2}),(\d)[*](\d{10})',msg.data):
             ProcessStats(msg.data,msg.dt)
