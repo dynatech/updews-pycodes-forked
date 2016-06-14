@@ -290,14 +290,10 @@ Userdb = cfg.get('LocalDB', 'Username')
 Passdb = cfg.get('LocalDB', 'Password')
 
 AlertReportInterval = cfg.getint('SMSAlert','AlertReportInterval')
-smsgndfile = cfg.get('SMSAlert','SMSgndmeasfile')
-gndmeasfilesdir= cfg.get('SMSAlert','gndmeasfilesdir')
 
 ##SMS alert numbers
 smartnumbers = cfg.get('SMSAlert', 'smartnumbers')
 globenumbers = cfg.get('SMSAlert', 'globenumbers')
 
-inboxdir = cfg.get('FileIO','inboxdir')
-unknownsenderfile = cfg.get('FileIO','unknownsenderfile')
 allalertsfile = cfg.get('FileIO','allalertsfile')
 

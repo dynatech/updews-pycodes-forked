@@ -12,6 +12,8 @@ class dbInstance:
        self.user = user
        self.password = password
 
+
+
 localdbinstance = dbInstance(cfg.get('LocalDB', 'DBName'),cfg.get('LocalDB', 'Host'),cfg.get('LocalDB', 'Username'),cfg.get('LocalDB', 'Password'))
 gsmdbinstance = dbInstance(cfg.get('GSMDB', 'DBName'),cfg.get('GSMDB', 'Host'),cfg.get('GSMDB', 'Username'),cfg.get('GSMDB', 'Password'))
 
@@ -64,6 +66,10 @@ def createTable(table_name, type):
         cur.execute("CREATE TABLE IF NOT EXISTS %s(sms_id int unsigned not null auto_increment, timestamp_written datetime, timestamp_sent datetime, recepients varchar(255), sms_msg varchar(255), send_status varchar(20), PRIMARY KEY (sms_id))" %table_name)
     elif type == "earthquake":
         cur.execute("CREATE TABLE IF NOT EXISTS %s(e_id int unsigned not null auto_increment, timestamp datetime, mag float(6,2), depth float (6,2), lat float(6,2), longi float(6,2), dist tinyint unsigned, heading varchar(5), municipality varchar(50), province varchar(50), issuer varchar(10), PRIMARY KEY (e_id,timestamp))" %table_name)
+    elif type == "servermonsched":
+        cur.execute("CREATE TABLE IF NOT EXISTS %s(p_id int unsigned not null auto_increment, date date, nickname varchar(20), primary key (p_id))" %table_name)
+    elif type == "monshiftsched":
+        cur.execute("CREATE TABLE IF NOT EXISTS %s(s_id int unsigned not null auto_increment, timestamp datetime, iompmt varchar(20), iompct varchar(20), oomps varchar(20), oompmt varchar(20), oompct varchar(20), primary key (s_id,timestamp))" %table_name)
     else:
         raise ValueError("ERROR: No option for creating table " + type)
    
@@ -133,7 +139,7 @@ def commitToDb(query, identifier, instance='local'):
         retry = 0
         while True:
             try:
-                a = cur.execute(query.lower())
+                a = cur.execute(query)
                 # db.commit()
                 if a:
                     db.commit()
@@ -160,3 +166,24 @@ def commitToDb(query, identifier, instance='local'):
         # print '>> Unexpected error in writing to database query', query, 'from', identifier
     finally:
         db.close()
+
+def querydatabase(query, identifier, instance='local'):
+    db, cur = SenslopeDBConnect(instance)
+    a = ''
+    try:
+        a = cur.execute(query)
+        # db.commit()
+        if a:
+            a = cur.fetchall()
+            print 'OK'
+        else:
+            print '>> Warning: Query has no result set', identifier
+            a = 'Empty'
+    except MySQLdb.OperationalError:
+        a =  'ERROR'
+    except KeyError:
+        a = 'ERROR key'
+    finally:
+        db.close()
+        return a
+        
