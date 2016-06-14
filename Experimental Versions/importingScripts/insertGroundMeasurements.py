@@ -90,7 +90,7 @@ def readGroundMeasurementsCSV (myFile):
             if (row[2] == None):
                 continue       
             else:
-                temp.append(row[1][0:3].lower())
+                temp.append(row[1][0:3].upper())
             
             #crack_id
             if (row[2] == None):

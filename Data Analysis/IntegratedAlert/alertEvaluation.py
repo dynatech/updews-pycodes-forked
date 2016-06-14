@@ -52,6 +52,111 @@ roll_window_numpts=int(1+roll_window_length/data_dt)
 end, start, offsetstart=gf.get_rt_window(rt_window_length,roll_window_numpts,num_roll_window_ops)
 valid_data = end - timedelta(hours=3)
 
+def node_alert2(disp_vel, colname, num_nodes, T_disp, T_velL2, T_velL3, k_ac_ax, lastgooddata):
+
+    #initializing DataFrame object, alert
+    alert=pd.DataFrame(data=None)
+
+    #adding node IDs
+    node_id = disp_vel.id.values[0]
+    alert['id']= [node_id]
+    alert=alert.set_index('id')
+
+    #checking for nodes with no data
+    lastgooddata=lastgooddata.loc[lastgooddata.id == node_id]
+    print "lastgooddata", lastgooddata
+    try:
+        cond = pd.to_datetime(lastgooddata.ts.values[0]) < valid_data
+    except IndexError:
+        cond = False
+    alert['ND']=np.where(cond,
+                         
+                         #No data within valid date 
+                         np.nan,
+                         
+                         #Data present within valid date
+                         np.ones(len(alert)))
+    
+    #evaluating net displacements within real-time window
+    alert['xz_disp']=np.round(disp_vel.xz.values[-1]-disp_vel.xz.values[0], 3)
+    alert['xy_disp']=np.round(disp_vel.xy.values[-1]-disp_vel.xy.values[0], 3)
+
+    #determining minimum and maximum displacement
+    cond = np.asarray(np.abs(alert['xz_disp'].values)<np.abs(alert['xy_disp'].values))
+    min_disp=np.round(np.where(cond,
+                               np.abs(alert['xz_disp'].values),
+                               np.abs(alert['xy_disp'].values)), 4)
+    cond = np.asarray(np.abs(alert['xz_disp'].values)>=np.abs(alert['xy_disp'].values))
+    max_disp=np.round(np.where(cond,
+                               np.abs(alert['xz_disp'].values),
+                               np.abs(alert['xy_disp'].values)), 4)
+
+    #checking if displacement threshold is exceeded in either axis    
+    cond = np.asarray((np.abs(alert['xz_disp'].values)>T_disp, np.abs(alert['xy_disp'].values)>T_disp))
+    alert['disp_alert']=np.where(np.any(cond, axis=0),
+
+                                 #disp alert=2
+                                 np.where(min_disp/max_disp<k_ac_ax,
+                                          np.zeros(len(alert)),
+                                          np.ones(len(alert))),
+
+                                 #disp alert=0
+                                 np.zeros(len(alert)))
+    
+    #getting minimum axis velocity value
+    alert['min_vel']=np.round(np.where(np.abs(disp_vel.vel_xz.values[-1])<np.abs(disp_vel.vel_xy.values[-1]),
+                                       np.abs(disp_vel.vel_xz.values[-1]),
+                                       np.abs(disp_vel.vel_xy.values[-1])), 4)
+
+    #getting maximum axis velocity value
+    alert['max_vel']=np.round(np.where(np.abs(disp_vel.vel_xz.values[-1])>=np.abs(disp_vel.vel_xy.values[-1]),
+                                       np.abs(disp_vel.vel_xz.values[-1]),
+                                       np.abs(disp_vel.vel_xy.values[-1])), 4)
+                                       
+    #checking if proportional velocity is present across node
+    alert['vel_alert']=np.where(alert['min_vel'].values/alert['max_vel'].values<k_ac_ax,   
+
+                                #vel alert=0
+                                np.zeros(len(alert)),    
+
+                                #checking if max node velocity exceeds threshold velocity for alert 1
+                                np.where(alert['max_vel'].values<=T_velL2,                  
+
+                                         #vel alert=0
+                                         np.zeros(len(alert)),
+
+                                         #checking if max node velocity exceeds threshold velocity for alert 2
+                                         np.where(alert['max_vel'].values<=T_velL3,         
+
+                                                  #vel alert=1
+                                                  np.ones(len(alert)),
+
+                                                  #vel alert=2
+                                                  np.ones(len(alert))*2)))
+    
+    alert['node_alert']=np.where(alert['vel_alert'].values >= alert['disp_alert'].values,
+
+                                 #node alert takes the higher perceive risk between vel alert and disp alert
+                                 alert['vel_alert'].values,                                
+
+                                 alert['disp_alert'].values)
+
+
+    alert['disp_alert']=alert['ND']*alert['disp_alert']
+    alert['vel_alert']=alert['ND']*alert['vel_alert']
+    alert['node_alert']=alert['ND']*alert['node_alert']
+    alert['ND']=alert['ND'].map({0:1,1:1})          #para saan??
+    alert['ND']=alert['ND'].fillna(value=0)         #para saan??
+    alert['disp_alert']=alert['disp_alert'].fillna(value=-1)
+    alert['vel_alert']=alert['vel_alert'].fillna(value=-1)
+    alert['node_alert']=alert['node_alert'].fillna(value=-1)
+
+    #rearrange columns
+    alert=alert.reset_index()
+    cols=colarrange
+    alert = alert[cols]
+ 
+    return alert
 
 
 def node_alert(colname, xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_velL2, T_velL3, k_ac_ax):
@@ -156,7 +261,6 @@ def node_alert(colname, xz_tilt, xy_tilt, xz_vel, xy_vel, num_nodes, T_disp, T_v
                                  alert['disp_alert'].values)
 
 
-#    alert['ND']=alert['ND']*alert['disp_alert']
     alert['disp_alert']=alert['ND']*alert['disp_alert']
     alert['vel_alert']=alert['ND']*alert['vel_alert']
     alert['node_alert']=alert['ND']*alert['node_alert']
