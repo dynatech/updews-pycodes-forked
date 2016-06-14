@@ -65,6 +65,12 @@ if PrintProc:
     if not os.path.exists(proc_monitoring_path):
         os.makedirs(proc_monitoring_path)
         
+def GetNodesWithNoInitialData(df,num_nodes,offsetstart):
+    allnodes=np.arange(1,num_nodes+1)*1.
+    with_init_val=df[df.ts<offsetstart+timedelta(hours=0.5)]['id'].values
+    no_init_val=allnodes[np.in1d(allnodes, with_init_val, invert=True)]
+    return no_init_val
+
 def generate_proc(colname, num_nodes, seg_len):
     
     #1. setting date boundaries for real-time monitoring window
@@ -78,18 +84,25 @@ def generate_proc(colname, num_nodes, seg_len):
     print num_nodes
     print seg_len
         
-    #2. getting accelerometer data for site 'colname'
-    monitoring=GetRawAccelData(colname,offsetstart-timedelta(5))
+    #3. getting accelerometer data for site 'colname'
+    monitoring=GetRawAccelData(colname,offsetstart)
+    monitoring = monitoring.loc[(monitoring.ts >= offsetstart) & (monitoring.ts <= end)]
+     
+    #3.1 identify the node ids with no data at start of monitoring window
+    NodesNoInitVal=GetNodesWithNoInitialData(monitoring,num_nodes,offsetstart)
+    
+    #4: get last good data prior to the monitoring window (LGDPM)
+    lgdpm = pd.DataFrame()
+    for node in NodesNoInitVal:
+        temp = GetSingleLGDPM(colname, node, offsetstart.strftime("%Y-%m-%d %H:%M"))
+        lgdpm = lgdpm.append(temp,ignore_index=True)
+ 
+    #5 TODO: Resample the dataframe together with the LGDOM
+    monitoring=monitoring.append(lgdpm)
 
-    monitoring.loc[monitoring.ts < offsetstart, ['ts']] = offsetstart
-    monitoring.drop_duplicates(['ts', 'id'], keep = 'last')
-    
-    monitoring = monitoring.loc[(monitoring.ts >= offsetstart) & (monitoring.ts < end + timedelta(hours=0.5) )]
-    #3.  evaluating which data needs to be filtered    
-    monitoring=applyFilters(monitoring)
-    
-    #4. last good data
-    try:		
+    #6. evaluating which data needs to be filtered
+    try:
+        monitoring=applyFilters(monitoring)		
         LastGoodData=GetLastGoodData(monitoring,num_nodes)		
         PushLastGoodData(LastGoodData,colname)		
         LastGoodData = GetLastGoodDataFromDb(colname)		
@@ -101,7 +114,7 @@ def generate_proc(colname, num_nodes, seg_len):
     if len(LastGoodData)<num_nodes: print colname, " Missing nodes in LastGoodData"		
 		
     #5. extracting last data outside monitoring window		
-    LastGoodData=LastGoodData[(LastGoodData.ts<offsetstart)]
+    LastGoodData=LastGoodData[(LastGoodData.ts<offsetstart)]		
 		
     #6. appending LastGoodData to monitoring		
     monitoring=monitoring.append(LastGoodData)    
@@ -109,8 +122,6 @@ def generate_proc(colname, num_nodes, seg_len):
     
     #7. replacing date of data outside monitoring window with first date of monitoring window
     monitoring.loc[monitoring.ts < offsetstart, ['ts']] = offsetstart
-    
-    monitoring.drop_duplicates('ts')
 
     #8. computing corresponding horizontal linear displacements (xz,xy), and appending as columns to dataframe
     monitoring['xz'],monitoring['xy']=gf.accel_to_lin_xz_xy(seg_len,monitoring.x.values,monitoring.y.values,monitoring.z.values)
