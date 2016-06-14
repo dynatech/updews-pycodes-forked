@@ -254,11 +254,11 @@ def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid
         query = query + " AND msgid in (11, 32)"
         if not fromTime:
             fromTime = "2010-01-01"
-        query = query + " AND timestamp > '%s'" %fromTime
+        query = query + " AND timestamp >= '%s'" %fromTime
         
         toTime_query = ''
         if toTime != '':
-            toTime_query =  " AND timestamp < '%s'" %toTime
+            toTime_query =  " AND timestamp <= '%s'" %toTime
         elif toTime:
             toTime_query = ''
             
@@ -281,10 +281,10 @@ def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid
         if not fromTime:
             fromTime = "2010-01-01"
             
-        query = query + " where timestamp > '%s'" % fromTime
+        query = query + " where timestamp >= '%s'" % fromTime
         
         if toTime != '':
-            query = query + " and timestamp < '%s'" % toTime
+            query = query + " and timestamp <= '%s'" % toTime
         
         if targetnode != '':
             query = query + " and id = %s;" % (targetnode)
@@ -639,7 +639,7 @@ def GetSingleLGDPM(site, node, startTS):
         query = query + "and (msgid = 32 or msgid = 11) "
 #        query = query + "ORDER BY timestamp DESC LIMIT 2"
 #    else:
-    query = query + "ORDER BY timestamp DESC LIMIT 1"
+    query = query + "ORDER BY timestamp DESC LIMIT 240"
     
     lgdpm = GetDBDataFrame(query)
 
@@ -657,6 +657,10 @@ def GetSingleLGDPM(site, node, startTS):
     else:
         lgdpm.columns = ['ts','id','x','y','z']
     lgdpm = lgdpm[['ts', 'id', 'x', 'y', 'z']]
+
+    lgdpm = filterSensorData.applyFilters(lgdpm)
+    lgdpm = lgdpm.sort_index(ascending = False)[0:1]
+    
     return lgdpm
     
 #PushLastGoodData(df,name):
@@ -760,8 +764,8 @@ except:
     #default values are used for missing configuration files or for cases when
     #sensitive info like db access credentials must not be viewed using a browser
     #print "No file named: %s. Trying Default Configuration" % (configFile)
-#    Hostdb = "127.0.0.1"    
-    Hostdb = "192.168.1.102"
+    Hostdb = "127.0.0.1"    
+#    Hostdb = "192.168.1.102"
     Userdb = "root"
     Passdb = "senslope"
     Namedb = "senslopedb"
