@@ -9,6 +9,7 @@ Created on Mon Jun 13 11:08:15 2016
 
 # Import socket module
 import socket
+import time
 
 # Create a socket object
 s = socket.socket()
@@ -18,10 +19,39 @@ port = 5051
 s.bind((host, port))
 
 s.listen(5)
+#while True:
+#	c, addr = s.accept()
+#	text = 'Got connection from', addr
+#	print text
+#	c.send('Thank you for connecting')
+#	#c.close()
+#	msg = c.recv(1024)
+#	print msg
+##	c.send("server received msg: %s" % msg)
+
+
 while True:
-	c, addr = s.accept()
-	print 'Got connection from', addr
-	c.send('Thank you for connecting')
-	#c.close()
-	msg = c.recv(4096)
-	print msg
+    c, addr = s.accept()
+    text = 'Got connection from', addr
+    print text
+    c.send('Thank you for connecting')
+    
+    # continuously send a spam of messages to client
+    ctr = 10
+    delay = 20
+    while ctr > 0:
+        time.sleep(delay) # delays for "delay" seconds
+        msg = "DateTime " + time.strftime("%c")
+        print msg
+        c.send(msg)
+    
+    c.close()
+    
+    
+    
+    
+    
+    
+    
+    
+    
