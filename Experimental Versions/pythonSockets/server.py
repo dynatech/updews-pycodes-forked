@@ -1,3 +1,9 @@
+"""
+Created on Mon Jun 13 11:08:15 2016
+
+@author: PradoArturo
+"""
+
 #!/usr/bin/python		
 # This is server.py file
 
@@ -17,5 +23,5 @@ while True:
 	print 'Got connection from', addr
 	c.send('Thank you for connecting')
 	#c.close()
-	msg = c.recv(1024)
+	msg = c.recv(4096)
 	print msg
