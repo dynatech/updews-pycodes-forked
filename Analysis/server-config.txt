@@ -1,0 +1,137 @@
+[File I/O]
+MachineFilePath = C:\Users\Dynaslope\Desktop\Fresh\Senslope Data\
+PurgedFilePath = Purged\New\
+PurgedMonitoringFilePath = Purged\Monitoring\
+LastGoodDataFilePath = Purged\LastGoodData\
+ProcFilePath = Proc2\New\
+ProcMonitoringFilePath = Proc2\Monitoring\
+AlertFilePath = Alert
+AlertFileName = Node-level_alerts.csv
+ColumnPropertiesFile = column_properties.csv
+
+[DB I/O]
+#Hostdb = 192.168.1.102
+Hostdb = 127.0.0.1
+Userdb = root
+Passdb = senslope
+Namedb = senslopedb
+NamedbPurged = senslopedb_purged
+Printtostdout = True
+
+[Value Limits]
+LimitValues = True
+xlim = 100
+ylim = 1126
+zlim = 1126
+xmax = 1200
+mlowlim = 2000
+muplim = 4000
+cutoff = 0.08
+moninterval = 15
+
+[Filter Args]
+window = 101
+order = 3
+off_lim = 80
+
+[Datetime range]
+RangeDefault = 3
+
+[Misc]
+Debug = True
+DotProductThreshold = 0.09
+
+[I/O]
+############################
+###   LOCAL FILE PATH    ###
+############################
+NDFilePath = /MonitoringOutput/NDBackAnalysis/
+OutputFilePath = /MonitoringOutput/
+ProcFilePath = /MonitoringOutput/Proc/
+ColAlertsFilePath = /MonitoringOutput/ColAlerts/
+TrendAlertsFilePath = /MonitoringOutput/TrendAlerts/
+AlertAnalysisPath = /MonitoringOutput/Alerts/
+RainfallPlotsPath = /MonitoringOutput/RainfallPlots/
+
+############################
+###      FILE NAMES      ###
+############################
+CSVFormat = .csv
+eqsummary = eqsummary.txt
+eqsummaryGSM = eqsummary_GSM.txt
+webtrends = webtrends.csv
+textalert = textalert.txt
+textalert2 = textalert2.txt
+rainfallalert = rainfallalert.txt
+groundalert = groundalert.txt
+allalerts = allalerts.txt
+gsmalert = all_alerts.txt
+timer = timer.txt
+NDlog = NDlog.csv
+ND7x = ND7x.csv
+
+#############################
+###    ALERT CONSTANTS    ###
+#############################
+T_disp = 0.05 			;Treshold displacement value for alert 1 (in meters)
+T_velL2 = 0.032		;Treshold velocity value for alert level 1 (in meters/day)
+T_velL3 = 0.5 			;Treshold velocity value for alert level 2 (in meters/day)
+k_ac_ax = 0.1			;minimum value velocity of axis across maximum velocity to consider movement as valid (in percent)
+num_nodes_to_check = 2	;number of nodes to check before calling column alert level 1 or 2
+
+############################
+###     FILE HEADERS     ###
+############################
+
+columnproperties_headers = colname,num_nodes,seg_len,col_length
+purged_file_headers = ts,id,x,y,z,m
+monitoring_file_headers = ts,id,x,y,z,m
+LastGoodData_file_headers = ts,id,x,y,z,m
+proc_monitoring_file_headers = ts,id,xz,xy,m
+alerteval_colarrange = id,ND,xz_disp,xy_disp,disp_alert,min_vel,max_vel,vel_alert,node_alert
+alertgen_headers = ND,xz_disp,xy_disp,disp_alert,min_vel,max_vel,vel_alert,node_alert,col_alert
+alert_headers = ts,id,ND,xz_disp,xy_disp,disp_alert,min_vel,max_vel,vel_alert,node_alert,col_alert,trending_col
+ 
+############################
+###        OTHERS        ###
+############################
+data_dt = 0.5				;time interval between data points, in hours
+rt_window_length = 3.		;length of real-time monitoring window, in days
+roll_window_length = 3.		;length of rolling/moving window operations in hours
+num_roll_window_ops = 2		;number of rolling window operations in the whole monitoring analysis
+col_pos_interval = '4H'   	;string expression indicating interval between two adjacent column position dates ex: '1D'= 1 day
+num_col_pos = 7            	;number of column position dates to plot 
+alert_time_int = 30 		;timeframe of alert files to be saved, in days
+to_fill = 1					;to forward fill (1 or 0)
+to_smooth = 1				;to smooth xz and xy through moving average (1 or 0)
+
+with_TrendingNodeAlert = False
+test_sites = lpasa
+test_specific_sites = False
+
+##############################
+# REAL-TIME MODULE CONSTANTS #
+##############################
+test_specific_time = False
+use_specific_time = 2016-06-04 07:30:00
+realtime_specific_sites = gamb
+realtime_test_specific_sites = True 
+RT_to_fill = 1
+RT_to_smooth = 0
+
+
+PlotColPos = True
+PlotDispVel = True
+
+PrintProc = True
+PrintTrendAlerts = True
+PrintWAlert = True
+PrintND = False
+PrintTimer = True
+
+PrintTAlert = True
+PrintTAlert2 = True
+PrintAAlert = True
+PrintGSMAlert = True
+PrintJSON = True
+PrintGAlert = False
