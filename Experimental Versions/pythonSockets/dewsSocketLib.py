@@ -38,12 +38,11 @@ def openSocketConn(host, port):
 def closeSocketConn(sock_conn):
     sock_conn.close()
 
-#One full cycle of opening connection, receiving data,
+#One full cycle of opening connection
 # sending data and closing connection
 def sendDataFullCycle(host, port, msg):
     s = socket.socket()    
     s.connect((host, port))
-    print s.recv(1024)
     s.send(msg)
     s.close()
 

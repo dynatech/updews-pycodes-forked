@@ -29,9 +29,9 @@ del path
 
 import querySenslopeDb as qs
 
-#host = "www.codesword.com"
+host = "www.codesword.com"
 #host = "127.0.0.1"
-host = socket.gethostname()
+#host = socket.gethostname()
 port = 5051
 
 pradoS = "09980619501"
@@ -39,7 +39,7 @@ pradoG = "09163677476"
 ivy = "09065310825"
 carloSun = "09228912093"
 #numbers = [pradoS, pradoG, ivy, carloSun]
-numbers = [pradoS]
+numbers = [pradoS, pradoG]
 
 ##connect to the AWS socket
 #s = dsl.openSocketConn(host, port)
@@ -52,4 +52,5 @@ numbers = [pradoS]
 ##close AWS socket
 #dsl.closeSocketConn(s)
 
-dsl.sendTimestampToGSM(host, port, numbers)
+#dsl.sendTimestampToGSM(host, port, numbers)
+dsl.sendDataFullCycle(host, port, "This is my message!")
