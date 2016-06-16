@@ -424,25 +424,56 @@ def GetCoordsList():
 #        sensorlist: list
 #            list of columnArray (see class definition above)
 
-def GetSensorList():
-    try:
-        db, cur = SenslopeDBConnect(Namedb)
-        cur.execute("use "+ Namedb)
-        
-        query = 'SELECT name, num_nodes, seg_length, col_length FROM site_column_props'
-        
-        df = psql.read_sql(query, db)
-        
-        # make a sensor list of columnArray class functions
-        sensors = []
-        for s in range(len(df)):
-            if df.name[s] == 'mcatb' or df.name[s] == 'messb':
-                continue
-            s = columnArray(df.name[s],df.num_nodes[s],df.seg_length[s],df.col_length[s])
+#def GetSensorList():
+#    try:
+#        db, cur = SenslopeDBConnect(Namedb)
+#        cur.execute("use "+ Namedb)
+#        
+#        query = 'SELECT name, num_nodes, seg_length, col_length FROM site_column_props'
+#        
+#        df = psql.read_sql(query, db)
+#        
+#        # make a sensor list of columnArray class functions
+#        sensors = []
+#        for s in range(len(df)):
+#            if df.name[s] == 'mcatb' or df.name[s] == 'messb':
+#                continue
+#            s = columnArray(df.name[s],df.num_nodes[s],df.seg_length[s],df.col_length[s])
+#            sensors.append(s)
+#        return sensors
+#    except:
+#        raise ValueError('Could not get sensor list from database')
+def GetSensorList(site=''):
+    if site == '':
+        try:
+            db, cur = SenslopeDBConnect(Namedb)
+            cur.execute("use "+ Namedb)
+            
+            query = 'SELECT name, num_nodes, seg_length, col_length FROM site_column_props'
+            
+            df = psql.read_sql(query, db)
+            
+            # make a sensor list of columnArray class functions
+            sensors = []
+            for s in range(len(df)):
+                if df.name[s] == 'mcatb' or df.name[s] == 'messb':
+                    continue
+                s = columnArray(df.name[s],df.num_nodes[s],df.seg_length[s],df.col_length[s])
+                sensors.append(s)
+            return sensors
+        except:
+            raise ValueError('Could not get sensor list from database')
+    else:
+            db, cur = SenslopeDBConnect(Namedb)
+            cur.execute("use "+ Namedb)
+            
+            query = "SELECT name, num_nodes, seg_length, col_length FROM site_column_props WHERE name LIKE '%"
+            query = query + str(site) + "%'"
+            df = psql.read_sql(query, db)
+            sensors = []
+            s = columnArray(df.name[0],df.num_nodes[0],df.seg_length[0],df.col_length[0])
             sensors.append(s)
-        return sensors
-    except:
-        raise ValueError('Could not get sensor list from database')
+            return sensors
 
 def GetSensorDF():
     try:
