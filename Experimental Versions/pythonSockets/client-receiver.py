@@ -48,7 +48,7 @@ while True:
 #	c, addr = s.accept()
     msg = s.recv(1024)
     print msg
-    s.send(msg)
+#    s.send(msg)
     dsl.sendMessageToGSM(numbers, msg)
 
 #close AWS socket

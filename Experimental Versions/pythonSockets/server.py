@@ -14,7 +14,8 @@ import time
 # Create a socket object
 s = socket.socket()
 # Get local machine name
-host = socket.gethostname()
+#host = socket.gethostname()
+host = "127.0.0.1"
 port = 5051
 s.bind((host, port))
 
