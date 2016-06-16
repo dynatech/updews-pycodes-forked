@@ -52,4 +52,5 @@ numbers = [pradoS, pradoG]
 ##close AWS socket
 #dsl.closeSocketConn(s)
 
-dsl.sendTimestampToGSM(host, port, numbers)
+#dsl.sendTimestampToGSM(host, port, numbers)
+dsl.sendDataFullCycle(host, port, "This is my message!")
