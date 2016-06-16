@@ -48,12 +48,13 @@ while True:
 #	c, addr = s.accept()
     msg = s.recv(1024)
     
-    if msg != None:
-        print msg
-    #    s.send(msg)
-        dsl.sendMessageToGSM(numbers, msg)
-    else:
+    #No database writing should happen if connection is interrupted
+    if msg == None or msg == '':
         print "Check connection with server\n"
+        dsl.closeSocketConn(s)
+    else:
+        print msg
+        dsl.sendMessageToGSM(numbers, msg)
 
 #close AWS socket
 dsl.closeSocketConn(s)

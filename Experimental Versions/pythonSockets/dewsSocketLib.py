@@ -43,6 +43,7 @@ def closeSocketConn(sock_conn):
 def sendDataFullCycle(host, port, msg):
     s = socket.socket()    
     s.connect((host, port))
+    print msg
     s.send(msg)
     s.close()
 
