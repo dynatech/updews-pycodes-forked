@@ -47,9 +47,13 @@ s = dsl.openSocketConn(host, port)
 while True:
 #	c, addr = s.accept()
     msg = s.recv(1024)
-    print msg
-#    s.send(msg)
-    dsl.sendMessageToGSM(numbers, msg)
+    
+    if msg != None:
+        print msg
+    #    s.send(msg)
+        dsl.sendMessageToGSM(numbers, msg)
+    else:
+        print "Check connection with server\n"
 
 #close AWS socket
 dsl.closeSocketConn(s)
