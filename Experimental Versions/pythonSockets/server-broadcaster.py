@@ -60,6 +60,7 @@ if __name__ == "__main__":
                     # a "Connection reset by peer" exception will be thrown
                     data = sock.recv(RECV_BUFFER)
                     if data:
+                        print data + "\n"
                         broadcast_data(sock, "\r" + 'Client' + str(sock.getpeername()) + ': ' + data)                
                  
                 except:
