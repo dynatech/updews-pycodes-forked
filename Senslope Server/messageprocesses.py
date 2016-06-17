@@ -4,7 +4,6 @@ import datetime
 import ConfigParser
 from datetime import datetime as dt
 from datetime import timedelta as td
-import emailer
 from senslopedbio import *
 from gsmSerialio import *
 from groundMeasurements import *
@@ -60,7 +59,7 @@ def checkNameOfNumber(number):
     while True:
         try:
             query = """select name from senslopedb.site_column_sim_nums
-                where sim_num = '%s' """ % (number)
+                where sim_num like '%s' """ % (number)
                 
             a = cur.execute(query)
             if a:
@@ -569,6 +568,7 @@ def ProcessRain(line,sender):
     if len(line.split(',')) > 9:
         line = re.sub(",(?=$)","",line)
     line = re.sub("(?<=,)(?=(,|$))","NULL",line)
+    line = re.sub("(?<=,)NULL(?=,)","0.0",line)
     print line
 
     try:
@@ -589,12 +589,12 @@ def ProcessRain(line,sender):
         # data = items.group(3)
         data = line.split(",",3)[3]
 
-        if msgtable in ('MAGW'):
-            print '>> Adjusting rain value',
-            rain_val_str = data.split(',')[3]
-            rain_val_adj = float(rain_val_str) - 0.254
-            data = data.replace(rain_val_str,str(rain_val_adj))
-            print 'data adj >>', data
+        # if msgtable in ('MAGW'):
+        #     print '>> Adjusting rain value',
+        #     rain_val_str = data.split(',')[3]
+        #     rain_val_adj = float(rain_val_str) - 0.254
+        #     data = data.replace(rain_val_str,str(rain_val_adj))
+        #     print 'data adj >>', data
 
         
     except IndexError and AttributeError:
@@ -680,6 +680,22 @@ def ProcessStats(line,txtdatetime):
         
     print 'End of Process status data'
 
+def CheckMessageSource(msg):
+    if checkNumberIfExists(msg.simnum,'community'):
+        smsmsg = "From: %s %s of %s\n" % (identity[0][1],identity[0][0],identity[0][2])
+        smsmsg += msg.data
+        WriteOutboxMessageToDb(smsmsg, communityphonenumber)
+        return
+    elif checkNumberIfExists(msg.simnum,'dewsl'):
+        print ">> From senslope staff"
+        return
+
+    name = checkNumberIfExists(msg.simnum,'sensor')    
+    if name:
+        print ">> From sensor", name[0][0]
+    else:
+        print "From unknown number ", msg.simnum
+
 def ProcessAllMessages(allmsgs,network):
     read_success_list = []
     read_fail_list = []
@@ -704,13 +720,14 @@ def ProcessAllMessages(allmsgs,network):
                 WriteOutboxMessageToDb(successen, msg.simnum)
             except ValueError as e:
                 print str(e)
-                print ">> Error in manual ground measurement SMS"
-                WriteOutboxMessageToDb("READ-FAIL: \n" + msg.data, communityphonenumber)
+                errortype = re.search("(WEATHER|DATE|TIME|GROUND MEASUREMENTS|NAME)", str(e).upper()).group(0)
+                print ">> Error in manual ground measurement SMS", errortype
+
+                WriteOutboxMessageToDb("READ-FAIL: (%s)\n%s" % (errortype,msg.data), communityphonenumber)
                 WriteOutboxMessageToDb(str(e), msg.simnum)
             except:
-                WriteOutboxMessageToDb("READ-FAIL: \n" + msg.data, communityphonenumber)
-                WriteOutboxMessageToDb("Unhandled error. From previous message", communityphonenumber)
-
+                WriteOutboxMessageToDb("READ-FAIL: (Unhandled) \n" + msg.data, communityphonenumber)
+              
         elif re.search("^[A-Z]{4,5}\*[xyabcXYABC]\*[A-F0-9]+\*[0-9]+T?$",msg.data):
             try:
                 dlist = ProcTwoAccelColData(msg.data,msg.simnum,msg.dt)
@@ -743,6 +760,7 @@ def ProcessAllMessages(allmsgs,network):
             print '>> Unrecognized message format: '
             print 'NUM: ' , msg.simnum
             print 'MSG: ' , msg.data
+            CheckMessageSource(msg)            
             isMsgProcSuccess = False
             
         if isMsgProcSuccess:

@@ -178,12 +178,32 @@ def querydatabase(query, identifier, instance='local'):
             print 'OK'
         else:
             print '>> Warning: Query has no result set', identifier
-            a = 'Empty'
+            a = None
     except MySQLdb.OperationalError:
-        a =  'ERROR'
+        a =  None
     except KeyError:
-        a = 'ERROR key'
+        a = None
     finally:
         db.close()
         return a
+
+def checkNumberIfExists(simnumber,table='community'):
+    simnumber = simnumber[-10:]
+    if table == 'community':
+        query = """select lastname,firstname,sitename from senslopedb.%scontacts where
+            number like "%s%s%s"; """ % (table,'%',simnumber,'%')
+    elif table == 'dewsl':
+        query = """select lastname,firstname from senslopedb.%scontacts where
+            number like "%s%s%s"; """ % (table,'%',simnumber,'%')
+    elif table == 'sensor':          
+        query = """select name from senslopedb.site_column_sim_nums where
+            number like "%s%s%s"; """ % ('%',simnumber,'%')
+    else:
+        return None
+
+    identity = querydatabase(query,'checknumber')
+
+    return identity
+
+
         

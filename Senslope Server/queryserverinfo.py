@@ -4,7 +4,6 @@ import datetime
 import ConfigParser
 from datetime import datetime as dt
 from datetime import timedelta as td
-import emailer
 import senslopedbio as dbio
 from gsmSerialio import *
 from groundMeasurements import *

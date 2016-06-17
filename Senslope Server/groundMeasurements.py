@@ -48,7 +48,7 @@ def getDateFromSms(text):
 
   cur_year = str(dt.today().year)
 
-  separator = "[\. ,]{0,1}"
+  separator = "[\. ,]{0,3}"
 
   date_format_dict = {
       mon_re1 + separator + day_re1 + separator + year_re1 : "%b%d%Y",
@@ -88,8 +88,9 @@ def getGndMeas(text):
   cleanText = re.sub(" +"," ",text.upper())
   cleanText = re.sub("\.+",".",cleanText)
   cleanText = re.sub(";",":",cleanText)
+  cleanText = re.sub("\n"," ",cleanText)
   cleanText = cleanText.strip()
-  sms_list = re.split(" ",re.sub("\W"," ",cleanText))
+  sms_list = re.split(" ",re.sub("[\W]"," ",cleanText))
   
   sms_date = ""
   sms_time = ""
@@ -120,7 +121,7 @@ def getGndMeas(text):
   
   # get all the weather information
   try:
-    wrecord = re.search("(?<="+meas[-1]+" )\w+(?= )",data_field).group(0)
+    wrecord = re.search("(?<="+meas[-1]+" )[A-Z]+",data_field).group(0)
     recisvalid = False
     for keyword in ["ARAW","ULAN","BAGYO","LIMLIM","AMBON","ULAP"]:
         if keyword in wrecord:
