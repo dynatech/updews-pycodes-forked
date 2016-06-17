@@ -1,9 +1,9 @@
 import ConfigParser, MySQLdb, time, sys
-from senslopedbio import *
 from datetime import datetime as dt
+import cfgfileio as cfg
 
-cfg = ConfigParser.ConfigParser()
-cfg.read(sys.path[0] + "/senslope-server-config.txt")
+# cfg = ConfigParser.ConfigParser()
+# cfg.read(sys.path[0] + "/senslope-server-config.txt")
 
 class dbInstance:
     def __init__(self,name,host,user,password):
@@ -12,10 +12,10 @@ class dbInstance:
        self.user = user
        self.password = password
 
+c = cfg.config()
 
-
-localdbinstance = dbInstance(cfg.get('LocalDB', 'DBName'),cfg.get('LocalDB', 'Host'),cfg.get('LocalDB', 'Username'),cfg.get('LocalDB', 'Password'))
-gsmdbinstance = dbInstance(cfg.get('GSMDB', 'DBName'),cfg.get('GSMDB', 'Host'),cfg.get('GSMDB', 'Username'),cfg.get('GSMDB', 'Password'))
+localdbinstance = dbInstance(c.localdb.name,c.localdb.host,c.localdb.user,c.localdb.pwd)
+gsmdbinstance = dbInstance(c.gsmdb.name,c.gsmdb.host,c.gsmdb.user,c.gsmdb.pwd)
 
 # def SenslopeDBConnect():
 # Definition: Connect to senslopedb in mysql
@@ -134,6 +134,8 @@ def getAllOutboxSmsFromDb(send_status):
 
 def commitToDb(query, identifier, instance='local'):
     db, cur = SenslopeDBConnect(instance)
+
+    # print query
     
     try:
         retry = 0
@@ -186,6 +188,26 @@ def querydatabase(query, identifier, instance='local'):
     finally:
         db.close()
         return a
+<<<<<<< .mine
+
+def checkNumberIfExists(simnumber,table='community'):
+    simnumber = simnumber[-10:]
+    if table == 'community':
+        query = """select lastname,firstname,sitename from %scontacts where
+            number like "%s%s%s"; """ % (table,'%',simnumber,'%')
+    elif table == 'dewsl':
+        query = """select lastname,firstname from %scontacts where
+            number like "%s%s%s"; """ % (table,'%',simnumber,'%')
+    elif table == 'sensor':          
+        query = """select name from site_column_sim_nums where
+            number like "%s%s%s"; """ % ('%',simnumber,'%')
+    else:
+        return None
+
+    identity = querydatabase(query,'checknumber')
+
+    return identity
+=======
 
 def checkNumberIfExists(simnumber,table='community'):
     simnumber = simnumber[-10:]
@@ -207,3 +229,4 @@ def checkNumberIfExists(simnumber,table='community'):
 
 
         
+>>>>>>> .r619

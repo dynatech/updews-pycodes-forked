@@ -11,14 +11,12 @@ import multiprocessing
 import SomsServerParser as SSP
 import math
 import senslopeServer as server
-
+import cfgfileio as cfg
 
 
 def getLatestQueryReport():
-	cfg = ConfigParser.ConfigParser()
-	cfg.read(sys.path[0] + '/' + "senslope-server-config.txt")
-
-	querylatestreportoutput = cfg.get('FileIO','querylatestreportoutput')
+	c = cfg.config
+	querylatestreportoutput = c.fileio.queryoutput
 	print querylatestreportoutput
 	f = open(querylatestreportoutput,'r')
 	filecontent = f.read()

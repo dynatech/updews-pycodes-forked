@@ -1,13 +1,13 @@
 [LocalDB]
 username = root
 host = 127.0.0.1
-password = irc311
+password = senslope
 dbname = senslopedb
 
 [GSMDB]
 username = root
-host = 127.0.0.1
-password = irc311
+host = 192.168.1.100
+password = senslope
 dbname = senslopedb
 
 [I/O]
@@ -22,6 +22,7 @@ timeout = 5
 smartport = COM17
 
 [SMSAlert]
+communityphonenumber = 09163938789
 sunnumbers = 09228412065,09228120490,09253120491
 enable = True
 globenumbers=09166685391,09054537225,09068386258,09178825084,09163938789
@@ -51,7 +52,7 @@ FailObvEN = Error! You did not put your name on the text message.  Please check 
 unexpectedchardir = D:\Server Files\Consolidated\
 inboxdir = D:\Server Files\Consolidated\Inbox\
 unknownsenderfile = D:\Server Files\Consolidated\Unknown-sender.txt
-allalertsfile = D:\Server Files\Consolidated\DYNA\all_alerts.txt
+allalertsfile = /home/dynaslope/Desktop/Monitoring\ Outputs/all_alerts.txt
 gndmeasfilesdir = C:\Users\windows user\Desktop\Ground Measurement Backup\
 
 [simprefix]

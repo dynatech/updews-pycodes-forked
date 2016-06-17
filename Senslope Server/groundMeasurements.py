@@ -1,17 +1,6 @@
 import re, sys
 from datetime import datetime as dt
-import ConfigParser
-
-# cfg = ConfigParser.ConfigParser()
-# cfg.read(sys.path[0] + '/' + "senslope-server-config.txt")
-
-# # print '\n\n*******************************************************'  
-# faildateen = cfg.get('ReplyMessages','FailDateEN')
-# failtimeen = cfg.get('ReplyMessages','FailTimeEN')
-# failmeasen = cfg.get('ReplyMessages','FailMeasEN')
-# failweaen = cfg.get('ReplyMessages','FailWeaEN')
-# failobven = cfg.get('ReplyMessages','FailObvEN')
-
+import cfgfileio as cfg
 
 def getTimeFromSms(text):
   # timetxt = ""
@@ -26,6 +15,7 @@ def getTimeFromSms(text):
       hm + sep + hm + " +" : "%H:%M"
   }
 
+  print text
   time_str = ''
   for fmt in time_format_dict:
     time_str_search = re.search(fmt,text)
@@ -35,6 +25,8 @@ def getTimeFromSms(text):
       time_str = re.sub("[^APM0-9:]","",time_str)
       time_str = dt.strptime(time_str,time_format_dict[fmt]).strftime("%H:%M:%S")
       break
+    else:
+      print 'not', fmt
   
   return time_str
 
@@ -72,16 +64,8 @@ def getDateFromSms(text):
 
 def getGndMeas(text):
 
-  cfg = ConfigParser.ConfigParser()
-  cfg.read(sys.path[0] + '/' + "senslope-server-config.txt")
-
+  c = cfg.config()
   print '\n\n*******************************************************'  
-  faildateen = cfg.get('ReplyMessages','FailDateEN')
-  failtimeen = cfg.get('ReplyMessages','FailTimeEN')
-  failmeasen = cfg.get('ReplyMessages','FailMeasEN')
-  failweaen = cfg.get('ReplyMessages','FailWeaEN')
-  failobven = cfg.get('ReplyMessages','FailObvEN')
-
   print text
   
   # clean the message
@@ -104,11 +88,17 @@ def getGndMeas(text):
     
   data_field = re.split(" ",cleanText,maxsplit=2)[2]
   
-  date_str = getDateFromSms(data_field)
-  print "Date: " + date_str
+  try:
+    date_str = getDateFromSms(data_field)
+    print "Date: " + date_str
+  except:
+    raise ValueError(c.reply.faildateen)
   
-  time_str = getTimeFromSms(data_field)
-  print "Time: " + time_str
+  try:
+    time_str = getTimeFromSms(data_field)
+    print "Time: " + time_str
+  except:
+    raise ValueError(c.reply.failtimeen)
   
   # get all the measurement pairs
   meas_pattern = "(?<= )[A-Z] *\d{1,3}\.*\d{0,2} *C*M"
@@ -117,9 +107,10 @@ def getGndMeas(text):
   if meas:
     pass
   else:
-    raise ValueError(failmeasen)
+    raise ValueError(c.reply.failmeasen)
   
   # get all the weather information
+  print repr(data_field)
   try:
     wrecord = re.search("(?<="+meas[-1]+" )[A-Z]+",data_field).group(0)
     recisvalid = False
@@ -131,14 +122,14 @@ def getGndMeas(text):
     if not recisvalid:
         raise AttributeError  
   except AttributeError:
-    raise ValueError(failweaen)
+    raise ValueError(c.reply.failweaen)
   
   # get all the name of reporter/s  
   try:
     observer_name = re.search("(?<="+wrecord+" ).+$",data_field).group(0)
     print observer_name
   except AttributeError:
-    raise ValueError(failobven)
+    raise ValueError(c.reply.failobven)
     
   gnd_records = ""
   for m in meas:
