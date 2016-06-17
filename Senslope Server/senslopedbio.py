@@ -188,7 +188,6 @@ def querydatabase(query, identifier, instance='local'):
     finally:
         db.close()
         return a
-<<<<<<< .mine
 
 def checkNumberIfExists(simnumber,table='community'):
     simnumber = simnumber[-10:]
@@ -207,26 +206,4 @@ def checkNumberIfExists(simnumber,table='community'):
     identity = querydatabase(query,'checknumber')
 
     return identity
-=======
 
-def checkNumberIfExists(simnumber,table='community'):
-    simnumber = simnumber[-10:]
-    if table == 'community':
-        query = """select lastname,firstname,sitename from senslopedb.%scontacts where
-            number like "%s%s%s"; """ % (table,'%',simnumber,'%')
-    elif table == 'dewsl':
-        query = """select lastname,firstname from senslopedb.%scontacts where
-            number like "%s%s%s"; """ % (table,'%',simnumber,'%')
-    elif table == 'sensor':          
-        query = """select name from senslopedb.site_column_sim_nums where
-            number like "%s%s%s"; """ % ('%',simnumber,'%')
-    else:
-        return None
-
-    identity = querydatabase(query,'checknumber')
-
-    return identity
-
-
-        
->>>>>>> .r619

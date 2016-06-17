@@ -49,11 +49,8 @@ FailWeaEN = Error! There is no weather information sent.  Please check your SMS 
 FailObvEN = Error! You did not put your name on the text message.  Please check your SMS and try again.
 
 [FileIO]
-unexpectedchardir = D:\Server Files\Consolidated\
-inboxdir = D:\Server Files\Consolidated\Inbox\
-unknownsenderfile = D:\Server Files\Consolidated\Unknown-sender.txt
 allalertsfile = /home/dynaslope/Desktop/Monitoring\ Outputs/all_alerts.txt
-gndmeasfilesdir = C:\Users\windows user\Desktop\Ground Measurement Backup\
+querylatestreportoutput = /home/dynaslope/Dynaslope/Desktop
 
 [simprefix]
 smart = 07,08,09,10,12,18,19,20,21,28,29,30,38,29,30,38,39,46,47,48,49,89,98,99,22,23,32,33,34,25,42,43
