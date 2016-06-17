@@ -78,11 +78,15 @@ def checkAccelDrift(df):
         return
         
 def outlierFilter(df):
-
-    df = df.resample('30Min', how='first', fill_method = 'ffill')
     
-    dfmean = pd.stats.moments.rolling_mean(df,48, min_periods=1, freq=None, center=False)
-    dfsd = pd.stats.moments.rolling_std(df,48, min_periods=1, freq=None, center=False)
+#    df['ts'] = pandas.to_datetime(df['ts'], unit = 's')
+#    df = df.set_index('ts')
+#    df = df.resample('30min').first()
+##    df = df.reset_index()
+#    df = df.resample('30Min', how='first', fill_method = 'ffill')
+    
+    dfmean = pd.stats.moments.rolling_mean(df[['x','y','z']],48, min_periods=1, freq=None, center=False)
+    dfsd = pd.stats.moments.rolling_std(df[['x','y','z']],48, min_periods=1, freq=None, center=False)
     
     #setting of limits
     dfulimits = dfmean + (3*dfsd)
@@ -141,29 +145,46 @@ def rangeFilterAccel2(dff):
     return dff[dff.x.notnull()]
     
 def orthogonalFilter(df):
-    
+#    print df
     # remove all non orthogonal value
     dfo = df[['x','y','z']]/1024.0
     mag = (dfo.x*dfo.x + dfo.y*dfo.y + dfo.z*dfo.z).apply(np.sqrt)
     lim = .08
     
     return df[((mag>(1-lim)) & (mag<(1+lim)))]
+
+def resample_df(df):
+    df.ts = pd.to_datetime(df['ts'], unit = 's')
+    df = df.set_index('ts')
+    df = df.resample('30min').first()
+    df = df.reset_index()
+    return df
     
 def applyFilters(dfl, orthof=True, rangef=True, outlierf=True):
+    
     if rangef:
-        #dfl = rangeFilterAccel(dfl)   
-        dfl = rangeFilterAccel2(dfl)   
-    if orthof: 
-        dfl = orthogonalFilter(dfl)
-    if outlierf:
-        dfl = dfl.set_index('ts').groupby('id').apply(outlierFilter)
+        dfl = dfl.groupby(['id'])
+        dfl = dfl.apply(rangeFilterAccel)  
+        dfl = dfl.reset_index(drop=True)
+#        dfl = dfl[['ts','name','id','x','y','z']]
         
+    if orthof: 
+        dfl = dfl.groupby(['id'])
+        dfl = dfl.apply(orthogonalFilter)
+        dfl = dfl.reset_index(drop=True)
+        
+    if outlierf:
+        dfl = dfl.groupby(['id'])
+        dfl = dfl.apply(resample_df)
+        dfl = dfl.set_index('ts').groupby('id').apply(outlierFilter)
+        dfl = dfl.reset_index(level = 1)
         #some results don't have the "extra id" which is why no removal is 
         #necessary
-        try:
-            dfl = dfl.drop('id',1).reset_index() 
-        except:
-            #print "Extra 'id' doesn't exist already. No need to remove. Proceed!"
-            return dfl
-        
+#        try:
+#            dfl = dfl.drop('id',1).reset_index() 
+#        except:
+#            return dfl
+            
+
+    dfl = dfl[['ts','name','id','x','y','z']]
     return dfl
