@@ -49,8 +49,6 @@ if __name__ == "__main__":
                 sockfd, addr = server_socket.accept()
                 CONNECTION_LIST.append(sockfd)
                 print "Client (%s, %s) connected" % addr
-                 
-                broadcast_data(sockfd, "[%s:%s] entered room\n" % addr)
              
             #Some incoming message from a client
             else:
@@ -61,10 +59,10 @@ if __name__ == "__main__":
                     data = sock.recv(RECV_BUFFER)
                     if data:
                         msg = "\r" + '<' + str(sock.getpeername()) + '> ' + data
+                        print msg
                         broadcast_data(sock, data)  
                  
                 except:
-                    broadcast_data(sock, "Client (%s, %s) is offline" % addr)
                     print "Client (%s, %s) is offline" % addr
                     sock.close()
                     try:

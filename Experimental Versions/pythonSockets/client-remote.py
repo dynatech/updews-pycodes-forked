@@ -53,4 +53,4 @@ numbers = [pradoS, pradoG]
 #dsl.closeSocketConn(s)
 
 #dsl.sendTimestampToGSM(host, port, numbers)
-dsl.sendDataFullCycle(host, port, "This is my message!")
+dsl.sendDataFullCycle(host, port, "Hello Mr Codesword!")
