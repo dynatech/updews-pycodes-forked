@@ -61,7 +61,7 @@ if __name__ == "__main__":
                     data = sock.recv(RECV_BUFFER)
                     if data:
                         msg = "\r" + '<' + str(sock.getpeername()) + '> ' + data
-                        broadcast_data(sock, msg)                 
+                        broadcast_data(sock, data)  
                  
                 except:
                     broadcast_data(sock, "Client (%s, %s) is offline" % addr)
