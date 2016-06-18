@@ -19,7 +19,7 @@ SOMS=[]
 
 def errorlogs(errortype, line, dt):
     error=""
-    writefolder='D:\Server Files\Consolidated\\'
+    writefolder=''
     
     x = {
         0: 'wrong identifier',1: 'wrong node division',

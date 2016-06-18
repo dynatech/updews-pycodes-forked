@@ -1,41 +1,33 @@
 import os,time,re,sys
-import MySQLdb
-import datetime
-import ConfigParser
 from datetime import datetime as dt
-from datetime import timedelta as td
-from senslopedbio import *
-from gsmSerialio import *
-from groundMeasurements import *
-import multiprocessing
-import SomsServerParser as SSP
-import math
-from messageprocesses import *
-from senslopeServer import *
+import senslopedbio as dbio
+import messageprocesses as msgproc
+import senslopeServer as server
 import lockscript
+import gsmSerialio as gsmio
 #---------------------------------------------------------------------------------------------------------------------------
 
 def main():
 
     lockscript.get_lock('processmessages')
             
-    createTable("runtimelog","runtime")
+    dbio.createTable("runtimelog","runtime")
     # logRuntimeStatus("procfromdb","startup")
 
     # force backup
     while True:
-        allmsgs = getAllSmsFromDb("UNREAD")
+        allmsgs = dbio.getAllSmsFromDb("UNREAD")
         if len(allmsgs) > 0:
             msglist = []
             for item in allmsgs:
-                smsItem = sms(item[0], str(item[2]), str(item[3]), str(item[1]))
+                smsItem = gsmio.sms(item[0], str(item[2]), str(item[3]), str(item[1]))
                 msglist.append(smsItem)
             allmsgs = msglist
 
-            read_success_list, read_fail_list = ProcessAllMessages(allmsgs,"procfromdb")
+            read_success_list, read_fail_list = msgproc.ProcessAllMessages(allmsgs,"procfromdb")
 
-            setReadStatus("READ-SUCCESS",read_success_list)
-            setReadStatus("READ-FAIL",read_fail_list)
+            dbio.setReadStatus("READ-SUCCESS",read_success_list)
+            dbio.setReadStatus("READ-FAIL",read_fail_list)
             sleeptime = 5
         else:
             # sleeptime = 60
@@ -45,7 +37,7 @@ def main():
             #     WriteOutboxMessageToDb(alertmsg,smartnumbers)
             #     WriteOutboxMessageToDb(alertmsg,globenumbers)
         
-            logRuntimeStatus("procfromdb","alive")
+            server.logRuntimeStatus("procfromdb","alive")
             print dt.today().strftime("\nServer active as of %A, %B %d, %Y, %X")
             return
             # time.sleep(sleeptime)

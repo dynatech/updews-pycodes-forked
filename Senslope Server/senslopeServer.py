@@ -4,9 +4,8 @@ import datetime
 import ConfigParser
 from datetime import datetime as dt
 from datetime import timedelta as td
-from senslopedbio import *
-from gsmSerialio import *
-from groundMeasurements import *
+import senslopedbio as dbio
+import gsmSerialio as gsmio
 import multiprocessing
 import SomsServerParser as SSP
 import math
@@ -14,7 +13,7 @@ import cfgfileio as cfg
 #---------------------------------------------------------------------------------------------------------------------------
 
 def updateSimNumTable(name,sim_num,date_activated):
-    db, cur = SenslopeDBConnect('local')
+    db, cur = dbio.SenslopeDBConnect('local')
     
     while True:
         try:
@@ -41,7 +40,7 @@ def updateSimNumTable(name,sim_num,date_activated):
                 (name,sim_num,date_activated)
                 VALUES ('%s','%s','%s')""" %(name,sim_num,date_activated)
 
-    commitToDb(query, 'updateSimNumTable')
+    dbio.commitToDb(query, 'updateSimNumTable')
     
 def logRuntimeStatus(script_name,status):
     if (status == 'alive'):
@@ -58,7 +57,7 @@ def logRuntimeStatus(script_name,status):
                 values ('%s','%s','%s')
                 """ %(logtimestamp,script_name,status)
     
-    commitToDb(query, 'logRuntimeStatus')
+    dbio.commitToDb(query, 'logRuntimeStatus')
        
 def SendAlertGsm(network,alertmsg):
     c = cfg.config()
@@ -71,15 +70,9 @@ def SendAlertGsm(network,alertmsg):
         # alllines = f.read()
         # f.close()
         for n in numlist:
-            sendMsg(alertmsg,n)
+            gsmio.sendMsg(alertmsg,n)
     except IndexError:
         print "Error sending all_alerts.txt"
-
-def UnexpectedCharactersLog(msg, network):
-    print ">> Error: Unexpected characters/s detected in ", msg.data
-    # f = open(unexpectedchardir+network+'Nonalphanumeric_errorlog.txt','a')
-    # f.write(msg.dt + ',' + msg.simnum + ',' + msg.data+ '\n')
-    # f.close()
 
 def WriteRawSmsToDb(msglist):
     query = "INSERT INTO smsinbox (timestamp,sim_num,sms_msg,read_status) VALUES "
@@ -90,7 +83,7 @@ def WriteRawSmsToDb(msglist):
     # just to remove the trailing ','
     query = query[:-1]
     
-    commitToDb(query, "WriteRawSmsToDb", instance='GSM')
+    dbio.commitToDb(query, "WriteRawSmsToDb", instance='GSM')
 
 def WriteEQAlertMessageToDb(alertmsg):
     c = cfg.config()
@@ -105,20 +98,20 @@ def WriteOutboxMessageToDb(message,recepients,send_status='UNSENT'):
     
     print query
     
-    commitToDb(query, "WriteOutboxMessageToDb", 'gsm')
+    dbio.commitToDb(query, "WriteOutboxMessageToDb", 'gsm')
     
 def CheckAlertMessages():
     c = cfg.config()
     alllines = ''
     if os.path.isfile(c.fileio.allalertsfile) and os.path.getsize(c.fileio.allalertsfile) > 0:
-        f = open(allalertsfile,'r')
+        f = open(c.fileio.allalertsfile,'r')
         alllines = f.read()
         f.close()
         
     return alllines
     
 def SendMessagesFromDb(network):
-    allmsgs = getAllOutboxSmsFromDb("UNSENT")
+    allmsgs = dbio.getAllOutboxSmsFromDb("UNSENT")
     if len(allmsgs) <= 0:
         # print ">> No messages in outbox"
         return
@@ -152,7 +145,7 @@ def SendMessagesFromDb(network):
                 continue
             # check if recepient number in allowed prefixed list    
             if num_prefix in extended_prefix_list:
-                sendMsg(msg.data,num)
+                gsmio.sendMsg(msg.data,num)
                 send_success_list.append(msg.num)
                 
     setSendStatus("SENT",send_success_list)
@@ -183,9 +176,9 @@ def RunSenslopeServer(network):
     print '**' + network + ' GSM server active**'
     print time.asctime()
     while True:
-        m = countmsg()
+        m = gsmio.countmsg()
         if m>0:
-            allmsgs = getAllSms(network)
+            allmsgs = gsmio.getAllSms(network)
             
             try:
                 WriteRawSmsToDb(allmsgs)

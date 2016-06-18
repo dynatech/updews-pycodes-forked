@@ -10,10 +10,6 @@ host = 192.168.1.100
 password = senslope
 dbname = senslopedb
 
-[I/O]
-writetodb = true
-savetofile = False
-
 [Serial]
 baudrate = 57600
 sunport = COM16
@@ -23,21 +19,13 @@ smartport = COM17
 
 [SMSAlert]
 communityphonenumber = 09163938789
-sunnumbers = 09228412065,09228120490,09253120491
+sunnumbers = 
 enable = True
-globenumbers=09166685391,09054537225,09068386258,09178825084,09163938789
+globenumbers=09166685391,09054537225,09068386258,09178825084,09163938789,09176023735
 csvinputfile = Node-level_alerts.csv
-smartnumbers=09288263063,09984405687
+smartnumbers=09288263063,09984405687,09228412065,09228120490,09253120491
 alertflags = 12
 alertreportinterval = 30
-SMSgndmeasfile = C:\Users\windows user\Desktop\Ground Measurement Backup\smsbackup.txt
-gndmeasfilesdir = C:\Users\windows user\Desktop\Ground Measurement Backup\
-
-[Misc]
-timestampstart = None
-timestampend = None
-sleepperiod = 2
-adjustcolumntimeof =OSLB
 
 [ReplyMessages]
 SuccessEN = Success! Thank you for sending your ground measurements.
@@ -49,7 +37,7 @@ FailWeaEN = Error! There is no weather information sent.  Please check your SMS 
 FailObvEN = Error! You did not put your name on the text message.  Please check your SMS and try again.
 
 [FileIO]
-allalertsfile = /home/dynaslope/Desktop/Monitoring\ Outputs/all_alerts.txt
+allalertsfile = /home/dynaslope/Desktop/MonitoringOutput/all_alerts.txt
 querylatestreportoutput = /home/dynaslope/Dynaslope/Desktop
 
 [simprefix]

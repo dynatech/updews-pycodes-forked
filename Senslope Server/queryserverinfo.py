@@ -1,15 +1,8 @@
 import os,time,serial,re,sys
-import MySQLdb, subprocess
 import datetime
-import ConfigParser
 from datetime import datetime as dt
 from datetime import timedelta as td
 import senslopedbio as dbio
-from gsmSerialio import *
-from groundMeasurements import *
-import multiprocessing
-import SomsServerParser as SSP
-import math
 import senslopeServer as server
 import cfgfileio as cfg
 
