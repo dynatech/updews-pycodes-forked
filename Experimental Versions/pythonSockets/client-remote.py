@@ -34,13 +34,6 @@ host = "www.codesword.com"
 #host = socket.gethostname()
 port = 5051
 
-pradoS = "09980619501"
-pradoG = "09163677476"
-ivy = "09065310825"
-carloSun = "09228912093"
-#numbers = [pradoS, pradoG, ivy, carloSun]
-numbers = [pradoS, pradoG]
-
 ##connect to the AWS socket
 #s = dsl.openSocketConn(host, port)
 #
@@ -52,5 +45,7 @@ numbers = [pradoS, pradoG]
 ##close AWS socket
 #dsl.closeSocketConn(s)
 
-#dsl.sendTimestampToGSM(host, port, numbers)
-dsl.sendDataFullCycle(host, port, "Hello Mr Codesword!")
+dsl.sendDataFullCycle(host, port, """Testing this very very long message...
+    The Quick Brown fox jumped over the lazy dog! Lets see how the server
+    will parse it. Will it chop the message into pieces? Will the GSM be
+    able to send it in proper chronological order?""")

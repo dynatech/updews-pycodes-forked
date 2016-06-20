@@ -15,6 +15,7 @@ import pandas as pd
 from datetime import datetime
 import queryPiDb as qpi
 import dewsSocketLib as dsl
+import json
 
 #import MySQLdb
 
@@ -38,6 +39,10 @@ pradoS = "09980619501"
 pradoG = "09163677476"
 ivy = "09065310825"
 carloSun = "09228912093"
+biboy = "09266413958"
+kennex = "09293175812"
+meryllS = "09228776515"
+meryllG = "09068386258"
 #numbers = [pradoS, pradoG, ivy, carloSun]
 numbers = [pradoS]
 
@@ -46,7 +51,7 @@ s = dsl.openSocketConn(host, port)
 
 while True:
 #	c, addr = s.accept()
-    msg = s.recv(1024)
+    msg = s.recv(2048)
     
     #No database writing should happen if connection is interrupted
     if msg == None or msg == '':
@@ -54,7 +59,49 @@ while True:
         dsl.closeSocketConn(s)
     else:
         print msg
-        dsl.sendMessageToGSM(numbers, msg)
+        #dsl.sendMessageToGSM(numbers, msg)
+    
+        #The local ubuntu server is expected to receive a JSON message
+        #parse the numbers from the message
+        try:
+            parsed_json = json.loads(msg)
+            
+            #print(parsed_json['numbers'])
+            recipients = parsed_json['numbers']
+            print "Recipients of Message: %s" % (len(recipients))
+            
+            for recipient in recipients:
+                print recipient
+            
+            #print(parsed_json['msg'])
+            message = parsed_json['msg']
+            
+            dsl.sendMessageToGSM(recipients, message)
+        except:
+            print "Error: Please check the JSON construction of your message"
+        
+
+        
 
 #close AWS socket
 dsl.closeSocketConn(s)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
