@@ -50,6 +50,7 @@ class config:
 		self.smsalert.sunnum = cfg.get("SMSAlert","sunnumbers")
 		self.smsalert.globenum = cfg.get("SMSAlert","globenumbers")
 		self.smsalert.smartnum = cfg.get("SMSAlert","smartnumbers")
+		self.smsalert.serveralert = cfg.get("SMSAlert","serveralert")
 
 		self.reply = Container()
 		self.reply.successen = cfg.get("ReplyMessages","successen")
