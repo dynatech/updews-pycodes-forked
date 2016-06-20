@@ -1,30 +1,41 @@
 import os,time,re,sys
 import MySQLdb
 import datetime
-import ConfigParser
+import cfgfileio as cfg
 from datetime import datetime as dt
 from datetime import timedelta as td
-import emailer
-from senslopedbio import *
-from gsmSerialio import *
-from groundMeasurements import *
-import multiprocessing
-import SomsServerParser as SSP
-import math
-from messageprocesses import *
-from senslopeServer import *
+import senslopedbio as dbio
+import senslopeServer as server
+import queryserverinfo
 #---------------------------------------------------------------------------------------------------------------------------
 
 def main():
-            
-    createTable("runtimelog","runtime")
-    logRuntimeStatus("alert","checked")
+    c = cfg.config()
+    dbio.createTable("runtimelog","runtime")
+    server.logRuntimeStatus("alert","checked")
 
     print '>> Checking for alert sms'
-    alertmsg = CheckAlertMessages()
+    alertmsg = server.CheckAlertMessages()
+
+    print alertmsg
     if alertmsg:
-        WriteOutboxMessageToDb(alertmsg,smartnumbers)
-        WriteOutboxMessageToDb(alertmsg,globenumbers)
+        # server.WriteOutboxMessageToDb(alertmsg,c.smsalert.smartnum)
+        # server.WriteOutboxMessageToDb(alertmsg,c.smsalert.globenum)
+        query = """select nickname, numbers from dewslcontacts where grouptags like '%alert%'"""
+        contacts = dbio.querydatabase(query,'checkalert')
+        # print contacts
+
+        query = "INSERT INTO smsoutbox (timestamp_written,recepients,sms_msg) VALUES "
+        timeofday = queryserverinfo.getTimeOfDayDescription()
+
+        tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
+        for item in contacts:
+            message = 'SENSOR ALERT. Good %s %s\n%s' % (timeofday,item[0],alertmsg)
+            query += "('%s','%s','%s')," % (tsw,item[1],message)
+        query = query[:-1]
+
+        dbio.commitToDb(query, 'checkalertmsg', 'GSM')
+        print 'done'
     else:
         print '>> No alert msg read.'
         

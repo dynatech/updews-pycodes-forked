@@ -1,25 +1,15 @@
 import os,time,serial,re,sys
-import MySQLdb, subprocess
 import datetime
-import ConfigParser
 from datetime import datetime as dt
 from datetime import timedelta as td
-import emailer
 import senslopedbio as dbio
-from gsmSerialio import *
-from groundMeasurements import *
-import multiprocessing
-import SomsServerParser as SSP
-import math
 import senslopeServer as server
-
+import cfgfileio as cfg
 
 
 def getLatestQueryReport():
-	cfg = ConfigParser.ConfigParser()
-	cfg.read(sys.path[0] + '/' + "senslope-server-config.txt")
-
-	querylatestreportoutput = cfg.get('FileIO','querylatestreportoutput')
+	c = cfg.config()
+	querylatestreportoutput = c.fileio.queryoutput
 	print querylatestreportoutput
 	f = open(querylatestreportoutput,'r')
 	filecontent = f.read()
@@ -42,11 +32,11 @@ def getRuntimeLogs(db='local'):
 		status1 = 'alive'
 		status2 = 'alive'
 	
-	query = """(select * from senslopedb.runtimelog 
+	query = """(select * from runtimelog 
 		where script_name = '%s' and status = '%s'
 		order by timestamp desc limit 1)
 		union
-		(select * from senslopedb.runtimelog 
+		(select * from runtimelog 
 		where script_name = '%s' and status = '%s'
 		order by timestamp desc limit 1)
 		""" % (script1,status1,script2,status2)
@@ -78,9 +68,14 @@ def sendStatusUpdates():
 	status_message += "Globe instance: %s\n" % (gsmlogs[0][0].strftime("%B %d, %H:%M%p"))
 	status_message += "Smart instance: %s\n" % (gsmlogs[1][0].strftime("%B %d, %H:%M%p"))
 
-	reportnumber = getNumberOfReporter(dt.today())
+	print dt.today()
 
-	server.WriteOutboxMessageToDb(status_message,reportnumber)
+	if reporter == 'scheduled':
+		reportnumber = getNumberOfReporter(dt.today())
+		server.WriteOutboxMessageToDb(status_message,reportnumber)
+	elif int(active_loggers_count) < 60:
+		print ">> Sending alert sms for server"
+		server.WriteOutboxMessageToDb(status_message,c.smsalert.serveralert)
 
 def getTimeOfDayDescription():
 	today = dt.today()
@@ -115,8 +110,8 @@ def sendServerMonReminder():
 
 def getShifts(datedt):
 
-	query = """select * from senslopedb.monshiftsched where `timestamp` = 
-	(select `timestamp` from senslopedb.monshiftsched order by 
+	query = """select * from monshiftsched where `timestamp` = 
+	(select `timestamp` from monshiftsched order by 
 	abs(timediff(`timestamp`, "%s")) limit 1);
 	""" % (datedt.strftime("%Y-%m-%d %H:%M:00"))
 
@@ -172,6 +167,8 @@ def main():
 		sendEventMonitoringReminder()
 	elif func =='introduce':
 		introduce()
+	elif func == 'sendserveralert':
+		sendStatusUpdates('server')
 	else:
 		print '>> Wrong argument'
 

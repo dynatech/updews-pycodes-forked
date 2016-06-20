@@ -4,17 +4,16 @@ import datetime
 import ConfigParser
 from datetime import datetime as dt
 from datetime import timedelta as td
-import emailer
-from senslopedbio import *
-from gsmSerialio import *
-from groundMeasurements import *
+import senslopedbio as dbio
+import gsmSerialio as gsmio
 import multiprocessing
 import SomsServerParser as SSP
 import math
+import cfgfileio as cfg
 #---------------------------------------------------------------------------------------------------------------------------
 
 def updateSimNumTable(name,sim_num,date_activated):
-    db, cur = SenslopeDBConnect('local')
+    db, cur = dbio.SenslopeDBConnect('local')
     
     while True:
         try:
@@ -41,7 +40,7 @@ def updateSimNumTable(name,sim_num,date_activated):
                 (name,sim_num,date_activated)
                 VALUES ('%s','%s','%s')""" %(name,sim_num,date_activated)
 
-    commitToDb(query, 'updateSimNumTable')
+    dbio.commitToDb(query, 'updateSimNumTable')
     
 def logRuntimeStatus(script_name,status):
     if (status == 'alive'):
@@ -58,59 +57,22 @@ def logRuntimeStatus(script_name,status):
                 values ('%s','%s','%s')
                 """ %(logtimestamp,script_name,status)
     
-    commitToDb(query, 'logRuntimeStatus')
+    dbio.commitToDb(query, 'logRuntimeStatus')
        
-def timeToSendAlertMessage(ref_minute):
-    current_minute = dt.now().minute
-    if current_minute % AlertReportInterval != 0:
-        return 0,ref_minute
-    elif ref_minute == current_minute:
-        return 0,ref_minute
-    else:
-        return 1,current_minute
-    
-def SendAlertEmail(network, serverstate):
-    print "\n\n>> Attemptint to send routine emails.."
-    sender = '1234dummymailer@gmail.com'
-    sender_password = '1234dummy'
-    receiver =['ggilbertluis@gmail.com', 'dynabeta@gmail.com']
-	
-    ## select if serial error if active server if inactive server
-    if serverstate == 'active':
-        subject = dt.today().strftime("ACTIVE " + network + " SERVER Notification as  of %A, %B %d, %Y, %X")
-        active_message = '\nGood Day!\n\nYou received this email because ' + network + ' SERVER is still active!\nThanks!\n\n-' + network + ' Server\n'
-    elif serverstate == 'serial':
-        subject = dt.today().strftime(network + 'SERVER No Serial Notification  as  of %A, %B %d, %Y, %X')
-        active_message = '\nGood Day!\n\nYou received this email because ' + network + ' SERVER is NOT connected to Serial Port!\nPlease fix me.\nThanks!\n\n-' + network + ' Server\n'
-    elif serverstate == 'inactive':
-        subject = dt.today().strftime(network + 'SERVER No Serial Notification  as  of %A, %B %d, %Y, %X')
-        active_message = '\nGood Day!\n\nYou received this email because ' + network + ' SERVER is now INACTIVE!\\nPlease fix me.\nThanks!\n\n-' + network + ' Server\n'
-	
-    p = multiprocessing.Process(target=emailer.sendmessage, args=(sender,sender_password,receiver,sender,subject,active_message),name="sendingemail")
-    p.start()
-    time.sleep(60)
-    # emailer.sendmessage(sender,sender_password,receiver,sender,subject,active_message)
-    print ">> Sending email done.."
-    
 def SendAlertGsm(network,alertmsg):
+    c = cfg.config()
     try:
         if network == 'GLOBE':    
-            numlist = globenumbers.split(",")
+            numlist = c.simprefix.globe.split(",")
         else:
-            numlist = smartnumbers.split(",")
+            numlist = c.simprefix.smart.split(",")
         # f = open(allalertsfile,'r')
         # alllines = f.read()
         # f.close()
         for n in numlist:
-            sendMsg(alertmsg,n)
+            gsmio.sendMsg(alertmsg,n)
     except IndexError:
         print "Error sending all_alerts.txt"
-
-def UnexpectedCharactersLog(msg, network):
-    print ">> Error: Unexpected characters/s detected in ", msg.data
-    # f = open(unexpectedchardir+network+'Nonalphanumeric_errorlog.txt','a')
-    # f.write(msg.dt + ',' + msg.simnum + ',' + msg.data+ '\n')
-    # f.close()
 
 def WriteRawSmsToDb(msglist):
     query = "INSERT INTO smsinbox (timestamp,sim_num,sms_msg,read_status) VALUES "
@@ -121,11 +83,12 @@ def WriteRawSmsToDb(msglist):
     # just to remove the trailing ','
     query = query[:-1]
     
-    commitToDb(query, "WriteRawSmsToDb", instance='GSM')
+    dbio.commitToDb(query, "WriteRawSmsToDb", instance='GSM')
 
 def WriteEQAlertMessageToDb(alertmsg):
-    WriteOutboxMessageToDb(alertmsg,globenumbers)
-    WriteOutboxMessageToDb(alertmsg,smartnumbers)
+    c = cfg.config()
+    WriteOutboxMessageToDb(alertmsg,c.smsalert.globenum)
+    WriteOutboxMessageToDb(alertmsg,c.smsalert.smartnum)
 
 def WriteOutboxMessageToDb(message,recepients,send_status='UNSENT'):
     query = "INSERT INTO smsoutbox (timestamp_written,recepients,sms_msg,send_status) VALUES "
@@ -135,19 +98,22 @@ def WriteOutboxMessageToDb(message,recepients,send_status='UNSENT'):
     
     print query
     
-    commitToDb(query, "WriteOutboxMessageToDb", 'gsm')
+    dbio.commitToDb(query, "WriteOutboxMessageToDb", 'gsm')
     
 def CheckAlertMessages():
+    c = cfg.config()
     alllines = ''
-    if os.path.isfile(allalertsfile) and os.path.getsize(allalertsfile) > 0:
-        f = open(allalertsfile,'r')
+    print c.fileio.allalertsfile
+    if os.path.isfile(c.fileio.allalertsfile) and os.path.getsize(c.fileio.allalertsfile) > 0:
+        f = open(c.fileio.allalertsfile,'r')
         alllines = f.read()
         f.close()
-        
+    else:
+        print '>> Error in reading file', print alllines
     return alllines
     
 def SendMessagesFromDb(network):
-    allmsgs = getAllOutboxSmsFromDb("UNSENT")
+    allmsgs = dbio.getAllOutboxSmsFromDb("UNSENT")
     if len(allmsgs) <= 0:
         # print ">> No messages in outbox"
         return
@@ -181,7 +147,7 @@ def SendMessagesFromDb(network):
                 continue
             # check if recepient number in allowed prefixed list    
             if num_prefix in extended_prefix_list:
-                sendMsg(msg.data,num)
+                gsmio.sendMsg(msg.data,num)
                 send_success_list.append(msg.num)
                 
     setSendStatus("SENT",send_success_list)
@@ -189,7 +155,6 @@ def SendMessagesFromDb(network):
 def RunSenslopeServer(network):
     minute_of_last_alert = dt.now().minute
     timetosend = 0
-    email_flg = 0
     lastAlertMsgSent = ''
     logruntimeflag = True
     global checkIfActive
@@ -200,8 +165,6 @@ def RunSenslopeServer(network):
         print ">> ERROR: Could not open COM %r!" % (Port+1)
         print '**NO COM PORT FOUND**'
         serverstate = 'serial'
-        # SendAlertEmail(network,serverstate)
-        # while True:
         gsm.close()
         logRuntimeStatus(network,"com port error")
         raise ValueError(">> Error: no com port found")
@@ -215,9 +178,9 @@ def RunSenslopeServer(network):
     print '**' + network + ' GSM server active**'
     print time.asctime()
     while True:
-        m = countmsg()
+        m = gsmio.countmsg()
         if m>0:
-            allmsgs = getAllSms(network)
+            allmsgs = gsmio.getAllSms(network)
             
             try:
                 WriteRawSmsToDb(allmsgs)
@@ -262,38 +225,3 @@ def RunSenslopeServer(network):
             print '>> Error in parsing mesages: No data returned by GSM'            
         else:
             print '>> Error in parsing mesages: Error unknown'
-            
-        # if os.path.isfile(allalertsfile) and os.path.getsize(allalertsfile) > 0:
-            # f = open(allalertsfile,'r')
-            # alllines = f.read()
-            # f.close()
-            # if lastAlertMsgSent != alllines:
-                # print ">> Sending alert SMS"
-                # lastAlertMsgSent = alllines
-                # SendAlertGsm(network,alllines)
-            # else:
-                # print ">> Alert already sent"
-            
-""" Global variables"""
-checkIfActive = True
-anomalysave = ''
-
-cfg = ConfigParser.ConfigParser()
-cfg.read(sys.path[0] + '/' + "senslope-server-config.txt")
-
-# gsm = serial.Serial() 
-Baudrate = cfg.getint('Serial', 'Baudrate')
-Timeout = cfg.getint('Serial', 'Timeout')
-Namedb = cfg.get('LocalDB', 'DBName')
-Hostdb = cfg.get('LocalDB', 'Host')
-Userdb = cfg.get('LocalDB', 'Username')
-Passdb = cfg.get('LocalDB', 'Password')
-
-AlertReportInterval = cfg.getint('SMSAlert','AlertReportInterval')
-
-##SMS alert numbers
-smartnumbers = cfg.get('SMSAlert', 'smartnumbers')
-globenumbers = cfg.get('SMSAlert', 'globenumbers')
-
-allalertsfile = cfg.get('FileIO','allalertsfile')
-

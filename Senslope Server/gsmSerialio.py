@@ -9,7 +9,7 @@ gsm = serial.Serial()
 Baudrate = cfg.getint('Serial', 'Baudrate')
 Timeout = cfg.getint('Serial', 'Timeout')
 Namedb = cfg.get('LocalDB', 'DBName')
-SaveToFile = cfg.get('I/O', 'savetofile')
+# SaveToFile = cfg.get('I/O', 'savetofile')
 
 class sms:
     def __init__(self,num,sender,data,dt):
