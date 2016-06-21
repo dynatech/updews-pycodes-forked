@@ -7,6 +7,8 @@ import groundMeasurements as gndmeas
 import SomsServerParser as SSP
 import senslopeServer as server
 import cfgfileio as cfg
+import argparse
+import queryserverinfo as qsi
 
 def updateLastMsgReceivedTable(txtdatetime,name,sim_num,msg):
     query = """insert into senslopedb.last_msg_received
@@ -743,7 +745,9 @@ def ProcessAllMessages(allmsgs,network):
         elif msg.data.split('*')[0] == 'COORDINATOR' or msg.data.split('*')[0] == 'GATEWAY':
             isMsgProcSuccess = ProcessCoordinatorMsg(msg.data, msg.simnum)
         elif re.search("EQINFO",msg.data):
-            isMsgProcSuccess = ProcessEarthquake(msg)            
+            isMsgProcSuccess = ProcessEarthquake(msg)
+        elif re.search("^PSRI ",msg.data):
+            isMsgProcSuccess = qsi.ProcessServerInfoRequest(msg)            
         else:
             print '>> Unrecognized message format: '
             print 'NUM: ' , msg.simnum
@@ -823,4 +827,6 @@ def ProcessCoordinatorMsg(coordsms, num):
         return False
     except:
         print ">> Unknown Error", coordsms
-        return False  
+        return False
+
+    

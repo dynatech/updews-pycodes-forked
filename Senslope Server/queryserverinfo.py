@@ -5,7 +5,8 @@ from datetime import timedelta as td
 import senslopedbio as dbio
 import senslopeServer as server
 import cfgfileio as cfg
-
+import argparse
+import StringIO
 
 def getLatestQueryReport():
 	c = cfg.config()
@@ -182,7 +183,50 @@ def getNonReportingSites():
 	message = message.replace("'","")
 	print repr(message)
 	server.WriteOutboxMessageToDb(message,c.smsalert.communitynum)
+
+def getLatestSmsFromColumn(colname):
+	query = """ select timestamp,sms_msg from smsinbox where sms_msg like '%s%s%s' 
+		order by timestamp desc limit 1 """ % ('%',colname,'%')
 	
+	last_col_msg = dbio.querydatabase(query,'getlatestcolmsg','gsm')
+
+	tmp_msg = "Latest message from %s\n" % (colname.upper())
+	if last_col_msg:
+		tmp_msg += 'Timestamp: ' + last_col_msg[0][0].strftime("%Y-%m-%d %H:%M:%S") + '\n'
+		tmp_msg += 'Message: ' + last_col_msg[0][1]
+	else:
+		tmp_msg += 'UNDEFINED'
+	return tmp_msg
+
+def GetSimNumofColumn(colname):
+	query = """ select sim_num from site_column_sim_nums where name = '%s'; """ % (colname)
+
+	num = dbio.querydatabase(query,'getsimumofcolumn')
+
+	tmp_msg = "%s: " % (colname.upper())
+	if num:
+		return tmp_msg + num[0][0]
+	else:
+		return tmp_msg + 'UNDEFINED'
+
+def GetLatestDataofNode(colname,nid):
+	query = """ select * from %s where id = %d and 
+	timestamp = (select max(timestamp) from %s where id = %d); """ % (colname,nid,colname,nid)
+
+	print query
+	data = dbio.querydatabase(query,'getlatestdataofnode')
+	tmp_msg = "Latest data from %s %d\n" % (colname.upper(),nid)
+	for line in data:
+		tmp_msg += line[0].strftime("%Y-%m-%d %H:%M:%S") + ','
+		tmp_msg += repr(line[1:]).replace('L','') + '\n'
+	
+	if len(data) == 0:
+		tmp_msg += 'UNDEFINED'
+	else:
+		print ">> ", data
+	
+	return tmp_msg
+
 def main():
 	func = sys.argv[1] 
 	if func == 'sendregularstatusupdates':
@@ -191,14 +235,64 @@ def main():
 		sendServerMonReminder()
 	elif func == 'sendeventmonitoringreminder':
 		sendEventMonitoringReminder()
-	elif func =='introduce':
+	elif func == 'introduce':
 		introduce()
 	elif func == 'sendserveralert':
 		sendStatusUpdates('server')
 	elif func == 'getnonreportingsites':
 		getNonReportingSites()
+	elif func == 'test':
+		test()
 	else:
 		print '>> Wrong argument'
 
+# if __name__ == "__main__":
+# 	main()
+
+def ProcessServerInfoRequest(msg):
+	parser = argparse.ArgumentParser(description="Request information from server\n PSRI [-options]")
+	parser.add_argument("-s", "--sim_num", help="get sim number of column", action="store_true")
+	parser.add_argument("-t", "--latest_ts", help="get timestamp of latest sms", action="store_true")
+	parser.add_argument("-d", "--latest_node_data", help="get latest node data", action="store_true")
+	
+	parser.add_argument("-c", "--col_name", help="column name")
+	parser.add_argument("-n", "--node_id", help="node id", type=int)
+	# parser.add_argument("-m", "--msg_id", help="message id", type=int)
+	
+	# check if there is an error in parsing the arguments
+	print msg.data
+	try:
+		args = parser.parse_args(msg.data.lower().split(' ')[1:])
+	except:
+		print '>> Error in parsing'
+		# error_msg = StringIO.StringIO()
+		error = parser.format_help().replace("processmessagesfromdb.py","PSRI")
+		# error = error_msg.get
+		print error
+		server.WriteOutboxMessageToDb(error,msg.simnum)
+		return
+
+	if args.sim_num:
+		num = GetSimNumofColumn(args.col_name.strip())
+		print num
+		server.WriteOutboxMessageToDb(num,msg.simnum)
+	
+	if args.latest_ts:
+		ts_msg = getLatestSmsFromColumn(args.col_name.strip())
+		print ts_msg
+		server.WriteOutboxMessageToDb(ts_msg,msg.simnum)
+
+	if args.latest_node_data:
+		latest_data = GetLatestDataofNode(args.col_name.strip(),args.node_id)
+		print latest_data
+		server.WriteOutboxMessageToDb(latest_data,msg.simnum)
+
+	return True
+
+		
+def test():
+    msg = "-t -clabb -n10"
+    ProcessServerInfoRequest(msg)
+
 if __name__ == "__main__":
-	main()
+    main()

@@ -197,9 +197,10 @@ def checkNumberIfExists(simnumber,table='community'):
     elif table == 'dewsl':
         query = """select lastname,firstname from %scontacts where
             number like "%s%s%s"; """ % (table,'%',simnumber,'%')
-    elif table == 'sensor':          
+    elif table == 'sensor': 
+        print simnumber         
         query = """select name from site_column_sim_nums where
-            number like "%s%s%s"; """ % ('%',simnumber,'%')
+            sim_num like "%s%s%s"; """ % ('%',simnumber,'%')
     else:
         return None
 
