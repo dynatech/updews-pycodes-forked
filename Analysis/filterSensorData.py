@@ -85,9 +85,10 @@ def outlierFilter(df):
 ##    df = df.reset_index()
 #    df = df.resample('30Min', how='first', fill_method = 'ffill')
     
-    dfmean = pd.stats.moments.rolling_mean(df[['x','y','z']],48, min_periods=1, freq=None, center=False)
-    dfsd = pd.stats.moments.rolling_std(df[['x','y','z']],48, min_periods=1, freq=None, center=False)
-    
+#    dfmean = pd.stats.moments.rolling_mean(df[['x','y','z']],48, min_periods=1, freq=None, center=False)
+    dfmean = df[['x','y','z']].rolling(min_periods=1,window=48,center=False).mean()
+#    dfsd = pd.stats.moments.rolling_std(df[['x','y','z']],48, min_periods=1, freq=None, center=False)
+    dfsd = df[['x','y','z']].rolling(min_periods=1,window=48,center=False).std()
     #setting of limits
     dfulimits = dfmean + (3*dfsd)
     dfllimits = dfmean - (3*dfsd)
