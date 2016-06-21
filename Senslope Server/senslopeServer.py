@@ -103,11 +103,13 @@ def WriteOutboxMessageToDb(message,recepients,send_status='UNSENT'):
 def CheckAlertMessages():
     c = cfg.config()
     alllines = ''
+    print c.fileio.allalertsfile
     if os.path.isfile(c.fileio.allalertsfile) and os.path.getsize(c.fileio.allalertsfile) > 0:
         f = open(c.fileio.allalertsfile,'r')
         alllines = f.read()
         f.close()
-        
+    else:
+        print '>> Error in reading file', alllines
     return alllines
     
 def SendMessagesFromDb(network):

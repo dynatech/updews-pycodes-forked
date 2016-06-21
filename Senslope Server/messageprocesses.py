@@ -705,7 +705,7 @@ def ProcessAllMessages(allmsgs,network):
                 gm = gndmeas.getGndMeas(msg.data)
                 RecordGroundMeasurements(gm)
                 server.WriteOutboxMessageToDb("READ-SUCCESS: \n" + msg.data,c.smsalert.communitynum)
-                server.WriteOutboxMessageToDb(successen, msg.simnum)
+                server.WriteOutboxMessageToDb(c.reply.successen, msg.simnum)
             except ValueError as e:
                 print str(e)
                 errortype = re.search("(WEATHER|DATE|TIME|GROUND MEASUREMENTS|NAME)", str(e).upper()).group(0)
