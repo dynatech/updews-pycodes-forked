@@ -26,11 +26,10 @@ def main():
         # print contacts
 
         query = "INSERT INTO smsoutbox (timestamp_written,recepients,sms_msg) VALUES "
-        timeofday = queryserverinfo.getTimeOfDayDescription()
-
+        
         tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
         for item in contacts:
-            message = 'SENSOR ALERT. Good %s %s\n%s' % (timeofday,item[0],alertmsg)
+            message = 'SENSOR ALERT:\n%s' % (alertmsg)
             query += "('%s','%s','%s')," % (tsw,item[1],message)
         query = query[:-1]
 

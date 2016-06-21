@@ -12,7 +12,7 @@ class MyClientProtocol(WebSocketClientProtocol):
 
         def hello():
             self.sendMessage(u"Hello, world!".encode('utf8'))
-            # self.sendMessage(b"\x00\x01\x03\x04", isBinary=True)
+            self.sendMessage(b"\x00\x01\x03\x04", isBinary=True)
             self.factory.reactor.callLater(1, hello)
 
         # start sending messages every second ..
@@ -37,8 +37,8 @@ if __name__ == '__main__':
 
     log.startLogging(sys.stdout)
 
-    factory = WebSocketClientFactory(u"ws://www.codesword.com:5050")
+    factory = WebSocketClientFactory(u"ws://127.0.0.1:5050")
     factory.protocol = MyClientProtocol
 
-    reactor.connectTCP("www.codesword.com", 5050, factory)
+    reactor.connectTCP("127.0.0.1", 5050, factory)
     reactor.run()
