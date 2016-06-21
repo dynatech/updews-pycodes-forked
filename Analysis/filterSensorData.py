@@ -166,7 +166,6 @@ def applyFilters(dfl, orthof=True, rangef=True, outlierf=True):
         dfl = dfl.groupby(['id'])
         dfl = dfl.apply(rangeFilterAccel)  
         dfl = dfl.reset_index(drop=True)
-#        dfl = dfl[['ts','name','id','x','y','z']]
         
     if orthof: 
         dfl = dfl.groupby(['id'])
@@ -178,13 +177,6 @@ def applyFilters(dfl, orthof=True, rangef=True, outlierf=True):
         dfl = dfl.apply(resample_df)
         dfl = dfl.set_index('ts').groupby('id').apply(outlierFilter)
         dfl = dfl.reset_index(level = 1)
-        #some results don't have the "extra id" which is why no removal is 
-        #necessary
-#        try:
-#            dfl = dfl.drop('id',1).reset_index() 
-#        except:
-#            return dfl
-            
 
     dfl = dfl[['ts','name','id','x','y','z']]
     return dfl
