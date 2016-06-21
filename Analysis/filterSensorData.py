@@ -161,22 +161,32 @@ def resample_df(df):
     return df
     
 def applyFilters(dfl, orthof=True, rangef=True, outlierf=True):
-    
+
+    if dfl.empty:
+        return dfl[['ts','name','id','x','y','z']]
+        
     if rangef:
         dfl = dfl.groupby(['id'])
         dfl = dfl.apply(rangeFilterAccel)  
         dfl = dfl.reset_index(drop=True)
+        if dfl.empty:
+            return dfl[['ts','name','id','x','y','z']]
         
     if orthof: 
         dfl = dfl.groupby(['id'])
         dfl = dfl.apply(orthogonalFilter)
         dfl = dfl.reset_index(drop=True)
+        if dfl.empty:
+            return dfl[['ts','name','id','x','y','z']]
         
     if outlierf:
         dfl = dfl.groupby(['id'])
         dfl = dfl.apply(resample_df)
         dfl = dfl.set_index('ts').groupby('id').apply(outlierFilter)
-        dfl = dfl.reset_index(level = 1)
+        dfl = dfl.reset_index(level = ['ts'])
+        if dfl.empty:
+            return dfl[['ts','name','id','x','y','z']]
 
+    dfl = dfl.reset_index(drop=True)     
     dfl = dfl[['ts','name','id','x','y','z']]
     return dfl
