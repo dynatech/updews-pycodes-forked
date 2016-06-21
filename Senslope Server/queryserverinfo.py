@@ -54,7 +54,8 @@ def getNumberOfReporter(datedt):
 
 	return num
 
-def sendStatusUpdates():
+def sendStatusUpdates(reporter):
+	c = cfg.config()
 	active_loggers_count = getLatestQueryReport()
 
 	loclogs = getRuntimeLogs('local')
@@ -156,7 +157,32 @@ def introduce():
 	print dbio.querydatabase(query,'customquery')
 	return dbio.querydatabase(query,'customquery')
 
-
+def getNonReportingSites():
+	c = cfg.config()
+	two_weeks_ago = (dt.today() - td(days=14)).strftime("%Y-%m-%d")
+	query = """ SELECT name FROM `senslopedb`.`site_rain_props` s
+		where name not in
+		(
+		SELECT site_id FROM `senslopedb`.`gndmeas` g
+		where timestamp > '%s'
+		#where site_id = 'agb'
+		group by site_id
+		)
+		""" % (two_weeks_ago)
+		
+	non_rep_sites = dbio.querydatabase(query,'nonreporting')
+	accu_sites = []
+	for s in non_rep_sites:
+		accu_sites.append(s[0])
+	print accu_sites
+	
+	message = "Non reporting sites reminder.\n"
+	message += "As of %s, the following sites have no ground data measurement: \n" % (two_weeks_ago)
+	message += str(accu_sites)[1:-1]
+	message = message.replace("'","")
+	print repr(message)
+	server.WriteOutboxMessageToDb(message,c.smsalert.communitynum)
+	
 def main():
 	func = sys.argv[1] 
 	if func == 'sendregularstatusupdates':
@@ -169,8 +195,10 @@ def main():
 		introduce()
 	elif func == 'sendserveralert':
 		sendStatusUpdates('server')
+	elif func == 'getnonreportingsites':
+		getNonReportingSites()
 	else:
 		print '>> Wrong argument'
 
 if __name__ == "__main__":
-    main()
+	main()

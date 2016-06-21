@@ -109,7 +109,7 @@ def CheckAlertMessages():
         alllines = f.read()
         f.close()
     else:
-        print '>> Error in reading file', print alllines
+        print '>> Error in reading file', alllines
     return alllines
     
 def SendMessagesFromDb(network):
