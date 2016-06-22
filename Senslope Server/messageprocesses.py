@@ -7,6 +7,8 @@ import groundMeasurements as gndmeas
 import SomsServerParser as SSP
 import senslopeServer as server
 import cfgfileio as cfg
+import argparse
+import queryserverinfo as qsi
 
 def updateLastMsgReceivedTable(txtdatetime,name,sim_num,msg):
     query = """insert into senslopedb.last_msg_received
@@ -486,7 +488,7 @@ def ProcessARQWeather(line,sender):
 
     print 'ARQ Weather data: ' + line
 
-    line = re.sub("(?<=,)((?=$)|(?=,))","NULL",line)
+    line = re.sub("(?<=\+) (?=\+)","NULL",line)
 
     try:
     # ARQ+1+3+4.143+4.128+0.0632+5.072+0.060+0000+13+28.1+75.0+55+150727/160058
@@ -736,14 +738,16 @@ def ProcessAllMessages(allmsgs,network):
             ProcessRain(msg.data,msg.simnum)
         elif re.search(r'(\w{4})[-](\d{1,2}[.]\d{02}),(\d{01}),(\d{1,2})/(\d{1,2}),#(\d),(\d),(\d{1,2}),(\d)[*](\d{10})',msg.data):
             ProcessStats(msg.data,msg.dt)
-        elif re.search("ARQ\+[0-9\.\+/]+$",msg.data):
+        elif re.search("ARQ\+[0-9\.\+/\- ]+$",msg.data):
             ProcessARQWeather(msg.data,msg.simnum)
         elif msg.data[4:7] == "PZ*":
             ProcessPiezometer(msg.data, msg.simnum)
         elif msg.data.split('*')[0] == 'COORDINATOR' or msg.data.split('*')[0] == 'GATEWAY':
             isMsgProcSuccess = ProcessCoordinatorMsg(msg.data, msg.simnum)
         elif re.search("EQINFO",msg.data):
-            isMsgProcSuccess = ProcessEarthquake(msg)            
+            isMsgProcSuccess = ProcessEarthquake(msg)
+        elif re.search("^PSRI ",msg.data):
+            isMsgProcSuccess = qsi.ProcessServerInfoRequest(msg)            
         else:
             print '>> Unrecognized message format: '
             print 'NUM: ' , msg.simnum
@@ -823,4 +827,11 @@ def ProcessCoordinatorMsg(coordsms, num):
         return False
     except:
         print ">> Unknown Error", coordsms
-        return False  
+        return False
+
+# for test codes    
+def test():
+    return
+
+if __name__ == "__main__":
+    test()
