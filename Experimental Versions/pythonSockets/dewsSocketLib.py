@@ -191,3 +191,24 @@ class DewsClientRegularProtocol(WebSocketClientProtocol):
 
     def onClose(self, wasClean, code, reason):
         print("WebSocket connection closed: {0}".format(reason))
+
+    def send(self, data):
+        self.sendMessage(data)
+
+    # def write(self, data):
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

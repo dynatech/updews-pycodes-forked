@@ -9,7 +9,6 @@ from autobahn.twisted.websocket import WebSocketClientProtocol, \
 
 def wsClientReceiver(host, port):
     factory = WebSocketClientFactory(u"ws://%s:%s" % (host,port))
-    # factory.protocol = DewsClientProtocol
     factory.protocol = dsl.DewsClientGSMProtocol
 
     reactor.connectTCP(host, port, factory)
