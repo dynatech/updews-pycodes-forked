@@ -8,7 +8,7 @@ Created on Fri Jun 10 14:06:04 2016
 import pandas as pd
 import pymysql as sql
 from datetime import timedelta
-import numpy as np
+#import numpy as np
 import scipy.fftpack as sff
 import scipy.signal as ss
 from matplotlib import pyplot as plt
@@ -23,13 +23,15 @@ def filt(df,keep_orig=False):
     df1 = df1[df1.id == 1]
         
     f1 = 1.0 #target freq
+    lower = 0.65
+    upper = 0.15
 #    f2 = 2.0
     sf = 48.0 #sampling freq
 #    Rp = 1.0
 #    As = 2.0
-    butter_order = 2
+    butter_order = 5
     
-    ws = [(f1*0.65/(sf*0.5)),(f1*1.35/(0.5*sf))]
+    ws = [((f1-lower)/(sf*0.5)),((f1+upper)/(0.5*sf))]
     b,a = ss.butter(butter_order,ws,'bandstop')
 #    df1['xfilt'] = ss.filtfilt(b,a,df1.x,axis=-1)
 #    df1['yfilt'] = ss.filtfilt(b,a,df1.y,axis=-1)
@@ -38,7 +40,7 @@ def filt(df,keep_orig=False):
     df1['y'] = ss.filtfilt(b,a,df1.y,axis=-1)
     df1['z'] = ss.filtfilt(b,a,df1.z,axis=-1)
     for i in [2,3,4,5,6,7,8,9,10]:
-        ws = [(f1*0.65*i/(sf*0.5)),(f1*1.35*i/(0.5*sf))]
+        ws = [(((f1*i)-lower)/(sf*0.5)),((f1*i)+upper)/(0.5*sf)]
         b,a = ss.butter(butter_order,ws,'bandstop')
         df1['x'] = ss.filtfilt(b,a,df1.x,axis=-1)
         df1['y'] = ss.filtfilt(b,a,df1.y,axis=-1)
@@ -156,7 +158,7 @@ def plotter(df1,fname=''):
     plt.tight_layout()
     if (len(fname) > 1):
         plt.savefig(fname)
-    
+        plt.close()
     
 def aim(target,dataframe=False):
     df_sa = pd.DataFrame.from_csv('sensor_alerts_cl.csv')
