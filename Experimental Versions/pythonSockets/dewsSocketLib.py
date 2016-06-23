@@ -16,6 +16,10 @@ import pandas as pd
 from datetime import datetime
 import queryPiDb as qpi
 
+#Simple Python WebSocket
+from websocket import create_connection
+
+#Autobahn and Twisted
 from twisted.python import log
 from twisted.internet import reactor
 from autobahn.twisted.websocket import WebSocketClientProtocol, \
@@ -117,6 +121,41 @@ def sendColumnNamesToSocket(host, port):
 # Web Sockets
 ###############################################################################
 
+#One full cycle of opening connection
+# sending data and closing connection
+def sendDataToWSS(host, port, msg):
+    try:
+        ws = create_connection("ws://%s:%s" % (host, port))
+#        print "Opened WebSocket"
+#        print msg
+        ws.send(msg)
+        print "Sent %s" % (msg)
+        ws.close()
+#        print "Closed WebSocket"
+        
+        #returns 0 on successful sending of data
+        return 0
+    except:
+        print "Failed to send data. Please check your internet connection"        
+        
+        #returns -1 on failure to send data
+        return -1
+    
+#No filtering yet for special characters
+def formatReceivedGSMtext(smsid, timestamp, sender, message):
+    jsonText = """{"type":"smsrcv","sms_id":"%s","timestamp":"%s","sender":["%s"],"msg":"%s"}""" % (smsid, timestamp, sender, message)
+    return jsonText    
+    
+def sendDataToDEWS(msg):
+#    host = "www.dewslandslide.com"
+    host = "www.codesword.com"
+    port = 5050
+    sendDataToWSS(host, port, msg)
+    
+def sendReceivedGSMtoDEWS(smsid, timestamp, sender, message):
+    jsonText = formatReceivedGSMtext(smsid, timestamp, sender, message)
+    sendDataToDEWS(jsonText)
+
 class DewsClientGSMProtocol(WebSocketClientProtocol):
 
     def onConnect(self, response):
@@ -124,14 +163,6 @@ class DewsClientGSMProtocol(WebSocketClientProtocol):
 
     def onOpen(self):
         print("WebSocket connection open.")
-
-        # def hello():
-        #     self.sendMessage(u"Hello, world!".encode('utf8'))
-        #     # self.sendMessage(b"\x00\x01\x03\x04", isBinary=True)
-        #     self.factory.reactor.callLater(1, hello)
-
-        # start sending messages every second ..
-        # hello()
 
     def onMessage(self, payload, isBinary):
         if isBinary:
@@ -174,14 +205,6 @@ class DewsClientRegularProtocol(WebSocketClientProtocol):
     def onOpen(self):
         print("WebSocket connection open.")
 
-        # def hello():
-        #     self.sendMessage(u"Hello, world!".encode('utf8'))
-        #     # self.sendMessage(b"\x00\x01\x03\x04", isBinary=True)
-        #     self.factory.reactor.callLater(1, hello)
-
-        # start sending messages every second ..
-        # hello()
-
     def onMessage(self, payload, isBinary):
         if isBinary:
             print("Binary message received: {0} bytes".format(len(payload)))
@@ -194,8 +217,6 @@ class DewsClientRegularProtocol(WebSocketClientProtocol):
 
     def send(self, data):
         self.sendMessage(data)
-
-    # def write(self, data):
 
 
 
