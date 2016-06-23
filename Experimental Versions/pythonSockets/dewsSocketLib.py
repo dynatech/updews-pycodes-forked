@@ -188,6 +188,8 @@ class DewsClientGSMProtocol(WebSocketClientProtocol):
                     
                     sendMessageToGSM(recipients, message)
                     self.sendMessage(u"Sent an SMS!".encode('utf8'))
+                elif commType == 'smsrcv':
+                    print "Warning: message type 'smsrcv', Message is ignored."
                 else:
                     print "Error: No message type detected. Can't send an SMS."
                 
