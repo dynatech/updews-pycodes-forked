@@ -112,9 +112,7 @@ def sendServerMonReminder():
 
 def getShifts(datedt):
 
-	query = """select * from monshiftsched where `timestamp` = 
-	(select `timestamp` from monshiftsched order by 
-	abs(timediff(`timestamp`, "%s")) limit 1);
+	query = """select * from monshiftsched where timestamp < "%s" order by timestamp desc limit 1)
 	""" % (datedt.strftime("%Y-%m-%d %H:%M:00"))
 
 	return dbio.querydatabase(query,'customquery')
@@ -141,11 +139,9 @@ def sendEventMonitoringReminder():
 		numbers_dict[nick] = num
 
 	for key in position_dict:
-		reminder_message = "Good %s Agent %s " % (getTimeOfDayDescription(),key)
-		reminder_message += "your mission, should you choose to accept it, is to be the %s " % (position_dict[key])
-		reminder_message += "for %s. " % (report_dt.strftime("%B %d, %H:%M%p"))
-		reminder_message += "Good luck. This message will self destruct in 5, 4, 3, 2 ..."
-
+		reminder_message = "Monitoring shift reminder. Good %s %s, " % (getTimeOfDayDescription(),key)
+		reminder_message += "you are assigned to be the %s " % (position_dict[key].upper())
+		reminder_message += "for %s." % (report_dt.strftime("%B %d, %H:%M%p"))
 		# print reminder_message
 
 	 	server.WriteOutboxMessageToDb(reminder_message,numbers_dict[key])
@@ -250,7 +246,7 @@ def main():
 # 	main()
 
 def ProcessServerInfoRequest(msg):
-	parser = argparse.ArgumentParser(description="Request information from server\n PSRI [-options]")
+	parser = argparse.ArgumentParser(description="Request information from server\n PSIR [-options]")
 	parser.add_argument("-s", "--sim_num", help="get sim number of column", action="store_true")
 	parser.add_argument("-t", "--latest_ts", help="get timestamp of latest sms", action="store_true")
 	parser.add_argument("-d", "--latest_node_data", help="get latest node data", action="store_true")
