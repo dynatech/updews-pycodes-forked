@@ -10,6 +10,12 @@ import queryserverinfo
 #---------------------------------------------------------------------------------------------------------------------------
 
 def main():
+    try:
+        if sys.argv[1] == 'test': writetodb = False
+        else: writetodb = True
+    except:
+        writetodb = True
+
     c = cfg.config()
     dbio.createTable("runtimelog","runtime")
     server.logRuntimeStatus("alert","checked")
@@ -33,7 +39,8 @@ def main():
             query += "('%s','%s','%s')," % (tsw,item[1],message)
         query = query[:-1]
 
-        dbio.commitToDb(query, 'checkalertmsg', 'GSM')
+        if writetodb: dbio.commitToDb(query, 'checkalertmsg', 'GSM')
+        else: print query
         print 'done'
     else:
         print '>> No alert msg read.'
