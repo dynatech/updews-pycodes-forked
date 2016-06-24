@@ -43,8 +43,8 @@ def plot_cracks(which_site,zeroed=True):
     sitelist=np.unique(df['site_id'].values)
     fig,ax=plt.subplots(nrows=len(which_site),ncols=1,sharex=True)
     ax_ind=0
-    min_date=max(df['timestamp'])
-    max_date=min(df['timestamp'])
+    min_date=max(df['timestamp'].values)
+    max_date=min(df['timestamp'].values)
     
 
     
@@ -59,11 +59,11 @@ def plot_cracks(which_site,zeroed=True):
         cursite.sort(['timestamp','crack_id'],inplace=True)
         cursite.drop_duplicates(subset = ['timestamp','crack_id'],inplace=True)
         cursite[['meas']]=cursite[['meas']].astype(float)
-        print max(cursite['timestamp'])
+        print max(cursite['timestamp'].values)
         print cursite.tail(20)
 
-        if min(cursite['timestamp'])<min_date:min_date=min(cursite['timestamp'])
-        if max(cursite['timestamp'])>max_date:max_date=max(cursite['timestamp'])
+        if min(cursite['timestamp'].values)<min_date:min_date=min(cursite['timestamp'].values)
+        if max(cursite['timestamp'].values)>max_date:max_date=max(cursite['timestamp'].values)
 
         print min_date, max_date
 
