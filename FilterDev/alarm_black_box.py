@@ -588,15 +588,7 @@ for i in range(0,last_target):
             for i in not_working_nodes:
                 node_list.remove(i)
         
-            # importing proc_monitoring file of current column to dataframe
-        #    try:
-#            print "proc_monitoring here: "
-            proc_monitoring,monwin=generate_proc(colname, num_nodes, seg_len, custom_end)
-    
-        #    print proc_monitoring
-        #    except:
-        #        print "     ",colname, "ERROR...missing/empty proc monitoring"
-        #        continue
+            proc_monitoring,monwin=generate_proc(colname, num_nodes, seg_len, custom_end)    
             
             xz_series_list,xy_series_list = create_series_list(proc_monitoring,monwin,colname,num_nodes)
 #            print "create_series_list tapos na"
@@ -620,16 +612,13 @@ for i in range(0,last_target):
             # Alert generation
             alert_out=alert_generation(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velL2, T_velL3, k_ac_ax,
                                        num_nodes_to_check,custom_end,proc_file_path,CSVFormat)
-        #    print alert_out
-            
-        
+
         alert_out = alert_out.reset_index(level = ['id'])
         alert_out = alert_out[['id','disp_alert','vel_alert','node_alert','col_alert']]
         alert_out = alert_out[(alert_out['vel_alert'] > 0 ) | (alert_out.node_alert == 'l2')]
         alert_out = alert_out[alert_out.id == 1]
         alert_out['site'] = sites
         summary = pd.concat((summary,alert_out),axis = 0)
-#        summary = summary.append(alert_out)
     except:
         print "Error."
         continue
