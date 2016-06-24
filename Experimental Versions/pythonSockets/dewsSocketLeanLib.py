@@ -137,19 +137,21 @@ def sendDataToWSS(host, port, msg):
         return -1
     
 #No filtering yet for special characters
-def formatReceivedGSMtext(smsid, timestamp, sender, message):
-    jsonText = """{"type":"smsrcv","sms_id":"%s","timestamp":"%s","sender":"%s","msg":"%s"}""" % (smsid, timestamp, sender, message)
+def formatReceivedGSMtext(timestamp, sender, message):
+    jsonText = """{"type":"smsrcv","timestamp":"%s","sender":"%s","msg":"%s"}""" % (timestamp, sender, message)
     return jsonText    
     
 def sendDataToDEWS(msg):
 #    host = "www.dewslandslide.com"
     host = "www.codesword.com"
     port = 5050
-    sendDataToWSS(host, port, msg)
-    
-def sendReceivedGSMtoDEWS(smsid, timestamp, sender, message):
-    jsonText = formatReceivedGSMtext(smsid, timestamp, sender, message)
-    sendDataToDEWS(jsonText)
+    success = sendDataToWSS(host, port, msg)
+    return success
+
+def sendReceivedGSMtoDEWS(timestamp, sender, message):
+    jsonText = formatReceivedGSMtext(timestamp, sender, message)
+    success = sendDataToDEWS(jsonText)
+    return success
 
 
 

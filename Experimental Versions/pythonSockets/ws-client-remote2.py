@@ -9,4 +9,4 @@ import dewsSocketLeanLib as dsll
 
 msg = "~`!@#$%^&*()_-+=qwertyuiop[]asdfghjkl;"
 
-dsll.sendReceivedGSMtoDEWS(1239, "2016-06-22 17:00:00", "09163677476", msg)
+dsll.sendReceivedGSMtoDEWS("2016-06-22 17:00:00", "09163677476", msg)
