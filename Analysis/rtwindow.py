@@ -98,5 +98,5 @@ def getwindow(end=datetime.now()):
 
     roll_window_numpts, offsetstart, start, end, monwin = set_monitoring_window(s.io.roll_window_length,s.io.data_dt,s.io.rt_window_length,s.io.num_roll_window_ops,endpt=end)
     
-    return rtwindow(roll_window_numpts, offsetstart, start, end, monwin)
+    return rtwindow(roll_window_numpts, offsetstart, start, end, monwin),s
 #    set_monitoring window
