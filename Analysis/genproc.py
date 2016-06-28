@@ -14,8 +14,15 @@ class procdata:
         self.vel = vel
         self.disp = disp
         
-def resamplenode(df):
-    df = df.resample('30T').ffill()
+def resamplenode(df, window):
+    blank_df = pd.DataFrame({'ts': [window.end,window.offsetstart], 'id': [df['id'].values[0]]*2, 'name': [df['name'].values[0]]*2}).set_index('ts')
+    df = df.append(blank_df)
+    df = df.reset_index().drop_duplicates(['ts','id']).set_index('ts')
+    df.index = pd.to_datetime(df.index)
+    df = df.sort_index(ascending = True)
+    df = df.resample('30Min', base=0, how='pad')
+    df = df.fillna(method='pad')
+    df = df.fillna(method='bfill')
     df = df.reset_index(level=1).set_index('ts')
     return df    
     
@@ -145,14 +152,15 @@ def genproc(col, end=datetime.now()):
     
     monitoring['xz'],monitoring['xy'] = accel_to_lin_xz_xy(col.seglen,monitoring.x.values,monitoring.y.values,monitoring.z.values)
     
-    
     monitoring = monitoring.drop(['x','y','z'],axis=1)
     monitoring = monitoring.drop_duplicates(['ts', 'id'])
     monitoring = monitoring.set_index('ts')
     monitoring = monitoring[['name','id','xz','xy']]
     
+    print "RawAccelData", monitoring
+    
     #resamples xz and xy values per node using forward fill
-    monitoring = monitoring.groupby('id').apply(resamplenode).reset_index(level=1).set_index('ts')
+    monitoring = monitoring.groupby('id').apply(resamplenode, window = window).reset_index(level=1).set_index('ts')
     
     nodal_proc_monitoring = monitoring.groupby('id')
     
