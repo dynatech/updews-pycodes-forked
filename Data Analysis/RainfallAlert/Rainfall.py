@@ -431,6 +431,25 @@ def RainfallAlert(siterainprops):
         datasource="ASTI" + str(n) + " (No Rain Gauge Data)"
         summary_writer(sum_index,r,datasource,twoyrmax,halfmax,summary,alert,alert_df,one,three)
 
+def uptoDB_site_level_alerts(df):
+    #INPUT: Dataframe containing site level alerts
+    #OUTPUT: Writes to sql database the alerts of sites who recently changed their alert status
+    
+    #Get the latest site_level_alert
+    query = 'SELECT s1.timestamp,s1.site,s1.source,s1.alert, COUNT(*) num FROM senslopedb.site_level_alert s1 JOIN senslopedb.site_level_alert s2 ON s1.site = s2.site AND s1.source = s2.source AND s1.timestamp <= s2.timestamp group by s1.timestamp,s1.site, s1.source HAVING COUNT(*) <= 1 ORDER BY site, source, num desc'
+    df2 = GetDBDataFrame(query)
+    
+    #Merge the two data frames to determine overlaps in alerts
+    overlap = pd.merge(df,df2,how = 'left', on = ['site','source','alert'],suffixes=['','_r'])
+    
+    #Get the site with change in its latest alert
+    to_db = df[overlap['timestamp_r'].isnull()]
+    to_db = to_db[['timestamp','site','source','alert']].set_index('timestamp')
+    
+    engine=create_engine('mysql://root:senslope@192.168.1.102:3306/senslopedb')
+    to_db.to_sql(name = 'site_level_alert', con = engine, if_exists = 'append', schema = Namedb, index = True)
+
+
 ###############################################################################
 
 start_time = datetime.now()
@@ -550,7 +569,9 @@ summary['source'] = 'rain'
 summary['site'] = summary['site'].map(lambda x: str(x)[:3])
 df_for_db = summary[['timestamp', 'site', 'source', 'alert']]
 df_for_db = df_for_db.dropna()
-df_for_db.to_sql(name = 'site_level_alert', con = engine, if_exists = 'append', schema = Namedb, index = False)
+
+#Write to site_level_alerts
+uptoDB_site_level_alerts(df_for_db)
 
 
 

@@ -336,7 +336,9 @@ def ProcessPiezometer(line,sender):
     #PUGBPZ*13173214*1511091800 
         linesplit = line.split('*')
         msgname = linesplit[0].lower()
-        print 'msg_name: '+msgname        
+        msgname = re.sub("due","",msgname)
+        msgname = msgname + 'pz'
+        print 'msg_name: ' + msgname        
         data = linesplit[1]
         msgid = int(('0x'+data[:2]), 16)
         p1 = int(('0x'+data[2:4]), 16)*100
@@ -488,7 +490,7 @@ def ProcessARQWeather(line,sender):
 
     print 'ARQ Weather data: ' + line
 
-    line = re.sub("(?<=,)((?=$)|(?=,))","NULL",line)
+    line = re.sub("(?<=\+) (?=\+)","NULL",line)
 
     try:
     # ARQ+1+3+4.143+4.128+0.0632+5.072+0.060+0000+13+28.1+75.0+55+150727/160058
@@ -670,7 +672,8 @@ def ProcessStats(line,txtdatetime):
 
 def CheckMessageSource(msg):
     c = cfg.config()
-    if dbio.checkNumberIfExists(msg.simnum,'community'):
+    identity = dbio.checkNumberIfExists(msg.simnum,'community')
+    if identity:
         smsmsg = "From: %s %s of %s\n" % (identity[0][1],identity[0][0],identity[0][2])
         smsmsg += msg.data
         server.WriteOutboxMessageToDb(smsmsg,c.smsalert.communitynum)
@@ -699,7 +702,9 @@ def ProcessAllMessages(allmsgs,network):
                      
         msgname = checkNameOfNumber(msg.simnum)
         ##### Added for V1 sensors removes unnecessary characters pls see function PreProcessColumnV1(data)
-        if re.search("[A-Z]{4}DUE\*[A-F0-9]+\*\d+T?$",msg.data):
+        if re.search("\*FF",msg.data):
+            ProcessPiezometer(msg.data, msg.simnum)
+        elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*\d+T?$",msg.data):
            msg.data = PreProcessColumnV1(msg.data)
            ProcessColumn(msg.data,msg.dt,msg.simnum)
         elif re.search("(RO*U*TI*N*E )|(EVE*NT )", msg.data.upper()):
@@ -738,15 +743,13 @@ def ProcessAllMessages(allmsgs,network):
             ProcessRain(msg.data,msg.simnum)
         elif re.search(r'(\w{4})[-](\d{1,2}[.]\d{02}),(\d{01}),(\d{1,2})/(\d{1,2}),#(\d),(\d),(\d{1,2}),(\d)[*](\d{10})',msg.data):
             ProcessStats(msg.data,msg.dt)
-        elif re.search("ARQ\+[0-9\.\+/]+$",msg.data):
+        elif re.search("ARQ\+[0-9\.\+/\- ]+$",msg.data):
             ProcessARQWeather(msg.data,msg.simnum)
-        elif msg.data[4:7] == "PZ*":
-            ProcessPiezometer(msg.data, msg.simnum)
         elif msg.data.split('*')[0] == 'COORDINATOR' or msg.data.split('*')[0] == 'GATEWAY':
             isMsgProcSuccess = ProcessCoordinatorMsg(msg.data, msg.simnum)
         elif re.search("EQINFO",msg.data):
             isMsgProcSuccess = ProcessEarthquake(msg)
-        elif re.search("^PSRI ",msg.data):
+        elif re.search("^PSIR ",msg.data):
             isMsgProcSuccess = qsi.ProcessServerInfoRequest(msg)            
         else:
             print '>> Unrecognized message format: '
@@ -829,4 +832,9 @@ def ProcessCoordinatorMsg(coordsms, num):
         print ">> Unknown Error", coordsms
         return False
 
-    
+# for test codes    
+def test():
+    return
+
+if __name__ == "__main__":
+    test()
