@@ -6,9 +6,11 @@ from pandas.stats.api import ols
 import cfgfileio as cfg
 import rtwindow as rtw
 import querySenslopeDb as q
+import genproc as g
 
 def node_alert2(disp_vel, colname, num_nodes, T_disp, T_velL2, T_velL3, k_ac_ax,lastgooddata,window,config):
-    valid_data = window.end - timedelta(hours=3)
+    disp_vel = disp_vel.reset_index(level=1)    
+    valid_data = pd.to_datetime(window.end - timedelta(hours=3))
     #initializing DataFrame object, alert
     alert=pd.DataFrame(data=None)
 
@@ -24,6 +26,7 @@ def node_alert2(disp_vel, colname, num_nodes, T_disp, T_velL2, T_velL3, k_ac_ax,
         cond = pd.to_datetime(lastgooddata.ts.values[0]) < valid_data
     except IndexError:
         cond = False
+        
     alert['ND']=np.where(cond,
                          
                          #No data within valid date 
@@ -128,7 +131,7 @@ def column_alert(alert, num_nodes_to_check, k_ac_ax):
     #OUTPUT:
     #alert:                             Pandas DataFrame object; same as input dataframe "alert" with additional column for column-level alert
 
-    print alert
+#    print alert
     col_alert=[]
     col_node=[]
     #looping through each node
@@ -161,22 +164,113 @@ def column_alert(alert, num_nodes_to_check, k_ac_ax):
 
     return alert
 
+def validity_check(adj_node_ind, alert, i, col_node, col_alert, k_ac_ax):
 
-def main():
-    window,config = rtw.getwindow()    
-    col = q.GetSensorList('martb')
-    monitoring = genproc(col[0])
-    lgd = q.GetLastGoodDataFromDb(monitoring.colprops.name)
+    #DESCRIPTION
+    #used in validating current node alert
 
-    nodal_dv = monitoring.veldisp.groupby('id')     
+    #INPUT
+    #adj_node_ind                       Indices of adjacent node
+    #alert:                             Pandas DataFrame object, with length equal to number of nodes, and columns for displacements along axes,
+    #                                   displacement alerts, minimum and maximum velocities, velocity alerts, final node alerts and olumn-level alert
+    #i                                  Integer, used for counting
+    #col_node                           Integer, current node
+    #col_alert                          Integer, current node alert
+    #k_ac_ax                            float; minimum value of (minimum velocity / maximum velocity) required to consider movement as valid
     
-    alert = nodal_dv.apply(node_alert2, colname=monitoring.colprops.name, num_nodes=monitoring.colprops.nos, T_disp=config.io.t_disp, T_velL2=config.io.t_vell2, T_velL3=config.io.t_vell3, k_ac_ax=config.io.k_ac_ax, lastgooddata=lgd,window=window,config=config)
-    alert = column_alert(alert, config.io.num_nodes_to_check, config.io.k_ac_ax)
-    alert['timestamp']=window.end
-    
-    #setting ts and node_ID as indices
-    alert=alert.set_index(['timestamp','id'])
-    print alert
+    #OUTPUT:
+    #col_alert, col_node                             
 
-if __name__ == "__main__":
-    main()
+    adj_node_alert=[]
+    for j in adj_node_ind:
+        if alert['ND'].values[j-1]==0:
+            adj_node_alert.append(-1)
+        else:
+            if alert['vel_alert'].values[i-1]!=0:
+                #comparing current adjacent node velocity with current node velocity
+                if abs(alert['max_vel'].values[j-1])>=abs(alert['max_vel'].values[i-1])*1/(2.**abs(i-j)):
+                    #current adjacent node alert assumes value of current node alert
+                    col_node.append(i-1)
+                    col_alert.append(alert['node_alert'].values[i-1])
+                    break
+                    
+                else:
+                    adj_node_alert.append(0)
+                    col_alert.append(max(getmode(adj_node_alert)))
+                    break
+                
+            else:
+                check_pl_cur=abs(alert['xz_disp'].values[i-1])>=abs(alert['xy_disp'].values[i-1])
+
+                if check_pl_cur==True:
+                    max_disp_cur=abs(alert['xz_disp'].values[i-1])
+                    max_disp_adj=abs(alert['xz_disp'].values[j-1])
+                else:
+                    max_disp_cur=abs(alert['xy_disp'].values[i-1])
+                    max_disp_adj=abs(alert['xy_disp'].values[j-1])        
+
+                if max_disp_adj>=max_disp_cur*1/(2.**abs(i-j)):
+                    #current adjacent node alert assumes value of current node alert
+                    col_node.append(i-1)
+                    col_alert.append(alert['node_alert'].values[i-1])
+                    break
+                    
+                else:
+                    adj_node_alert.append(0)
+                    col_alert.append(max(getmode(adj_node_alert)))
+                    break
+                
+        if j==adj_node_ind[-1]:
+            col_alert.append(max(getmode(adj_node_alert)))
+        
+    return col_alert, col_node
+
+def getmode(li):
+    li.sort()
+    numbers = {}
+    for x in li:
+        num = li.count(x)
+        numbers[x] = num
+    highest = max(numbers.values())
+    n = []
+    for m in numbers.keys():
+        if numbers[m] == highest:
+            n.append(m)
+    return n
+
+
+#def main():
+window,config = rtw.getwindow()    
+col = q.GetSensorList('agbta')
+monitoring = g.genproc(col[0])
+print 'after genproc ' + str(len(monitoring.vel))
+lgd = q.GetLastGoodDataFromDb(monitoring.colprops.name)
+
+
+
+
+monitoring.vel = monitoring.vel[window.start:window.end]
+monitoring.vel = monitoring.vel.reset_index().sort_values('ts',ascending=True)
+nodal_dv = monitoring.vel.groupby('id')     
+
+
+alert = nodal_dv.apply(node_alert2, colname=monitoring.colprops.name, num_nodes=monitoring.colprops.nos, T_disp=config.io.t_disp, T_velL2=config.io.t_vell2, T_velL3=config.io.t_vell3, k_ac_ax=config.io.k_ac_ax, lastgooddata=lgd,window=window,config=config)
+alert = column_alert(alert, config.io.num_nodes_to_check, config.io.k_ac_ax)
+alert['timestamp']=window.end
+
+#setting ts and node_ID as indices
+alert=alert.set_index(['timestamp','id'])
+print alert
+print '\n\n\n\n\n\n\n\n\n'
+zxc= monitoring.vel
+
+asd = zxc.groupby('id').get_group
+qwe = monitoring.disp.groupby('id').get_group
+
+for x in range (1,col[0].nos+1):
+    try:
+        print len(asd(x))
+    except:
+        print 'nothing for node=' + str(x)
+#if __name__ == "__main__":
+#    main()
