@@ -77,8 +77,8 @@ def checkAccelDrift(df):
     except IndexError:
         return
         
-def outlierFilter(df):
-    
+def outlierFilter(dff):
+    df = dff.copy()
 #    df['ts'] = pandas.to_datetime(df['ts'], unit = 's')
 #    df = df.set_index('ts')
 #    df = df.resample('30min').first()
@@ -103,25 +103,25 @@ def outlierFilter(df):
    
     return df
 
-def rangeFilterAccel(dff):
-    
+def rangeFilterAccel(df):
+    dff = df.copy()
     ## adjust accelerometer values for valid overshoot ranges
     dff.x[(dff.x<-2970) & (dff.x>-3072)] = dff.x[(dff.x<-2970) & (dff.x>-3072)] + 4096
     dff.y[(dff.y<-2970) & (dff.y>-3072)] = dff.y[(dff.y<-2970) & (dff.y>-3072)] + 4096
     dff.z[(dff.z<-2970) & (dff.z>-3072)] = dff.z[(dff.z<-2970) & (dff.z>-3072)] + 4096
     
-    ## remove all invalid values
+    
     dff.x[((dff.x > 1126) | (dff.x < 100))] = np.nan
     dff.y[abs(dff.y) > 1126] = np.nan
     dff.z[abs(dff.z) > 1126] = np.nan
-    
-#    dfl = dff.x * dff.y * dff.z
+
     
 #    return dff[dfl.x.notnull()]
     return dff[dff.x.notnull()]
     
 ### Prado - Created this version to remove warnings
 def rangeFilterAccel2(dff):
+    
     x_index = (dff.x<-2970) & (dff.x>-3072)
     y_index = (dff.y<-2970) & (dff.y>-3072)
     z_index = (dff.z<-2970) & (dff.z>-3072)
@@ -140,13 +140,10 @@ def rangeFilterAccel2(dff):
     dff.loc[y_range,'y'] = np.nan
     dff.loc[z_range,'z'] = np.nan
     
-#    dfl = dff.x * dff.y * dff.z
-    
-#    return dff[dfl.x.notnull()]
     return dff[dff.x.notnull()]
     
 def orthogonalFilter(df):
-#    print df
+
     # remove all non orthogonal value
     dfo = df[['x','y','z']]/1024.0
     mag = (dfo.x*dfo.x + dfo.y*dfo.y + dfo.z*dfo.z).apply(np.sqrt)
@@ -166,20 +163,23 @@ def applyFilters(dfl, orthof=True, rangef=True, outlierf=True):
     if dfl.empty:
         return dfl[['ts','name','id','x','y','z']]
         
+  
     if rangef:
         dfl = dfl.groupby(['id'])
         dfl = dfl.apply(rangeFilterAccel)  
         dfl = dfl.reset_index(drop=True)
+        dfl = dfl.reset_index(level=['ts'])
         if dfl.empty:
             return dfl[['ts','name','id','x','y','z']]
-        
+
     if orthof: 
         dfl = dfl.groupby(['id'])
         dfl = dfl.apply(orthogonalFilter)
         dfl = dfl.reset_index(drop=True)
         if dfl.empty:
             return dfl[['ts','name','id','x','y','z']]
-        
+            
+    
     if outlierf:
         dfl = dfl.groupby(['id'])
         dfl = dfl.apply(resample_df)
@@ -188,6 +188,7 @@ def applyFilters(dfl, orthof=True, rangef=True, outlierf=True):
         if dfl.empty:
             return dfl[['ts','name','id','x','y','z']]
 
+    
     dfl = dfl.reset_index(drop=True)     
     dfl = dfl[['ts','name','id','x','y','z']]
     return dfl
