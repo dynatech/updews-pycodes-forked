@@ -131,7 +131,6 @@ def column_alert(alert, num_nodes_to_check, k_ac_ax):
     #OUTPUT:
     #alert:                             Pandas DataFrame object; same as input dataframe "alert" with additional column for column-level alert
 
-#    print alert
     col_alert=[]
     col_node=[]
     #looping through each node
@@ -251,7 +250,6 @@ def alertgen(trending_alert, monitoring, lgd, window, config):
     
     #setting ts and node_ID as indices
     alert=alert.set_index(['timestamp','id'])
-    print alert
     
     if 'L3' in list(alert.col_alert.values):
         site_alert = 'L3'
@@ -262,8 +260,6 @@ def alertgen(trending_alert, monitoring, lgd, window, config):
     
     alert_index = trending_alert.loc[trending_alert.ts == endTS].index[0]
     trending_alert.loc[alert_index] = [monitoring.colprops.name, site_alert, endTS]
-
-    print trending_alert
     
     return trending_alert
 
@@ -272,6 +268,7 @@ def trending_alertgen(trending_alert, col, window, config):
     lgd = q.GetLastGoodDataFromDb(monitoring.colprops.name)
     
     trending_alert = alertgen(trending_alert, monitoring, lgd, window, config)
+    print trending_alert    
     
     return trending_alert
 
@@ -280,18 +277,29 @@ def main(site=''):
     
     monwinTS = pd.date_range(start = window.end - timedelta(hours=3), end = window.end, freq = '30Min')
     trending_alert = pd.DataFrame({'name': [np.nan]*len(monwinTS), 'alert': [np.nan]*len(monwinTS), 'ts': monwinTS})
+    trending_alert = trending_alert[['name', 'alert', 'ts']]
     
     col = q.GetSensorList(site)
     
     trending_alertTS = trending_alert.groupby('ts')
     output = trending_alertTS.apply(trending_alertgen, col=col, window=window, config=config)
     
-    return output 
+    print output
+    
+    if 'L3' in list(output.alert.values):
+        site_alert = 'L3'
+    elif 'L2' in list(output.alert.values):
+        site_alert = 'L2'
+    else: 
+        site_alert = min(getmode(list(output.alert.values)))
+    
+    return site_alert
 
 
 
 if __name__ == "__main__":
     start_time = datetime.now()
     output = main('agbta')
+    print output
     end_time = datetime.now()
     print 'run time = ', str(end_time - start_time)
