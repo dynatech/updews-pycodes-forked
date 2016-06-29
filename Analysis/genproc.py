@@ -59,6 +59,7 @@ def smooth (df, offsetstart, end, roll_window_numpts, to_smooth):
         return np.round(df, 4)
     else:
         return df
+        
 def node_inst_vel(filled_smoothened, roll_window_numpts, start):
 
     try:          
@@ -77,7 +78,7 @@ def node_inst_vel(filled_smoothened, roll_window_numpts, start):
     
     return filled_smoothened
 
-def genproc(col, end=datetime.now(), offsetstart):
+def genproc(col, offsetstart, end=datetime.now()):
     
     window,config = rtw.getwindow()
     
