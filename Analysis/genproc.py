@@ -51,57 +51,7 @@ def accel_to_lin_xz_xy(seg_len,xa,ya,za):
     xy=x*(ya/(np.sqrt(xa**2+za**2)))
     
     return np.round(xz,4),np.round(xy,4)
-    
-#def fillsmooth (df, offsetstart, end, roll_window_numpts, to_smooth):
-#
-#    df=df.fillna(method='pad')
-#    
-#    df = df[(df.index>=offsetstart)&(df.index<=end)]
-#    
-#    if to_smooth:
-#        df=pd.rolling_mean(df,window=roll_window_numpts,min_periods=1)
-#        
-#    return np.round(df, 4)
-    
 
-#def fill_smooth_df(proc_monitoring, offsetstart, end, roll_window_numpts, to_smooth):
-#
-#    ##DESCRIPTION:
-#    ##returns filled and smoothened xz and xy within monitoring window
-#
-#    ##INPUT:
-#    ##proc_monitoring; dataframe; index: ts, columns: [id, xz, xy]
-#    ##num_dodes; integer; number of nodes
-#    ##monwin; monitoring window dataframe
-#    ##roll_window_numpts; integer; number of data points per rolling window
-#    ##to_fill; filling NAN values
-#    ##to_smooth; smoothing dataframes with moving average
-#
-#    ##OUTPUT:
-#    ##proc_monitoring; dataframe; index: ts, columns: [id, filled and smoothened (fs) xz, fs xy]
-#
-#    #filling NAN values
-#    try:
-#        proc_monitoring = proc_monitoring.reset_index(level=1)
-#        NodesWithVal = list(set(proc_monitoring.dropna().id.values))
-#        blank_df = pd.DataFrame({'ts': [end]*len(NodesWithVal), 'id': NodesWithVal}).set_index('ts')
-#        proc_monitoring = proc_monitoring.append(blank_df)
-#        proc_monitoring = proc_monitoring.reset_index().drop_duplicates(['ts','id']).set_index('ts')
-#        proc_monitoring.index = pd.to_datetime(proc_monitoring.index)
-#        proc_monitoring = proc_monitoring.resample('30Min', base=0, how='ffill')
-#        proc_monitoring = proc_monitoring.fillna(method='pad')
-#        proc_monitoring = proc_monitoring.fillna(method='bfill')
-#     
-#        #dropping rows outside monitoring window
-#        proc_monitoring = proc_monitoring[(proc_monitoring.index>=offsetstart)&(proc_monitoring.index<=end)]
-#        
-#        if to_smooth:
-#            #smoothing dataframes with moving average
-#            proc_monitoring=pd.rolling_mean(proc_monitoring,window=roll_window_numpts,min_periods=1)[roll_window_numpts-1:]
-#    except:
-#        pass
-#
-#    return np.round(proc_monitoring, 4)
     
 def smooth (df, offsetstart, end, roll_window_numpts, to_smooth):
     if to_smooth and len(df)>1:
@@ -127,11 +77,11 @@ def node_inst_vel(filled_smoothened, roll_window_numpts, start):
     
     return filled_smoothened
 
-def genproc(col, end=datetime.now()):
+def genproc(col, end=datetime.now(), offsetstart):
     
     window,config = rtw.getwindow()
     
-    monitoring = q.GetRawAccelData(col.name, window.offsetstart)
+    monitoring = q.GetRawAccelData(col.name, offsetstart)
     
     try:
         monitoring = flt.applyFilters(monitoring)
@@ -148,7 +98,7 @@ def genproc(col, end=datetime.now()):
     monitoring = monitoring.append(LastGoodData)
     
     #assigns timestamps from LGD to be timestamp of offsetstart
-    monitoring.loc[monitoring.ts < window.offsetstart, ['ts']] = window.offsetstart
+    monitoring.loc[monitoring.ts < offsetstart, ['ts']] = offsetstart
     
     monitoring['xz'],monitoring['xy'] = accel_to_lin_xz_xy(col.seglen,monitoring.x.values,monitoring.y.values,monitoring.z.values)
     
@@ -164,7 +114,7 @@ def genproc(col, end=datetime.now()):
     
     nodal_proc_monitoring = monitoring.groupby('id')
     
-    filled_smoothened = nodal_proc_monitoring.apply(smooth, offsetstart=window.offsetstart, end=window.end, roll_window_numpts=window.numpts, to_smooth=config.io.to_smooth)
+    filled_smoothened = nodal_proc_monitoring.apply(smooth, offsetstart=offsetstart, end=window.end, roll_window_numpts=window.numpts, to_smooth=config.io.to_smooth)
     filled_smoothened = filled_smoothened[['xz', 'xy','name']].reset_index()
     
     monitoring = filled_smoothened.set_index('ts')   
