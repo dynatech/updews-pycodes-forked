@@ -9,10 +9,23 @@ import querySenslopeDb as q
 import filterSensorData as flt
 
 class procdata:
-    def __init__ (self, colprops, veldisp):
+    def __init__ (self, colprops, disp, vel):
         self.colprops = colprops
-        self.veldisp = veldisp
-
+        self.vel = vel
+        self.disp = disp
+        
+def resamplenode(df, window):
+    blank_df = pd.DataFrame({'ts': [window.end,window.offsetstart], 'id': [df['id'].values[0]]*2, 'name': [df['name'].values[0]]*2}).set_index('ts')
+    df = df.append(blank_df)
+    df = df.reset_index().drop_duplicates(['ts','id']).set_index('ts')
+    df.index = pd.to_datetime(df.index)
+    df = df.sort_index(ascending = True)
+    df = df.resample('30Min', base=0, how='pad')
+    df = df.fillna(method='pad')
+    df = df.fillna(method='bfill')
+    df = df.reset_index(level=1).set_index('ts')
+    return df    
+      
 def GetNodesWithNoInitialData(df,num_nodes,offsetstart):
     allnodes=np.arange(1,num_nodes+1)*1.
     with_init_val=df[df.ts<offsetstart+timedelta(hours=0.5)]['id'].values
@@ -38,43 +51,14 @@ def accel_to_lin_xz_xy(seg_len,xa,ya,za):
     
     return np.round(xz,4),np.round(xy,4)
 
-def fill_smooth_df(proc_monitoring, offsetstart, end, roll_window_numpts, to_smooth):
-
-    ##DESCRIPTION:
-    ##returns filled and smoothened xz and xy within monitoring window
-
-    ##INPUT:
-    ##proc_monitoring; dataframe; index: ts, columns: [id, xz, xy]
-    ##num_dodes; integer; number of nodes
-    ##monwin; monitoring window dataframe
-    ##roll_window_numpts; integer; number of data points per rolling window
-    ##to_fill; filling NAN values
-    ##to_smooth; smoothing dataframes with moving average
-
-    ##OUTPUT:
-    ##proc_monitoring; dataframe; index: ts, columns: [id, filled and smoothened (fs) xz, fs xy]
-
-    #filling NAN values
-    NodesWithVal = list(set(proc_monitoring.dropna().id.values))
-    blank_df = pd.DataFrame({'ts': [end]*len(NodesWithVal), 'id': NodesWithVal}).set_index('ts')
-    proc_monitoring = proc_monitoring.append(blank_df)
-    proc_monitoring = proc_monitoring.reset_index().drop_duplicates(['ts','id']).set_index('ts')
-    proc_monitoring.index = pd.to_datetime(proc_monitoring.index)
-    proc_monitoring = proc_monitoring.resample('30Min', base=0, how='pad')
-    proc_monitoring = proc_monitoring.fillna(method='pad')
-    proc_monitoring = proc_monitoring.fillna(method='bfill')
- 
-    #dropping rows outside monitoring window
-    proc_monitoring = proc_monitoring[(proc_monitoring.index>=offsetstart)&(proc_monitoring.index<=end)]
-    
-    if to_smooth:
-        #smoothing dataframes with moving average
-        proc_monitoring=pd.rolling_mean(proc_monitoring,window=roll_window_numpts)[roll_window_numpts-1:]
-
-    return np.round(proc_monitoring, 4)
-
+def smooth (df, offsetstart, end, roll_window_numpts, to_smooth):
+    if to_smooth and len(df)>1:
+        df=pd.rolling_mean(df,window=roll_window_numpts,min_periods=1)[roll_window_numpts-1:]
+        return np.round(df, 4)
+    else:
+        return df
+        
 def node_inst_vel(filled_smoothened, roll_window_numpts, start):
-
     try:          
         lr_xz=ols(y=filled_smoothened.xz,x=filled_smoothened.td,window=roll_window_numpts,intercept=True)
         lr_xy=ols(y=filled_smoothened.xy,x=filled_smoothened.td,window=roll_window_numpts,intercept=True)
@@ -91,48 +75,49 @@ def node_inst_vel(filled_smoothened, roll_window_numpts, start):
     
     return filled_smoothened
 
-def genproc(col, end=datetime.now()):
+def genproc(col, offsetstart, end=datetime.now()):
     
-    window,config = rtw.getwindow(end)
+    window,config = rtw.getwindow()
     
-    monitoring = q.GetRawAccelData(col.name, window.offsetstart)
-#    print monitoring
-#    NodesNoInitVal=GetNodesWithNoInitialData(monitoring,col.nos, window.offsetstart)
-    
-#    lgdpm = pd.DataFrame()
-#    for node in NodesNoInitVal:
-#        temp = q.GetSingleLGDPM(col.name, node, window.offsetstart.strftime("%Y-%m-%d %H:%M"))
-#        lgdpm = lgdpm.append(temp,ignore_index=True)
-    
-#    monitoring=monitoring.append(lgdpm)
+    monitoring = q.GetRawAccelData(col.name, offsetstart)
     
     try:
         monitoring = flt.applyFilters(monitoring)
-        LastGoodData=GetLastGoodData(monitoring,col.nos)
-        if len(LastGoodData)<col.nos: print col.name, " Missing nodes in LastGoodData"
-        monitoring=monitoring.append(LastGoodData)  
-        print 'Done'		
-    except KeyboardInterrupt:			
+        LastGoodData = q.GetLastGoodData(monitoring,col.nos)
+        q.PushLastGoodData(LastGoodData,col.name)		
+        LastGoodData = q.GetLastGoodDataFromDb(col.name)
+    	
+    except:	
+        LastGoodData = q.GetLastGoodDataFromDb(col.name)
         print 'error'		
-
-    monitoring.loc[monitoring.ts < window.offsetstart, ['ts']] = window.offsetstart
+        
+    if len(LastGoodData)<col.nos: print col.name, " Missing nodes in LastGoodData"
+    
+    monitoring = monitoring.append(LastGoodData)
+    
+    #assigns timestamps from LGD to be timestamp of offsetstart
+    monitoring.loc[monitoring.ts < offsetstart, ['ts']] = offsetstart
     
     monitoring['xz'],monitoring['xy'] = accel_to_lin_xz_xy(col.seglen,monitoring.x.values,monitoring.y.values,monitoring.z.values)
-
-    monitoring=monitoring.drop(['x','y','z'],axis=1)
+    
+    monitoring = monitoring.drop(['x','y','z'],axis=1)
     monitoring = monitoring.drop_duplicates(['ts', 'id'])
+    monitoring = monitoring.set_index('ts')
+    monitoring = monitoring[['name','id','xz','xy']]
     
-    monitoring=monitoring.set_index('ts')
-    
-    monitoring=monitoring[['name','id','xy','xz']]
+    #resamples xz and xy values per node using forward fill
+    monitoring = monitoring.groupby('id').apply(resamplenode, window = window).reset_index(level=1).set_index('ts')
     
     nodal_proc_monitoring = monitoring.groupby('id')
     
-    filled_smoothened = nodal_proc_monitoring.apply(fill_smooth_df, offsetstart=window.offsetstart, end=window.end, roll_window_numpts=window.numpts, to_smooth=config.io.to_smooth)
+    filled_smoothened = nodal_proc_monitoring.apply(smooth, offsetstart=offsetstart, end=end, roll_window_numpts=window.numpts, to_smooth=config.io.to_smooth)
     filled_smoothened = filled_smoothened[['xz', 'xy','name']].reset_index()
+    
+    monitoring = filled_smoothened.set_index('ts')   
+    
     filled_smoothened['td'] = filled_smoothened.ts.values - filled_smoothened.ts.values[0]
     filled_smoothened['td'] = filled_smoothened['td'].apply(lambda x: x / np.timedelta64(1,'D'))
-    
+    #
     nodal_filled_smoothened = filled_smoothened.groupby('id') 
     
     disp_vel = nodal_filled_smoothened.apply(node_inst_vel, roll_window_numpts=window.numpts, start=window.start)
@@ -141,15 +126,12 @@ def genproc(col, end=datetime.now()):
     disp_vel = disp_vel.set_index('ts')
     disp_vel = disp_vel.sort_values('id', ascending=True)
     
-    monitoring = disp_vel    
-    
-    
-    return procdata(col,monitoring)
+    return procdata(col,monitoring.sort(),disp_vel.sort())
 
-def main():
-    col=q.GetSensorList('agbta')
-    monitoring = genproc(col[0])
-    print monitoring.veldisp
-
-if __name__ == "__main__":
-    main()
+#def main():
+#    col=q.GetSensorList('agbta')
+#    monitoring = genproc(col[0])
+#    print monitoring.veldisp
+#
+#if __name__ == "__main__":
+#    main()

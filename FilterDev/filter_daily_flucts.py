@@ -23,8 +23,8 @@ def filt(df,keep_orig=False):
     df1 = df1[df1.id == 1]
         
     f1 = 1.0 #target freq
-    lower = 0.65
-    upper = 0.15
+    lower = 0.15
+    upper = 0.35
 #    f2 = 2.0
     sf = 48.0 #sampling freq
 #    Rp = 1.0

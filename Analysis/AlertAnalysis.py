@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 from pandas.stats.api import ols
+from sqlalchemy import create_engine
 
 import cfgfileio as cfg
 import rtwindow as rtw
@@ -131,7 +132,6 @@ def column_alert(alert, num_nodes_to_check, k_ac_ax):
     #OUTPUT:
     #alert:                             Pandas DataFrame object; same as input dataframe "alert" with additional column for column-level alert
 
-#    print alert
     col_alert=[]
     col_node=[]
     #looping through each node
@@ -239,38 +239,80 @@ def getmode(li):
     return n
 
 
-#def main():
-window,config = rtw.getwindow()    
-col = q.GetSensorList('agbta')
-monitoring = g.genproc(col[0])
-print 'after genproc ' + str(len(monitoring.vel))
-lgd = q.GetLastGoodDataFromDb(monitoring.colprops.name)
+def alertgen(trending_alert, monitoring, lgd, window, config):
+    endTS = pd.to_datetime(trending_alert.timestamp.values[0])
+    monitoring.vel = monitoring.vel[endTS-timedelta(3):endTS]
+    monitoring.vel = monitoring.vel.reset_index().sort_values('ts',ascending=True)
+    nodal_dv = monitoring.vel.groupby('id')     
+    
+    alert = nodal_dv.apply(node_alert2, colname=monitoring.colprops.name, num_nodes=monitoring.colprops.nos, T_disp=config.io.t_disp, T_velL2=config.io.t_vell2, T_velL3=config.io.t_vell3, k_ac_ax=config.io.k_ac_ax, lastgooddata=lgd,window=window,config=config)
+    alert = column_alert(alert, config.io.num_nodes_to_check, config.io.k_ac_ax)
+    alert['timestamp']=endTS
+    
+    #setting ts and node_ID as indices
+    alert=alert.set_index(['timestamp','id'])
+    
+    if 'L3' in list(alert.col_alert.values):
+        site_alert = 'L3'
+    elif 'L2' in list(alert.col_alert.values):
+        site_alert = 'L2'
+    else:
+        site_alert = min(getmode(list(alert.col_alert.values)))
+    
+    alert_index = trending_alert.loc[trending_alert.timestamp == endTS].index[0]
+    trending_alert.loc[alert_index] = [endTS, monitoring.colprops.name, 'sensor', site_alert]
+    
+    return trending_alert
 
+def trending_alertgen(trending_alert, col, window, config):
+    monitoring = g.genproc(col[0], window.offsetstart)
+    lgd = q.GetLastGoodDataFromDb(monitoring.colprops.name)
+    
+    trending_alert = alertgen(trending_alert, monitoring, lgd, window, config)  
+    
+    return trending_alert
 
+def main(site=''):
+    window,config = rtw.getwindow()
+    
+    monwinTS = pd.date_range(start = window.end - timedelta(hours=3), end = window.end, freq = '30Min')
+    trending_alert = pd.DataFrame({'site': [np.nan]*len(monwinTS), 'alert': [np.nan]*len(monwinTS), 'timestamp': monwinTS, 'source': [np.nan]*len(monwinTS)})
+    trending_alert = trending_alert[['timestamp', 'site', 'source', 'alert']]
+    
+    col = q.GetSensorList(site)
+    
+    trending_alertTS = trending_alert.groupby('timestamp')
+    output = trending_alertTS.apply(trending_alertgen, col=col, window=window, config=config)
+    
+    print output
+    
+    if 'L3' in list(output.alert.values):
+        site_alert = 'L3'
+    elif 'L2' in list(output.alert.values):
+        site_alert = 'L2'
+    else: 
+        site_alert = min(getmode(list(output.alert.values)))
+    
+    site_level_alert = pd.DataFrame({'timestamp': [window.end], 'site': [output.site.values[0]], 'source': ['sensor'], 'alert': [site_alert]})
+    
+    return site_level_alert
 
+def alert_toDB(df):
+    
+    query = "SELECT timestamp, site, source, alert FROM senslopedb.column_level_alert WHERE site = '%s' ORDER BY timestamp DESC LIMIT 1" %df.site.values[0]
+    
+    df2 = q.GetDBDataFrame(query)
+    
+    if len(df2) == 0 or df2.alert.values[0] != df.alert.values[0]:
+        engine = create_engine('mysql://root:senslope@192.168.1.102:3306/senslopedb')
+        df.to_sql(name = 'column_level_alert', con = engine, if_exists = 'append', schema = q.Namedb, index = False)
+        
+################################################################################
 
-monitoring.vel = monitoring.vel[window.start:window.end]
-monitoring.vel = monitoring.vel.reset_index().sort_values('ts',ascending=True)
-nodal_dv = monitoring.vel.groupby('id')     
-
-
-alert = nodal_dv.apply(node_alert2, colname=monitoring.colprops.name, num_nodes=monitoring.colprops.nos, T_disp=config.io.t_disp, T_velL2=config.io.t_vell2, T_velL3=config.io.t_vell3, k_ac_ax=config.io.k_ac_ax, lastgooddata=lgd,window=window,config=config)
-alert = column_alert(alert, config.io.num_nodes_to_check, config.io.k_ac_ax)
-alert['timestamp']=window.end
-
-#setting ts and node_ID as indices
-alert=alert.set_index(['timestamp','id'])
-print alert
-print '\n\n\n\n\n\n\n\n\n'
-zxc= monitoring.vel
-
-asd = zxc.groupby('id').get_group
-qwe = monitoring.disp.groupby('id').get_group
-
-for x in range (1,col[0].nos+1):
-    try:
-        print len(asd(x))
-    except:
-        print 'nothing for node=' + str(x)
-#if __name__ == "__main__":
-#    main()
+if __name__ == "__main__":
+    start_time = datetime.now()
+    output = main('baktb')
+    print output
+    alert_toDB(output)
+    end_time = datetime.now()
+    print 'run time = ', str(end_time - start_time)

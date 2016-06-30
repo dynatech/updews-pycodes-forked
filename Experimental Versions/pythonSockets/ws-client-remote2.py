@@ -5,8 +5,9 @@ Created on Wed Jun 22 13:59:18 2016
 @author: PradoArturo
 """
 
-import dewsSocketLib as dsl
+from datetime import datetime
+import dewsSocketLeanLib as dsll
 
-msg = "~`!@#$%^&*()_-+="
-
-dsl.sendReceivedGSMtoDEWS(1234, "2016-06-22 17:00:00", "09163677476", msg)
+msg = "~`!@#$%^&*()_-+=qwertyuiop[]asdfghjkl;"
+curTS = datetime.now()
+dsll.sendReceivedGSMtoDEWS(curTS, "09163677476", msg)

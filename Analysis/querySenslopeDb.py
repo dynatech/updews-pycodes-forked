@@ -659,7 +659,7 @@ def GetLastGoodDataFromDb(col):
 #       returns the dataframe for the last good data prior to the monitoring window
     
 def GetSingleLGDPM(site, node, startTS):
-    query = "SELECT timestamp, id, xvalue, yvalue, zvalue"
+    query = "SELECT timestamp,id, xvalue, yvalue, zvalue"
     if len(site) == 5:
         query = query + ", msgid"
     query = query + " from %s WHERE id = %s and timestamp < '%s' " % (site, node, startTS)
@@ -668,8 +668,9 @@ def GetSingleLGDPM(site, node, startTS):
 #        query = query + "ORDER BY timestamp DESC LIMIT 2"
 #    else:
     query = query + "ORDER BY timestamp DESC LIMIT 240"
-    
+    print query
     lgdpm = GetDBDataFrame(query)
+    lgdpm['name'] = site 
 
 #    if len(site) == 5:
 #        if len(set(lgdpm.timestamp)) == 1:
@@ -681,10 +682,10 @@ def GetSingleLGDPM(site, node, startTS):
 #                print 'no data for node ' + str(node) + ' of ' + site
     
     if len(site) == 5:
-        lgdpm.columns = ['ts','id','x','y','z', 'msgid']
+        lgdpm.columns = ['ts','id','x','y','z', 'msgid','name']
     else:
-        lgdpm.columns = ['ts','id','x','y','z']
-    lgdpm = lgdpm[['ts', 'id', 'x', 'y', 'z']]
+        lgdpm.columns = ['ts','id','x','y','z','name']
+    lgdpm = lgdpm[['ts', 'id', 'x', 'y', 'z','name']]
 
     lgdpm = filterSensorData.applyFilters(lgdpm)
     lgdpm = lgdpm.sort_index(ascending = False)[0:1]
