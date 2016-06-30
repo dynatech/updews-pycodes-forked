@@ -105,14 +105,12 @@ def genproc(col, offsetstart, end=datetime.now()):
     monitoring = monitoring.set_index('ts')
     monitoring = monitoring[['name','id','xz','xy']]
     
-    print "RawAccelData", monitoring
-    
     #resamples xz and xy values per node using forward fill
     monitoring = monitoring.groupby('id').apply(resamplenode, window = window).reset_index(level=1).set_index('ts')
     
     nodal_proc_monitoring = monitoring.groupby('id')
     
-    filled_smoothened = nodal_proc_monitoring.apply(smooth, offsetstart=offsetstart, end=window.end, roll_window_numpts=window.numpts, to_smooth=config.io.to_smooth)
+    filled_smoothened = nodal_proc_monitoring.apply(smooth, offsetstart=offsetstart, end=end, roll_window_numpts=window.numpts, to_smooth=config.io.to_smooth)
     filled_smoothened = filled_smoothened[['xz', 'xy','name']].reset_index()
     
     monitoring = filled_smoothened.set_index('ts')   
@@ -122,16 +120,11 @@ def genproc(col, offsetstart, end=datetime.now()):
     #
     nodal_filled_smoothened = filled_smoothened.groupby('id') 
     
-    asd = nodal_filled_smoothened.get_group
-    
     disp_vel = nodal_filled_smoothened.apply(node_inst_vel, roll_window_numpts=window.numpts, start=window.start)
     disp_vel = disp_vel[['ts', 'xz', 'xy', 'vel_xz', 'vel_xy','name']].reset_index()
     disp_vel = disp_vel[['ts', 'id', 'xz', 'xy', 'vel_xz', 'vel_xy','name']]
     disp_vel = disp_vel.set_index('ts')
     disp_vel = disp_vel.sort_values('id', ascending=True)
-    
-    
-    print disp_vel.sort()
     
     return procdata(col,monitoring.sort(),disp_vel.sort())
 

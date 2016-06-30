@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 from pandas.stats.api import ols
+from sqlalchemy import create_engine
 
 import cfgfileio as cfg
 import rtwindow as rtw
@@ -239,7 +240,7 @@ def getmode(li):
 
 
 def alertgen(trending_alert, monitoring, lgd, window, config):
-    endTS = pd.to_datetime(trending_alert.ts.values[0])
+    endTS = pd.to_datetime(trending_alert.timestamp.values[0])
     monitoring.vel = monitoring.vel[endTS-timedelta(3):endTS]
     monitoring.vel = monitoring.vel.reset_index().sort_values('ts',ascending=True)
     nodal_dv = monitoring.vel.groupby('id')     
@@ -258,8 +259,8 @@ def alertgen(trending_alert, monitoring, lgd, window, config):
     else:
         site_alert = min(getmode(list(alert.col_alert.values)))
     
-    alert_index = trending_alert.loc[trending_alert.ts == endTS].index[0]
-    trending_alert.loc[alert_index] = [monitoring.colprops.name, site_alert, endTS]
+    alert_index = trending_alert.loc[trending_alert.timestamp == endTS].index[0]
+    trending_alert.loc[alert_index] = [endTS, monitoring.colprops.name, 'sensor', site_alert]
     
     return trending_alert
 
@@ -267,8 +268,7 @@ def trending_alertgen(trending_alert, col, window, config):
     monitoring = g.genproc(col[0], window.offsetstart)
     lgd = q.GetLastGoodDataFromDb(monitoring.colprops.name)
     
-    trending_alert = alertgen(trending_alert, monitoring, lgd, window, config)
-    print trending_alert    
+    trending_alert = alertgen(trending_alert, monitoring, lgd, window, config)  
     
     return trending_alert
 
@@ -276,12 +276,12 @@ def main(site=''):
     window,config = rtw.getwindow()
     
     monwinTS = pd.date_range(start = window.end - timedelta(hours=3), end = window.end, freq = '30Min')
-    trending_alert = pd.DataFrame({'name': [np.nan]*len(monwinTS), 'alert': [np.nan]*len(monwinTS), 'ts': monwinTS})
-    trending_alert = trending_alert[['name', 'alert', 'ts']]
+    trending_alert = pd.DataFrame({'site': [np.nan]*len(monwinTS), 'alert': [np.nan]*len(monwinTS), 'timestamp': monwinTS, 'source': [np.nan]*len(monwinTS)})
+    trending_alert = trending_alert[['timestamp', 'site', 'source', 'alert']]
     
     col = q.GetSensorList(site)
     
-    trending_alertTS = trending_alert.groupby('ts')
+    trending_alertTS = trending_alert.groupby('timestamp')
     output = trending_alertTS.apply(trending_alertgen, col=col, window=window, config=config)
     
     print output
@@ -293,13 +293,26 @@ def main(site=''):
     else: 
         site_alert = min(getmode(list(output.alert.values)))
     
-    return site_alert
+    site_level_alert = pd.DataFrame({'timestamp': [window.end], 'site': [output.site.values[0]], 'source': ['sensor'], 'alert': [site_alert]})
+    
+    return site_level_alert
 
-
+def alert_toDB(df):
+    
+    query = "SELECT timestamp, site, source, alert FROM senslopedb.column_level_alert WHERE site = '%s' ORDER BY timestamp DESC LIMIT 1" %df.site.values[0]
+    
+    df2 = q.GetDBDataFrame(query)
+    
+    if len(df2) == 0 or df2.alert.values[0] != df.alert.values[0]:
+        engine = create_engine('mysql://root:senslope@192.168.1.102:3306/senslopedb')
+        df.to_sql(name = 'column_level_alert', con = engine, if_exists = 'append', schema = q.Namedb, index = False)
+        
+################################################################################
 
 if __name__ == "__main__":
     start_time = datetime.now()
-    output = main('agbta')
+    output = main('baktb')
     print output
+    alert_toDB(output)
     end_time = datetime.now()
     print 'run time = ', str(end_time - start_time)
