@@ -25,8 +25,7 @@ def resamplenode(df, window):
     df = df.fillna(method='bfill')
     df = df.reset_index(level=1).set_index('ts')
     return df    
-    
-    
+      
 def GetNodesWithNoInitialData(df,num_nodes,offsetstart):
     allnodes=np.arange(1,num_nodes+1)*1.
     with_init_val=df[df.ts<offsetstart+timedelta(hours=0.5)]['id'].values
@@ -52,7 +51,6 @@ def accel_to_lin_xz_xy(seg_len,xa,ya,za):
     
     return np.round(xz,4),np.round(xy,4)
 
-    
 def smooth (df, offsetstart, end, roll_window_numpts, to_smooth):
     if to_smooth and len(df)>1:
         df=pd.rolling_mean(df,window=roll_window_numpts,min_periods=1)[roll_window_numpts-1:]
@@ -61,7 +59,6 @@ def smooth (df, offsetstart, end, roll_window_numpts, to_smooth):
         return df
         
 def node_inst_vel(filled_smoothened, roll_window_numpts, start):
-
     try:          
         lr_xz=ols(y=filled_smoothened.xz,x=filled_smoothened.td,window=roll_window_numpts,intercept=True)
         lr_xy=ols(y=filled_smoothened.xy,x=filled_smoothened.td,window=roll_window_numpts,intercept=True)
