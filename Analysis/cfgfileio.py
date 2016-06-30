@@ -74,7 +74,7 @@ class config:
 		self.io.t_vell2 = cfg.getfloat("I/O","t_vell2")
 		self.io.t_vell3 = cfg.getfloat("I/O","t_vell3")
 		self.io.k_ac_ax = cfg.getfloat("I/O","k_ac_ax")
-		self.io.num_nodes_to_check = cfg.getfloat("I/O","num_nodes_to_check")
+		self.io.num_nodes_to_check = cfg.getint("I/O","num_nodes_to_check")
 
 		self.io.col_props_headers = cfg.get("I/O","columnproperties_headers")
 		self.io.purged_file_headers = cfg.get("I/O","purged_file_headers")
