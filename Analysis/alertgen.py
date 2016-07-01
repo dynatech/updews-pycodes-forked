@@ -259,9 +259,9 @@ def main(name=''):
     lgd = q.GetLastGoodDataFromDb(monitoring.colprops.name)
     
     
-    monitoring.vel = monitoring.vel[window.start:window.end]
-    monitoring.vel = monitoring.vel.reset_index().sort_values('ts',ascending=True)
-    nodal_dv = monitoring.vel.groupby('id')     
+    monitoring_vel = monitoring.vel[window.start:window.end]
+    monitoring_vel = monitoring_vel.reset_index().sort_values('ts',ascending=True)
+    nodal_dv = monitoring_vel.groupby('id')     
     
     
     alert = nodal_dv.apply(node_alert2, colname=monitoring.colprops.name, num_nodes=monitoring.colprops.nos, T_disp=config.io.t_disp, T_velL2=config.io.t_vell2, T_velL3=config.io.t_vell3, k_ac_ax=config.io.k_ac_ax, lastgooddata=lgd,window=window,config=config)

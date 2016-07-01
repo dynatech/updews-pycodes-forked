@@ -239,12 +239,11 @@ def getmode(li):
             n.append(m)
     return n
 
-
 def alertgen(trending_alert, monitoring, lgd, window, config):
     endTS = pd.to_datetime(trending_alert.timestamp.values[0])
-    monitoring.vel = monitoring.vel[endTS-timedelta(3):endTS]
-    monitoring.vel = monitoring.vel.reset_index().sort_values('ts',ascending=True)
-    nodal_dv = monitoring.vel.groupby('id')     
+    monitoring_vel = monitoring.vel[endTS-timedelta(3):endTS]
+    monitoring_vel = monitoring_vel.reset_index().sort_values('ts',ascending=True)
+    nodal_dv = monitoring_vel.groupby('id')     
     
     alert = nodal_dv.apply(node_alert2, colname=monitoring.colprops.name, num_nodes=monitoring.colprops.nos, T_disp=config.io.t_disp, T_velL2=config.io.t_vell2, T_velL3=config.io.t_vell3, k_ac_ax=config.io.k_ac_ax, lastgooddata=lgd,window=window,config=config)
     alert = column_alert(alert, config.io.num_nodes_to_check, config.io.k_ac_ax)
@@ -276,12 +275,8 @@ def alertgen(trending_alert, monitoring, lgd, window, config):
     
     return trending_alert
 
-def trending_alertgen(trending_alert, col, window, config):
-    monitoring = g.genproc(col[0], window.offsetstart)
-    lgd = q.GetLastGoodDataFromDb(monitoring.colprops.name)
-    
+def trending_alertgen(trending_alert, col, window, config, monitoring, lgd):    
     trending_alert = alertgen(trending_alert, monitoring, lgd, window, config)  
-    
     return trending_alert
 
 def alert_toDB(df, table_name):
@@ -309,8 +304,12 @@ def main(site=''):
     
     col = q.GetSensorList(site)
     
+    monitoring = g.genproc(col[0], window.offsetstart)
+    lgd = q.GetLastGoodDataFromDb(monitoring.colprops.name)
+
+    
     trending_alertTS = trending_alert.groupby('timestamp')
-    output = trending_alertTS.apply(trending_alertgen, col=col, window=window, config=config)
+    output = trending_alertTS.apply(trending_alertgen, col=col, window=window, config=config, monitoring=monitoring, lgd=lgd)
     
     print output
     
