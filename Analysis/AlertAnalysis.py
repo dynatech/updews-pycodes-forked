@@ -3,6 +3,7 @@ import numpy as np
 from datetime import datetime, timedelta
 from pandas.stats.api import ols
 from sqlalchemy import create_engine
+import sys
 
 import cfgfileio as cfg
 import rtwindow as rtw
@@ -298,8 +299,7 @@ def main(site=''):
     start_time = datetime.now()
 
     if site == '':
-        print "enter site name: main(site_name)"
-        return
+        site = sys.argv[1].lower()
         
     window,config = rtw.getwindow()
     
@@ -335,4 +335,4 @@ def main(site=''):
 ################################################################################
 
 if __name__ == "__main__":
-    main('agbta')
+    main()

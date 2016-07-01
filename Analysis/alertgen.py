@@ -3,11 +3,13 @@ import numpy as np
 from datetime import datetime, timedelta
 from pandas.stats.api import ols
 from sqlalchemy import create_engine
+import sys
 
 import cfgfileio as cfg
 import rtwindow as rtw
 import querySenslopeDb as q
 import genproc as g
+
 
 def node_alert2(disp_vel, colname, num_nodes, T_disp, T_velL2, T_velL3, k_ac_ax,lastgooddata,window,config):
     disp_vel = disp_vel.reset_index(level=1)    
@@ -247,8 +249,7 @@ def alert_toDB(df, table_name):
 
 def main(name=''):
     if name == '':
-        print "enter site name: main(site_name)"
-        return
+        name = sys.argv[1].lower()
 
     start = datetime.now()
     
@@ -284,4 +285,4 @@ def main(name=''):
     return alert
 
 if __name__ == "__main__":
-    main('sibta')
+    main()
