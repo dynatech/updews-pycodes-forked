@@ -45,14 +45,15 @@ def updateSimNumTable(name,sim_num,date_activated):
 def logRuntimeStatus(script_name,status):
     if (status == 'alive'):
         ts = dt.today()
-        roundmintoten = int(math.floor(ts.minute / 10.0)) * 10
-        logtimestamp = "%d-%02d-%02d %02d:%02d:00" % (ts.year,ts.month,ts.day,ts.hour,roundmintoten)
+        diff = (ts.minute%10) * 60 + ts.second
+        ts = ts - td(seconds=diff)
+        logtimestamp = ts.strftime("%Y-%m-%d %H:%M:00")
     else:
         logtimestamp = dt.today().strftime("%Y-%m-%d %H:%M:00")
     
     print ">> Logging runtime '" + status + "' at " + logtimestamp 
     
-    query = """insert ignore into senslopedb.runtimelog
+    query = """insert ignore into runtimelog
                 (timestamp,script_name,status)
                 values ('%s','%s','%s')
                 """ %(logtimestamp,script_name,status)

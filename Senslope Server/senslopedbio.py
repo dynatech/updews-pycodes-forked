@@ -147,7 +147,7 @@ def commitToDb(query, identifier, instance='local'):
                     db.commit()
                     break
                 else:
-                    print '>> Warning: Query has no result set', identifier
+                    # print '>> Warning: Query has no result set', identifier
                     db.commit()
                     time.sleep(0.1)
                     break
@@ -177,9 +177,8 @@ def querydatabase(query, identifier, instance='local'):
         # db.commit()
         if a:
             a = cur.fetchall()
-            print 'OK'
         else:
-            print '>> Warning: Query has no result set', identifier
+            # print '>> Warning: Query has no result set', identifier
             a = None
     except MySQLdb.OperationalError:
         a =  None
@@ -198,7 +197,6 @@ def checkNumberIfExists(simnumber,table='community'):
         query = """select lastname,firstname from %scontacts where
             number like "%s%s%s"; """ % (table,'%',simnumber,'%')
     elif table == 'sensor': 
-        print simnumber         
         query = """select name from site_column_sim_nums where
             sim_num like "%s%s%s"; """ % ('%',simnumber,'%')
     else:

@@ -52,6 +52,7 @@ ColAlertsFilePath = /MonitoringOutput/ColAlerts/
 TrendAlertsFilePath = /MonitoringOutput/TrendAlerts/
 AlertAnalysisPath = /MonitoringOutput/Alerts/
 RainfallPlotsPath = /MonitoringOutput/RainfallPlots/
+GrndMeasPlotsPath = /MonitoringOutput/GrndMeasPlots/
 
 ############################
 ###      FILE NAMES      ###
