@@ -110,11 +110,6 @@ def node_alert2(disp_vel, colname, num_nodes, T_disp, T_velL2, T_velL3, k_ac_ax,
     alert['node_alert']=alert['node_alert'].fillna(value=-1)
     
     alert=alert.reset_index()
-#    alert = alert.set_index('id')
-    #rearrange columns
-    
-#    cols=config.io.alerteval_colarrange
-#    alert = alert[cols]
  
     return alert
 
@@ -239,38 +234,28 @@ def getmode(li):
     return n
 
 
-#def main():
-window,config = rtw.getwindow()    
-col = q.GetSensorList('agbta')
-monitoring = g.genproc(col[0])
-print 'after genproc ' + str(len(monitoring.vel))
-lgd = q.GetLastGoodDataFromDb(monitoring.colprops.name)
-
-
-
-
-monitoring.vel = monitoring.vel[window.start:window.end]
-monitoring.vel = monitoring.vel.reset_index().sort_values('ts',ascending=True)
-nodal_dv = monitoring.vel.groupby('id')     
-
-
-alert = nodal_dv.apply(node_alert2, colname=monitoring.colprops.name, num_nodes=monitoring.colprops.nos, T_disp=config.io.t_disp, T_velL2=config.io.t_vell2, T_velL3=config.io.t_vell3, k_ac_ax=config.io.k_ac_ax, lastgooddata=lgd,window=window,config=config)
-alert = column_alert(alert, config.io.num_nodes_to_check, config.io.k_ac_ax)
-alert['timestamp']=window.end
-
-#setting ts and node_ID as indices
-alert=alert.set_index(['timestamp','id'])
-print alert
-print '\n\n\n\n\n\n\n\n\n'
-zxc= monitoring.vel
-
-asd = zxc.groupby('id').get_group
-qwe = monitoring.disp.groupby('id').get_group
-
-for x in range (1,col[0].nos+1):
-    try:
-        print len(asd(x))
-    except:
-        print 'nothing for node=' + str(x)
-#if __name__ == "__main__":
-#    main()
+def main(name='sibta'):
+    start = datetime.now()
+    window,config = rtw.getwindow()    
+    col = q.GetSensorList(name)
+    monitoring = g.genproc(col[0],window.offsetstart)
+    print 'after genproc ' + str(len(monitoring.vel))
+    lgd = q.GetLastGoodDataFromDb(monitoring.colprops.name)
+    
+    
+    monitoring.vel = monitoring.vel[window.start:window.end]
+    monitoring.vel = monitoring.vel.reset_index().sort_values('ts',ascending=True)
+    nodal_dv = monitoring.vel.groupby('id')     
+    
+    
+    alert = nodal_dv.apply(node_alert2, colname=monitoring.colprops.name, num_nodes=monitoring.colprops.nos, T_disp=config.io.t_disp, T_velL2=config.io.t_vell2, T_velL3=config.io.t_vell3, k_ac_ax=config.io.k_ac_ax, lastgooddata=lgd,window=window,config=config)
+    alert = column_alert(alert, config.io.num_nodes_to_check, config.io.k_ac_ax)
+    alert['timestamp']=window.end
+    
+    #setting ts and node_ID as indices
+    alert=alert.set_index(['timestamp','id'])
+    print alert
+    print '\n\n\n\n\n\n\n\n\n'
+    print datetime.now()-start
+if __name__ == "__main__":
+    main()
