@@ -1,15 +1,12 @@
 import serial, datetime, ConfigParser, time, re
 from datetime import datetime as dt
-from senslopedbio import * 
+from datetime import timedelta as td
+import senslopedbio as dbio 
+from messaging.sms import SmsDeliver as smsdeliver
+from messaging.sms import SmsSubmit as smssubmit
+import cfgfileio as cfg
 
-cfg = ConfigParser.ConfigParser()
-cfg.read(sys.path[0] + '/' + 'senslope-server-config.txt')
-
-gsm = serial.Serial()
-Baudrate = cfg.getint('Serial', 'Baudrate')
-Timeout = cfg.getint('Serial', 'Timeout')
-Namedb = cfg.get('LocalDB', 'DBName')
-# SaveToFile = cfg.get('I/O', 'savetofile')
+gsm = ''
 
 class sms:
     def __init__(self,num,sender,data,dt):
@@ -17,21 +14,57 @@ class sms:
        self.simnum = sender
        self.data = data
        self.dt = dt
+
+class CustomGSMResetException(Exception):
+    pass
+
+def resetGsm():
+    print ">> Resetting GSM Module ...",
+    resetPin = 38
+    try:
+        import RPi.GPIO as GPIO
+        GPIO.setmode(GPIO.BOARD)
+        GPIO.setup(resetPin, GPIO.OUT)
+
+        GPIO.output(resetPin, True)
+        time.sleep(1)
+        GPIO.output(resetPin, False)
+        time.sleep(5)
+        GPIO.output(resetPin, True)
+        gsm.close()
+        print 'done'
+        raise CustomGSMResetException(">> Raising exception to reset code from GSM module reset")
+    except ImportError:
+        return
        
 def gsmInit(network):
-    Port = cfg.get('Serial', network+'port')
+    global gsm
+    gsm = serial.Serial()
+    c = cfg.config()
+    if network.lower() == 'globe':
+        Port = c.serialio.globeport
+    else:
+        Port = c.serialio.smartport
     print 'Connecting to GSM modem at', Port
     
-    if Port.find("COM")>0:
-        gsm.port = int(re.search("\d+").group(0)) - 1
-    else:
-        gsm.port = Port
-    gsm.baudrate = Baudrate
-    gsm.timeout = Timeout
-    gsm.open()
+    gsm.port = Port
+    gsm.baudrate = c.serialio.baudrate
+    gsm.timeout = c.serialio.timeout
+    
+    if(gsm.isOpen() == False):
+        gsm.open()
+    
     #gsmflush()
+    gsm.write('AT\r\n')
+    time.sleep(1)
+    gsm.write('AT\r\n')
+    time.sleep(1)
+    gsm.write('AT\r\n')
+    time.sleep(1)
     print 'Switching to no-echo mode', gsmcmd('ATE0').strip('\r\n')
-    print 'Switching to text mode', gsmcmd('AT+CMGF=1').rstrip('\r\n')
+    print 'Switching to text mode', gsmcmd('AT+CMGF=0').rstrip('\r\n')
+
+    return gsm
     
 def gsmflush():
     """Removes any pending inputs from the GSM modem and checks if it is alive."""
@@ -47,7 +80,8 @@ def gsmflush():
             stat = gsmcmd('\x1a\rAT\r')
     except serial.SerialException:
         print "NO SERIAL COMMUNICATION (gsmflush)"
-        RunSenslopeServer(gsm_network)
+        sys.exit()
+        # RunSenslopeServer(gsm_network)
 
 def gsmcmd(cmd):
     """
@@ -55,6 +89,8 @@ def gsmcmd(cmd):
     Returns the reply of the module
     Usage: str = gsmcmd()
     """
+    global gsm
+
     try:
         gsm.flushInput()
         gsm.flushOutput()
@@ -84,47 +120,59 @@ def sendMsg(msg, number):
     """
     # under development
     # return
-    try: 
-        a = ''
-        now = time.time()
-        preamble = "AT+CMGS=\""+number+"\""
-        print "\nMSG:", msg
-        print "NUM:", number
-        gsm.write(preamble+"\r")
-        now = time.time()
-        while a.find('>')<0 and a.find("ERROR")<0 and time.time()<now+20:
-            a += gsm.read(gsm.inWaiting())
-            time.sleep(0.5)
-            print '.',
 
-        if time.time()>now+3 or a.find("ERROR") > -1:  
-            print '>> Error: GSM Unresponsive at finding >'
-            print a
-            print '^^ a ^^'
-            return -1
-        else:
-            print '>'
-        
-        a = ''
-        now = time.time()
-        gsm.write(msg+chr(26))
-        while a.find('OK')<0 and a.find("ERROR")<0 and time.time()<now+60:
+    pdulist = smssubmit(number,msg).to_pdu()
+
+    # print "pdulen", len(pdulist)
+
+    for pdu in pdulist:
+        try: 
+            a = ''
+            now = time.time()
+            preamble = "AT+CMGS=%d" % (pdu.length)
+
+            # print preamble
+
+            print "\nMSG:", msg, 
+            print "NUM:", number
+
+            gsm.write(preamble+"\r")
+            now = time.time()
+            while a.find('>')<0 and a.find("ERROR")<0 and time.time()<now+20:
                 a += gsm.read(gsm.inWaiting())
                 time.sleep(0.5)
-                print ':',
-        if time.time()-60>now:
-            print '>> Error: timeout reached'
-            return -1
-        elif a.find('ERROR')>-1:
-            print '>> Error: GSM reported ERROR in SMS reading'
-            return -1
-        else:
-            print ">> Message sent!"
-            return 0
+                print '.',
+
+            if time.time()>now+3 or a.find("ERROR") > -1:  
+                print '>> Error: GSM Unresponsive at finding >'
+                print a
+                print '^^ a ^^'
+                return -1
+            else:
+                print '>'
             
-    except serial.SerialException:
-        print "NO SERIAL COMMUNICATION (sendmsg)"
-        RunSenslopeServer(gsm_network)	
+            a = ''
+            now = time.time()
+            gsm.write(pdu.pdu+chr(26))
+            while a.find('OK')<0 and a.find("ERROR")<0 and time.time()<now+60:
+                    a += gsm.read(gsm.inWaiting())
+                    time.sleep(0.5)
+                    print ':',
+            if time.time()-60>now:
+                print '>> Error: timeout reached'
+                return -1
+            elif a.find('ERROR')>-1:
+                print '>> Error: GSM reported ERROR in SMS reading'
+                return -1
+            else:
+                print ">> Message sent!"
+                
+                
+        except serial.SerialException:
+            print "NO SERIAL COMMUNICATION (sendmsg)"
+            RunSenslopeServer(gsm_network)  
+
+    return 0
         
 def logError(log):
     nowdate = dt.today().strftime("%A, %B %d, %Y, %X")
@@ -145,11 +193,11 @@ def countmsg():
         
         try:
             c = int( b.split(',')[1] )
-            #print '>>>> ', c
+            print '>> Received', c, 'message/s'
             return c
         except IndexError:
             print 'count_msg b = ',b
-            logError(b)
+            # logError(b)
             if b:
                 return 0                
             else:
@@ -160,15 +208,17 @@ def countmsg():
             print '>> ValueError:'
             print b
             print '>> Retryring message reading'
-            logError(b)
+            # logError(b)
             # return -2   
 
 def getAllSms(network):
-    allmsgs = 'd' + gsmcmd('AT+CMGL="ALL"')
-    allmsgs = allmsgs.replace("\r\nOK\r\n",'').split("+CMGL")[1:]
-    if allmsgs:
-        temp = allmsgs.pop(0) #removes "=ALL"
-        
+    allmsgs = 'd' + gsmcmd('AT+CMGL=4')
+    # print allmsgs.replace('\r','@').replace('\n','$')
+    # allmsgs = allmsgs.replace("\r\nOK\r\n",'').split("+CMGL")[1:]
+
+    allmsgs = re.findall("(?<=\+CMGL:).+\r\n.+(?=\n*\r\n\r\n)",allmsgs)
+    #if allmsgs:
+    #    temp = allmsgs.pop(0) #removes "=ALL"
     msglist = []
     
     for msg in allmsgs:
@@ -178,30 +228,52 @@ def getAllSms(network):
             # f.write(msg)
             # f.close()
                 
-        msg = msg.replace('\n','').split("\r")
+        # msg = msg.replace('\n','').split("\r")
         try:
-            txtnum = re.search(r': [0-9]{1,2},',msg[0]).group(0).strip(': ,')
+            pdu = re.search(r'[0-9A-F]{20,}',msg).group(0)
         except AttributeError:
             # particular msg may be some extra strip of string 
-            print ">> Error: message may not have correct construction", msg[0]
-            logError("wrong construction\n"+msg[0])
+            print ">> Error: cannot find pdu text", msg
+            # logError("wrong construction\n"+msg[0])
+            continue
+
+        # print pdu
+
+        smsdata = smsdeliver(pdu).data
+
+        try:
+            txtnum = re.search(r'(?<= )[0-9]{1,2}(?=,)',msg).group(0)
+        except AttributeError:
+            # particular msg may be some extra strip of string 
+            print ">> Error: message may not have correct construction", msg
+            # logError("wrong construction\n"+msg[0])
             continue
         
-        try:
-            sender = re.search(r'[0-9]{11,12}',msg[0]).group(0)
-        except AttributeError:
-            print 'Sender unknown.', msg[0]
-            sender = "UNK"
+        # try:
+        #     sender = re.search(r'[0-9]{11,12}',msg[0]).group(0)
+        # except AttributeError:
+        #     print 'Sender unknown.', msg[0]
+        #     sender = "UNK"
             
-        try:
-            txtdatetimeStr = re.search(r'\d\d/\d\d/\d\d,\d\d:\d\d:\d\d',msg[0]).group(0)
-            txtdatetime = dt.strptime(txtdatetimeStr,'%y/%m/%d,%H:%M:%S').strftime('%Y-%m-%d %H:%M:00')
-        except:
-            print "Error in date time conversion"
-                
-        smsItem = sms(txtnum, sender, msg[1], txtdatetimeStr)
+        # try:
+        #     txtdatetimeStr = re.search(r'\d\d/\d\d/\d\d,\d\d:\d\d:\d\d',msg[0]).group(0)
+        #     txtdatetime = dt.strptime(txtdatetimeStr,'%y/%m/%d,%H:%M:%S').strftime('%Y-%m-%d %H:%M:00')
+        # except:
+        #     print "Error in date time conversion"
+        txtdatetimeStr = smsdata['date'] + td(hours=8)
+
+        txtdatetimeStr = txtdatetimeStr.strftime('%Y-%m-%d %H:%M:%S')
+
+#        print smsdata['text']
+        try:        
+            smsItem = sms(txtnum, smsdata['number'].strip('+'), str(smsdata['text']), txtdatetimeStr)
+            msglist.append(smsItem)
+        except UnicodeEncodeError:
+            print ">> Unknown character error. Skipping message"
+            continue
+        # print str(smsdata['text'])
         
-        msglist.append(smsItem)
+#        msglist.append(smsItem)
         
     
     return msglist
