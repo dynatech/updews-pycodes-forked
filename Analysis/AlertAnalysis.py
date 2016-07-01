@@ -239,7 +239,7 @@ def getmode(li):
             n.append(m)
     return n
 
-def alertgen(trending_alert, monitoring, lgd, window, config):
+def trending_alertgen(trending_alert, monitoring, lgd, window, config):
     endTS = pd.to_datetime(trending_alert.timestamp.values[0])
     monitoring_vel = monitoring.vel[endTS-timedelta(3):endTS]
     monitoring_vel = monitoring_vel.reset_index().sort_values('ts',ascending=True)
@@ -275,10 +275,6 @@ def alertgen(trending_alert, monitoring, lgd, window, config):
     
     return trending_alert
 
-def trending_alertgen(trending_alert, col, window, config, monitoring, lgd):    
-    trending_alert = alertgen(trending_alert, monitoring, lgd, window, config)  
-    return trending_alert
-
 def alert_toDB(df, table_name):
     
     query = "SELECT timestamp, site, source, alert FROM senslopedb.%s WHERE site = '%s' ORDER BY timestamp DESC LIMIT 1" %(table_name, df.site.values[0])
@@ -309,7 +305,7 @@ def main(site=''):
 
     
     trending_alertTS = trending_alert.groupby('timestamp')
-    output = trending_alertTS.apply(trending_alertgen, col=col, window=window, config=config, monitoring=monitoring, lgd=lgd)
+    output = trending_alertTS.apply(trending_alertgen, window=window, config=config, monitoring=monitoring, lgd=lgd)
     
     print output
     
