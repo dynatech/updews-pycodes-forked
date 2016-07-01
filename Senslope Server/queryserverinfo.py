@@ -55,7 +55,7 @@ def getNumberOfReporter(datedt):
 
 	return num
 
-def sendStatusUpdates(reporter):
+def sendStatusUpdates(reporter='scheduled'):
 	c = cfg.config()
 	active_loggers_count = getLatestQueryReport()
 
@@ -75,7 +75,7 @@ def sendStatusUpdates(reporter):
 	if reporter == 'scheduled':
 		reportnumber = getNumberOfReporter(dt.today())
 		server.WriteOutboxMessageToDb(status_message,reportnumber)
-	elif int(active_loggers_count) < 60:
+	elif int(active_loggers_count) < 50:
 		print ">> Sending alert sms for server"
 		server.WriteOutboxMessageToDb(status_message,c.smsalert.serveralert)
 
@@ -112,7 +112,7 @@ def sendServerMonReminder():
 
 def getShifts(datedt):
 
-	query = """select * from monshiftsched where timestamp < "%s" order by timestamp desc limit 1)
+	query = """select * from monshiftsched where timestamp < "%s" order by timestamp desc limit 1
 	""" % (datedt.strftime("%Y-%m-%d %H:%M:00"))
 
 	return dbio.querydatabase(query,'customquery')
@@ -124,19 +124,19 @@ def getNumbersFromList(personnel_list):
 	return dbio.querydatabase(query,'customquery')
 
 def sendEventMonitoringReminder():
-	next_shift = dt.today()+td(hours=12)
+	next_shift = dt.today()+td(hours=13)
 	shifts = getShifts(next_shift)
 	report_dt = shifts[0][1]
 
 	position = ['iompmt','iompct','oomps','oompmt','oompct']
 	position_dict = {}
 	for pos,per in zip(position,shifts[0][2:]):
-		position_dict[per] = pos
+		position_dict[per.upper().strip()] = pos
 
 	numbers = getNumbersFromList(str(shifts[0][2:]))
 	numbers_dict = {}
 	for nick,num in numbers:
-		numbers_dict[nick] = num
+		numbers_dict[nick.upper().strip()] = num
 
 	for key in position_dict:
 		reminder_message = "Monitoring shift reminder. Good %s %s, " % (getTimeOfDayDescription(),key)
