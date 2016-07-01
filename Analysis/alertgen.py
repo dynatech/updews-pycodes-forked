@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 from pandas.stats.api import ols
+from sqlalchemy import create_engine
 
 import cfgfileio as cfg
 import rtwindow as rtw
@@ -233,13 +234,27 @@ def getmode(li):
             n.append(m)
     return n
 
+def alert_toDB(df, table_name):
+    
+    query = "SELECT timestamp, site, source, alert FROM senslopedb.%s WHERE site = '%s' ORDER BY timestamp DESC LIMIT 1" %(table_name, df.site.values[0])
+    
+    df2 = q.GetDBDataFrame(query)
+    
+    if len(df2) == 0 or df2.alert.values[0] != df.alert.values[0]:
+        engine = create_engine('mysql://'+q.Userdb+':'+q.Passdb+'@'+q.Hostdb+':3306/'+q.Namedb)
+        df.to_sql(name = table_name, con = engine, if_exists = 'append', schema = q.Namedb, index = False)
 
-def main(name='sibta'):
+
+def main(name=''):
+    if name == '':
+        print "enter site name: main(site_name)"
+        return
+
     start = datetime.now()
+    
     window,config = rtw.getwindow()    
     col = q.GetSensorList(name)
     monitoring = g.genproc(col[0],window.offsetstart)
-    print 'after genproc ' + str(len(monitoring.vel))
     lgd = q.GetLastGoodDataFromDb(monitoring.colprops.name)
     
     
@@ -249,13 +264,24 @@ def main(name='sibta'):
     
     
     alert = nodal_dv.apply(node_alert2, colname=monitoring.colprops.name, num_nodes=monitoring.colprops.nos, T_disp=config.io.t_disp, T_velL2=config.io.t_vell2, T_velL3=config.io.t_vell3, k_ac_ax=config.io.k_ac_ax, lastgooddata=lgd,window=window,config=config)
-    alert = column_alert(alert, config.io.num_nodes_to_check, config.io.k_ac_ax)
-    alert['timestamp']=window.end
+    alert = column_alert(alert, config.io.num_nodes_to_check, config.io.k_ac_ax)       
+
+    if 'L3' in list(alert.col_alert.values):
+        site_alert = 'L3'
+    elif 'L2' in list(alert.col_alert.values):
+        site_alert = 'L2'
+    else:
+        site_alert = min(getmode(list(alert.col_alert.values)))
+        
+    column_level_alert = pd.DataFrame({'timestamp': [window.end], 'site': [monitoring.colprops.name], 'source': ['sensor'], 'alert': [site_alert]})
     
-    #setting ts and node_ID as indices
-    alert=alert.set_index(['timestamp','id'])
-    print alert
-    print '\n\n\n\n\n\n\n\n\n'
+    print column_level_alert
+    
+    alert_toDB(column_level_alert, 'column_level_alert')
+
     print datetime.now()-start
+    
+    return alert
+
 if __name__ == "__main__":
-    main()
+    main('sibta')

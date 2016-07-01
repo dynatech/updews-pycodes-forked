@@ -252,6 +252,17 @@ def alertgen(trending_alert, monitoring, lgd, window, config):
     #setting ts and node_ID as indices
     alert=alert.set_index(['timestamp','id'])
     
+    if endTS == window.end:
+        palert = alert.loc[(alert.col_alert == 'L2') | (alert.col_alert == 'L3')]
+        
+        if len(palert) != 0:
+            palert['site']=monitoring.colprops.name
+            palert = palert[['site', 'disp_alert', 'vel_alert', 'col_alert']].reset_index()
+            palert = palert[['timestamp', 'site', 'id', 'disp_alert', 'vel_alert', 'col_alert']]
+            
+            engine = create_engine('mysql://'+q.Userdb+':'+q.Passdb+'@'+q.Hostdb+':3306/'+q.Namedb)
+            palert.to_sql(name = 'node_level_alert', con = engine, if_exists = 'append', schema = q.Namedb, index = False) 
+    
     if 'L3' in list(alert.col_alert.values):
         site_alert = 'L3'
     elif 'L2' in list(alert.col_alert.values):
@@ -272,7 +283,24 @@ def trending_alertgen(trending_alert, col, window, config):
     
     return trending_alert
 
+def alert_toDB(df, table_name):
+    
+    query = "SELECT timestamp, site, source, alert FROM senslopedb.%s WHERE site = '%s' ORDER BY timestamp DESC LIMIT 1" %(table_name, df.site.values[0])
+    
+    df2 = q.GetDBDataFrame(query)
+    
+    if len(df2) == 0 or df2.alert.values[0] != df.alert.values[0]:
+        engine = create_engine('mysql://'+q.Userdb+':'+q.Passdb+'@'+q.Hostdb+':3306/'+q.Namedb)
+        df.to_sql(name = table_name, con = engine, if_exists = 'append', schema = q.Namedb, index = False)
+
 def main(site=''):
+    
+    start_time = datetime.now()
+
+    if site == '':
+        print "enter site name: main(site_name)"
+        return
+        
     window,config = rtw.getwindow()
     
     monwinTS = pd.date_range(start = window.end - timedelta(hours=3), end = window.end, freq = '30Min')
@@ -294,25 +322,17 @@ def main(site=''):
         site_alert = min(getmode(list(output.alert.values)))
     
     site_level_alert = pd.DataFrame({'timestamp': [window.end], 'site': [output.site.values[0]], 'source': ['sensor'], 'alert': [site_alert]})
+
+    alert_toDB(site_level_alert, 'column_level_alert')
+
+    print site_level_alert
+    
+    end_time = datetime.now()
+    print 'run time = ', str(end_time - start_time)
     
     return site_level_alert
-
-def alert_toDB(df):
-    
-    query = "SELECT timestamp, site, source, alert FROM senslopedb.column_level_alert WHERE site = '%s' ORDER BY timestamp DESC LIMIT 1" %df.site.values[0]
-    
-    df2 = q.GetDBDataFrame(query)
-    
-    if len(df2) == 0 or df2.alert.values[0] != df.alert.values[0]:
-        engine = create_engine('mysql://root:senslope@192.168.1.102:3306/senslopedb')
-        df.to_sql(name = 'column_level_alert', con = engine, if_exists = 'append', schema = q.Namedb, index = False)
         
 ################################################################################
 
 if __name__ == "__main__":
-    start_time = datetime.now()
-    output = main('baktb')
-    print output
-    alert_toDB(output)
-    end_time = datetime.now()
-    print 'run time = ', str(end_time - start_time)
+    main('agbta')
