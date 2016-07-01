@@ -44,6 +44,12 @@ class config:
 		self.gsmdb.host = cfg.get("GSMDB","host")
 		self.gsmdb.pwd = cfg.get("GSMDB","password")
 		self.gsmdb.name = cfg.get("GSMDB","dbname")
+
+		self.serialio = Container()
+		self.serialio.baudrate = cfg.getint("Serial","baudrate")
+		self.serialio.globeport = cfg.get("Serial","globeport")
+		self.serialio.smartport = cfg.get("Serial","smartport")
+		self.serialio.timeout = cfg.getint("Serial","timeout")
 		
 		self.smsalert = Container()
 		self.smsalert.communitynum = cfg.get("SMSAlert","communityphonenumber")

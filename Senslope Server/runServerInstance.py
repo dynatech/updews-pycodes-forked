@@ -1,4 +1,4 @@
-from senslopeServer import *
+import senslopeServer as server
 import time, sys, gsmSerialio
 
 debug = False
@@ -9,7 +9,7 @@ def main():
     if network not in ['GLOBE','SMART']:
         print ">> Error in network selection", network
     
-    RunSenslopeServer(network)
+    server.RunSenslopeServer(network)
 
 if __name__ == '__main__':
 ##    main()

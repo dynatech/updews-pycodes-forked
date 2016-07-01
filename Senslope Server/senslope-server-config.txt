@@ -1,6 +1,6 @@
 [LocalDB]
 username = root
-host = 127.0.0.1
+host = 192.168.1.102
 password = senslope
 dbname = senslopedb
 
@@ -13,9 +13,9 @@ dbname = senslopedb
 [Serial]
 baudrate = 57600
 sunport = COM16
-globeport = COM16
+globeport = /dev/gsmusbport
 timeout = 5
-smartport = COM17
+smartport = /dev/xbeeusbport
 
 [SMSAlert]
 communityphonenumber = 09163938789
