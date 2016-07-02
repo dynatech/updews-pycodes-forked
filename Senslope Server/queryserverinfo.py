@@ -65,10 +65,10 @@ def sendStatusUpdates(reporter='scheduled'):
 	status_message = "SERVER STATUS UPDATES\n"
 	status_message += "Active loggers: %s\n" % (active_loggers_count)
 	status_message += "Last logs for:\n"
-	status_message += "Process messages: %s\n" % (loclogs[0][0].strftime("%B %d, %H:%M%p"))
-	status_message += "Check alert: %s\n" % (loclogs[0][0].strftime("%B %d, %H:%M%p"))
-	status_message += "Globe instance: %s\n" % (gsmlogs[0][0].strftime("%B %d, %H:%M%p"))
-	status_message += "Smart instance: %s\n" % (gsmlogs[1][0].strftime("%B %d, %H:%M%p"))
+	status_message += "Process messages: %s\n" % (loclogs[0][0].strftime("%B %d, %I:%M%p"))
+	status_message += "Check alert: %s\n" % (loclogs[0][0].strftime("%B %d, %I:%M%p"))
+	status_message += "Globe instance: %s\n" % (gsmlogs[0][0].strftime("%B %d, %I:%M%p"))
+	status_message += "Smart instance: %s\n" % (gsmlogs[1][0].strftime("%B %d, %I:%M%p"))
 
 	print dt.today()
 
@@ -181,10 +181,21 @@ def getNonReportingSites():
 	server.WriteOutboxMessageToDb(message,c.smsalert.communitynum)
 
 def getLatestSmsFromColumn(colname):
-	query = """ select timestamp,sms_msg from smsinbox where sms_msg like '%s%s%s' 
-		order by timestamp desc limit 1 """ % ('%',colname,'%')
+	# query = """ select timestamp,sms_msg from smsinbox where sms_msg like '%s%s%s' 
+		# order by timestamp desc limit 1 """ % ('%',colname,'%')
+	
+	query = """
+		select timestamp,sms_msg from senslopedb.smsinbox t1,
+		(select sim_num from senslopedb.smsinbox
+		where sms_msg like '%s%s%s'
+		order by sms_id desc limit 1
+		)  t2
+		where t1.sim_num = t2.sim_num
+		order by timestamp desc limit 1;
+	""" % ('%',colname,'%')
 	
 	last_col_msg = dbio.querydatabase(query,'getlatestcolmsg','gsm')
+	print last_col_msg
 
 	tmp_msg = "Latest message from %s\n" % (colname.upper())
 	if last_col_msg:
