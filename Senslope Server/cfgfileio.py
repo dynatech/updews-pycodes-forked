@@ -80,7 +80,9 @@ class config:
 		if self.mode.script_mode == 'gsmserver':
 			self.mode.sendmsg = True
 			self.mode.procmsg = False
+			self.mode.logtoinstance = 'GSM'
 		elif self.mode.script_mode == 'procmsg':
 			self.mode.sendmsg = False
 			self.mode.procmsg = True
+			self.mode.logtoinstance = 'LOCAL'
 

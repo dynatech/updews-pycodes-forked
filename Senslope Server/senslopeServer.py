@@ -58,7 +58,7 @@ def logRuntimeStatus(script_name,status):
                 values ('%s','%s','%s')
                 """ %(logtimestamp,script_name,status)
     
-    dbio.commitToDb(query, 'logRuntimeStatus', 'GSM')
+    dbio.commitToDb(query, 'logRuntimeStatus', cfg.config().mode.logtoinstance)
        
 def SendAlertGsm(network,alertmsg):
     c = cfg.config()
