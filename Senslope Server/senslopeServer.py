@@ -58,7 +58,7 @@ def logRuntimeStatus(script_name,status):
                 values ('%s','%s','%s')
                 """ %(logtimestamp,script_name,status)
     
-    dbio.commitToDb(query, 'logRuntimeStatus')
+    dbio.commitToDb(query, 'logRuntimeStatus', 'GSM')
        
 def SendAlertGsm(network,alertmsg):
     c = cfg.config()
@@ -113,27 +113,32 @@ def CheckAlertMessages():
         print '>> Error in reading file', alllines
     return alllines
     
-def SendMessagesFromDb(network):
-    allmsgs = dbio.getAllOutboxSmsFromDb("UNSENT")
+def SendMessagesFromDb(network,limit=10):
+    c = cfg.config()
+    if not c.mode.sendmsg:
+        return
+    allmsgs = dbio.getAllOutboxSmsFromDb("UNSENT",limit)
     if len(allmsgs) <= 0:
         # print ">> No messages in outbox"
         return
+
+    print ">> Sending messagess from db"
         
     msglist = []
     for item in allmsgs:
-        smsItem = sms(item[0], str(item[2]), str(item[3]), str(item[1]))
+        smsItem = gsmio.sms(item[0], str(item[2]), str(item[3]), str(item[1]))
         msglist.append(smsItem)
     allmsgs = msglist
-    
+
     if network.upper() == 'SMART':
-        prefix_list = cfg.get('simprefix','smart').split(',')
+        prefix_list = c.simprefix.smart.split(',')
     else:
-        prefix_list = cfg.get('simprefix','globe').split(',')
+        prefix_list = c.simprefix.globe.split(',')
     
     extended_prefix_list = []
     for p in prefix_list:
         extended_prefix_list.append("639"+p)
-        extended_prefix_list.append("09"+p)        
+        extended_prefix_list.append("09"+p)
     
     send_success_list = []
     # cycle through all messages
@@ -148,10 +153,14 @@ def SendMessagesFromDb(network):
                 continue
             # check if recepient number in allowed prefixed list    
             if num_prefix in extended_prefix_list:
-                gsmio.sendMsg(msg.data,num)
-                send_success_list.append(msg.num)
-                
-    setSendStatus("SENT",send_success_list)
+                ret = gsmio.sendMsg(msg.data,num)
+                if ret == 0:
+                    send_success_list.append(msg.num)
+            else:
+                print "Number not in prefix list", num_prefix
+
+
+    dbio.setSendStatus("SENT",send_success_list)
         
 def RunSenslopeServer(network):
     minute_of_last_alert = dt.now().minute
@@ -161,20 +170,19 @@ def RunSenslopeServer(network):
     global checkIfActive
 
     try:
-        gsmInit(network)        
+        gsm = gsmio.gsmInit(network)        
     except serial.SerialException:
-        print ">> ERROR: Could not open COM %r!" % (Port+1)
         print '**NO COM PORT FOUND**'
         serverstate = 'serial'
         gsm.close()
         logRuntimeStatus(network,"com port error")
         raise ValueError(">> Error: no com port found")
             
-    createTable("runtimelog","runtime")
+    dbio.createTable("runtimelog","runtime")
     logRuntimeStatus(network,"startup")
     
-    createTable('smsinbox','smsinbox')
-    createTable('smsoutbox','smsoutbox')
+    dbio.createTable('smsinbox','smsinbox')
+    dbio.createTable('smsoutbox','smsoutbox')
 
     print '**' + network + ' GSM server active**'
     print time.asctime()
@@ -194,18 +202,38 @@ def RunSenslopeServer(network):
             # delete all read messages
             print "\n>> Deleting all read messages"
             try:
-                gsmcmd('AT+CMGD=0,2').strip()
+                gsmio.gsmcmd('AT+CMGD=0,2').strip()
                 print 'OK'
             except ValueError:
                 print '>> Error deleting messages'
                 
-            print dt.today().strftime("\nServer active as of %A, %B %d, %Y, %X")
+            print dt.today().strftime("\n" + network + " Server active as of %A, %B %d, %Y, %X")
             logRuntimeStatus(network,"alive")
-            time.sleep(10)
+
+            start = dt.now()
+            SendMessagesFromDb(network,limit=5)
+            end = dt.now()
+
+            send_time = (end-start).seconds
+            sleep_time = 30-send_time
+
+            if sleep_time > 0:
+                print ">> Sleeping for", sleep_time, "seconds"
+                time.sleep(sleep_time)
             
         elif m == 0:
-            time.sleep(2)
-            gsmflush()
+            start = dt.now()
+            SendMessagesFromDb(network)
+            end = dt.now()
+            
+            send_time = (end-start).seconds
+            sleep_time = 30-send_time
+
+            if sleep_time > 0:
+                print ">> Sleeping for", sleep_time, "seconds"
+                time.sleep(sleep_time)
+
+            gsmio.gsmflush()
             today = dt.today()
             if (today.minute % 10 == 0):
                 if checkIfActive:
