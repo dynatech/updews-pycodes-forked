@@ -253,10 +253,26 @@ def alert_toDB(df, table_name, window):
         db.commit()
         db.close()
 
-def write_site_alert(site):
-    site = site + '%'
+def write_site_alert(site, window):
+    site = site[0:3] + '%'
     query = "SELECT * FROM ( SELECT * FROM senslopedb.column_level_alert WHERE site LIKE '%s' ORDER BY timestamp DESC) AS sub GROUP BY site" %site
-    return query
+    df = q.GetDBDataFrame(query)
+
+    if 'L3' in list(df.alert.values):
+        site_alert = 'L3'
+    elif 'L2' in list(df.alert.values):
+        site_alert = 'L2'
+    elif 'L0' in list(df.alert.values):
+        site_alert = 'L0'
+    else:
+        site_alert = 'ND'
+        
+    output = pd.DataFrame({'timestamp': [window.end], 'site': [site[0:3]], 'source': ['sensor'], 'alert': [site_alert], 'updateTS': [window.end]})
+    
+    alert_toDB(output, 'site_level_alert', window)
+    
+    return output
+
 
 def main(name=''):
     if name == '':
@@ -290,6 +306,8 @@ def main(name=''):
     print column_level_alert
     
     alert_toDB(column_level_alert, 'column_level_alert', window)
+    
+    write_site_alert(monitoring.colprops.name, window)
 
     print datetime.now()-start
     
@@ -298,4 +316,4 @@ def main(name=''):
 ################################################################################
 
 if __name__ == "__main__":
-    main()
+    main('luntb')
