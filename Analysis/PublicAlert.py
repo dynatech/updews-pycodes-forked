@@ -28,8 +28,6 @@ def alert_toDB(df, table_name, window):
     
     df2 = q.GetDBDataFrame(query)
     
-    print df
-    
     if len(df2) == 0 or df2.alert.values[0] != df.alert.values[0]:
         engine = create_engine('mysql://'+q.Userdb+':'+q.Passdb+'@'+q.Hostdb+':3306/'+q.Namedb)
         df.to_sql(name = table_name, con = engine, if_exists = 'append', schema = q.Namedb, index = False)
@@ -43,7 +41,7 @@ def alert_toDB(df, table_name, window):
 def SitePublicAlert(PublicAlert, window):
     site = PublicAlert.site.values[0]
     print site
-    query = "SELECT * FROM ( SELECT * FROM senslopedb.site_level_alert WHERE site = '%s' " %site
+    query = "SELECT * FROM ( SELECT * FROM senslopedb.site_level_alert WHERE ( site = '%s' " %site
     if site == 'bto':
         query += "or site = 'bat' "
     elif site == 'mng':
@@ -52,23 +50,42 @@ def SitePublicAlert(PublicAlert, window):
         query += "or site = 'pan' "
     elif site == 'jor':
         query += "or site = 'pob' "
-    query += "ORDER BY timestamp DESC) AS sub GROUP BY source"
+    query += ") and source != 'public' ORDER BY timestamp DESC) AS sub GROUP BY source"
     
     site_alert = q.GetDBDataFrame(query)
     
-    if 'L3' in site_alert.alert.values:
+    if 'L3' in site_alert.alert.values or 'l3' in site_alert.alert.values:
         public_alert = 'A3'
-    elif 'L2' in site_alert.alert.values:
+        if 'L3' in site_alert.alert.values:
+            alert_source = 'sensor'
+        else:
+            alert_source = 'ground'
+    elif 'L2' in site_alert.alert.values or 'l2' in site_alert.alert.values:
         public_alert = 'A2'
-    elif 'r1' in site_alert.alert.values or 'd1' in site_alert.alert.values or 'd1' in site_alert.alert.values:
+        if 'L2' in site_alert.alert.values:
+            alert_source = 'sensor'
+        else:
+            alert_source = 'ground'
+    elif 'r1' in site_alert.alert.values or 'd1' in site_alert.alert.values or 'e1' in site_alert.alert.values:
         public_alert = 'A1'
+        if 'r1' in site_alert.alert.values:
+            alert_source = 'rain'
+        elif 'e1' in site_alert.alert.values:
+            alert_source = 'earthquake'
+        else:
+            alert_source = 'on demand'
     else:
+        alert_source = '-'
         public_alert = 'A0'
     
     alert_index = PublicAlert.loc[PublicAlert.site == site].index[0]
-    PublicAlert.loc[alert_index] = [window.end, PublicAlert.site.values[0], 'public', public_alert, window.end]
+    if len(site_alert.dropna()) != 0:
+        PublicAlert.loc[alert_index] = [window.end, PublicAlert.site.values[0], 'public', public_alert, pd.to_datetime(str(site_alert.dropna().sort('updateTS', ascending = False).updateTS.values[0])), alert_source]
+    else:
+        PublicAlert.loc[alert_index] = [window.end, PublicAlert.site.values[0], 'public', public_alert, window.end, alert_source]
+
     
-    SitePublicAlert = PublicAlert.loc[PublicAlert.site == site]
+    SitePublicAlert = PublicAlert.loc[PublicAlert.site == site][['timestamp', 'site', 'source', 'alert', 'updateTS']]
     
     alert_toDB(SitePublicAlert, 'site_level_alert', window)
 
@@ -78,17 +95,21 @@ def main():
     start = datetime.now()
     
     window,config = rtw.getwindow()
-    PublicAlert = pd.DataFrame({'timestamp': [window.end]*len(q.GetRainProps()), 'site': q.GetRainProps().name.values, 'source': ['public']*len(q.GetRainProps()), 'alert': [np.nan]*len(q.GetRainProps()), 'updateTS': [window.end]*len(q.GetRainProps())})
-    PublicAlert = PublicAlert[['timestamp', 'site', 'source', 'alert', 'updateTS']]
+    PublicAlert = pd.DataFrame({'timestamp': [window.end]*len(q.GetRainProps()), 'site': q.GetRainProps().name.values, 'source': ['public']*len(q.GetRainProps()), 'alert': [np.nan]*len(q.GetRainProps()), 'updateTS': [window.end]*len(q.GetRainProps()), 'palert_source': [np.nan]*len(q.GetRainProps())})
+    PublicAlert = PublicAlert[['timestamp', 'site', 'source', 'alert', 'updateTS', 'palert_source']]
     
     Site_Public_Alert = PublicAlert.groupby('site')
     
     PublicAlert = Site_Public_Alert.apply(SitePublicAlert, window=window)
     
+    PublicAlert = PublicAlert[['updateTS', 'site', 'alert', 'palert_source']]
+    PublicAlert = PublicAlert.rename(columns = {'updateTS': 'timestamp', 'palert_source': 'source'})
     print PublicAlert
     
+    PublicAlert.to_csv('PublicAlert.txt', header=True, index=None, sep='\t', mode='w')
+    
     print "run time =", datetime.now() - start
-
+    
     return PublicAlert
 
 ################################################################################
