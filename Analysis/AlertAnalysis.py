@@ -275,7 +275,7 @@ def trending_alertgen(trending_alert, monitoring, lgd, window, config):
     
     return trending_alert
 
-def alert_toDB(df, table_name):
+def alert_toDB(df, table_name, window):
     
     query = "SELECT timestamp, site, source, alert FROM senslopedb.%s WHERE site = '%s' ORDER BY timestamp DESC LIMIT 1" %(table_name, df.site.values[0])
     
@@ -284,6 +284,18 @@ def alert_toDB(df, table_name):
     if len(df2) == 0 or df2.alert.values[0] != df.alert.values[0]:
         engine = create_engine('mysql://'+q.Userdb+':'+q.Passdb+'@'+q.Hostdb+':3306/'+q.Namedb)
         df.to_sql(name = table_name, con = engine, if_exists = 'append', schema = q.Namedb, index = False)
+    elif df2.timestamp.values[0] == df.timestamp.values[0]:
+        db, cur = q.SenslopeDBConnect(q.Namedb)
+        query = "UPDATE senslopedb.%s SET updateTS='%s', alert='%s' WHERE site = '%s' and source = 'sensor' and alert = '%s' and timestamp = '%s'" %(table_name, window.end, df.alert.values[0], df2.site.values[0], df2.alert.values[0], pd.to_datetime(str(df2.timestamp.values[0])))
+        cur.execute(query)
+        db.commit()
+        db.close()
+    elif df2.alert.values[0] == df.alert.values[0]:
+        db, cur = q.SenslopeDBConnect(q.Namedb)
+        query = "UPDATE senslopedb.%s SET updateTS='%s' WHERE site = '%s' and source = 'sensor' and alert = '%s' and timestamp = '%s'" %(table_name, window.end, df2.site.values[0], df2.alert.values[0], pd.to_datetime(str(df2.timestamp.values[0])))
+        cur.execute(query)
+        db.commit()
+        db.close()
 
 def main(site=''):
     
@@ -316,9 +328,9 @@ def main(site=''):
     else: 
         site_alert = min(getmode(list(output.alert.values)))
     
-    site_level_alert = pd.DataFrame({'timestamp': [window.end], 'site': [output.site.values[0]], 'source': ['sensor'], 'alert': [site_alert]})
+    site_level_alert = pd.DataFrame({'timestamp': [window.end], 'site': [output.site.values[0]], 'source': ['sensor'], 'alert': [site_alert], 'updateTS': [window.end]})
 
-    alert_toDB(site_level_alert, 'column_level_alert')
+    alert_toDB(site_level_alert, 'column_level_alert', window)
 
     print site_level_alert
     

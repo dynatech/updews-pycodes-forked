@@ -236,7 +236,7 @@ def getmode(li):
             n.append(m)
     return n
 
-def alert_toDB(df, table_name):
+def alert_toDB(df, table_name, window):
     
     query = "SELECT timestamp, site, source, alert FROM senslopedb.%s WHERE site = '%s' ORDER BY timestamp DESC LIMIT 1" %(table_name, df.site.values[0])
     
@@ -245,7 +245,18 @@ def alert_toDB(df, table_name):
     if len(df2) == 0 or df2.alert.values[0] != df.alert.values[0]:
         engine = create_engine('mysql://'+q.Userdb+':'+q.Passdb+'@'+q.Hostdb+':3306/'+q.Namedb)
         df.to_sql(name = table_name, con = engine, if_exists = 'append', schema = q.Namedb, index = False)
+        
+    elif df2.alert.values[0] == df.alert.values[0]:
+        db, cur = q.SenslopeDBConnect(q.Namedb)
+        query = "UPDATE senslopedb.%s SET updateTS='%s' WHERE site = '%s' and source = 'sensor' and alert = '%s' and timestamp = '%s'" %(table_name, window.end, df2.site.values[0], df2.alert.values[0], pd.to_datetime(str(df2.timestamp.values[0])))
+        cur.execute(query)
+        db.commit()
+        db.close()
 
+def write_site_alert(site):
+    site = site + '%'
+    query = "SELECT * FROM ( SELECT * FROM senslopedb.column_level_alert WHERE site LIKE '%s' ORDER BY timestamp DESC) AS sub GROUP BY site" %site
+    return query
 
 def main(name=''):
     if name == '':
@@ -274,15 +285,17 @@ def main(name=''):
     else:
         site_alert = min(getmode(list(alert.col_alert.values)))
         
-    column_level_alert = pd.DataFrame({'timestamp': [window.end], 'site': [monitoring.colprops.name], 'source': ['sensor'], 'alert': [site_alert]})
+    column_level_alert = pd.DataFrame({'timestamp': [window.end], 'site': [monitoring.colprops.name], 'source': ['sensor'], 'alert': [site_alert], 'updateTS': [window.end]})
     
     print column_level_alert
     
-    alert_toDB(column_level_alert, 'column_level_alert')
+    alert_toDB(column_level_alert, 'column_level_alert', window)
 
     print datetime.now()-start
     
     return alert
+
+################################################################################
 
 if __name__ == "__main__":
     main()
