@@ -75,3 +75,14 @@ class config:
 		self.simprefix.smart = cfg.get("simprefix","smart")
 		self.simprefix.globe = cfg.get("simprefix","globe")
 
+		self.mode = Container()
+		self.mode.script_mode = cfg.get("mode","script_mode")
+		if self.mode.script_mode == 'gsmserver':
+			self.mode.sendmsg = True
+			self.mode.procmsg = False
+			self.mode.logtoinstance = 'GSM'
+		elif self.mode.script_mode == 'procmsg':
+			self.mode.sendmsg = False
+			self.mode.procmsg = True
+			self.mode.logtoinstance = 'LOCAL'
+

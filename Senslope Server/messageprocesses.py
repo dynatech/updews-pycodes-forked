@@ -9,6 +9,7 @@ import senslopeServer as server
 import cfgfileio as cfg
 import argparse
 import queryserverinfo as qsi
+import lockscript as lock
 
 def updateLastMsgReceivedTable(txtdatetime,name,sim_num,msg):
     query = """insert into senslopedb.last_msg_received
@@ -173,7 +174,9 @@ def ProcTwoAccelColData(msg,sender,txtdatetime):
             except ValueError:
                 print ">> Value Error detected.", piece,
                 print "Piece of data to be ignored"
-                    
+    
+    SpawnAlertGen(colid)
+
     return outl
 
 def WriteTwoAccelDataToDb(dlist,msgtime):
@@ -218,8 +221,12 @@ def ProcessColumn(line,txtdatetime,sender):
     print 'raw data: ' + msgdata
     #getting date and time
     #msgdatetime = line[-10:]
-    msgdatetime = (line.split('*'))[2][:10]
-    print 'date & time: ' + msgdatetime
+    try:
+        msgdatetime = (line.split('*'))[2][:10]
+        print 'date & time: ' + msgdatetime
+    except:
+        print '>> Date and time defaults to SMS not sensor data'
+        msgdatetime = txtdatetime
 
     # col_list = cfg.get("Misc","AdjustColumnTimeOf").split(',')
     # if msgtable in col_list:
@@ -300,6 +307,8 @@ def ProcessColumn(line,txtdatetime,sender):
         if i!=0:
             dbio.createTable(str(msgtable), "sensor v1")
             dbio.commitToDb(query, 'ProcessColumn')
+
+        SpawnAlertGen(msgtable)
                 
     except KeyboardInterrupt:
         print '\n>>Error: Unknown'
@@ -679,6 +688,15 @@ def CheckMessageSource(msg):
     else:
         print "From unknown number ", msg.simnum
 
+def SpawnAlertGen(sitename):
+    # spawn alert alert_gen
+    if lock.get_lock('alertgen'+sitename,False):
+        print "Alert gen spawned for", sitename
+        command = "sleep 60 && ~/anaconda2/bin/python /home/dynaslope/Desktop/updews-pycodes/Analysis/alertgen.py " + sitename.lower()
+        p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, stderr=subprocess.STDOUT)
+    else:
+        print "Aborting alert gen spawn for ", sitename
+
 def ProcessAllMessages(allmsgs,network):
     c = cfg.config()
     read_success_list = []
@@ -695,7 +713,8 @@ def ProcessAllMessages(allmsgs,network):
         ##### Added for V1 sensors removes unnecessary characters pls see function PreProcessColumnV1(data)
         if re.search("\*FF",msg.data):
             ProcessPiezometer(msg.data, msg.simnum)
-        elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*\d+T?$",msg.data):
+        # elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*\d+T?$",msg.data):
+        elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*.*",msg.data):
            msg.data = PreProcessColumnV1(msg.data)
            ProcessColumn(msg.data,msg.dt,msg.simnum)
         elif re.search("(RO*U*TI*N*E )|(EVE*NT )", msg.data.upper()):
