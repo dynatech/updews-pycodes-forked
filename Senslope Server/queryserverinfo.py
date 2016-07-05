@@ -7,6 +7,7 @@ import senslopeServer as server
 import cfgfileio as cfg
 import argparse
 import StringIO
+import gsmSerialio as gsmio
 
 def getLatestQueryReport():
 	c = cfg.config()
@@ -280,25 +281,30 @@ def ProcessServerInfoRequest(msg):
 		return
 
 	if args.sim_num:
+		print ">> Sim num request",
 		num = GetSimNumofColumn(args.col_name.strip())
 		print num
 		server.WriteOutboxMessageToDb(num,msg.simnum)
 	
 	if args.latest_ts:
+		print ">> Latest sms request",
 		ts_msg = getLatestSmsFromColumn(args.col_name.strip())
 		print ts_msg
 		server.WriteOutboxMessageToDb(ts_msg,msg.simnum)
 
 	if args.latest_node_data:
+		print ">> Latest data of node", 
 		latest_data = GetLatestDataofNode(args.col_name.strip(),args.node_id)
 		print latest_data
 		server.WriteOutboxMessageToDb(latest_data,msg.simnum)
 
+	print ">> End of psir"
 	return True
 
 		
 def test():
-    msg = "-t -clabb -n10"
+    # msg = "-t -clabb -n10"
+    msg = gsmio.sms("1","09176023735","PSIR -T -CLABB -N 10","")
     ProcessServerInfoRequest(msg)
 
 if __name__ == "__main__":
