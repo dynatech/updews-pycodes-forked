@@ -255,7 +255,7 @@ def alert_toDB(df, table_name, window):
 
 def write_site_alert(site, window):
     site = site[0:3] + '%'
-    query = "SELECT * FROM ( SELECT * FROM senslopedb.column_level_alert WHERE site LIKE '%s' ORDER BY timestamp DESC) AS sub GROUP BY site" %site
+    query = "SELECT * FROM ( SELECT * FROM senslopedb.column_level_alert WHERE site LIKE '%s' AND updateTS >= '%s' ORDER BY timestamp DESC) AS sub GROUP BY site" %(site, window.end-timedelta(hours=3))
     df = q.GetDBDataFrame(query)
 
     if 'L3' in list(df.alert.values):
@@ -316,4 +316,4 @@ def main(name=''):
 ################################################################################
 
 if __name__ == "__main__":
-    main('martb')
+    main()

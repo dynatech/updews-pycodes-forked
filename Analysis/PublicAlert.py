@@ -73,15 +73,14 @@ def SitePublicAlert(PublicAlert, window):
     list_ground_alerts = ','.join(site_alert.alert.values)
     
     sensor_site = site + '%'
-    query = "SELECT * FROM ( SELECT * FROM senslopedb.column_level_alert WHERE site LIKE '%s' ORDER BY timestamp DESC) AS sub GROUP BY site" %sensor_site
+    query = "SELECT * FROM ( SELECT * FROM senslopedb.column_level_alert WHERE site LIKE '%s' AND updateTS >= '%s' ORDER BY timestamp DESC) AS sub GROUP BY site" %(sensor_site,window.end-timedelta(hours=3))
     sensor_alertDF = q.GetDBDataFrame(query)
     
+    sensor_alert = str(sensor_alertDF[['site','alert']].set_index('site').T.to_dict('records'))
+    sensor_alert = sensor_alert[2:len(sensor_alert)-2]
+    
     try:
-        sensor_alert = ','.join(sensor_alertDF.sort('site', ascending = True).alert.values)
-    except:
-        sensor_alert = 'ND'
-    try:
-        rain_alert = site_alert.loc[site_alert.source == 'rain'].alert.values[0]
+        rain_alert = site_alert.loc[(site_alert.source == 'rain') & (site_alert.updateTS >= window.end-timedelta(hours=3))].alert.values[0]
     except:
         rain_alert = 'nd'
     
@@ -193,9 +192,9 @@ def SitePublicAlert(PublicAlert, window):
     
     alert_index = PublicAlert.loc[PublicAlert.site == site].index[0]
     if len(site_alert.dropna()) != 0:
-        PublicAlert.loc[alert_index] = [window.end, PublicAlert.site.values[0], 'public', public_alert, pd.to_datetime(str(site_alert.dropna().sort('updateTS', ascending = False).updateTS.values[0])), alert_source, internal_alert, validity, sensor_alert, rain_alert]
+        PublicAlert.loc[alert_index] = [window.end, PublicAlert.site.values[0], 'public', public_alert, pd.to_datetime(str(site_alert.loc[site_alert.source != 'public'].dropna().sort('updateTS', ascending = False).updateTS.values[0])), alert_source, internal_alert, validity, sensor_alert, rain_alert]
     else:
-        PublicAlert.loc[alert_index] = [window.end, PublicAlert.site.values[0], 'public', public_alert, window.end, alert_source, internal_alert, validity, sensor_alert, rain_alert]
+        PublicAlert.loc[alert_index] = [window.end, PublicAlert.site.values[0], 'public', public_alert, '2016-01-01', alert_source, internal_alert, validity, sensor_alert, rain_alert]
 
     
     SitePublicAlert = PublicAlert.loc[PublicAlert.site == site][['timestamp', 'site', 'source', 'alert', 'updateTS']]
