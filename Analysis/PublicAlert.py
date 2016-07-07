@@ -1,10 +1,9 @@
 import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 from pandas.stats.api import ols
 from sqlalchemy import create_engine
 import sys
-import time
 
 import cfgfileio as cfg
 import rtwindow as rtw
@@ -12,6 +11,9 @@ import querySenslopeDb as q
 
 def RoundTime(date_time):
     time_hour = int(date_time.strftime('%H'))
+    time_min = int(date_time.strftime('%M'))
+    if time_min > 0:
+        time_hour += 1
     modulo = time_hour % 4
     
     if modulo == 0:
@@ -88,7 +90,7 @@ def SitePublicAlert(PublicAlert, window):
     if 'L3' in site_alert.alert.values or 'l3' in site_alert.alert.values or 'A3' in site_alert.alert.values:
         validity_L = site_alert.loc[(site_alert.alert == 'L3')|(site_alert.alert == 'l3')].updateTS.values
         validity_A = site_alert.loc[(site_alert.alert == 'A3')].timestamp.values
-        validity = pd.to_datetime(str(max(list(validity_L) + list(validity_A)))) + timedelta(2)
+        validity = RoundTime(pd.to_datetime(str(max(list(validity_L) + list(validity_A))))) + timedelta(2)
         if validity >= window.end:
             public_alert = 'A3'
             internal_alert = 'A3'
@@ -113,7 +115,7 @@ def SitePublicAlert(PublicAlert, window):
     elif 'L2' in site_alert.alert.values or 'l2' in site_alert.alert.values or 'A2' in site_alert.alert.values:
         validity_L = site_alert.loc[(site_alert.alert == 'L2')|(site_alert.alert == 'l2')].updateTS.values
         validity_A = site_alert.loc[(site_alert.alert == 'A2')].timestamp.values
-        validity = pd.to_datetime(str(max(list(validity_L) + list(validity_A)))) + timedelta(1)
+        validity = RoundTime(pd.to_datetime(str(max(list(validity_L) + list(validity_A))))) + timedelta(1)
         if validity >= window.end:
             public_alert = 'A2'
             if 'L' in list_ground_alerts or 'l' in list_ground_alerts:
@@ -141,7 +143,7 @@ def SitePublicAlert(PublicAlert, window):
     elif 'r1' in site_alert.alert.values or 'e1' in site_alert.alert.values or 'd1' in site_alert.alert.values or 'A1' in site_alert.alert.values:
         validity_RED = site_alert.loc[(site_alert.alert == 'r1')|(site_alert.alert == 'e1')|(site_alert.alert == 'd1')].updateTS.values
         validity_A = site_alert.loc[(site_alert.alert == 'A1')].timestamp.values
-        validity = pd.to_datetime(str(max(list(validity_RED) + list(validity_A)))) + timedelta(1)
+        validity = RoundTime(pd.to_datetime(str(max(list(validity_RED) + list(validity_A))))) + timedelta(1)
         if validity >= window.end:
             public_alert = 'A1'
             if 'r1' in site_alert.alert.values:
