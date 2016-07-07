@@ -223,10 +223,12 @@ def SitePublicAlert(PublicAlert, window):
             internal_alert = 'ND'
     
     alert_index = PublicAlert.loc[PublicAlert.site == site].index[0]
-    if len(site_alert.dropna()) != 0:
-        PublicAlert.loc[alert_index] = [window.end, PublicAlert.site.values[0], 'public', public_alert, pd.to_datetime(str(site_alert.loc[site_alert.source != 'public'].dropna().sort('updateTS', ascending = False).updateTS.values[0])), alert_source, internal_alert, validity, sensor_alert, rain_alert]
+    
+    nonND_alert = site_alert.loc[(site_alert.source != 'public')&(site_alert.alert != 'nd')&(site_alert.alert != 'ND')].dropna()
+    if len(nonND_alert) != 0:
+        PublicAlert.loc[alert_index] = [pd.to_datetime(str(nonND_alert.sort('updateTS', ascending = False).updateTS.values[0])), PublicAlert.site.values[0], 'public', public_alert, window.end, alert_source, internal_alert, validity, sensor_alert, rain_alert]
     else:
-        PublicAlert.loc[alert_index] = [window.end, PublicAlert.site.values[0], 'public', 'A0', pd.to_datetime('2016-01-01 00:00:00'), '-', 'ND', '-', 'ND', 'nd']
+        PublicAlert.loc[alert_index] = [pd.to_datetime('2016-01-01 00:00:00'), PublicAlert.site.values[0], 'public', 'A0', window.end, '-', 'ND', '-', 'ND', 'nd']
     
     SitePublicAlert = PublicAlert.loc[PublicAlert.site == site][['timestamp', 'site', 'source', 'alert', 'updateTS']]
     
@@ -245,8 +247,8 @@ def main():
     
     PublicAlert = Site_Public_Alert.apply(SitePublicAlert, window=window)
     
-    PublicAlert = PublicAlert[['updateTS', 'site', 'alert', 'palert_source', 'internal_alert', 'validity', 'sensor_alert', 'rain_alert']]
-    PublicAlert = PublicAlert.rename(columns = {'updateTS': 'timestamp', 'palert_source': 'source'})
+    PublicAlert = PublicAlert[['timestamp', 'site', 'alert', 'palert_source', 'internal_alert', 'validity', 'sensor_alert', 'rain_alert']]
+    PublicAlert = PublicAlert.rename(columns = {'palert_source': 'source'})
     print PublicAlert
     
     PublicAlert.to_csv('PublicAlert.txt', header=True, index=None, sep='\t', mode='w')
