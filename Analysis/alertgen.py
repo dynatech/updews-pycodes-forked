@@ -311,9 +311,9 @@ def main(name=''):
 
     print datetime.now()-start
     
-    return alert
+    return column_level_alert
 
 ################################################################################
 
 if __name__ == "__main__":
-    main()
+    main('martb')
