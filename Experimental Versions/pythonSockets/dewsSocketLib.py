@@ -48,6 +48,13 @@ class DewsClientGSMProtocol(WebSocketClientProtocol):
     def onOpen(self):
         print("WebSocket connection open.")
 
+        def ping():
+            self.sendMessage(u"ping".encode('utf8'))
+            self.factory.reactor.callLater(300, ping)
+
+        # start sending messages every second ..
+        ping()
+
     def onMessage(self, payload, isBinary):
         if isBinary:
             print("Binary message received: {0} bytes".format(len(payload)))
