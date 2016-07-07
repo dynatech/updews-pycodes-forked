@@ -11,6 +11,7 @@ import os
 import sys
 import time
 import json
+import simplejson
 import pandas as pd
 #import datetime
 from datetime import datetime
@@ -47,18 +48,26 @@ def writeToSMSoutbox(number, msg, timestamp = None):
                         VALUES ('%s','%s','UNSENT');""" % (number,msg)
 
         print qInsert
-        qpi.ExecuteQuery(qInsert)        
+        qpi.ExecuteQuery(qInsert)
+        return 0
     
     except IndexError:
         print '>> Error in writing extracting database data to files..'
+        return -1
 
 def sendMessageToGSM(recipients, msg, timestamp = None):
     db, cur = qpi.SenslopeDBConnect('senslopedb')
     print '>> Connected to database'
+    ctr = 0
     
     for number in recipients:
         # print "%s: %s" % (number, msg)
-        writeToSMSoutbox(number, msg, timestamp)
+        writeStatus = writeToSMSoutbox(number, msg, timestamp)
+
+        if writeStatus < 0:
+            ctr -= 1
+
+    return ctr
 
 def sendTimestampToGSM(host, port, recipients):
     db, cur = qpi.SenslopeDBConnect('senslopedb')
@@ -214,13 +223,23 @@ def parseRecvMsg(payload):
             recipients = parsed_json['numbers']
             print "Recipients of Message: %s" % (len(recipients))
             
-            # for recipient in recipients:
-            #     print recipient
-            
             message = parsed_json['msg']
             timestamp = parsed_json['timestamp']
             
-            sendMessageToGSM(recipients, message, timestamp)
+            writeStatus = sendMessageToGSM(recipients, message, timestamp)
+
+            # TODO: create a message containing the recipients, timestamp, and
+            #   write status to raspi database
+            if writeStatus < 0:
+                # if write unsuccessful
+                ack_json = """{"type":"gsmack","timestamp":"%s","recipients":"%s","send_status":"FAIL"}""" % (timestamp, recipients)
+                pass
+            else:
+                # if write SUCCESSFUL
+                ack_json = """{"type":"gsmack","timestamp":"%s","recipients":"%s","send_status":"SENT"}""" % (timestamp, recipients)
+                pass
+
+            sendDataToDEWS(ack_json)
         elif commType == 'smsrcv':
             print "Warning: message type 'smsrcv', Message is ignored."
         else:
