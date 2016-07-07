@@ -10,6 +10,9 @@ import multiprocessing
 import SomsServerParser as SSP
 import math
 import cfgfileio as cfg
+
+sys.path.insert(0, '/home/pi/updews-pycodes/Experimental Versions/pythonSockets')
+import dewsSocketLeanLib as dsll
 #---------------------------------------------------------------------------------------------------------------------------
 
 def updateSimNumTable(name,sim_num,date_activated):
@@ -75,14 +78,23 @@ def SendAlertGsm(network,alertmsg):
     except IndexError:
         print "Error sending all_alerts.txt"
 
-def WriteRawSmsToDb(msglist):
-    query = "INSERT INTO smsinbox (timestamp,sim_num,sms_msg,read_status) VALUES "
-    
+def WriteRawSmsToDb(msglist,sensor_nums):
+    query = "INSERT INTO smsinbox (timestamp,sim_num,sms_msg,read_status,web_flag) VALUES "
     for m in msglist:
-        query += "('" + str(m.dt.replace("/","-")) + "','" + str(m.simnum) + "','" + str(m.data) + "','UNREAD'),"
+        if sensor_nums.find(m.simnum[-10:]) == -1:
+        # if re.search(m.simnum[-10:],sensor_nums):
+            web_flag = 'W'
+            print m.data[:20]
+            dsll.sendReceivedGSMtoDEWS(str(m.dt.replace("/","-")), m.simnum, m.data)
+        else:
+            web_flag = 'S'
+        query += "('%s','%s','%s','UNREAD','%c')," % (str(m.dt.replace("/","-")),str(m.simnum),str(m.data.replace("'","\"")),web_flag)
+        # query += "('" + str(m.dt.replace("/","-")) + "','" + str(m.simnum) + "','"
+        # query += str(m.data.replace("'","\"")) + "','UNREAD'),"
     
     # just to remove the trailing ','
     query = query[:-1]
+    # print query
     
     dbio.commitToDb(query, "WriteRawSmsToDb", instance='GSM')
 
@@ -161,6 +173,15 @@ def SendMessagesFromDb(network,limit=10):
 
 
     dbio.setSendStatus("SENT",send_success_list)
+
+def getSensorNumbers():
+    querys = "SELECT sim_num from site_column_sim_nums"
+
+    # print querys
+
+    nums = dbio.querydatabase(querys,'getSensorNumbers','LOCAL')
+
+    return nums
         
 def RunSenslopeServer(network):
     minute_of_last_alert = dt.now().minute
@@ -184,6 +205,8 @@ def RunSenslopeServer(network):
     dbio.createTable('smsinbox','smsinbox')
     dbio.createTable('smsoutbox','smsoutbox')
 
+    sensor_numbers_str = str(getSensorNumbers())
+
     print '**' + network + ' GSM server active**'
     print time.asctime()
     while True:
@@ -192,7 +215,7 @@ def RunSenslopeServer(network):
             allmsgs = gsmio.getAllSms(network)
             
             try:
-                WriteRawSmsToDb(allmsgs)
+                WriteRawSmsToDb(allmsgs,sensor_numbers_str)
             except MySQLdb.ProgrammingError:
                 print ">> Error: May be an empty line.. skipping message storing"
             

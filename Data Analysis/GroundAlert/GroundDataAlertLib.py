@@ -87,6 +87,13 @@ def uptoDB_gndmeas_alerts(df):
     engine=create_engine('mysql://root:senslope@192.168.1.102:3306/senslopedb')
     df.to_sql(name = 'gndmeas_alerts', con = engine, if_exists = 'append', schema = Namedb, index = True)
 
+def site_level_alerts_updater(df):
+    query = 'UPDATE senslopedb.site_level_alert SET updateTS = "{}" WHERE site = "{}" AND timestamp = "{}" AND source = "{}"'.format(pd.to_datetime(str(df.updateTS.values[0])),df.site.values[0],pd.to_datetime(str(df.timestamp.values[0])),df.source.values[0])
+    db, cur = SenslopeDBConnect(Namedb)
+    cur.execute(query)
+    db.commit()
+    db.close()
+    
 def uptoDB_site_level_alerts(df):
     #INPUT: Dataframe containing site level alerts
     #OUTPUT: Writes to sql database the alerts of sites who recently changed their alert status
@@ -96,15 +103,23 @@ def uptoDB_site_level_alerts(df):
     df2 = GetDBDataFrame(query)
     
     #Merge the two data frames to determine overlaps in alerts
-    overlap = pd.merge(df,df2,how = 'left', on = ['site','source','alert'],suffixes=['','_r'])
+    overlap = pd.merge(df,df2,how = 'left', on = ['site','source','alert'],suffixes=['','_r'])    
+    
+    #Get the site with no changes in its latest alert
+    persistent_alerts = df[~overlap['timestamp_r'].isnull()]
+    persistent_alerts['updateTS'] = persistent_alerts['timestamp']
+    persistent_alerts['timestamp'] = overlap[~overlap['timestamp_r'].isnull()]['timestamp_r']
+    persistent_alerts = persistent_alerts.groupby('site')
+    persistent_alerts.apply(site_level_alerts_updater)
     
     #Get the site with change in its latest alert
-    to_db = df[overlap['timestamp_r'].isnull()]
-    to_db = to_db[['timestamp','site','source','alert']].set_index('timestamp')
+    changed_alerts = df[overlap['timestamp_r'].isnull()]
+    changed_alerts['updateTS'] = changed_alerts['timestamp']
+    changed_alerts = changed_alerts[['timestamp','site','source','alert','updateTS']].set_index('timestamp')
     
     engine=create_engine('mysql://root:senslope@192.168.1.102:3306/senslopedb')
-    to_db.to_sql(name = 'site_level_alert', con = engine, if_exists = 'append', schema = Namedb, index = True)
-
+    changed_alerts.to_sql(name = 'site_level_alert', con = engine, if_exists = 'append', schema = Namedb, index = True)
+    
 def get_latest_ground_df(site=None):
     #INPUT: String containing site name    
     #OUTPUT: Dataframe of the last 4 recent ground measurement in the database

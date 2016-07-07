@@ -229,12 +229,12 @@ def ProcessColumn(line,txtdatetime,sender):
         msgdatetime = txtdatetime
 
     # col_list = cfg.get("Misc","AdjustColumnTimeOf").split(',')
-    # if msgtable in col_list:
-    #     msgdatetime = txtdatetime
-    #     print "date & time adjusted " + msgdatetime
-    # else:
-    #     msgdatetime = dt.strptime(msgdatetime,'%y%m%d%H%M').strftime('%Y-%m-%d %H:%M:00')
-    #     print 'date & time no change'
+    if msgtable == 'PUGB':
+        msgdatetime = txtdatetime
+        print "date & time adjusted " + msgdatetime
+    else:
+        msgdatetime = dt.strptime(msgdatetime,'%y%m%d%H%M').strftime('%Y-%m-%d %H:%M:00')
+        print 'date & time no change'
         
     dlen = len(msgdata) #checks if data length is divisible by 15
     #print 'data length: %d' %dlen
@@ -693,6 +693,7 @@ def SpawnAlertGen(sitename):
     if lock.get_lock('alertgen'+sitename,False):
         print "Alert gen spawned for", sitename
         command = "sleep 60 && ~/anaconda2/bin/python /home/dynaslope/Desktop/updews-pycodes/Analysis/alertgen.py " + sitename.lower()
+        command += " && ~/anaconda2/bin/python /home/dynaslope/Desktop/updews-pycodes/Analysis/AlertAnalysis.py " + sitename.lower()
         p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, stderr=subprocess.STDOUT)
     else:
         print "Aborting alert gen spawn for ", sitename

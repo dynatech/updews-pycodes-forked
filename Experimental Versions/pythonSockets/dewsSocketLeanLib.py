@@ -11,6 +11,7 @@ import os
 import sys
 import time
 import json
+import simplejson
 import pandas as pd
 #import datetime
 from datetime import datetime
@@ -36,23 +37,37 @@ import querySenslopeDb as qs
 # GSM Functionalities
 ###############################################################################
 
-def writeToSMSoutbox(number, msg):
+def writeToSMSoutbox(number, msg, timestamp = None):
     try:
-        qInsert = """INSERT INTO smsoutbox (recepients,sms_msg,send_status)
-                    VALUES ('%s','%s','UNSENT');""" % (number,msg)
+        print "timestamp: %s" % (timestamp)
+        if timestamp != None:
+            qInsert = """INSERT INTO smsoutbox (timestamp_sent,recepients,sms_msg,send_status)
+                        VALUES ('%s','%s','%s','UNSENT');""" % (timestamp,number,msg)
+        else:
+            qInsert = """INSERT INTO smsoutbox (recepients,sms_msg,send_status)
+                        VALUES ('%s','%s','UNSENT');""" % (number,msg)
+
         print qInsert
-        qpi.ExecuteQuery(qInsert)        
+        qpi.ExecuteQuery(qInsert)
+        return 0
     
     except IndexError:
         print '>> Error in writing extracting database data to files..'
+        return -1
 
-def sendMessageToGSM(recipients, msg):
+def sendMessageToGSM(recipients, msg, timestamp = None):
     db, cur = qpi.SenslopeDBConnect('senslopedb')
     print '>> Connected to database'
+    ctr = 0
     
     for number in recipients:
-        print "%s: %s" % (number, msg)
-        writeToSMSoutbox(number, msg)
+        # print "%s: %s" % (number, msg)
+        writeStatus = writeToSMSoutbox(number, msg, timestamp)
+
+        if writeStatus < 0:
+            ctr -= 1
+
+    return ctr
 
 def sendTimestampToGSM(host, port, recipients):
     db, cur = qpi.SenslopeDBConnect('senslopedb')
@@ -136,6 +151,20 @@ def sendDataToWSS(host, port, msg):
         #returns -1 on failure to send data
         return -1
     
+#Connect to Web Socket Server
+def connectWS(host, port):
+    try:
+        #create 
+        ws = create_connection("ws://%s:%s" % (host, port))
+
+        #returns 0 on successful sending of data
+        return 0
+    except:
+        print "Failed to send data. Please check your internet connection"        
+        
+        #returns -1 on failure to send data
+        return -1
+
 #No filtering yet for special characters
 def formatReceivedGSMtext(timestamp, sender, message):
     jsonText = """{"type":"smsrcv","timestamp":"%s","sender":"%s","msg":"%s"}""" % (timestamp, sender, message)
@@ -153,11 +182,70 @@ def sendReceivedGSMtoDEWS(timestamp, sender, message):
     success = sendDataToDEWS(jsonText)
     return success
 
+#Connect to WebSocket Server and attempt to reconnect when disconnected
+#Receive and process messages as well
+def connRecvReconn(host, port):
+    url = "ws://%s:%s/" % (host, port)
+    delay = 5
 
+    while True:
+        try:
+            print "Receiving..."
+            result = ws.recv()
+            parseRecvMsg(result)
+            # print "Received '%s'" % result
+            delay = 5
+        except Exception, e:
+            # connectWS()
+            try:
+                print "Connecting to Websocket Server..."
+                ws = create_connection(url)
+            except Exception, e:
+                print "Disconnected! will attempt reconnection in %s seconds..." % (delay)
+                time.sleep(delay)
 
+                if delay < 10:
+                    delay += 1
 
+    ws.close()
 
+def parseRecvMsg(payload):
+    msg = format(payload.decode('utf8'))
+    print("Text message received: %s" % msg)
 
+    #The local ubuntu server is expected to receive a JSON message
+    #parse the numbers from the message
+    try:
+        parsed_json = json.loads(msg)
+        commType = parsed_json['type']
+
+        if commType == 'smssend':
+            recipients = parsed_json['numbers']
+            print "Recipients of Message: %s" % (len(recipients))
+            
+            message = parsed_json['msg']
+            timestamp = parsed_json['timestamp']
+            
+            writeStatus = sendMessageToGSM(recipients, message, timestamp)
+
+            # TODO: create a message containing the recipients, timestamp, and
+            #   write status to raspi database
+            if writeStatus < 0:
+                # if write unsuccessful
+                ack_json = """{"type":"gsmack","timestamp":"%s","recipients":"%s","send_status":"FAIL"}""" % (timestamp, recipients)
+                pass
+            else:
+                # if write SUCCESSFUL
+                ack_json = """{"type":"gsmack","timestamp":"%s","recipients":"%s","send_status":"SENT"}""" % (timestamp, recipients)
+                pass
+
+            sendDataToDEWS(ack_json)
+        elif commType == 'smsrcv':
+            print "Warning: message type 'smsrcv', Message is ignored."
+        else:
+            print "Error: No message type detected. Can't send an SMS."
+    except:
+        print "Error: Please check the JSON construction of your message"
 
 
 
