@@ -10,6 +10,9 @@ import multiprocessing
 import SomsServerParser as SSP
 import math
 import cfgfileio as cfg
+
+sys.path.insert(0, '/home/pi/updews-pycodes/Experimental Versions/pythonSockets')
+import dewsSocketLeanLib as dsll
 #---------------------------------------------------------------------------------------------------------------------------
 
 def updateSimNumTable(name,sim_num,date_activated):
@@ -45,19 +48,20 @@ def updateSimNumTable(name,sim_num,date_activated):
 def logRuntimeStatus(script_name,status):
     if (status == 'alive'):
         ts = dt.today()
-        roundmintoten = int(math.floor(ts.minute / 10.0)) * 10
-        logtimestamp = "%d-%02d-%02d %02d:%02d:00" % (ts.year,ts.month,ts.day,ts.hour,roundmintoten)
+        diff = (ts.minute%10) * 60 + ts.second
+        ts = ts - td(seconds=diff)
+        logtimestamp = ts.strftime("%Y-%m-%d %H:%M:00")
     else:
         logtimestamp = dt.today().strftime("%Y-%m-%d %H:%M:00")
     
     print ">> Logging runtime '" + status + "' at " + logtimestamp 
     
-    query = """insert ignore into senslopedb.runtimelog
+    query = """insert ignore into runtimelog
                 (timestamp,script_name,status)
                 values ('%s','%s','%s')
                 """ %(logtimestamp,script_name,status)
     
-    dbio.commitToDb(query, 'logRuntimeStatus')
+    dbio.commitToDb(query, 'logRuntimeStatus', cfg.config().mode.logtoinstance)
        
 def SendAlertGsm(network,alertmsg):
     c = cfg.config()
@@ -74,14 +78,23 @@ def SendAlertGsm(network,alertmsg):
     except IndexError:
         print "Error sending all_alerts.txt"
 
-def WriteRawSmsToDb(msglist):
-    query = "INSERT INTO smsinbox (timestamp,sim_num,sms_msg,read_status) VALUES "
-    
+def WriteRawSmsToDb(msglist,sensor_nums):
+    query = "INSERT INTO smsinbox (timestamp,sim_num,sms_msg,read_status,web_flag) VALUES "
     for m in msglist:
-        query += "('" + str(m.dt.replace("/","-")) + "','" + str(m.simnum) + "','" + str(m.data) + "','UNREAD'),"
+        if sensor_nums.find(m.simnum[-10:]) == -1:
+        # if re.search(m.simnum[-10:],sensor_nums):
+            web_flag = 'W'
+            print m.data[:20]
+            dsll.sendReceivedGSMtoDEWS(str(m.dt.replace("/","-")), m.simnum, m.data)
+        else:
+            web_flag = 'S'
+        query += "('%s','%s','%s','UNREAD','%c')," % (str(m.dt.replace("/","-")),str(m.simnum),str(m.data.replace("'","\"")),web_flag)
+        # query += "('" + str(m.dt.replace("/","-")) + "','" + str(m.simnum) + "','"
+        # query += str(m.data.replace("'","\"")) + "','UNREAD'),"
     
     # just to remove the trailing ','
     query = query[:-1]
+    # print query
     
     dbio.commitToDb(query, "WriteRawSmsToDb", instance='GSM')
 
@@ -112,27 +125,32 @@ def CheckAlertMessages():
         print '>> Error in reading file', alllines
     return alllines
     
-def SendMessagesFromDb(network):
-    allmsgs = dbio.getAllOutboxSmsFromDb("UNSENT")
+def SendMessagesFromDb(network,limit=10):
+    c = cfg.config()
+    if not c.mode.sendmsg:
+        return
+    allmsgs = dbio.getAllOutboxSmsFromDb("UNSENT",limit)
     if len(allmsgs) <= 0:
         # print ">> No messages in outbox"
         return
+
+    print ">> Sending messagess from db"
         
     msglist = []
     for item in allmsgs:
-        smsItem = sms(item[0], str(item[2]), str(item[3]), str(item[1]))
+        smsItem = gsmio.sms(item[0], str(item[2]), str(item[3]), str(item[1]))
         msglist.append(smsItem)
     allmsgs = msglist
-    
+
     if network.upper() == 'SMART':
-        prefix_list = cfg.get('simprefix','smart').split(',')
+        prefix_list = c.simprefix.smart.split(',')
     else:
-        prefix_list = cfg.get('simprefix','globe').split(',')
+        prefix_list = c.simprefix.globe.split(',')
     
     extended_prefix_list = []
     for p in prefix_list:
         extended_prefix_list.append("639"+p)
-        extended_prefix_list.append("09"+p)        
+        extended_prefix_list.append("09"+p)
     
     send_success_list = []
     # cycle through all messages
@@ -147,10 +165,23 @@ def SendMessagesFromDb(network):
                 continue
             # check if recepient number in allowed prefixed list    
             if num_prefix in extended_prefix_list:
-                gsmio.sendMsg(msg.data,num)
-                send_success_list.append(msg.num)
-                
-    setSendStatus("SENT",send_success_list)
+                ret = gsmio.sendMsg(msg.data,num)
+                if ret == 0:
+                    send_success_list.append(msg.num)
+            else:
+                print "Number not in prefix list", num_prefix
+
+
+    dbio.setSendStatus("SENT",send_success_list)
+
+def getSensorNumbers():
+    querys = "SELECT sim_num from site_column_sim_nums"
+
+    # print querys
+
+    nums = dbio.querydatabase(querys,'getSensorNumbers','LOCAL')
+
+    return nums
         
 def RunSenslopeServer(network):
     minute_of_last_alert = dt.now().minute
@@ -160,20 +191,21 @@ def RunSenslopeServer(network):
     global checkIfActive
 
     try:
-        gsmInit(network)        
+        gsm = gsmio.gsmInit(network)        
     except serial.SerialException:
-        print ">> ERROR: Could not open COM %r!" % (Port+1)
         print '**NO COM PORT FOUND**'
         serverstate = 'serial'
         gsm.close()
         logRuntimeStatus(network,"com port error")
         raise ValueError(">> Error: no com port found")
             
-    createTable("runtimelog","runtime")
+    dbio.createTable("runtimelog","runtime")
     logRuntimeStatus(network,"startup")
     
-    createTable('smsinbox','smsinbox')
-    createTable('smsoutbox','smsoutbox')
+    dbio.createTable('smsinbox','smsinbox')
+    dbio.createTable('smsoutbox','smsoutbox')
+
+    sensor_numbers_str = str(getSensorNumbers())
 
     print '**' + network + ' GSM server active**'
     print time.asctime()
@@ -183,7 +215,7 @@ def RunSenslopeServer(network):
             allmsgs = gsmio.getAllSms(network)
             
             try:
-                WriteRawSmsToDb(allmsgs)
+                WriteRawSmsToDb(allmsgs,sensor_numbers_str)
             except MySQLdb.ProgrammingError:
                 print ">> Error: May be an empty line.. skipping message storing"
             
@@ -193,18 +225,38 @@ def RunSenslopeServer(network):
             # delete all read messages
             print "\n>> Deleting all read messages"
             try:
-                gsmcmd('AT+CMGD=0,2').strip()
+                gsmio.gsmcmd('AT+CMGD=0,2').strip()
                 print 'OK'
             except ValueError:
                 print '>> Error deleting messages'
                 
-            print dt.today().strftime("\nServer active as of %A, %B %d, %Y, %X")
+            print dt.today().strftime("\n" + network + " Server active as of %A, %B %d, %Y, %X")
             logRuntimeStatus(network,"alive")
-            time.sleep(10)
+
+            start = dt.now()
+            SendMessagesFromDb(network,limit=5)
+            end = dt.now()
+
+            send_time = (end-start).seconds
+            sleep_time = 30-send_time
+
+            if sleep_time > 0:
+                print ">> Sleeping for", sleep_time, "seconds"
+                time.sleep(sleep_time)
             
         elif m == 0:
-            time.sleep(2)
-            gsmflush()
+            start = dt.now()
+            SendMessagesFromDb(network)
+            end = dt.now()
+            
+            send_time = (end-start).seconds
+            sleep_time = 30-send_time
+
+            if sleep_time > 0:
+                print ">> Sleeping for", sleep_time, "seconds"
+                time.sleep(sleep_time)
+
+            gsmio.gsmflush()
             today = dt.today()
             if (today.minute % 10 == 0):
                 if checkIfActive:

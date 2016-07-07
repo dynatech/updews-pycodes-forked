@@ -44,6 +44,12 @@ class config:
 		self.gsmdb.host = cfg.get("GSMDB","host")
 		self.gsmdb.pwd = cfg.get("GSMDB","password")
 		self.gsmdb.name = cfg.get("GSMDB","dbname")
+
+		self.serialio = Container()
+		self.serialio.baudrate = cfg.getint("Serial","baudrate")
+		self.serialio.globeport = cfg.get("Serial","globeport")
+		self.serialio.smartport = cfg.get("Serial","smartport")
+		self.serialio.timeout = cfg.getint("Serial","timeout")
 		
 		self.smsalert = Container()
 		self.smsalert.communitynum = cfg.get("SMSAlert","communityphonenumber")
@@ -68,4 +74,15 @@ class config:
 		self.simprefix = Container()
 		self.simprefix.smart = cfg.get("simprefix","smart")
 		self.simprefix.globe = cfg.get("simprefix","globe")
+
+		self.mode = Container()
+		self.mode.script_mode = cfg.get("mode","script_mode")
+		if self.mode.script_mode == 'gsmserver':
+			self.mode.sendmsg = True
+			self.mode.procmsg = False
+			self.mode.logtoinstance = 'GSM'
+		elif self.mode.script_mode == 'procmsg':
+			self.mode.sendmsg = False
+			self.mode.procmsg = True
+			self.mode.logtoinstance = 'LOCAL'
 

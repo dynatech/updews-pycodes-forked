@@ -9,6 +9,7 @@ import senslopeServer as server
 import cfgfileio as cfg
 import argparse
 import queryserverinfo as qsi
+import lockscript as lock
 
 def updateLastMsgReceivedTable(txtdatetime,name,sim_num,msg):
     query = """insert into senslopedb.last_msg_received
@@ -24,30 +25,8 @@ def updateLastMsgReceivedTable(txtdatetime,name,sim_num,msg):
 def updateSimNumTable(name,sim_num,date_activated):
     db, cur = dbio.SenslopeDBConnect('local')
     
-    while True:
-        try:
-            query = """select sim_num from senslopedb.site_column_sim_nums
-                where name = '%s' """ % (name.lower())
-        
-            a = cur.execute(query)
-            if a:
-                out = cur.fetchall()
-                if (sim_num == out[0][0]):
-                    print ">> Number already in database", name, out[0][0]
-                    return
-                                    
-                break
-            else:
-                print '>> Number not in database', sim_num
-                return
-                break
-        except MySQLdb.OperationalError:
-            print '1.',
-            raise KeyboardInterrupt
-    
-    query = """INSERT INTO senslopedb.site_column_sim_nums
-                (name,sim_num,date_activated)
-                VALUES ('%s','%s','%s')""" %(name.lower(),sim_num,date_activated)
+    query = """INSERT IGNORE INTO site_column_sim_nums (name,sim_num,date_activated)
+                VALUES ('%s','%s','%s')""" %( name.upper(),sim_num,date_activated)
 
     dbio.commitToDb(query, 'updateSimNumTable')
 
@@ -110,8 +89,7 @@ def ProcTwoAccelColData(msg,sender,txtdatetime):
     outl = []
     msgsplit = msg.split('*')
     colid = msgsplit[0] # column id
-        
-    
+
     if len(msgsplit) != 4:
         print 'wrong data format'
         # print msg
@@ -157,6 +135,9 @@ def ProcTwoAccelColData(msg,sender,txtdatetime):
  
     if timestamp == '':
         raise ValueError(">> Error: Unrecognized timestamp pattern " + ts)
+
+    updateSimNumTable(colid,sender,timestamp[:8])
+
  # PARTITION the message into n characters
     if dtype == 'Y' or dtype == 'X':
        n = 15
@@ -193,7 +174,9 @@ def ProcTwoAccelColData(msg,sender,txtdatetime):
             except ValueError:
                 print ">> Value Error detected.", piece,
                 print "Piece of data to be ignored"
-                    
+    
+    SpawnAlertGen(colid)
+
     return outl
 
 def WriteTwoAccelDataToDb(dlist,msgtime):
@@ -238,16 +221,20 @@ def ProcessColumn(line,txtdatetime,sender):
     print 'raw data: ' + msgdata
     #getting date and time
     #msgdatetime = line[-10:]
-    msgdatetime = (line.split('*'))[2][:10]
-    print 'date & time: ' + msgdatetime
+    try:
+        msgdatetime = (line.split('*'))[2][:10]
+        print 'date & time: ' + msgdatetime
+    except:
+        print '>> Date and time defaults to SMS not sensor data'
+        msgdatetime = txtdatetime
 
     # col_list = cfg.get("Misc","AdjustColumnTimeOf").split(',')
-    # if msgtable in col_list:
-    #     msgdatetime = txtdatetime
-    #     print "date & time adjusted " + msgdatetime
-    # else:
-    #     msgdatetime = dt.strptime(msgdatetime,'%y%m%d%H%M').strftime('%Y-%m-%d %H:%M:00')
-    #     print 'date & time no change'
+    if msgtable == 'PUGB':
+        msgdatetime = txtdatetime
+        print "date & time adjusted " + msgdatetime
+    else:
+        msgdatetime = dt.strptime(msgdatetime,'%y%m%d%H%M').strftime('%Y-%m-%d %H:%M:00')
+        print 'date & time no change'
         
     dlen = len(msgdata) #checks if data length is divisible by 15
     #print 'data length: %d' %dlen
@@ -320,6 +307,8 @@ def ProcessColumn(line,txtdatetime,sender):
         if i!=0:
             dbio.createTable(str(msgtable), "sensor v1")
             dbio.commitToDb(query, 'ProcessColumn')
+
+        SpawnAlertGen(msgtable)
                 
     except KeyboardInterrupt:
         print '\n>>Error: Unknown'
@@ -385,20 +374,25 @@ def ProcessEarthquake(msg):
 
     #find date
     if re.search("\d{1,2}\w+201[6789]",msg.data):
-        datestr = re.search("\d{1,2}\w+201[6789]",msg.data).group(0)
-        print datestr
-        try:
-            datestr = dt.strptime(datestr,"%d%B%Y").strftime("%Y-%m-%d")
-        except:
-            print ">> Error in datetime conversion", datestr
+        datestr_init = re.search("\d{1,2}\w+201[6789]",msg.data).group(0)
+        pattern = ["%d%B%Y","%d%b%Y"]
+        datestr = None
+        for p in pattern:
+            try:
+                datestr = dt.strptime(datestr_init,p).strftime("%Y-%m-%d")
+                break
+            except:
+                print ">> Error in datetime conversion", datestr, "for pattern", p
+        if datestr == None:
             return False
     else:
         print ">> No date string recognized"
         return False
 
     #find time
-    if re.search("\d{1,2}:\d{1,2}[AP]M",msg.data):
-        timestr = re.search("\d{1,2}:\d{1,2}[AP]M",msg.data).group(0)
+    if re.search("\d{1,2}[:\.]\d{1,2} *[AP]M",msg.data):
+        timestr = re.search("\d{1,2}[:\.]\d{1,2} *[AP]M",msg.data).group(0)
+        timestr = timestr.replace(" ","").replace(".",":")
         try:
             timestr = dt.strptime(timestr,"%I:%M%p").strftime("%H:%M:00")
         except:
@@ -477,6 +471,8 @@ def ProcessEarthquake(msg):
 
     print query
 
+    query.replace("'NULL'","NULL")
+
     dbio.commitToDb(query, 'earthquake')
 
     subprocess.Popen(["python","/home/dynaslope/Desktop/updews-pycodes/Data Analysis/eq_alert_gen.py"])
@@ -500,8 +496,9 @@ def ProcessARQWeather(line,sender):
         msgname = checkNameOfNumber(sender).lower()
         if msgname:
             print ">> Number registered as", msgname
-            #updateSimNumTable(msgname,sender,txtdatetime[:10])
+            msgname_contact = msgname
             msgname = msgname + 'w'
+
         # else:
             # print ">> New number", sender
             # msgname = ''
@@ -521,6 +518,9 @@ def ProcessARQWeather(line,sender):
         hum = linesplit[11]
         flashp = linesplit[12]
         txtdatetime = dt.strptime(linesplit[13],'%y%m%d/%H%M%S').strftime('%Y-%m-%d %H:%M:00')
+
+        updateSimNumTable(msgname_contact,sender,txtdatetime[:8])
+            
         
         # print str(r15m),str(r24h),batv1, batv2, current, boostv1, boostv2, charge, csq, temp, hum, flashp,txtdatetime 
 
@@ -688,6 +688,16 @@ def CheckMessageSource(msg):
     else:
         print "From unknown number ", msg.simnum
 
+def SpawnAlertGen(sitename):
+    # spawn alert alert_gen
+    if lock.get_lock('alertgen'+sitename,False):
+        print "Alert gen spawned for", sitename
+        command = "sleep 60 && ~/anaconda2/bin/python /home/dynaslope/Desktop/updews-pycodes/Analysis/alertgen.py " + sitename.lower()
+        command += " && ~/anaconda2/bin/python /home/dynaslope/Desktop/updews-pycodes/Analysis/AlertAnalysis.py " + sitename.lower()
+        p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, stderr=subprocess.STDOUT)
+    else:
+        print "Aborting alert gen spawn for ", sitename
+
 def ProcessAllMessages(allmsgs,network):
     c = cfg.config()
     read_success_list = []
@@ -704,7 +714,8 @@ def ProcessAllMessages(allmsgs,network):
         ##### Added for V1 sensors removes unnecessary characters pls see function PreProcessColumnV1(data)
         if re.search("\*FF",msg.data):
             ProcessPiezometer(msg.data, msg.simnum)
-        elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*\d+T?$",msg.data):
+        # elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*\d+T?$",msg.data):
+        elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*.*",msg.data):
            msg.data = PreProcessColumnV1(msg.data)
            ProcessColumn(msg.data,msg.dt,msg.simnum)
         elif re.search("(RO*U*TI*N*E )|(EVE*NT )", msg.data.upper()):

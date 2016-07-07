@@ -7,6 +7,7 @@ import senslopeServer as server
 import cfgfileio as cfg
 import argparse
 import StringIO
+import gsmSerialio as gsmio
 
 def getLatestQueryReport():
 	c = cfg.config()
@@ -55,7 +56,7 @@ def getNumberOfReporter(datedt):
 
 	return num
 
-def sendStatusUpdates(reporter):
+def sendStatusUpdates(reporter='scheduled'):
 	c = cfg.config()
 	active_loggers_count = getLatestQueryReport()
 
@@ -65,17 +66,17 @@ def sendStatusUpdates(reporter):
 	status_message = "SERVER STATUS UPDATES\n"
 	status_message += "Active loggers: %s\n" % (active_loggers_count)
 	status_message += "Last logs for:\n"
-	status_message += "Process messages: %s\n" % (loclogs[0][0].strftime("%B %d, %H:%M%p"))
-	status_message += "Check alert: %s\n" % (loclogs[0][0].strftime("%B %d, %H:%M%p"))
-	status_message += "Globe instance: %s\n" % (gsmlogs[0][0].strftime("%B %d, %H:%M%p"))
-	status_message += "Smart instance: %s\n" % (gsmlogs[1][0].strftime("%B %d, %H:%M%p"))
+	status_message += "Process messages: %s\n" % (loclogs[0][0].strftime("%B %d, %I:%M%p"))
+	status_message += "Check alert: %s\n" % (loclogs[0][0].strftime("%B %d, %I:%M%p"))
+	status_message += "Globe instance: %s\n" % (gsmlogs[0][0].strftime("%B %d, %I:%M%p"))
+	status_message += "Smart instance: %s\n" % (gsmlogs[1][0].strftime("%B %d, %I:%M%p"))
 
 	print dt.today()
 
 	if reporter == 'scheduled':
 		reportnumber = getNumberOfReporter(dt.today())
 		server.WriteOutboxMessageToDb(status_message,reportnumber)
-	elif int(active_loggers_count) < 60:
+	elif int(active_loggers_count) < 50:
 		print ">> Sending alert sms for server"
 		server.WriteOutboxMessageToDb(status_message,c.smsalert.serveralert)
 
@@ -112,7 +113,7 @@ def sendServerMonReminder():
 
 def getShifts(datedt):
 
-	query = """select * from monshiftsched where timestamp < "%s" order by timestamp desc limit 1)
+	query = """select * from monshiftsched where timestamp < "%s" order by timestamp desc limit 1
 	""" % (datedt.strftime("%Y-%m-%d %H:%M:00"))
 
 	return dbio.querydatabase(query,'customquery')
@@ -124,19 +125,19 @@ def getNumbersFromList(personnel_list):
 	return dbio.querydatabase(query,'customquery')
 
 def sendEventMonitoringReminder():
-	next_shift = dt.today()+td(hours=12)
+	next_shift = dt.today()+td(hours=13)
 	shifts = getShifts(next_shift)
 	report_dt = shifts[0][1]
 
 	position = ['iompmt','iompct','oomps','oompmt','oompct']
 	position_dict = {}
 	for pos,per in zip(position,shifts[0][2:]):
-		position_dict[per] = pos
+		position_dict[per.upper().strip()] = pos
 
 	numbers = getNumbersFromList(str(shifts[0][2:]))
 	numbers_dict = {}
 	for nick,num in numbers:
-		numbers_dict[nick] = num
+		numbers_dict[nick.upper().strip()] = num
 
 	for key in position_dict:
 		reminder_message = "Monitoring shift reminder. Good %s %s, " % (getTimeOfDayDescription(),key)
@@ -181,10 +182,21 @@ def getNonReportingSites():
 	server.WriteOutboxMessageToDb(message,c.smsalert.communitynum)
 
 def getLatestSmsFromColumn(colname):
-	query = """ select timestamp,sms_msg from smsinbox where sms_msg like '%s%s%s' 
-		order by timestamp desc limit 1 """ % ('%',colname,'%')
+	# query = """ select timestamp,sms_msg from smsinbox where sms_msg like '%s%s%s' 
+		# order by timestamp desc limit 1 """ % ('%',colname,'%')
+	
+	query = """
+		select timestamp,sms_msg from senslopedb.smsinbox t1,
+		(select sim_num from senslopedb.smsinbox
+		where sms_msg like '%s%s%s'
+		order by sms_id desc limit 1
+		)  t2
+		where t1.sim_num = t2.sim_num
+		order by timestamp desc limit 1;
+	""" % ('%',colname,'%')
 	
 	last_col_msg = dbio.querydatabase(query,'getlatestcolmsg','gsm')
+	print last_col_msg
 
 	tmp_msg = "Latest message from %s\n" % (colname.upper())
 	if last_col_msg:
@@ -269,25 +281,30 @@ def ProcessServerInfoRequest(msg):
 		return
 
 	if args.sim_num:
+		print ">> Sim num request",
 		num = GetSimNumofColumn(args.col_name.strip())
 		print num
 		server.WriteOutboxMessageToDb(num,msg.simnum)
 	
 	if args.latest_ts:
+		print ">> Latest sms request",
 		ts_msg = getLatestSmsFromColumn(args.col_name.strip())
 		print ts_msg
 		server.WriteOutboxMessageToDb(ts_msg,msg.simnum)
 
 	if args.latest_node_data:
+		print ">> Latest data of node", 
 		latest_data = GetLatestDataofNode(args.col_name.strip(),args.node_id)
 		print latest_data
 		server.WriteOutboxMessageToDb(latest_data,msg.simnum)
 
+	print ">> End of psir"
 	return True
 
 		
 def test():
-    msg = "-t -clabb -n10"
+    # msg = "-t -clabb -n10"
+    msg = gsmio.sms("1","09176023735","PSIR -T -CLABB -N 10","")
     ProcessServerInfoRequest(msg)
 
 if __name__ == "__main__":

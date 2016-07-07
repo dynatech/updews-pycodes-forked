@@ -1,5 +1,5 @@
 #Importing relevant functions
-from datetime import datetime, date, time
+from datetime import datetime, date, time, timedelta
 import pandas as pd
 import numpy as np
 import ConfigParser
@@ -8,6 +8,7 @@ import os
 import sys
 import platform
 from sqlalchemy import create_engine
+import matplotlib.pyplot as plt
 
 #Include the path of "Data Analysis" folder for the python scripts searching
 path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -25,13 +26,60 @@ if curOS == "Windows":
 elif curOS == "Linux":
     import pymysql as MySQLdb
 
-#Defining important local functions
-
+#####################Defining important local functions
 def up_one(p):
     #INPUT: Path or directory
     #OUTPUT: Parent directory
     out = os.path.abspath(os.path.join(p, '..'))
     return out  
+
+def get_rt_window(rt_window_length,roll_window_size,num_roll_window_ops):
+    ##INPUT:
+    ##rt_window_length; float; length of real-time monitoring window in days
+    ##roll_window_size; integer; number of data points to cover in moving window operations
+    
+    ##OUTPUT: 
+    ##end, start, offsetstart; datetimes; dates for the end, start and offset-start of the real-time monitoring window 
+
+    ##set current time as endpoint of the interval
+    end=datetime.now()
+
+    ##round down current time to the nearest HH:00 or HH:30 time value
+    end_Year=end.year
+    end_month=end.month
+    end_day=end.day
+    end_hour=end.hour
+    end_minute=end.minute
+    if end_minute<30:end_minute=0
+    else:end_minute=30
+    end=datetime.combine(date(end_Year,end_month,end_day),time(end_hour,end_minute,0))
+
+    #starting point of the interval
+    start=end-timedelta(days=rt_window_length)
+    
+    #starting point of interval with offset to account for moving window operations 
+    offsetstart=end-timedelta(days=rt_window_length+((num_roll_window_ops*roll_window_size-1)/48.))
+    
+    return end, start, offsetstart
+
+def set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_window_ops):    
+    ##INPUT:
+    ##roll_window_length; float; length of rolling/moving window operations, in hours
+    ##data_dt; float; time interval between data points, in hours    
+    ##rt_window_length; float; length of real-time monitoring window, in days
+    ##num_roll_window_ops; float; number of rolling window operations in the whole monitoring analysis
+    
+    ##OUTPUT:
+    ##roll_window_numpts; number of data points per rolling window, end; endpoint of interval, 
+    ##start; starting point of interval, offsetstart; starting point of interval with offset to account for moving window operations,
+    ##monwin; empty dataframe with length of rt_window_length
+    
+    roll_window_numpts=int(1+roll_window_length/data_dt)
+    end, start, offsetstart=get_rt_window(rt_window_length,roll_window_numpts,num_roll_window_ops)
+    monwin_time=pd.date_range(start=start, end=end, freq='30Min',name='ts', closed=None)
+    monwin=pd.DataFrame(data=np.nan*np.ones(len(monwin_time)), index=monwin_time)
+
+    return roll_window_numpts, end, start, offsetstart, monwin
 
 def uptoDB_gndmeas_alerts(df):
     #INPUT: Dataframe containing all alerts
@@ -39,6 +87,13 @@ def uptoDB_gndmeas_alerts(df):
     engine=create_engine('mysql://root:senslope@192.168.1.102:3306/senslopedb')
     df.to_sql(name = 'gndmeas_alerts', con = engine, if_exists = 'append', schema = Namedb, index = True)
 
+def site_level_alerts_updater(df):
+    query = 'UPDATE senslopedb.site_level_alert SET updateTS = "{}" WHERE site = "{}" AND timestamp = "{}" AND source = "{}"'.format(pd.to_datetime(str(df.updateTS.values[0])),df.site.values[0],pd.to_datetime(str(df.timestamp.values[0])),df.source.values[0])
+    db, cur = SenslopeDBConnect(Namedb)
+    cur.execute(query)
+    db.commit()
+    db.close()
+    
 def uptoDB_site_level_alerts(df):
     #INPUT: Dataframe containing site level alerts
     #OUTPUT: Writes to sql database the alerts of sites who recently changed their alert status
@@ -48,21 +103,50 @@ def uptoDB_site_level_alerts(df):
     df2 = GetDBDataFrame(query)
     
     #Merge the two data frames to determine overlaps in alerts
-    overlap = pd.merge(df,df2,how = 'left', on = ['site','source','alert'],suffixes=['','_r'])
+    overlap = pd.merge(df,df2,how = 'left', on = ['site','source','alert'],suffixes=['','_r'])    
+    
+    #Get the site with no changes in its latest alert
+    persistent_alerts = df[~overlap['timestamp_r'].isnull()]
+    persistent_alerts['updateTS'] = persistent_alerts['timestamp']
+    persistent_alerts['timestamp'] = overlap[~overlap['timestamp_r'].isnull()]['timestamp_r']
+    persistent_alerts = persistent_alerts.groupby('site')
+    persistent_alerts.apply(site_level_alerts_updater)
     
     #Get the site with change in its latest alert
-    to_db = df[overlap['timestamp_r'].isnull()]
-    to_db = to_db[['timestamp','site','source','alert']].set_index('timestamp')
+    changed_alerts = df[overlap['timestamp_r'].isnull()]
+    changed_alerts['updateTS'] = changed_alerts['timestamp']
+    changed_alerts = changed_alerts[['timestamp','site','source','alert','updateTS']].set_index('timestamp')
     
     engine=create_engine('mysql://root:senslope@192.168.1.102:3306/senslopedb')
-    to_db.to_sql(name = 'site_level_alert', con = engine, if_exists = 'append', schema = Namedb, index = True)
-
-def get_latest_ground_df():
+    changed_alerts.to_sql(name = 'site_level_alert', con = engine, if_exists = 'append', schema = Namedb, index = True)
+    
+def get_latest_ground_df(site=None):
+    #INPUT: String containing site name    
     #OUTPUT: Dataframe of the last 4 recent ground measurement in the database
-    query = 'SELECT g1.timestamp,g1.site_id,g1.crack_id,g1.meas, COUNT(*) num FROM senslopedb.gndmeas g1 JOIN senslopedb.gndmeas g2 ON g1.site_id = g2.site_id AND g1.crack_id = g2.crack_id AND g1.timestamp <= g2.timestamp group by g1.timestamp,g1.site_id, g1.crack_id HAVING COUNT(*) <= 4 ORDER BY site_id, crack_id, num desc'
+    if site == None:
+        query = 'SELECT g1.timestamp,g1.site_id,g1.crack_id,g1.meas, COUNT(*) num FROM senslopedb.gndmeas g1 JOIN senslopedb.gndmeas g2 ON g1.site_id = g2.site_id AND g1.crack_id = g2.crack_id AND g1.timestamp <= g2.timestamp group by g1.timestamp,g1.site_id, g1.crack_id HAVING COUNT(*) <= 4 ORDER BY site_id, crack_id, num desc'
+    else:
+        query = 'SELECT g1.timestamp,g1.site_id,g1.crack_id,g1.meas, COUNT(*) num FROM senslopedb.gndmeas g1 JOIN senslopedb.gndmeas g2 ON g1.site_id = g2.site_id AND g1.crack_id = g2.crack_id AND g1.timestamp <= g2.timestamp group by g1.timestamp,g1.site_id, g1.crack_id HAVING COUNT(*) <= 4 AND site_id = "{}" ORDER BY site_id, crack_id, num desc'.format(site)
+
     df = GetDBDataFrame(query)
     return df[['timestamp','site_id','crack_id','meas']]
 
+def get_ground_df(start = '',end = '',site=None):
+    #INPUT: Optional start time, end time, and site name
+    #OUTPUT: Ground measurement data frame
+
+    query = 'SELECT timestamp, site_id, crack_id, meas FROM senslopedb.gndmeas '
+    if not start:
+        start = '2010-01-01'
+    query = query + 'WHERE timestamp > "{}"'.format(start)
+    
+    if end:
+        query = query + ' AND timestamp < "{}"'.format(end)
+    if site != None:
+        query = query + ' AND site_id = "{}"'.format(site)
+    
+    return GetDBDataFrame(query)
+    
 def crack_eval(df,end):
     #INPUT: df containing crack parameters
     #OUTPUT: crack alert according to protocol table
@@ -152,8 +236,29 @@ def site_eval(df):
     
     return pd.Series([site_alert,', '.join(list(cracks_to_check))], index = ['site_alert','cracks_to_check'])
 
-def GenerateGroundDataAlert():
+def PlotSite(df,tsn,print_out_path):
+    cracks = df.groupby('crack_id')
+    site_name = ''.join(list(np.unique(df.site_id.values)))
+    plt.figure(figsize = (12,9))
+    cracks.agg(PlotCrack)
+    plt.xlabel('')
+    plt.ylabel(site_name)
+    plt.legend(loc='upper left')
+    plt.grid(True)
+    plt.xticks(rotation = 45)
+    plt.savefig(print_out_path+tsn+'_'+site_name,dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
+    plt.close()
 
+    
+def PlotCrack(df):
+    disp = df.meas.values
+    time = df.timestamp.values
+    crack_name = ''.join(list(np.unique(df.crack_id.values)))
+    markers = ['x','d','+','s','*']
+    plt.plot(time,disp,label = crack_name,marker = markers[df.index[0]%len(markers)])
+
+def GenerateGroundDataAlert(site=None,end=None):
+    start_time = datetime.now()
     #Monitoring output directory
     path2 = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
     out_path = up_one(up_one(path2)) 
@@ -166,26 +271,28 @@ def GenerateGroundDataAlert():
     output_file_path = cfg.get('I/O','OutputFilePath')
     PrintJSON = cfg.get('I/O','PrintJSON')
     PrintGAlert = cfg.get('I/O','PrintGAlert')
-    Namedb = cfg.get('DB I/O','Namedb') 
+    Namedb = cfg.get('DB I/O','Namedb')
+    rt_window_length = cfg.getfloat('I/O','rt_window_length')
+    roll_window_length = cfg.getfloat('I/O','roll_window_length')
+    data_dt = cfg.getfloat('I/O','data_dt')
+    num_roll_window_ops = cfg.getfloat('I/O','num_roll_window_ops')
     
-    #Set the date of the report as the current date rounded to HH:30 or HH:00
-    end=datetime.now()
-    end_Year=end.year
-    end_month=end.month
-    end_day=end.day
-    end_hour=end.hour
-    end_minute=end.minute
-    if end_minute<30:end_minute=0
-    else:end_minute=30
+    GrndMeasPlotsPath = cfg.get('I/O','GrndMeasPlotsPath')
+    print_out_path = out_path + GrndMeasPlotsPath
+    if not os.path.exists(print_out_path):
+        os.makedirs(print_out_path)
     
-    end=datetime.combine(date(end_Year,end_month,end_day),time(end_hour,end_minute,0))
+    #Set the monitoring window
+    if end == None:
+        roll_window_numpts, end, start, offsetstart, monwin = set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_window_ops)
+    
 #    Use this so set the end time    
-#    end = datetime(2016,06,21,12,00,00)
+#    end = datetime(2016,06,24,12,00,00)
 
 ############################################ MAIN ############################################
 
     #Step 1: Get the ground data from local database 
-    df = get_latest_ground_df()
+    df = get_latest_ground_df(site)
     
     #lower caps all site_id names while cracks should be in title form
     df['site_id'] = map(lambda x: x.lower(),df['site_id'])
@@ -210,12 +317,22 @@ def GenerateGroundDataAlert():
     
     #Step 6: Upload to site_level_alert        
     ground_site_level = ground_alert_release.reset_index()
-    del ground_site_level['cracks']
     ground_site_level['source'] = 'ground'
     
     uptoDB_site_level_alerts(ground_site_level[['timestamp','site','source','alert']])
-
-
+    
+    #Step 7: Displacement plot for each crack and site for the last 30 days
+    start = end - timedelta(days = 30)
+    ground_data_to_plot = get_ground_df(start,end)
+    ground_data_to_plot['site_id'] = map(lambda x: x.lower(),ground_data_to_plot['site_id'])
+    ground_data_to_plot['crack_id'] = map(lambda x: x.title(),ground_data_to_plot['crack_id'])
+    
+    tsn=end.strftime("%Y-%m-%d_%H-%M-%S")
+    site_data_to_plot = ground_data_to_plot.groupby('site_id')
+    site_data_to_plot.apply(PlotSite,tsn,print_out_path)
+    
+    end_time = datetime.now()
+    print "time = ",end_time-start_time
 ################## #Stand by Functionalities
 
 #    if PrintGAlert:

@@ -113,13 +113,13 @@ def getAllSmsFromDb(read_status):
         except MySQLdb.OperationalError:
             print '9.',
             
-def getAllOutboxSmsFromDb(send_status):
+def getAllOutboxSmsFromDb(send_status,limit=10):
     db, cur = SenslopeDBConnect('gsm')
     
     while True:
         try:
             query = """select sms_id, timestamp_written, recepients, sms_msg from %s.smsoutbox
-                where send_status = '%s' limit 200""" % (gsmdbinstance.name, send_status)
+                where send_status = '%s' limit %d""" % (gsmdbinstance.name, send_status,limit)
         
             # print query
             a = cur.execute(query)
@@ -147,7 +147,7 @@ def commitToDb(query, identifier, instance='local'):
                     db.commit()
                     break
                 else:
-                    print '>> Warning: Query has no result set', identifier
+                    # print '>> Warning: Query has no result set', identifier
                     db.commit()
                     time.sleep(0.1)
                     break
@@ -177,9 +177,8 @@ def querydatabase(query, identifier, instance='local'):
         # db.commit()
         if a:
             a = cur.fetchall()
-            print 'OK'
         else:
-            print '>> Warning: Query has no result set', identifier
+            # print '>> Warning: Query has no result set', identifier
             a = None
     except MySQLdb.OperationalError:
         a =  None
@@ -198,7 +197,6 @@ def checkNumberIfExists(simnumber,table='community'):
         query = """select lastname,firstname from %scontacts where
             number like "%s%s%s"; """ % (table,'%',simnumber,'%')
     elif table == 'sensor': 
-        print simnumber         
         query = """select name from site_column_sim_nums where
             sim_num like "%s%s%s"; """ % ('%',simnumber,'%')
     else:

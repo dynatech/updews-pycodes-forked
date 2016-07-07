@@ -81,8 +81,8 @@ def create_series_list(input_df,monwin,colname,num_nodes):
         #d.resampling node series to 30-min exact intervals
         finite_data=len(np.where(np.isfinite(curxz.values.astype(np.float64)))[0])
         if finite_data>0:
-            curxz=curxz.resample('30Min',how='mean',base=0)
-            curxy=curxy.resample('30Min',how='mean',base=0)
+            curxz=curxz.resample('30Min',how='ffill',base=0)
+            curxy=curxy.resample('30Min',how='ffill',base=0)
         else:
             print colname, n, "ERROR missing node data"
             #zeroing tilt data if node data is missing
@@ -751,7 +751,7 @@ for s in sensorlist:
 #        print proc_monitoring
 #        print "\n", colname
     except:
-#        print "     ",colname, "ERROR...missing/empty proc monitoring"
+        print "     ",colname, "ERROR...missing/empty proc monitoring"
         continue
 
     # creating series lists per node
@@ -806,5 +806,9 @@ if PrintTimer:
     with open (output_file_path+timer, 'ab') as p:
         p.write (start_time.strftime(fmt) + ": " + str(end_time) + '\n')
         print 'run time =', end_time
-    
 
+
+##asd = proc_monitoring.groupby('id').get_group
+##
+##for x in range(1,num_nodes+1):
+#    print len(asd(x))

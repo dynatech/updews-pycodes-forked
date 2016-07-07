@@ -10,7 +10,6 @@ import rtwindow as rtw
 import querySenslopeDb as q
 import genproc as g
 
-
 def node_alert2(disp_vel, colname, num_nodes, T_disp, T_velL2, T_velL3, k_ac_ax,lastgooddata,window,config):
     disp_vel = disp_vel.reset_index(level=1)    
     valid_data = pd.to_datetime(window.end - timedelta(hours=3))
@@ -113,6 +112,11 @@ def node_alert2(disp_vel, colname, num_nodes, T_disp, T_velL2, T_velL3, k_ac_ax,
     alert['node_alert']=alert['node_alert'].fillna(value=-1)
     
     alert=alert.reset_index()
+#    alert = alert.set_index('id')
+    #rearrange columns
+    
+#    cols=config.io.alerteval_colarrange
+#    alert = alert[cols]
  
     return alert
 
@@ -129,7 +133,6 @@ def column_alert(alert, num_nodes_to_check, k_ac_ax):
     #OUTPUT:
     #alert:                             Pandas DataFrame object; same as input dataframe "alert" with additional column for column-level alert
 
-#    print alert
     col_alert=[]
     col_node=[]
     #looping through each node
@@ -236,6 +239,42 @@ def getmode(li):
             n.append(m)
     return n
 
+def trending_alertgen(trending_alert, monitoring, lgd, window, config):
+    endTS = pd.to_datetime(trending_alert.timestamp.values[0])
+    monitoring_vel = monitoring.vel[endTS-timedelta(3):endTS]
+    monitoring_vel = monitoring_vel.reset_index().sort_values('ts',ascending=True)
+    nodal_dv = monitoring_vel.groupby('id')     
+    
+    alert = nodal_dv.apply(node_alert2, colname=monitoring.colprops.name, num_nodes=monitoring.colprops.nos, T_disp=config.io.t_disp, T_velL2=config.io.t_vell2, T_velL3=config.io.t_vell3, k_ac_ax=config.io.k_ac_ax, lastgooddata=lgd,window=window,config=config)
+    alert = column_alert(alert, config.io.num_nodes_to_check, config.io.k_ac_ax)
+    alert['timestamp']=endTS
+    
+    #setting ts and node_ID as indices
+    alert=alert.set_index(['timestamp','id'])
+    
+    if endTS == window.end:
+        palert = alert.loc[(alert.col_alert == 'L2') | (alert.col_alert == 'L3')]
+        
+        if len(palert) != 0:
+            palert['site']=monitoring.colprops.name
+            palert = palert[['site', 'disp_alert', 'vel_alert', 'col_alert']].reset_index()
+            palert = palert[['timestamp', 'site', 'id', 'disp_alert', 'vel_alert', 'col_alert']]
+            
+            engine = create_engine('mysql://'+q.Userdb+':'+q.Passdb+'@'+q.Hostdb+':3306/'+q.Namedb)
+            palert.to_sql(name = 'node_level_alert', con = engine, if_exists = 'append', schema = q.Namedb, index = False) 
+    
+    if 'L3' in list(alert.col_alert.values):
+        site_alert = 'L3'
+    elif 'L2' in list(alert.col_alert.values):
+        site_alert = 'L2'
+    else:
+        site_alert = min(getmode(list(alert.col_alert.values)))
+    
+    alert_index = trending_alert.loc[trending_alert.timestamp == endTS].index[0]
+    trending_alert.loc[alert_index] = [endTS, monitoring.colprops.name, 'sensor', site_alert]
+    
+    return trending_alert
+
 def alert_toDB(df, table_name, window):
     
     query = "SELECT timestamp, site, source, alert FROM senslopedb.%s WHERE site = '%s' ORDER BY timestamp DESC LIMIT 1" %(table_name, df.site.values[0])
@@ -245,7 +284,12 @@ def alert_toDB(df, table_name, window):
     if len(df2) == 0 or df2.alert.values[0] != df.alert.values[0]:
         engine = create_engine('mysql://'+q.Userdb+':'+q.Passdb+'@'+q.Hostdb+':3306/'+q.Namedb)
         df.to_sql(name = table_name, con = engine, if_exists = 'append', schema = q.Namedb, index = False)
-        
+    elif df2.timestamp.values[0] == df.timestamp.values[0]:
+        db, cur = q.SenslopeDBConnect(q.Namedb)
+        query = "UPDATE senslopedb.%s SET updateTS='%s', alert='%s' WHERE site = '%s' and source = 'sensor' and alert = '%s' and timestamp = '%s'" %(table_name, window.end, df.alert.values[0], df2.site.values[0], df2.alert.values[0], pd.to_datetime(str(df2.timestamp.values[0])))
+        cur.execute(query)
+        db.commit()
+        db.close()
     elif df2.alert.values[0] == df.alert.values[0]:
         db, cur = q.SenslopeDBConnect(q.Namedb)
         query = "UPDATE senslopedb.%s SET updateTS='%s' WHERE site = '%s' and source = 'sensor' and alert = '%s' and timestamp = '%s'" %(table_name, window.end, df2.site.values[0], df2.alert.values[0], pd.to_datetime(str(df2.timestamp.values[0])))
@@ -253,66 +297,48 @@ def alert_toDB(df, table_name, window):
         db.commit()
         db.close()
 
-def write_site_alert(site, window):
-    site = site[0:3] + '%'
-    query = "SELECT * FROM ( SELECT * FROM senslopedb.column_level_alert WHERE site LIKE '%s' ORDER BY timestamp DESC) AS sub GROUP BY site" %site
-    df = q.GetDBDataFrame(query)
+def main(site=''):
+    
+    start_time = datetime.now()
 
-    if 'L3' in list(df.alert.values):
-        site_alert = 'L3'
-    elif 'L2' in list(df.alert.values):
-        site_alert = 'L2'
-    elif 'L0' in list(df.alert.values):
-        site_alert = 'L0'
-    else:
-        site_alert = 'ND'
+    if site == '':
+        site = sys.argv[1].lower()
         
-    output = pd.DataFrame({'timestamp': [window.end], 'site': [site[0:3]], 'source': ['sensor'], 'alert': [site_alert], 'updateTS': [window.end]})
+    window,config = rtw.getwindow()
     
-    alert_toDB(output, 'site_level_alert', window)
+    monwinTS = pd.date_range(start = window.end - timedelta(hours=3), end = window.end, freq = '30Min')
+    trending_alert = pd.DataFrame({'site': [np.nan]*len(monwinTS), 'alert': [np.nan]*len(monwinTS), 'timestamp': monwinTS, 'source': [np.nan]*len(monwinTS)})
+    trending_alert = trending_alert[['timestamp', 'site', 'source', 'alert']]
     
-    return output
-
-
-def main(name=''):
-    if name == '':
-        name = sys.argv[1].lower()
-
-    start = datetime.now()
+    col = q.GetSensorList(site)
     
-    window,config = rtw.getwindow()    
-    col = q.GetSensorList(name)
-    monitoring = g.genproc(col[0],window.offsetstart)
+    monitoring = g.genproc(col[0], window.offsetstart)
     lgd = q.GetLastGoodDataFromDb(monitoring.colprops.name)
-    
-    
-    monitoring_vel = monitoring.vel[window.start:window.end]
-    monitoring_vel = monitoring_vel.reset_index().sort_values('ts',ascending=True)
-    nodal_dv = monitoring_vel.groupby('id')     
-    
-    
-    alert = nodal_dv.apply(node_alert2, colname=monitoring.colprops.name, num_nodes=monitoring.colprops.nos, T_disp=config.io.t_disp, T_velL2=config.io.t_vell2, T_velL3=config.io.t_vell3, k_ac_ax=config.io.k_ac_ax, lastgooddata=lgd,window=window,config=config)
-    alert = column_alert(alert, config.io.num_nodes_to_check, config.io.k_ac_ax)       
 
-    if 'L3' in list(alert.col_alert.values):
+    
+    trending_alertTS = trending_alert.groupby('timestamp')
+    output = trending_alertTS.apply(trending_alertgen, window=window, config=config, monitoring=monitoring, lgd=lgd)
+    
+    print output
+    
+    if 'L3' in list(output.alert.values):
         site_alert = 'L3'
-    elif 'L2' in list(alert.col_alert.values):
+    elif 'L2' in list(output.alert.values):
         site_alert = 'L2'
-    else:
-        site_alert = min(getmode(list(alert.col_alert.values)))
+    else: 
+        site_alert = min(getmode(list(output.alert.values)))
+    
+    site_level_alert = pd.DataFrame({'timestamp': [window.end], 'site': [output.site.values[0]], 'source': ['sensor'], 'alert': [site_alert], 'updateTS': [window.end]})
+
+    alert_toDB(site_level_alert, 'column_level_alert', window)
+
+    print site_level_alert
+    
+    end_time = datetime.now()
+    print 'run time = ', str(end_time - start_time)
+    
+    return site_level_alert
         
-    column_level_alert = pd.DataFrame({'timestamp': [window.end], 'site': [monitoring.colprops.name], 'source': ['sensor'], 'alert': [site_alert], 'updateTS': [window.end]})
-    
-    print column_level_alert
-    
-    alert_toDB(column_level_alert, 'column_level_alert', window)
-    
-    write_site_alert(monitoring.colprops.name, window)
-
-    print datetime.now()-start
-    
-    return alert
-
 ################################################################################
 
 if __name__ == "__main__":
