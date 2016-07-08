@@ -42,7 +42,7 @@ def getmode(li):
 
 def alert_toDB(df, table_name, window):
     
-    query = "SELECT timestamp, site, source, alert FROM senslopedb.%s WHERE site = '%s' and source = 'public' ORDER BY timestamp DESC LIMIT 1" %(table_name, df.site.values[0])
+    query = "SELECT timestamp, site, source, alert FROM senslopedb.%s WHERE site = '%s' and source = 'public' ORDER BY updateTS DESC LIMIT 1" %(table_name, df.site.values[0])
     
     df2 = q.GetDBDataFrame(query)
     
@@ -121,7 +121,7 @@ def SitePublicAlert(PublicAlert, window):
     site_alert = q.GetDBDataFrame(query)
     
     validity_site_alert = site_alert
-    site_alert = site_alert.loc[site_alert.updateTS >= window.end]
+    site_alert = site_alert.loc[site_alert.updateTS >= window.end - timedelta(hours=3)]
     
     list_ground_alerts = ','.join(site_alert.alert.values)
     
