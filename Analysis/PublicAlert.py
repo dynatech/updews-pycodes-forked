@@ -82,7 +82,7 @@ def SitePublicAlert(PublicAlert, window):
         query += "or site = 'pan' "
     elif site == 'jor':
         query += "or site = 'pob' "
-    query += ") AND source = 'sensor' ORDER BY timestamp DESC LIMIT 4) "
+    query += ") AND source = 'sensor' AND alert in ('L2', 'L3') ORDER BY timestamp DESC LIMIT 4) "
     
     query += " UNION ALL "
     
@@ -95,7 +95,7 @@ def SitePublicAlert(PublicAlert, window):
         query += "or site = 'pan' "
     elif site == 'jor':
         query += "or site = 'pob' "
-    query += ") AND source = 'rain' ORDER BY timestamp DESC LIMIT 4)"
+    query += ") AND source = 'rain' AND alert = 'r1' ORDER BY timestamp DESC LIMIT 1)"
 
     site_alert = q.GetDBDataFrame(query)
     
@@ -253,7 +253,7 @@ def main():
     
     PublicAlert.to_csv('PublicAlert.txt', header=True, index=None, sep='\t', mode='w')
     
-    dfjson = df.to_json(orient="records", date_format="iso")
+    dfjson = PublicAlert.to_json(orient="records", date_format="iso")
     with open('PublicAlert.json', 'w') as w:
         w.write(dfjson)
     
