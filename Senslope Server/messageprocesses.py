@@ -329,14 +329,14 @@ def ProcessPiezometer(line,sender):
         msgname = msgname + 'pz'
         print 'msg_name: ' + msgname        
         data = linesplit[1]
-        msgid = int(('0x'+data[:2]), 16)
-        p1 = int(('0x'+data[2:4]), 16)*100
-        p2 = int(('0x'+data[4:6]), 16)
-        p3 = int(('0x'+data[6:8]), 16)*.01
+        msgid = int(('0x'+data[:4]), 16)
+        p1 = int(('0x'+data[4:6]), 16)*100
+        p2 = int(('0x'+data[6:8]), 16)
+        p3 = int(('0x'+data[8:10]), 16)*.01
         piezodata = p1+p2+p3
         
-        t1 = int(('0x'+data[8:10]), 16)
-        t2 = int(('0x'+data[10:12]), 16)*.01
+        t1 = int(('0x'+data[10:12]), 16)
+        t2 = int(('0x'+data[12:14]), 16)*.01
         tempdata = t1+t2
         try:
             txtdatetime = dt.strptime(linesplit[2],'%y%m%d%H%M%S').strftime('%Y-%m-%d %H:%M:00')

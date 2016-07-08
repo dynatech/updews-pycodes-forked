@@ -36,6 +36,7 @@ def main():
         tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
         for item in contacts:
             message = 'SENSOR ALERT:\n%s' % (alertmsg)
+            message = message.replace("ALERT","AL3RT")
             query += "('%s','%s','%s')," % (tsw,item[1],message)
         query = query[:-1]
 
