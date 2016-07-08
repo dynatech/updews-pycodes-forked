@@ -121,7 +121,7 @@ def SitePublicAlert(PublicAlert, window):
     site_alert = q.GetDBDataFrame(query)
     
     validity_site_alert = site_alert
-    site_alert = site_alert.loc[site_alert.updateTS >= window.end - timedelta(hours=3)]
+    site_alert = site_alert.loc[site_alert.updateTS >= window.end]
     
     list_ground_alerts = ','.join(site_alert.alert.values)
     
