@@ -689,11 +689,14 @@ def CheckMessageSource(msg):
         print "From unknown number ", msg.simnum
 
 def SpawnAlertGen(sitename):
+    c = cfg.config()
     # spawn alert alert_gen
     if lock.get_lock('alertgen'+sitename,False):
         print "Alert gen spawned for", sitename
-        command = "sleep 60 && ~/anaconda2/bin/python /home/dynaslope/Desktop/updews-pycodes/Analysis/alertgen.py " + sitename.lower()
-        command += " && ~/anaconda2/bin/python /home/dynaslope/Desktop/updews-pycodes/Analysis/AlertAnalysis.py " + sitename.lower()
+        # command = "sleep 60 && ~/anaconda2/bin/python /home/dynaslope/Desktop/updews-pycodes/Analysis/alertgen.py " + sitename.lower()
+        # command += " && ~/anaconda2/bin/python /home/dynaslope/Desktop/updews-pycodes/Analysis/AlertAnalysis.py " + sitename.lower()
+        command = "sleep 60 && ~/anaconda2/bin/python %s %s && ~/anaconda2/bin/python %s %s" % (c.fileio.alertgenscript,sitename.lower(),c.fileio.alertanalysisscript,sitename.lower())
+        
         p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, stderr=subprocess.STDOUT)
     else:
         print "Aborting alert gen spawn for ", sitename
