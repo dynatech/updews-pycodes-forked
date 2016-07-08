@@ -253,6 +253,10 @@ def main():
     
     PublicAlert.to_csv('PublicAlert.txt', header=True, index=None, sep='\t', mode='w')
     
+    dfjson = df.to_json(orient="records", date_format="iso")
+    with open('PublicAlert.json', 'w') as w:
+        w.write(dfjson)
+    
     print "run time =", datetime.now() - start
     
     return PublicAlert
