@@ -329,14 +329,14 @@ def ProcessPiezometer(line,sender):
         msgname = msgname + 'pz'
         print 'msg_name: ' + msgname        
         data = linesplit[1]
-        msgid = int(('0x'+data[:2]), 16)
-        p1 = int(('0x'+data[2:4]), 16)*100
-        p2 = int(('0x'+data[4:6]), 16)
-        p3 = int(('0x'+data[6:8]), 16)*.01
+        msgid = int(('0x'+data[:4]), 16)
+        p1 = int(('0x'+data[4:6]), 16)*100
+        p2 = int(('0x'+data[6:8]), 16)
+        p3 = int(('0x'+data[8:10]), 16)*.01
         piezodata = p1+p2+p3
         
-        t1 = int(('0x'+data[8:10]), 16)
-        t2 = int(('0x'+data[10:12]), 16)*.01
+        t1 = int(('0x'+data[10:12]), 16)
+        t2 = int(('0x'+data[12:14]), 16)*.01
         tempdata = t1+t2
         try:
             txtdatetime = dt.strptime(linesplit[2],'%y%m%d%H%M%S').strftime('%Y-%m-%d %H:%M:00')
@@ -689,11 +689,14 @@ def CheckMessageSource(msg):
         print "From unknown number ", msg.simnum
 
 def SpawnAlertGen(sitename):
+    c = cfg.config()
     # spawn alert alert_gen
     if lock.get_lock('alertgen'+sitename,False):
         print "Alert gen spawned for", sitename
-        command = "sleep 60 && ~/anaconda2/bin/python /home/dynaslope/Desktop/updews-pycodes/Analysis/alertgen.py " + sitename.lower()
-        command += " && ~/anaconda2/bin/python /home/dynaslope/Desktop/updews-pycodes/Analysis/AlertAnalysis.py " + sitename.lower()
+        # command = "sleep 60 && ~/anaconda2/bin/python /home/dynaslope/Desktop/updews-pycodes/Analysis/alertgen.py " + sitename.lower()
+        # command += " && ~/anaconda2/bin/python /home/dynaslope/Desktop/updews-pycodes/Analysis/AlertAnalysis.py " + sitename.lower()
+        command = "sleep 60 && ~/anaconda2/bin/python %s %s && ~/anaconda2/bin/python %s %s" % (c.fileio.alertgenscript,sitename.lower(),c.fileio.alertanalysisscript,sitename.lower())
+        
         p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, stderr=subprocess.STDOUT)
     else:
         print "Aborting alert gen spawn for ", sitename
