@@ -12,7 +12,7 @@ import math
 import cfgfileio as cfg
 
 if cfg.config().mode.sendmsg:
-    sys.path.insert(0, cfg.config().websocketdir)
+    sys.path.insert(0, cfg.config().fileio.websocketdir)
     import dewsSocketLeanLib as dsll
 #---------------------------------------------------------------------------------------------------------------------------
 
