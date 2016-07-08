@@ -86,7 +86,7 @@ def SitePublicAlert(PublicAlert, window):
         query += "or site = 'pob' "
     elif site == 'tga':
         query += "or site = 'tag' "
-    query += ") AND source = 'sensor' AND alert in ('L2', 'L3') ORDER BY timestamp DESC LIMIT 4) "
+    query += ") AND source = 'sensor' AND alert IN ('L2', 'L3') ORDER BY timestamp DESC LIMIT 4) "
     
     query += " UNION ALL "
     
@@ -102,6 +102,21 @@ def SitePublicAlert(PublicAlert, window):
     elif site == 'tga':
         query += "or site = 'tag' "
     query += ") AND source = 'rain' AND alert = 'r1' ORDER BY timestamp DESC LIMIT 1)"
+    
+    query += " UNION ALL "
+    
+    query += "(SELECT * FROM senslopedb.site_level_alert WHERE ( site = '%s' " %site
+    if site == 'bto':
+        query += "or site = 'bat' "
+    elif site == 'mng':
+        query += "or site = 'man' "
+    elif site == 'png':
+        query += "or site = 'pan' "
+    elif site == 'jor':
+        query += "or site = 'pob' "
+    elif site == 'tga':
+        query += "or site = 'tag' "
+    query += ") AND source = 'GROUND' AND alert IN ('l2', 'l3') ORDER BY timestamp DESC LIMIT 4)"
 
     site_alert = q.GetDBDataFrame(query)
     
