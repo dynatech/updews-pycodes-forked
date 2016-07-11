@@ -9,6 +9,7 @@ import cfgfileio as cfg
 import rtwindow as rtw
 import querySenslopeDb as q
 import genproc as g
+import AlertAnalysis as A
 
 
 def node_alert2(disp_vel, colname, num_nodes, T_disp, T_velL2, T_velL3, k_ac_ax,lastgooddata,window,config):
@@ -305,7 +306,10 @@ def main(name=''):
     
     print column_level_alert
     
-    alert_toDB(column_level_alert, 'column_level_alert', window)
+    if site_alert in ('L2', 'L3'):
+        A.main(monitoring.colprops.name)
+    else:
+        alert_toDB(column_level_alert, 'column_level_alert', window)
     
     write_site_alert(monitoring.colprops.name, window)
 
