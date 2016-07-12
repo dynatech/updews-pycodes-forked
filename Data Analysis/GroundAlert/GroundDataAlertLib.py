@@ -151,6 +151,9 @@ def crack_eval(df,end):
     #INPUT: df containing crack parameters
     #OUTPUT: crack alert according to protocol table
     
+    #^&*()
+    print df
+    
     #Obtain the time difference and displacement between the latest values
     if len(df) >= 2:
         time_delta = (df.timestamp.iloc[-1]  - df.timestamp.iloc[-2]) / np.timedelta64(1,'D')
@@ -197,9 +200,11 @@ def crack_eval(df,end):
     
                 #perform linear regression to get p value
                 m, b, r, p, std = stats.linregress(last_cur_feature_time,last_cur_feature_measure)
+                #^&*()
+                print p
                 
                 #Evaluate p value
-                if p <= 0.05:
+                if p > 0.05:
                     crack_alert = 'l0p'
     else:
         crack_alert = 'l0'
@@ -258,6 +263,7 @@ def PlotCrack(df):
     plt.plot(time,disp,label = crack_name,marker = markers[df.index[0]%len(markers)])
 
 def GenerateGroundDataAlert(site=None,end=None):
+        
     start_time = datetime.now()
     #Monitoring output directory
     path2 = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
