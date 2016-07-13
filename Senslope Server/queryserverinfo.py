@@ -182,18 +182,18 @@ def getNonReportingSites():
 	server.WriteOutboxMessageToDb(message,c.smsalert.communitynum)
 
 def getLatestSmsFromColumn(colname):
-	# query = """ select timestamp,sms_msg from smsinbox where sms_msg like '%s%s%s' 
-		# order by timestamp desc limit 1 """ % ('%',colname,'%')
+	query = """ select timestamp,sms_msg from smsinbox where sms_msg like '%s%s*%s' 
+		and sms_msg not like '%spsir%s' order by timestamp desc limit 1 """ % ('%',colname,'%','%','%')
 	
-	query = """
-		select timestamp,sms_msg from senslopedb.smsinbox t1,
-		(select sim_num from senslopedb.smsinbox
-		where sms_msg like '%s%s%s'
-		order by sms_id desc limit 1
-		)  t2
-		where t1.sim_num = t2.sim_num
-		order by timestamp desc limit 1;
-	""" % ('%',colname,'%')
+	#query = """
+	#	select timestamp,sms_msg from senslopedb.smsinbox t1,
+	#	(select sim_num from senslopedb.smsinbox
+	#	where sms_msg like '%s%s*%s'
+	#	order by sms_id desc limit 1
+	#	)  t2
+	#	where t1.sim_num = t2.sim_num
+	#	order by timestamp desc limit 1;
+	#""" % ('%',colname,'%')
 	
 	last_col_msg = dbio.querydatabase(query,'getlatestcolmsg','gsm')
 	print last_col_msg
