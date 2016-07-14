@@ -172,7 +172,7 @@ def SitePublicAlert(PublicAlert, window):
         validity = RoundTime(pd.to_datetime(str(max(list(validity_L) + list(validity_A))))) + timedelta(1)
         
         # A2 is still valid
-        if validity > window.end:
+        if validity > window.end + timedelta(hours=0.5):
             public_alert = 'A2'
             if 'L' in list_ground_alerts or 'l' in list_ground_alerts:
                 internal_alert = 'A2'
@@ -233,7 +233,7 @@ def SitePublicAlert(PublicAlert, window):
         validity = RoundTime(pd.to_datetime(str(max(list(validity_RED) + list(validity_A))))) + timedelta(1)
         
         # A1 is still valid
-        if validity > window.end:
+        if validity > window.end + timedelta(hours=0.5):
             public_alert = 'A1'
             # rain (re)trigger
             if 'r1' in site_alert.alert.values:
@@ -291,6 +291,8 @@ def SitePublicAlert(PublicAlert, window):
             if 'L' in list_ground_alerts or 'l' in list_ground_alerts:
                 internal_alert = 'A0'
                 public_alert = 'A0'
+                alert_source = '-'
+                validity = '-'
             
             # without data
             else:
