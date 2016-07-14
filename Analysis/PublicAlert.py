@@ -125,6 +125,8 @@ def SitePublicAlert(PublicAlert, window):
     
     list_ground_alerts = ','.join(site_alert.loc[(site_alert.source == 'sensor')|(site_alert.source == 'ground')].alert.values)
     
+    public_PrevAlert = validity_site_alert.loc[validity_site_alert.source == 'public'].alert.values[0]
+    
     internal_alertDF = site_alert.loc[(site_alert.source == 'internal')|(site_alert.alert == 'ND-L')|(site_alert.alert == 'ND-R')|(site_alert.alert == 'ND-E')|(site_alert.alert == 'ND-D')]
     
     sensor_site = site + '%'
@@ -354,20 +356,32 @@ def SitePublicAlert(PublicAlert, window):
     
     SitePublicAlert = PublicAlert.loc[PublicAlert.site == site][['timestamp', 'site', 'source', 'alert', 'updateTS']]
     alert_toDB(SitePublicAlert, 'site_level_alert', window, 'public')
+    
+    GSMAlert = SitePublicAlert[['site', 'alert', 'source']]
+    public_CurrAlert = SitePublicAlert.alert.values[0]
+    
+    if public_CurrAlert != 'A0':
+        if len(validity_A) == 0:
+            GSMAlert.to_csv('GSMAlert.txt', header = False, index = None, sep = ':', mode = 'a')
+        else:
+            if public_PrevAlert != public_CurrAlert:
+                GSMAlert.to_csv('GSMAlert.txt', header = False, index = None, sep = ':', mode = 'a')
 
     return PublicAlert
     
 def main():
     start = datetime.now()
     
+    with open('GSMAlert.txt', 'w') as w:
+        w.write('')
+    
     window,config = rtw.getwindow()
+    
     PublicAlert = pd.DataFrame({'timestamp': [window.end]*len(q.GetRainProps()), 'site': q.GetRainProps().name.values, 'source': ['public']*len(q.GetRainProps()), 'alert': [np.nan]*len(q.GetRainProps()), 'updateTS': [window.end]*len(q.GetRainProps()), 'palert_source': [np.nan]*len(q.GetRainProps()), 'internal_alert': [np.nan]*len(q.GetRainProps()), 'validity': [np.nan]*len(q.GetRainProps()), 'sensor_alert': [np.nan]*len(q.GetRainProps()), 'rain_alert': [np.nan]*len(q.GetRainProps())})
     PublicAlert = PublicAlert[['timestamp', 'site', 'source', 'alert', 'updateTS', 'palert_source', 'internal_alert', 'validity', 'sensor_alert', 'rain_alert']]
-    
+
     Site_Public_Alert = PublicAlert.groupby('site')
-    
     PublicAlert = Site_Public_Alert.apply(SitePublicAlert, window=window)
-    
     PublicAlert = PublicAlert[['timestamp', 'site', 'alert', 'palert_source', 'internal_alert', 'validity', 'sensor_alert', 'rain_alert']]
     PublicAlert = PublicAlert.rename(columns = {'palert_source': 'source'})
     print PublicAlert
@@ -377,6 +391,12 @@ def main():
     dfjson = PublicAlert.to_json(orient="records", date_format="iso")
     with open('PublicAlert.json', 'w') as w:
         w.write(dfjson)
+    
+    GSMAlert = pd.read_csv('GSMAlert.txt', sep = ':', header = None, names = ['site', 'alert', 'source'])
+    if len(GSMAlert) != 0:
+        with open('GSMAlert.txt', 'w') as w:
+            w.write('As of ' + str(datetime.now())[:16] + '\n')
+        GSMAlert.to_csv('GSMAlert.txt', header = False, index = None, sep = ':', mode = 'a')
     
     print "run time =", datetime.now() - start
     
