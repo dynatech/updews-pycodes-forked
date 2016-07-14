@@ -145,7 +145,7 @@ def SitePublicAlert(PublicAlert, window):
         validity_A = site_alert.loc[(site_alert.alert == 'A3')].timestamp.values
         validity = RoundTime(pd.to_datetime(str(max(list(validity_L) + list(validity_A))))) + timedelta(2)
         # A3 is still valid
-        if validity >= window.end - timedelta(hours=4):
+        if validity >= window.end - timedelta(hours=3.5):
             public_alert = 'A3'
             internal_alert = 'A3'            
             # evaluates which triggers A2
@@ -188,7 +188,7 @@ def SitePublicAlert(PublicAlert, window):
                 alert_source = 'ground'
 
         # end of A2 validity if with data with no significant mov't
-        elif validity == window.end:
+        elif validity == window.end + timedelta(hours=0.5):
             # with data
             if 'L' in list_ground_alerts or 'l' in list_ground_alerts:
                 internal_alert = 'A0'
@@ -286,7 +286,7 @@ def SitePublicAlert(PublicAlert, window):
                         alert_source = 'on demand'
 
         # end of A1 validity if with data with no significant mov't
-        elif validity == window.end:
+        elif validity == window.end + timedelta(hours=0.5):
             # with data
             if 'L' in list_ground_alerts or 'l' in list_ground_alerts:
                 internal_alert = 'A0'
