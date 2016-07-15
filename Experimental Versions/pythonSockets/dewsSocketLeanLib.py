@@ -134,7 +134,7 @@ def sendColumnNamesToSocket(host, port):
 #One full cycle of opening connection
 # sending data and closing connection
 def sendDataToWSS(host, port, msg):
-    try:
+    try:       
         ws = create_connection("ws://%s:%s" % (host, port))
 #        print "Opened WebSocket"
 #        print msg
@@ -178,6 +178,9 @@ def sendDataToDEWS(msg):
     return success
 
 def sendReceivedGSMtoDEWS(timestamp, sender, message):
+    # Filter out characters (") and (\)
+    message = message.replace('\\','\\\\').replace('"', '\\"')
+    
     jsonText = formatReceivedGSMtext(timestamp, sender, message)
     success = sendDataToDEWS(jsonText)
     return success
