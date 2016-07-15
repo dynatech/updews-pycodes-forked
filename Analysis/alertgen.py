@@ -9,6 +9,7 @@ import cfgfileio as cfg
 import rtwindow as rtw
 import querySenslopeDb as q
 import genproc as g
+import AlertAnalysis as A
 
 
 def node_alert2(disp_vel, colname, num_nodes, T_disp, T_velL2, T_velL3, k_ac_ax,lastgooddata,window,config):
@@ -255,7 +256,7 @@ def alert_toDB(df, table_name, window):
 
 def write_site_alert(site, window):
     site = site[0:3] + '%'
-    query = "SELECT * FROM ( SELECT * FROM senslopedb.column_level_alert WHERE site LIKE '%s' ORDER BY timestamp DESC) AS sub GROUP BY site" %site
+    query = "SELECT * FROM ( SELECT * FROM senslopedb.column_level_alert WHERE site LIKE '%s' AND updateTS >= '%s' ORDER BY timestamp DESC) AS sub GROUP BY site" %(site, window.end-timedelta(hours=3))
     df = q.GetDBDataFrame(query)
 
     if 'L3' in list(df.alert.values):
@@ -305,13 +306,16 @@ def main(name=''):
     
     print column_level_alert
     
-    alert_toDB(column_level_alert, 'column_level_alert', window)
+    if site_alert in ('L2', 'L3'):
+        A.main(monitoring.colprops.name)
+    else:
+        alert_toDB(column_level_alert, 'column_level_alert', window)
     
     write_site_alert(monitoring.colprops.name, window)
 
     print datetime.now()-start
     
-    return alert
+    return column_level_alert
 
 ################################################################################
 

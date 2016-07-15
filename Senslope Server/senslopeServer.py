@@ -11,8 +11,9 @@ import SomsServerParser as SSP
 import math
 import cfgfileio as cfg
 
-sys.path.insert(0, '/home/pi/updews-pycodes/Experimental Versions/pythonSockets')
-import dewsSocketLeanLib as dsll
+if cfg.config().mode.sendmsg:
+    sys.path.insert(0, cfg.config().fileio.websocketdir)
+    import dewsSocketLeanLib as dsll
 #---------------------------------------------------------------------------------------------------------------------------
 
 def updateSimNumTable(name,sim_num,date_activated):
@@ -85,7 +86,8 @@ def WriteRawSmsToDb(msglist,sensor_nums):
         # if re.search(m.simnum[-10:],sensor_nums):
             web_flag = 'W'
             print m.data[:20]
-            dsll.sendReceivedGSMtoDEWS(str(m.dt.replace("/","-")), m.simnum, m.data)
+            if cfg.config().mode.sendmsg:
+                dsll.sendReceivedGSMtoDEWS(str(m.dt.replace("/","-")), m.simnum, m.data)
         else:
             web_flag = 'S'
         query += "('%s','%s','%s','UNREAD','%c')," % (str(m.dt.replace("/","-")),str(m.simnum),str(m.data.replace("'","\"")),web_flag)

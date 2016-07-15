@@ -249,11 +249,9 @@ def trending_alertgen(trending_alert, monitoring, lgd, window, config):
     alert = column_alert(alert, config.io.num_nodes_to_check, config.io.k_ac_ax)
     alert['timestamp']=endTS
     
-    #setting ts and node_ID as indices
-    alert=alert.set_index(['timestamp','id'])
-    
+    palert = alert.loc[(alert.col_alert == 'L2') | (alert.col_alert == 'L3')]
+        
     if endTS == window.end:
-        palert = alert.loc[(alert.col_alert == 'L2') | (alert.col_alert == 'L3')]
         
         if len(palert) != 0:
             palert['site']=monitoring.colprops.name
@@ -261,14 +259,24 @@ def trending_alertgen(trending_alert, monitoring, lgd, window, config):
             palert = palert[['timestamp', 'site', 'id', 'disp_alert', 'vel_alert', 'col_alert']]
             
             engine = create_engine('mysql://'+q.Userdb+':'+q.Passdb+'@'+q.Hostdb+':3306/'+q.Namedb)
-            palert.to_sql(name = 'node_level_alert', con = engine, if_exists = 'append', schema = q.Namedb, index = False) 
+            palert.to_sql(name = 'node_level_alert', con = engine, if_exists = 'append', schema = q.Namedb, index = False)
+            
+
+    alert['TNL'] = alert.col_alert.values
     
-    if 'L3' in list(alert.col_alert.values):
+    if len(palert) != 0:
+        for i in palert.id.values:
+            query = "SELECT * FROM senslopedb.node_level_alert WHERE site = '%s' and timestamp >= '%s' and id = %s" %(monitoring.colprops.name, endTS-timedelta(hours=3), i)
+            nodal_palertDF = q.GetDBDataFrame(query)
+            if len(nodal_palertDF) >= 3:
+                alert.loc[alert.id == i, 'TNL'] = max(getmode(list(nodal_palertDF.col_alert.values)))
+    
+    if 'L3' in alert.TNL.values:
         site_alert = 'L3'
-    elif 'L2' in list(alert.col_alert.values):
+    elif 'L2' in alert.TNL.values:
         site_alert = 'L2'
     else:
-        site_alert = min(getmode(list(alert.col_alert.values)))
+        site_alert = min(getmode(list(alert.TNL.values)))
     
     alert_index = trending_alert.loc[trending_alert.timestamp == endTS].index[0]
     trending_alert.loc[alert_index] = [endTS, monitoring.colprops.name, 'sensor', site_alert]
@@ -319,17 +327,9 @@ def main(site=''):
     trending_alertTS = trending_alert.groupby('timestamp')
     output = trending_alertTS.apply(trending_alertgen, window=window, config=config, monitoring=monitoring, lgd=lgd)
     
-    print output
+    site_level_alert = output.loc[output.timestamp == window.end]
+    site_level_alert['updateTS'] = [window.end]
     
-    if 'L3' in list(output.alert.values):
-        site_alert = 'L3'
-    elif 'L2' in list(output.alert.values):
-        site_alert = 'L2'
-    else: 
-        site_alert = min(getmode(list(output.alert.values)))
-    
-    site_level_alert = pd.DataFrame({'timestamp': [window.end], 'site': [output.site.values[0]], 'source': ['sensor'], 'alert': [site_alert], 'updateTS': [window.end]})
-
     alert_toDB(site_level_alert, 'column_level_alert', window)
 
     print site_level_alert

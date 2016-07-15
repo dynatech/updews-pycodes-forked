@@ -70,6 +70,9 @@ class config:
 		self.fileio = Container()
 		self.fileio.allalertsfile = cfg.get("FileIO","allalertsfile")
 		self.fileio.queryoutput = cfg.get("FileIO","querylatestreportoutput")
+		self.fileio.alertgenscript = cfg.get("FileIO","alertgenscript")
+		self.fileio.alertanalysisscript = cfg.get("FileIO","alertanalysisscript")
+		self.fileio.websocketdir = cfg.get("FileIO","websocketdir")
 		
 		self.simprefix = Container()
 		self.simprefix.smart = cfg.get("simprefix","smart")

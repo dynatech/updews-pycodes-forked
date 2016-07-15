@@ -36,7 +36,7 @@ def getSites():
 
 def uptoDB(df):
     engine=create_engine('mysql://root:senslope@192.168.1.102:3306/senslopedb')
-    df.to_sql(name = 'earthquake_alerts', con = engine, if_exists = 'append', schema = Namedb, index = True)
+    df.to_sql(name = 'site_level_alert', con = engine, if_exists = 'append', schema = Namedb, index = True)
 
 #MAIN
 
@@ -60,8 +60,11 @@ if mag >=4:
         WriteEQAlertMessageToDb(message)
     
         crits['timestamp']  = ts
-        crits['alert'] = 'E1'
-        crits = crits[['timestamp','name','alert']].set_index('timestamp')
+        crits['alert'] = 'e1'
+        crits['updateTS'] = ts
+        crits['source'] = 'eq'
+        crits.rename(columns = {'name':'site'}, inplace = True)
+        crits = crits[['timestamp','site','source','alert','updateTS']].set_index('timestamp')
     
         uptoDB(crits)
     
