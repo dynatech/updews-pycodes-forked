@@ -62,7 +62,9 @@ def sendMessageToGSM(recipients, msg, timestamp = None):
     
     for number in recipients:
         # print "%s: %s" % (number, msg)
-        writeStatus = writeToSMSoutbox(number, msg, timestamp)
+        # Filter out characters (") and (\)
+        message = filterSpecialCharacters(msg)
+        writeStatus = writeToSMSoutbox(number, message, timestamp)
 
         if writeStatus < 0:
             ctr -= 1
@@ -134,7 +136,7 @@ def sendColumnNamesToSocket(host, port):
 #One full cycle of opening connection
 # sending data and closing connection
 def sendDataToWSS(host, port, msg):
-    try:
+    try:       
         ws = create_connection("ws://%s:%s" % (host, port))
 #        print "Opened WebSocket"
 #        print msg
@@ -177,7 +179,19 @@ def sendDataToDEWS(msg):
     success = sendDataToWSS(host, port, msg)
     return success
 
+def filterSpecialCharacters(message):
+    # Filter out characters (") and (\)
+    message = message.replace('\\','\\\\').replace('"', '\\"')
+    
+    # Filter single quote character (')
+    message = message.replace("'","\'")
+    
+    return message
+
 def sendReceivedGSMtoDEWS(timestamp, sender, message):
+    # Filter out characters (") and (\)
+    message = filterSpecialCharacters(message)
+    
     jsonText = formatReceivedGSMtext(timestamp, sender, message)
     success = sendDataToDEWS(jsonText)
     return success
