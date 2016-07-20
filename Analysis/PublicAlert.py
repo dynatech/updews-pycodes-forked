@@ -11,19 +11,12 @@ import querySenslopeDb as q
 
 def RoundTime(date_time):
     time_hour = int(date_time.strftime('%H'))
-    time_min = int(date_time.strftime('%M'))
-    if time_min > 0:
-        time_hour += 1
-    modulo = time_hour % 4
-    
-    if modulo == 0:
-        date_time = datetime.combine(date_time.date(), time(time_hour,0,0))
+
+    quotient = time_hour / 4
+    if quotient == 5:
+        date_time = datetime.combine(date_time.date() + timedelta(1), time(0,0,0))
     else:
-        quotient = time_hour / 4
-        if quotient == 5:
-            date_time = datetime.combine(date_time.date() + timedelta(1), time(0,0,0))
-        else:
-            date_time = datetime.combine(date_time.date(), time((quotient+1)*4,0,0))
+        date_time = datetime.combine(date_time.date(), time((quotient+1)*4,0,0))
             
     return date_time
 
