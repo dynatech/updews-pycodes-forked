@@ -70,6 +70,10 @@ def createTable(table_name, type, instance='local'):
         cur.execute("CREATE TABLE IF NOT EXISTS %s(p_id int unsigned not null auto_increment, date date, nickname varchar(20), primary key (p_id))" %table_name)
     elif type == "monshiftsched":
         cur.execute("CREATE TABLE IF NOT EXISTS %s(s_id int unsigned not null auto_increment, timestamp datetime, iompmt varchar(20), iompct varchar(20), oomps varchar(20), oompmt varchar(20), oompct varchar(20), primary key (s_id,timestamp))" %table_name)
+    elif type == "monshiftsched":
+        cur.execute("CREATE TABLE IF NOT EXISTS %s(s_id int unsigned not null auto_increment, timestamp datetime, iompmt varchar(20), iompct varchar(20), oomps varchar(20), oompmt varchar(20), oompct varchar(20), primary key (s_id,timestamp))" %table_name)
+    elif type == "smsalerts":
+        cur.execute("CREATE TABLE IF NOT EXISTS %s(alert_id int unsigned not null auto_increment, ts_set datetime, ts_ack datetime DEFAULT NULL, alertmsg varchar(512), ack varchar (20) DEFAULT 'None', primary key (alert_id))" %table_name)
     else:
         raise ValueError("ERROR: No option for creating table " + type)
    
