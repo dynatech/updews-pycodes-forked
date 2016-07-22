@@ -34,8 +34,8 @@ def SenslopeDBConnect(instance):
             print '6.',
             time.sleep(2)
             
-def createTable(table_name, type):
-    db, cur = SenslopeDBConnect('local')
+def createTable(table_name, type, instance='local'):
+    db, cur = SenslopeDBConnect(instance)
     # cur.execute("CREATE DATABASE IF NOT EXISTS %s" %Namedb)
     # cur.execute("USE %s"%Namedb)
     table_name = table_name.lower()
@@ -61,7 +61,7 @@ def createTable(table_name, type):
     elif type == "coordrssi":
         cur.execute("CREATE TABLE IF NOT EXISTS %s(timestamp datetime, site_name char(5), router_name char(7), rssi_val smallint(20), PRIMARY KEY (timestamp, site_name, router_name))" %table_name)
     elif type == "smsinbox":
-        cur.execute("CREATE TABLE IF NOT EXISTS %s(sms_id int unsigned not null auto_increment, timestamp datetime, sim_num varchar(20), sms_msg varchar(255), read_status varchar(20), PRIMARY KEY (sms_id))" %table_name)
+        cur.execute("CREATE TABLE IF NOT EXISTS %s(sms_id int unsigned not null auto_increment, timestamp datetime, sim_num varchar(20), sms_msg varchar(255), read_status varchar(20), web_flag varchar(5) default 'S', PRIMARY KEY (sms_id))" %table_name)
     elif type == "smsoutbox":
         cur.execute("CREATE TABLE IF NOT EXISTS %s(sms_id int unsigned not null auto_increment, timestamp_written datetime, timestamp_sent datetime, recepients varchar(255), sms_msg varchar(255), send_status varchar(20), PRIMARY KEY (sms_id))" %table_name)
     elif type == "earthquake":

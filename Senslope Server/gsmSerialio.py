@@ -267,6 +267,7 @@ def getAllSms(network):
 #        print smsdata['text']
         try:        
             smsItem = sms(txtnum, smsdata['number'].strip('+'), str(smsdata['text']), txtdatetimeStr)
+            print str(smsdata['text'])
             msglist.append(smsItem)
         except UnicodeEncodeError:
             print ">> Unknown character error. Skipping message"
