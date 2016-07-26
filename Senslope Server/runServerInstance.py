@@ -8,6 +8,7 @@ def main():
 
     if network not in ['GLOBE','SMART']:
         print ">> Error in network selection", network
+        sys.exit()
     
     server.RunSenslopeServer(network)
 

@@ -97,7 +97,7 @@ def setSendStatus(send_status,sms_id_list):
         
     now = dt.today().strftime("%Y-%m-%d %H:%M:%S")
 
-    query = "update %s.smsoutbox set send_status = '%s', timestamp_written ='%s' where sms_id in (%s) " % (gsmdbinstance.name, send_status, now, str(sms_id_list)[1:-1].replace("L",""))
+    query = "update %s.smsoutbox set send_status = '%s', timestamp_sent ='%s' where sms_id in (%s) " % (gsmdbinstance.name, send_status, now, str(sms_id_list)[1:-1].replace("L",""))
     commitToDb(query,"setSendStatus", instance='GSM')
     
 def getAllSmsFromDb(read_status):

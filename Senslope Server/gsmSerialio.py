@@ -5,8 +5,14 @@ import senslopedbio as dbio
 from messaging.sms import SmsDeliver as smsdeliver
 from messaging.sms import SmsSubmit as smssubmit
 import cfgfileio as cfg
+import argparse
+import RPi.GPIO as GPIO
 
+resetpin = cfg.config().gsmio.resetpin
 gsm = ''
+
+GPIO.setmode(GPIO.BOARD)
+GPIO.setup(resetpin, GPIO.OUT)
 
 class sms:
     def __init__(self,num,sender,data,dt):
@@ -18,20 +24,16 @@ class sms:
 class CustomGSMResetException(Exception):
     pass
 
+def powerGsm(mode):
+    GPIO.output(cfg.config().gsmio.resetpin, mode)
+    print 'done'
+    
 def resetGsm():
     print ">> Resetting GSM Module ...",
-    resetPin = 38
     try:
-        import RPi.GPIO as GPIO
-        GPIO.setmode(GPIO.BOARD)
-        GPIO.setup(resetPin, GPIO.OUT)
-
-        GPIO.output(resetPin, True)
-        time.sleep(1)
-        GPIO.output(resetPin, False)
-        time.sleep(5)
-        GPIO.output(resetPin, True)
-        gsm.close()
+        powerGsm(False)
+        time.sleep(2)
+        powerGsm(True)
         print 'done'
         raise CustomGSMResetException(">> Raising exception to reset code from GSM module reset")
     except ImportError:
@@ -39,6 +41,7 @@ def resetGsm():
        
 def gsmInit(network):
     global gsm
+    powerGsm(True)
     gsm = serial.Serial()
     c = cfg.config()
     if network.lower() == 'globe':
@@ -55,10 +58,6 @@ def gsmInit(network):
         gsm.open()
     
     #gsmflush()
-    gsm.write('AT\r\n')
-    time.sleep(1)
-    gsm.write('AT\r\n')
-    time.sleep(1)
     gsm.write('AT\r\n')
     time.sleep(1)
     print 'Switching to no-echo mode', gsmcmd('ATE0').strip('\r\n')
@@ -278,4 +277,21 @@ def getAllSms(network):
         
     
     return msglist
+
+
+if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser(description="RPI GSM command options")
+    parser.add_argument("-r", "--reset_gsm", help="hard reset of gsm modules", action="store_true")
+    # parser.add_argument("-m", "--msg_id", help="message id", type=int)
+    
+    # check if there is an error in parsing the arguments
+    try:
+        args = parser.parse_args()
+    except:
+        print "Error in parsing"
+
+    if args.reset_gsm:
+        print "> Resetting GSM module"
+        resetGsm()
         

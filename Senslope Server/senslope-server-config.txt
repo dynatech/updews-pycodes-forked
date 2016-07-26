@@ -17,6 +17,9 @@ globeport = /dev/globeport
 timeout = 5
 smartport = /dev/smartport
 
+[gsmio]
+resetpin = 38
+
 [SMSAlert]
 communityphonenumber = 09163938789
 sunnumbers = 

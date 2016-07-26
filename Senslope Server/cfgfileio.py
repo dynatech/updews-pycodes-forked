@@ -50,6 +50,9 @@ class config:
 		self.serialio.globeport = cfg.get("Serial","globeport")
 		self.serialio.smartport = cfg.get("Serial","smartport")
 		self.serialio.timeout = cfg.getint("Serial","timeout")
+
+		self.gsmio = Container()
+		self.gsmio.resetpin = cfg.getint("gsmio","resetpin")
 		
 		self.smsalert = Container()
 		self.smsalert.communitynum = cfg.get("SMSAlert","communityphonenumber")

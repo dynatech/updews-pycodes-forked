@@ -273,8 +273,8 @@ def RunSenslopeServer(network):
         elif m == -1:
             print'GSM MODULE MAYBE INACTIVE'
             serverstate = 'inactive'
-            gsm.close()
             logRuntimeStatus(network,"gsm inactive")
+            gsmio.resetGsm()
 
         elif m == -2:
             print '>> Error in parsing mesages: No data returned by GSM'            
