@@ -276,13 +276,13 @@ def SitePublicAlert(PublicAlert, window):
                         internal_alert = 'A1-D'
                         alert_source = 'on demand'
                 else:
-                    if 'A1-R' in validity_site_alert.alert.values:
+                    if 'A1-R' in validity_site_alert.alert.values or 'ND-R' in validity_site_alert.alert.values:
                         internal_alert = 'ND-R'
                         alert_source = 'rain'
-                    elif 'A1-E' in validity_site_alert.alert.values:
+                    elif 'A1-E' in validity_site_alert.alert.values or 'ND-E' in validity_site_alert.alert.values:
                         internal_alert = 'ND-E'
                         alert_source = 'eq'
-                    elif 'A1-D' in validity_site_alert.alert.values:
+                    elif 'A1-D' in validity_site_alert.alert.values or 'ND-D' in validity_site_alert.alert.values:
                         internal_alert = 'ND-D'
                         alert_source = 'on demand'
 
