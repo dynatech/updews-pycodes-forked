@@ -382,9 +382,10 @@ def main():
     PublicAlert.to_csv('PublicAlert.txt', header=True, index=None, sep='\t', mode='w')
     
     dfjson = PublicAlert.to_json(orient="records", date_format="iso")
+    dfjson.replace('T', ' ').replace(':.000Z', '')
     with open('PublicAlert.json', 'w') as w:
         w.write(dfjson)
-    
+            
     GSMAlert = pd.read_csv('GSMAlert.txt', sep = ':', header = None, names = ['site', 'alert', 'source'])
     if len(GSMAlert) != 0:
         with open('GSMAlert.txt', 'w') as w:
