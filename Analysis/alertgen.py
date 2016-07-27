@@ -255,7 +255,7 @@ def alert_toDB(df, table_name, window):
         db.close()
 
 def write_site_alert(site, window):
-    if site != 'messb' or site != 'mesta':
+    if site != 'messb' and site != 'mesta':
         site = site[0:3] + '%'
         query = "SELECT * FROM ( SELECT * FROM senslopedb.column_level_alert WHERE site LIKE '%s' AND updateTS >= '%s' ORDER BY timestamp DESC) AS sub GROUP BY site" %(site, window.end)
     else:
