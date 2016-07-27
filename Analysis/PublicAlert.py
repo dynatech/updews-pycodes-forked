@@ -192,7 +192,7 @@ def SitePublicAlert(PublicAlert, window):
             # without data
             else:
                 # within 3 days of 4hr-extension
-                if len(internal_alertDF) == 0 or pd.datetime(internal_alertDF.timestamp.values[0]) >= (window.end - timedelta(3)):
+                if len(internal_alertDF) == 0 or pd.to_datetime(internal_alertDF.timestamp.values[0]) >= (window.end - timedelta(3)):
                     validity = validity + timedelta(hours=4)
                     internal_alert = 'ND-L'
                     public_alert = 'A2'
@@ -282,7 +282,7 @@ def SitePublicAlert(PublicAlert, window):
             # without data
             else:
                 # within 3 days of 4hr-extension
-                if len(internal_alertDF) == 0 or pd.datetime(internal_alertDF.timestamp.values[0]) >= (window.end - timedelta(3)):
+                if len(internal_alertDF) == 0 or pd.to_datetime(internal_alertDF.timestamp.values[0]) >= (window.end - timedelta(3)):
                     validity = validity + timedelta(hours=4)
                     public_alert = 'A1'
                     
