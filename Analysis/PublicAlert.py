@@ -192,7 +192,7 @@ def SitePublicAlert(PublicAlert, window):
             # without data
             else:
                 # within 3 days of 4hr-extension
-                if len(internal_alertDF) == 0 or pd.datetime(internal_alertDF.timestamp.values[0]) >= (window.end - timedelta(3)):
+                if len(internal_alertDF) == 0 or pd.to_datetime(internal_alertDF.timestamp.values[0]) >= (window.end - timedelta(3)):
                     validity = validity + timedelta(hours=4)
                     internal_alert = 'ND-L'
                     public_alert = 'A2'
@@ -282,7 +282,7 @@ def SitePublicAlert(PublicAlert, window):
             # without data
             else:
                 # within 3 days of 4hr-extension
-                if len(internal_alertDF) == 0 or pd.datetime(internal_alertDF.timestamp.values[0]) >= (window.end - timedelta(3)):
+                if len(internal_alertDF) == 0 or pd.to_datetime(internal_alertDF.timestamp.values[0]) >= (window.end - timedelta(3)):
                     validity = validity + timedelta(hours=4)
                     public_alert = 'A1'
                     
@@ -362,7 +362,7 @@ def main():
     PublicAlert.to_csv('PublicAlert.txt', header=True, index=None, sep='\t', mode='w')
     
     dfjson = PublicAlert.to_json(orient="records", date_format="iso")
-    dfjson.replace('T', ' ').replace(':.000Z', '')
+    dfjson.replace('T', ' ').replace('.000Z', '')
     with open('PublicAlert.json', 'w') as w:
         w.write(dfjson)
             
