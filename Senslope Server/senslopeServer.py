@@ -190,7 +190,8 @@ def RunSenslopeServer(network):
     timetosend = 0
     lastAlertMsgSent = ''
     logruntimeflag = True
-    global checkIfActive
+    global checkIfActive 
+    checkIfActive = True
 
     try:
         gsm = gsmio.gsmInit(network)        
@@ -201,11 +202,11 @@ def RunSenslopeServer(network):
         logRuntimeStatus(network,"com port error")
         raise ValueError(">> Error: no com port found")
             
-    dbio.createTable("runtimelog","runtime")
+    dbio.createTable("runtimelog","runtime",cfg.config().mode.logtoinstance)
     logRuntimeStatus(network,"startup")
     
-    dbio.createTable('smsinbox','smsinbox')
-    dbio.createTable('smsoutbox','smsoutbox')
+    dbio.createTable('smsinbox','smsinbox',cfg.config().mode.logtoinstance)
+    dbio.createTable('smsoutbox','smsoutbox',cfg.config().mode.logtoinstance)
 
     sensor_numbers_str = str(getSensorNumbers())
 
@@ -272,8 +273,8 @@ def RunSenslopeServer(network):
         elif m == -1:
             print'GSM MODULE MAYBE INACTIVE'
             serverstate = 'inactive'
-            gsm.close()
             logRuntimeStatus(network,"gsm inactive")
+            gsmio.resetGsm()
 
         elif m == -2:
             print '>> Error in parsing mesages: No data returned by GSM'            

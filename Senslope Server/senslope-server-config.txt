@@ -13,9 +13,12 @@ dbname = senslopedb
 [Serial]
 baudrate = 57600
 sunport = COM16
-globeport = /dev/gsmusbport
+globeport = /dev/globeport
 timeout = 5
-smartport = /dev/xbeeusbport
+smartport = /dev/smartport
+
+[gsmio]
+resetpin = 38
 
 [SMSAlert]
 communityphonenumber = 09163938789

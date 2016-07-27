@@ -34,8 +34,8 @@ def SenslopeDBConnect(instance):
             print '6.',
             time.sleep(2)
             
-def createTable(table_name, type):
-    db, cur = SenslopeDBConnect('local')
+def createTable(table_name, type, instance='local'):
+    db, cur = SenslopeDBConnect(instance)
     # cur.execute("CREATE DATABASE IF NOT EXISTS %s" %Namedb)
     # cur.execute("USE %s"%Namedb)
     table_name = table_name.lower()
@@ -61,15 +61,19 @@ def createTable(table_name, type):
     elif type == "coordrssi":
         cur.execute("CREATE TABLE IF NOT EXISTS %s(timestamp datetime, site_name char(5), router_name char(7), rssi_val smallint(20), PRIMARY KEY (timestamp, site_name, router_name))" %table_name)
     elif type == "smsinbox":
-        cur.execute("CREATE TABLE IF NOT EXISTS %s(sms_id int unsigned not null auto_increment, timestamp datetime, sim_num varchar(20), sms_msg varchar(255), read_status varchar(20), PRIMARY KEY (sms_id))" %table_name)
+        cur.execute("CREATE TABLE IF NOT EXISTS %s(sms_id int unsigned not null auto_increment, timestamp datetime, sim_num varchar(20), sms_msg varchar(800), read_status varchar(20), web_flag varchar(5) default 'S', PRIMARY KEY (sms_id))" %table_name)
     elif type == "smsoutbox":
-        cur.execute("CREATE TABLE IF NOT EXISTS %s(sms_id int unsigned not null auto_increment, timestamp_written datetime, timestamp_sent datetime, recepients varchar(255), sms_msg varchar(255), send_status varchar(20), PRIMARY KEY (sms_id))" %table_name)
+        cur.execute("CREATE TABLE IF NOT EXISTS %s(sms_id int unsigned not null auto_increment, timestamp_written datetime, timestamp_sent datetime, recepients varchar(255), sms_msg varchar(800), send_status varchar(20), PRIMARY KEY (sms_id))" %table_name)
     elif type == "earthquake":
         cur.execute("CREATE TABLE IF NOT EXISTS %s(e_id int unsigned not null auto_increment, timestamp datetime, mag float(6,2), depth float (6,2), lat float(6,2), longi float(6,2), dist tinyint unsigned, heading varchar(5), municipality varchar(50), province varchar(50), issuer varchar(10), PRIMARY KEY (e_id,timestamp))" %table_name)
     elif type == "servermonsched":
         cur.execute("CREATE TABLE IF NOT EXISTS %s(p_id int unsigned not null auto_increment, date date, nickname varchar(20), primary key (p_id))" %table_name)
     elif type == "monshiftsched":
         cur.execute("CREATE TABLE IF NOT EXISTS %s(s_id int unsigned not null auto_increment, timestamp datetime, iompmt varchar(20), iompct varchar(20), oomps varchar(20), oompmt varchar(20), oompct varchar(20), primary key (s_id,timestamp))" %table_name)
+    elif type == "monshiftsched":
+        cur.execute("CREATE TABLE IF NOT EXISTS %s(s_id int unsigned not null auto_increment, timestamp datetime, iompmt varchar(20), iompct varchar(20), oomps varchar(20), oompmt varchar(20), oompct varchar(20), primary key (s_id,timestamp))" %table_name)
+    elif type == "smsalerts":
+        cur.execute("CREATE TABLE IF NOT EXISTS %s(alert_id int unsigned not null auto_increment, ts_set datetime, ts_ack datetime DEFAULT NULL, alertmsg varchar(512), ack varchar (20) DEFAULT 'None', primary key (alert_id))" %table_name)
     else:
         raise ValueError("ERROR: No option for creating table " + type)
    
@@ -93,7 +97,7 @@ def setSendStatus(send_status,sms_id_list):
         
     now = dt.today().strftime("%Y-%m-%d %H:%M:%S")
 
-    query = "update %s.smsoutbox set send_status = '%s', timestamp_written ='%s' where sms_id in (%s) " % (gsmdbinstance.name, send_status, now, str(sms_id_list)[1:-1].replace("L",""))
+    query = "update %s.smsoutbox set send_status = '%s', timestamp_sent ='%s' where sms_id in (%s) " % (gsmdbinstance.name, send_status, now, str(sms_id_list)[1:-1].replace("L",""))
     commitToDb(query,"setSendStatus", instance='GSM')
     
 def getAllSmsFromDb(read_status):
