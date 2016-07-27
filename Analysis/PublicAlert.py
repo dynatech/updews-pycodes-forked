@@ -183,7 +183,7 @@ def SitePublicAlert(PublicAlert, window):
                 alert_source = 'ground'
 
         # end of A2 validity if with data with no significant mov't
-        elif validity == window.end + timedelta(hours=0.5):
+        else:
             # with data
             if 'L' in list_ground_alerts or 'l' in list_ground_alerts:
                 internal_alert = 'A0'
@@ -211,16 +211,6 @@ def SitePublicAlert(PublicAlert, window):
                     validity = '-'
                     internal_alert = 'ND'
         
-        # end of A2 validity
-        else:
-            public_alert = 'A0'
-            alert_source = '-'
-            validity = '-'
-            if 'L' in list_ground_alerts or 'l' in list_ground_alerts:
-                internal_alert = 'A0'
-            else:
-                internal_alert = 'ND'
-
     #Public ALert A1
     elif 'r1' in site_alert.alert.values or 'e1' in site_alert.alert.values or 'd1' in site_alert.alert.values or 'A1' in validity_site_alert.alert.values:
         validity_RED = validity_site_alert.loc[(validity_site_alert.alert == 'r1')|(validity_site_alert.alert == 'e1')|(validity_site_alert.alert == 'd1')].updateTS.values
@@ -281,7 +271,7 @@ def SitePublicAlert(PublicAlert, window):
                         alert_source = 'on demand'
 
         # end of A1 validity if with data with no significant mov't
-        elif validity == window.end + timedelta(hours=0.5):
+        else:
             # with data
             if 'L' in list_ground_alerts or 'l' in list_ground_alerts:
                 internal_alert = 'A0'
@@ -312,16 +302,6 @@ def SitePublicAlert(PublicAlert, window):
                     alert_source = '-'
                     validity = '-'
                     internal_alert = 'ND'
-
-        # end of A1 validity
-        else:
-            public_alert = 'A0'
-            alert_source = '-'
-            validity = '-'
-            if 'L' in list_ground_alerts or 'l' in list_ground_alerts:
-                internal_alert = 'A0'
-            else:
-                internal_alert = 'ND'
     
     #Public Alert A0
     else:
