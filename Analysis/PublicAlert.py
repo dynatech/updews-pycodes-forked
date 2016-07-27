@@ -64,6 +64,10 @@ def SitePublicAlert(PublicAlert, window):
         query += "or site = 'pob' "
     elif site == 'tga':
         query += "or site = 'tag' "
+    elif site == 'msl':
+        query += "or site = 'mes' "
+    elif site == 'msu':
+        query += "or site = 'mes' "
     query += ") ORDER BY timestamp DESC) AS sub GROUP BY source)"
     
     query += " UNION ALL "
@@ -79,6 +83,10 @@ def SitePublicAlert(PublicAlert, window):
         query += "or site = 'pob' "
     elif site == 'tga':
         query += "or site = 'tag' "
+    elif site == 'msl':
+        query += "or site = 'mes' "
+    elif site == 'msu':
+        query += "or site = 'mes' "
     query += ") AND source = 'sensor' AND alert IN ('L2', 'L3') ORDER BY timestamp DESC LIMIT 4) "
     
     query += " UNION ALL "
@@ -94,6 +102,10 @@ def SitePublicAlert(PublicAlert, window):
         query += "or site = 'pob' "
     elif site == 'tga':
         query += "or site = 'tag' "
+    elif site == 'msl':
+        query += "or site = 'mes' "
+    elif site == 'msu':
+        query += "or site = 'mes' "
     query += ") AND source = 'rain' AND alert = 'r1' ORDER BY timestamp DESC LIMIT 1)"
     
     query += " UNION ALL "
@@ -109,6 +121,10 @@ def SitePublicAlert(PublicAlert, window):
         query += "or site = 'pob' "
     elif site == 'tga':
         query += "or site = 'tag' "
+    elif site == 'msl':
+        query += "or site = 'mes' "
+    elif site == 'msu':
+        query += "or site = 'mes' "
     query += ") AND source = 'ground' AND alert IN ('l2', 'l3') ORDER BY timestamp DESC LIMIT 4)"
 
     site_alert = q.GetDBDataFrame(query)
