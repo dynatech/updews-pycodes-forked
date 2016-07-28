@@ -83,10 +83,6 @@ def SitePublicAlert(PublicAlert, window):
         query += "or site = 'pob' "
     elif site == 'tga':
         query += "or site = 'tag' "
-    elif site == 'msl':
-        query += "or site = 'mes' "
-    elif site == 'msu':
-        query += "or site = 'mes' "
     query += ") AND source = 'sensor' AND alert IN ('L2', 'L3') ORDER BY timestamp DESC LIMIT 4) "
     
     query += " UNION ALL "
@@ -102,10 +98,6 @@ def SitePublicAlert(PublicAlert, window):
         query += "or site = 'pob' "
     elif site == 'tga':
         query += "or site = 'tag' "
-    elif site == 'msl':
-        query += "or site = 'mes' "
-    elif site == 'msu':
-        query += "or site = 'mes' "
     query += ") AND source = 'rain' AND alert = 'r1' ORDER BY timestamp DESC LIMIT 1)"
     
     query += " UNION ALL "
@@ -230,7 +222,7 @@ def SitePublicAlert(PublicAlert, window):
                     alert_source = '-'
                     validity = '-'
                     internal_alert = 'ND'
-        
+
     #Public ALert A1
     elif 'r1' in site_alert.alert.values or 'e1' in site_alert.alert.values or 'd1' in site_alert.alert.values or 'A1' in validity_site_alert.alert.values:
         validity_RED = validity_site_alert.loc[(validity_site_alert.alert == 'r1')|(validity_site_alert.alert == 'e1')|(validity_site_alert.alert == 'd1')].updateTS.values
