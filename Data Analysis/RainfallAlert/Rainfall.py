@@ -550,6 +550,7 @@ rainprops['rain_arq'] = rainprops['rain_arq'].fillna(rainprops['name'])
 rainprops['site'] = rainprops['rain_arq']
 rainprops = rainprops[['site', 'max_rain_2year', 'rain_noah', 'rain_noah2', 'rain_noah3']]
 rainprops = rainprops.drop_duplicates(['site'], take_last = True)
+rainprops = rainprops.reset_index(drop = True)
 
 #empty dataframe
 index = range(len(rainprops))
