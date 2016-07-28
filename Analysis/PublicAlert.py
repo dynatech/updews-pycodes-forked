@@ -361,6 +361,16 @@ def SitePublicAlert(PublicAlert, window):
                 GSMAlert.to_csv('GSMAlert.txt', header = False, index = None, sep = ':', mode = 'a')
 
     return PublicAlert
+
+def writeAlertToDb(alertfile):
+    f = open(alertfile,'r')
+    alerttxt = f.read()
+    f.close()
+
+    sys.path.insert(0, '/home/dynaslope/Desktop/Senslope Server/')
+    import senslopeServer as server
+
+    server.writeAlertToDb(alerttxt)
     
 def main():
     start = datetime.now()
@@ -392,6 +402,9 @@ def main():
         with open('GSMAlert.txt', 'w') as w:
             w.write('As of ' + str(datetime.now())[:16] + '\n')
         GSMAlert.to_csv('GSMAlert.txt', header = False, index = None, sep = ':', mode = 'a')
+
+        # write text file to db
+        writeAlertToDb('GSMAlert.txt')
     
     print "run time =", datetime.now() - start
     
