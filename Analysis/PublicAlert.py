@@ -139,6 +139,10 @@ def SitePublicAlert(PublicAlert, window):
     internal_alertDF = site_alert.loc[(site_alert.source == 'internal')|(site_alert.alert == 'ND-L')|(site_alert.alert == 'ND-R')|(site_alert.alert == 'ND-E')|(site_alert.alert == 'ND-D')]
     
     sensor_site = site + '%'
+    if site == 'msl':
+        sensor_site = 'messb%'
+    if site == 'msu':
+        sensor_site = 'mesta%'
     query = "SELECT * FROM ( SELECT * FROM senslopedb.column_level_alert WHERE site LIKE '%s' AND updateTS >= '%s' ORDER BY timestamp DESC) AS sub GROUP BY site" %(sensor_site,window.end-timedelta(hours=3))
     sensor_alertDF = q.GetDBDataFrame(query)
     
@@ -373,6 +377,7 @@ def main():
     PublicAlert = Site_Public_Alert.apply(SitePublicAlert, window=window)
     PublicAlert = PublicAlert[['timestamp', 'site', 'alert', 'palert_source', 'internal_alert', 'validity', 'sensor_alert', 'rain_alert']]
     PublicAlert = PublicAlert.rename(columns = {'palert_source': 'source'})
+    PublicAlert = PublicAlert.sort('site')
     print PublicAlert
     
     PublicAlert.to_csv('PublicAlert.txt', header=True, index=None, sep='\t', mode='w')
