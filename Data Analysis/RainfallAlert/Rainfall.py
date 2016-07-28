@@ -573,7 +573,6 @@ siterainprops.apply(RainfallAlert)
 #Writes dataframe containaining site codes with its corresponding one and three days cumulative sum, data source, alert level and advisory
 if PrintSummaryAlert:
     summary.to_csv(RainfallPlotsPath+'SummaryOfRainfallAlertGenerationFor'+tsn+CSVFormat,sep=',',mode='w')
-print summary
 
 #### writing to db ####
 from sqlalchemy import create_engine
@@ -583,15 +582,20 @@ engine=create_engine('mysql://root:senslope@192.168.1.102:3306/senslopedb')
 summary['timestamp'] = [str(end)]*len(summary)
 summary['source'] = 'rain'
 summary['site'] = summary['site'].map(lambda x: str(x)[:3])
+msl_raindf = summary.loc[summary.site == 'mes']
+msl_raindf.site = 'msl'
+msu_raindf = summary.loc[summary.site == 'mes']
+msu_raindf.site = 'msu'
+summary = summary.append(msl_raindf).append(msu_raindf)
+summary = summary.loc[summary.site != 'mes']
+summary = summary.reset_index(drop = True)
+summary = summary.sort('site')
 df_for_db = summary[['timestamp', 'site', 'source', 'alert']]
 df_for_db = df_for_db.dropna()
+print df_for_db
 
 #Write to site_level_alerts
 uptoDB_site_level_alerts(df_for_db)
-
-
-
-
 
 #Summarizing rainfall data to rainfallalerts.txt
 if PrintRAlert:
@@ -620,8 +624,6 @@ if set_json:
             i += 1
         else:
             i += 1
-    print dfajson
-
 
 end_time = datetime.now()
 print "time = ", end_time - start_time
