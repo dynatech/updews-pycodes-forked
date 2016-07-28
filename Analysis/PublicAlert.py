@@ -342,7 +342,7 @@ def SitePublicAlert(PublicAlert, window):
     SitePublicAlert = PublicAlert.loc[PublicAlert.site == site][['timestamp', 'site', 'source', 'alert', 'updateTS']]
     alert_toDB(SitePublicAlert, 'site_level_alert', window, 'public')
     
-    GSMAlert = SitePublicAlert[['site', 'alert', 'source']]
+    GSMAlert = PublicAlert.loc[PublicAlert.site == site][['site', 'alert', 'palert_source']]
     public_CurrAlert = SitePublicAlert.alert.values[0]
     
     if public_CurrAlert != 'A0':
