@@ -33,6 +33,18 @@ def up_one(p):
     out = os.path.abspath(os.path.join(p, '..'))
     return out  
 
+def RoundTime(date_time):
+    date_time = pd.to_datetime(date_time)
+    time_hour = int(date_time.strftime('%H'))
+
+    quotient = time_hour / 4
+    if quotient == 5:
+        date_time = datetime.combine(date_time.date() + timedelta(1), time(0,0,0))
+    else:
+        date_time = datetime.combine(date_time.date(), time((quotient+1)*4,0,0))
+            
+    return date_time
+
 def get_rt_window(rt_window_length,roll_window_size,num_roll_window_ops):
     ##INPUT:
     ##rt_window_length; float; length of real-time monitoring window in days
@@ -132,20 +144,28 @@ def crack_eval(df,end):
         
         #Based on alert table
         if time_delta >= 7:
-            if abs_disp >= 75:
-                crack_alert = 'l3'
-            elif abs_disp >= 3:
-                crack_alert = 'l2'
+            if time_delta < 8:
+                if abs_disp >= 75:
+                    crack_alert = 'l3'
+                elif abs_disp >= 3:
+                    crack_alert = 'l2'
+                else:
+                    crack_alert = 'l0'
             else:
-                crack_alert = 'l0'
-        elif time_delta >= 3:
+                if abs_disp >= (time_delta/7.)*75:
+                    crack_alert = 'l3'
+                elif abs_disp >= (time_delta/7.)*3:
+                    crack_alert = 'l3'
+                else:
+                    crack_alert = 'l0'
+        elif time_delta >= 2.75:
             if abs_disp >= 30:
                 crack_alert = 'l3'
             elif abs_disp >= 1.5:
                 crack_alert = 'l2'
             else:
                 crack_alert = 'l0'
-        elif time_delta >= 1:
+        elif time_delta >= 0.75:
             if abs_disp >= 10:
                 crack_alert = 'l3'
             elif abs_disp >= 0.5:
@@ -178,9 +198,9 @@ def crack_eval(df,end):
     else:
         crack_alert = 'l0'
         
-    #Impose the 4 hour validity of the groundmeasurement
+    #Impose the validity of the groundmeasurement
     try:
-        if end - df.timestamp.iloc[-1] > np.timedelta64(4,'h'):
+        if RoundTime(end) != RoundTime(df.timestamp.iloc[-1]):
             crack_alert = 'nd'
     except:
         print 'Timestamp error for '+' '.join(list(np.concatenate((df.site_id.values,df.crack_id.values))))
@@ -237,6 +257,9 @@ def alert_toDB(df,end):
     
     df2 = GetDBDataFrame(query)
     
+    print df
+    print df2
+
     if len(df2) == 0 or df2.alert.values[0] != df.alert.values[0]:
         engine = create_engine('mysql://'+Userdb+':'+Passdb+'@'+Hostdb+':3306/'+Namedb)
         df['updateTS'] = end
