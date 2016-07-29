@@ -438,9 +438,11 @@ def alert_toDB(df):
     df2 = GetDBDataFrame(query)
     
     if len(df2) == 0 or df2.alert.values[0] != df.alert.values[0]:
+        df['updateTS'] = end
         engine = create_engine('mysql://'+Userdb+':'+Passdb+'@'+Hostdb+':3306/'+Namedb)
         df.to_sql(name = 'site_level_alert', con = engine, if_exists = 'append', schema = Namedb, index = False)
     elif df2.alert.values[0] == df.alert.values[0]:
+        print "update alert"
         db, cur = SenslopeDBConnect(Namedb)
         query = "UPDATE senslopedb.site_level_alert SET updateTS='%s' WHERE site = '%s' and source = 'rain' and alert = '%s' and timestamp = '%s'" %(end, df2.site.values[0], df2.alert.values[0], pd.to_datetime(str(df2.timestamp.values[0])))
         cur.execute(query)
