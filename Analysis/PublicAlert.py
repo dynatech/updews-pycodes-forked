@@ -200,6 +200,7 @@ def SitePublicAlert(PublicAlert, window):
             if 'L' in list_ground_alerts or 'l' in list_ground_alerts:
                 internal_alert = 'A0'
                 public_alert = 'A0'
+                alert_source = '-'
             
             # without data
             else:
@@ -262,13 +263,13 @@ def SitePublicAlert(PublicAlert, window):
             # A1 is still valid
             else:
                 if 'L' in list_ground_alerts or 'l' in list_ground_alerts:
-                    if 'A1-R' in validity_site_alert.alert.values:
+                    if 'A1-R' in validity_site_alert.alert.values or 'ND-R' in validity_site_alert.alert.values:
                         internal_alert = 'A1-R'
                         alert_source = 'rain'
-                    elif 'A1-E' in validity_site_alert.alert.values:
+                    elif 'A1-E' in validity_site_alert.alert.values or 'ND-E' in validity_site_alert.alert.values:
                         internal_alert = 'A1-E'
                         alert_source = 'eq'
-                    elif 'A1-D' in validity_site_alert.alert.values:
+                    elif 'A1-D' in validity_site_alert.alert.values or 'ND-D' in validity_site_alert.alert.values:
                         internal_alert = 'A1-D'
                         alert_source = 'on demand'
                 else:
