@@ -81,6 +81,18 @@ def genproc(col, offsetstart, end=datetime.now()):
     
     monitoring = q.GetRawAccelData(col.name, offsetstart)
     
+    monitoring = monitoring.loc[(monitoring.ts >= offsetstart) & (monitoring.ts <= end)]
+     
+    #identify the node ids with no data at start of monitoring window
+    NodesNoInitVal=GetNodesWithNoInitialData(monitoring,col.nos,offsetstart)
+    
+    #get last good data prior to the monitoring window (LGDPM)
+    lgdpm = pd.DataFrame()
+    for node in NodesNoInitVal:
+        temp = q.GetSingleLGDPM(col.name, node, offsetstart.strftime("%Y-%m-%d %H:%M"))
+        lgdpm = lgdpm.append(temp,ignore_index=True)
+    monitoring=monitoring.append(lgdpm)
+    
     try:
         monitoring = flt.applyFilters(monitoring)
         LastGoodData = q.GetLastGoodData(monitoring,col.nos)
@@ -127,11 +139,3 @@ def genproc(col, offsetstart, end=datetime.now()):
     disp_vel = disp_vel.sort_values('id', ascending=True)
     
     return procdata(col,monitoring.sort(),disp_vel.sort())
-
-#def main():
-#    col=q.GetSensorList('agbta')
-#    monitoring = genproc(col[0])
-#    print monitoring.veldisp
-#
-#if __name__ == "__main__":
-#    main()
