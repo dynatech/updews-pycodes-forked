@@ -56,6 +56,16 @@ def getNumberOfReporter(datedt):
 
 	return num
 
+def getNameofStaff(number):
+	query = """select nickname from dewslcontacts 
+		where numbers like '%s%s%s' """ % ('%',number[-7:],'%')
+
+	print query
+
+	name = dbio.querydatabase(query,'customquery')[0][0]
+
+	return name
+
 def sendStatusUpdates(reporter='scheduled'):
 	c = cfg.config()
 	active_loggers_count = getLatestQueryReport()
@@ -142,7 +152,7 @@ def sendEventMonitoringReminder():
 	for key in position_dict:
 		reminder_message = "Monitoring shift reminder. Good %s %s, " % (getTimeOfDayDescription(),key)
 		reminder_message += "you are assigned to be the %s " % (position_dict[key].upper())
-		reminder_message += "for %s." % (report_dt.strftime("%B %d, %H:%M%p"))
+		reminder_message += "for %s." % (report_dt.strftime("%B %d, %I:%M%p"))
 		# print reminder_message
 
 	 	server.WriteOutboxMessageToDb(reminder_message,numbers_dict[key])
@@ -304,6 +314,7 @@ def ServerMessaging(msg):
 	if args.message:
 		print msg.data
 		messagetosend = re.search("(?<=-m).+(?=(-|$))",msg.data).group(0).strip()
+		# messagetosend = re.search("(?<=-m).+",msg.data).group(0).strip()
 		messagetosend = "From: %s\n%s" % (args.sender.strip(),messagetosend)
 	else:
 		print ">> Message argument not defined" 

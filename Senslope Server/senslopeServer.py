@@ -11,7 +11,7 @@ import SomsServerParser as SSP
 import math
 import cfgfileio as cfg
 
-if cfg.config().mode.sendmsg:
+if cfg.config().mode.script_mode == 'procmsg':
     sys.path.insert(0, cfg.config().fileio.websocketdir)
     import dewsSocketLeanLib as dsll
 #---------------------------------------------------------------------------------------------------------------------------
@@ -105,15 +105,38 @@ def WriteEQAlertMessageToDb(alertmsg):
     WriteOutboxMessageToDb(alertmsg,c.smsalert.globenum)
     WriteOutboxMessageToDb(alertmsg,c.smsalert.smartnum)
 
+def getGsmId(number):
+    smart_prefixes = getAllowedPrefixes('SMART')
+    globe_prefixes = getAllowedPrefixes('GLOBE')
+
+    try:
+        num_prefix = re.match("^((0)|(63))9\d\d",number).group()
+    except:
+        print '>> Unable to send sim number in this gsm module'
+        return -1
+
+    if num_prefix in smart_prefixes:
+        return 'SMART'
+    elif num_prefix in globe_prefixes:
+        return 'GLOBE'
+    else:
+        print '>> Prefix', num_prefix, 'cannot be sent'
+        return -1
+
 def WriteOutboxMessageToDb(message,recepients,send_status='UNSENT'):
-    query = "INSERT INTO smsoutbox (timestamp_written,recepients,sms_msg,send_status) VALUES "
-    
-    tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
-    query += "('%s','%s','%s','%s')" % (tsw,recepients,message,send_status)
-    
-    print query
-    
-    dbio.commitToDb(query, "WriteOutboxMessageToDb", 'gsm')
+
+    gsm_id = getGsmId(recepients)
+
+    print send_status
+
+    if gsm_id == -1:
+        return
+    else:
+        query = "INSERT INTO smsoutbox (timestamp_written,recepients,sms_msg,send_status,gsm_id) VALUES "
+        tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
+        query += "('%s','%s','%s','%s','%s')" % (tsw,recepients,message,send_status,gsm_id)
+        print query
+        dbio.commitToDb(query, "WriteOutboxMessageToDb", 'gsm')
     
 def CheckAlertMessages():
     c = cfg.config()
@@ -126,6 +149,20 @@ def CheckAlertMessages():
     else:
         print '>> Error in reading file', alllines
     return alllines
+
+def getAllowedPrefixes(network):
+    c = cfg.config()
+    if network.upper() == 'SMART':
+        prefix_list = c.simprefix.smart.split(',')
+    else:
+        prefix_list = c.simprefix.globe.split(',')
+
+    extended_prefix_list = []
+    for p in prefix_list:
+        extended_prefix_list.append("639"+p)
+        extended_prefix_list.append("09"+p)
+
+    return extended_prefix_list
     
 def SendMessagesFromDb(network,limit=10):
     c = cfg.config()
@@ -144,17 +181,10 @@ def SendMessagesFromDb(network,limit=10):
         msglist.append(smsItem)
     allmsgs = msglist
 
-    if network.upper() == 'SMART':
-        prefix_list = c.simprefix.smart.split(',')
-    else:
-        prefix_list = c.simprefix.globe.split(',')
-    
-    extended_prefix_list = []
-    for p in prefix_list:
-        extended_prefix_list.append("639"+p)
-        extended_prefix_list.append("09"+p)
-    
     send_success_list = []
+    fail_success_list = []
+
+    allowed_prefixes = getAllowedPrefixes(network)
     # cycle through all messages
     for msg in allmsgs:
         # get recepient numbers in list
@@ -166,16 +196,18 @@ def SendMessagesFromDb(network,limit=10):
                 print '>> Unable to send sim number in this gsm module'
                 continue
             # check if recepient number in allowed prefixed list    
-            if num_prefix in extended_prefix_list:
+            if num_prefix in allowed_prefixes:
                 ret = gsmio.sendMsg(msg.data,num)
                 if ret == 0:
                     send_success_list.append(msg.num)
+                else:
+                    fail_success_list.append(msg.num)
             else:
                 print "Number not in prefix list", num_prefix
 
-
+    dbio.setSendStatus("FAIL",fail_success_list)
     dbio.setSendStatus("SENT",send_success_list)
-
+    
 def getSensorNumbers():
     querys = "SELECT sim_num from site_column_sim_nums"
 
@@ -184,6 +216,18 @@ def getSensorNumbers():
     nums = dbio.querydatabase(querys,'getSensorNumbers','LOCAL')
 
     return nums
+
+def writeAlertToDb(alertmsg):
+    dbio.createTable('smsalerts','smsalerts')
+
+    today = dt.today().strftime("%Y-%m-%d %H:%M:%S")
+
+    query = "insert into smsalerts (ts_set,alertmsg,remarks) values ('%s','%s','none')" % (today,alertmsg)
+
+    print query
+
+    dbio.commitToDb(query,'writeAlertToDb','LOCAL')
+
         
 def RunSenslopeServer(network):
     minute_of_last_alert = dt.now().minute

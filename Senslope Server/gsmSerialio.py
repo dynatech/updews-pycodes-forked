@@ -6,13 +6,15 @@ from messaging.sms import SmsDeliver as smsdeliver
 from messaging.sms import SmsSubmit as smssubmit
 import cfgfileio as cfg
 import argparse
-import RPi.GPIO as GPIO
 
-resetpin = cfg.config().gsmio.resetpin
-gsm = ''
+if cfg.config().mode.script_mode == 'gsmserver':
+    import RPi.GPIO as GPIO
 
-GPIO.setmode(GPIO.BOARD)
-GPIO.setup(resetpin, GPIO.OUT)
+    resetpin = cfg.config().gsmio.resetpin
+    gsm = ''
+
+    GPIO.setmode(GPIO.BOARD)
+    GPIO.setup(resetpin, GPIO.OUT)
 
 class sms:
     def __init__(self,num,sender,data,dt):
@@ -62,6 +64,7 @@ def gsmInit(network):
     time.sleep(1)
     print 'Switching to no-echo mode', gsmcmd('ATE0').strip('\r\n')
     print 'Switching to text mode', gsmcmd('AT+CMGF=0').rstrip('\r\n')
+    print 'Disabling unsolicited CMTI', gsmcmd('AT+CNMI=2,0,0,0,0').rstrip('\r\n')
 
     return gsm
     

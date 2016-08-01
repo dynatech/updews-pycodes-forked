@@ -6,7 +6,7 @@ debug = False
 def main():
     network = sys.argv[1].upper()
 
-    if network not in ['GLOBE','SMART']:
+    if network[0:5] not in ['GLOBE','SMART']:
         print ">> Error in network selection", network
         sys.exit()
     
@@ -20,12 +20,11 @@ if __name__ == '__main__':
 	    #gsmSerialio.resetGsm()
             main()
         except KeyboardInterrupt:
-            gsm.close()
-            print '>> Exiting gracefully.'
+            print 'Bye'
             break
-	except gsmSerialio.CustomGSMResetException:
-	    print "> Resetting system because of GSM failure"
-	    continue
+    	except gsmSerialio.CustomGSMResetException:
+    	    print "> Resetting system because of GSM failure"
+    	    continue
         # except IndexError:
             # gsm.close()
             # print time.asctime()
