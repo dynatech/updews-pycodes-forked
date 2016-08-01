@@ -37,15 +37,53 @@ import querySenslopeDb as qs
 # GSM Functionalities
 ###############################################################################
 
-def writeToSMSoutbox(number, msg, timestamp = None):
+# Identify contact number's network
+def identifyMobileNetwork(contactNumber):
     try:
-        print "timestamp: %s" % (timestamp)
-        if timestamp != None:
-            qInsert = """INSERT INTO smsoutbox (timestamp_sent,recepients,sms_msg,send_status)
-                        VALUES ('%s','%s','%s','UNSENT');""" % (timestamp,number,msg)
+        countNum = len(contactNumber);
+
+        # //ex. 09 '16' 8888888
+        if (countNum == 11) :
+            # curSimPrefix = substr(contactNumber, 2, 2);
+            curSimPrefix = contactNumber[2:4]
+        # //ex. 639 '16' 8888888
+        elif (countNum == 12) :
+            # curSimPrefix = substr(contactNumber, 3, 2);
+            curSimPrefix = contactNumber[3:5]
+
+        print "Py simprefix: 09%s" % (curSimPrefix);
+        # //TODO: compare the prefix to the list of sim prefixes
+
+        # //Mix of Smart, Sun, Talk & Text
+        networkSmart = "00,07,08,09,10,11,12,14,18,19,20,21,22,23,24,25,28,29,30,31,32,33,34,38,39,40,42,43,44,46,47,48,49,50,89,98,99"
+        # //Mix of Globe and TM
+        networkGlobe = "05,06,15,16,17,25,26,27,35,36,37,45,75,77,78,79,94,96,97"
+
+        if networkSmart.find(curSimPrefix) >= 0:
+            print "Py Smart Network!\n";
+            return "SMART";
+        elif networkGlobe.find(curSimPrefix) >= 0:
+            print "Py Globe Network!\n";
+            return "GLOBE";
         else:
-            qInsert = """INSERT INTO smsoutbox (recepients,sms_msg,send_status)
-                        VALUES ('%s','%s','UNSENT');""" % (number,msg)
+            print "Py Unkown Network!\n"
+            return "UNKNOWN"
+
+    except:
+        print "identifyMobileNetwork Exception: Unknown Network\n"
+        return "UNKNOWN"
+
+def writeToSMSoutbox(number, msg, timestamp = None, mobNetwork = None):
+    try:
+        mobNetwork = identifyMobileNetwork(number)
+        print "timestamp: %s" % (timestamp)
+
+        if timestamp != None:
+            qInsert = """INSERT INTO smsoutbox (timestamp_written,recepients,sms_msg,send_status,gsm_id)
+                        VALUES ('%s','%s','%s','UNSENT','%s');""" % (timestamp,number,msg,mobNetwork)
+        else:
+            qInsert = """INSERT INTO smsoutbox (recepients,sms_msg,send_status,gsm_id)
+                        VALUES ('%s','%s','UNSENT','%s');""" % (number,msg,mobNetwork)
 
         print qInsert
         qpi.ExecuteQuery(qInsert)
@@ -184,7 +222,7 @@ def filterSpecialCharacters(message):
     message = message.replace('\\','\\\\').replace('"', '\\"')
     
     # Filter single quote character (')
-    message = message.replace("'","\'")
+    message = message.replace("'","\\'")
     
     return message
 
