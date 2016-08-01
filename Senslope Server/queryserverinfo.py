@@ -56,6 +56,16 @@ def getNumberOfReporter(datedt):
 
 	return num
 
+def getNameofStaff(number):
+	query = """select nickname from dewslcontacts 
+		where numbers like '%s%s%s' """ % ('%',number[-7:],'%')
+
+	print query
+
+	name = dbio.querydatabase(query,'customquery')[0][0]
+
+	return name
+
 def sendStatusUpdates(reporter='scheduled'):
 	c = cfg.config()
 	active_loggers_count = getLatestQueryReport()
@@ -142,7 +152,7 @@ def sendEventMonitoringReminder():
 	for key in position_dict:
 		reminder_message = "Monitoring shift reminder. Good %s %s, " % (getTimeOfDayDescription(),key)
 		reminder_message += "you are assigned to be the %s " % (position_dict[key].upper())
-		reminder_message += "for %s." % (report_dt.strftime("%B %d, %H:%M%p"))
+		reminder_message += "for %s." % (report_dt.strftime("%B %d, %I:%M%p"))
 		# print reminder_message
 
 	 	server.WriteOutboxMessageToDb(reminder_message,numbers_dict[key])
@@ -254,8 +264,65 @@ def main():
 	else:
 		print '>> Wrong argument'
 
+def getPersonnelofGroup(groupname):
+	query = """ select nickname from dewslcontacts where """
+
+	for g in groupname.split(","):
+		query += """grouptags like '%s%s%s' or """ % ('%',g,'%')
+
+	# remove trailing or
+	query = re.sub(" or $", "", query)
+
+	return dbio.querydatabase(query,'customquery')
+
+
 # if __name__ == "__main__":
 # 	main()
+def ServerMessaging(msg):
+	parser = argparse.ArgumentParser(description="Send server messaging\n SENDGM [-options]")
+	parser.add_argument("-g", "--group", help="name of group")
+	parser.add_argument("-s", "--sender", help="sender name")
+	parser.add_argument("-m", "--message", help="message to send", action="store_true")
+
+	
+	args_msg = re.search("(?<=SENDGM ).+-m(?=(\w| ))",msg.data,re.IGNORECASE).group(0).lower()
+	# args_msg = re.search("SENDGM .+-m(?=(\w| ))",msg.data).group(0).lower()
+	
+
+	try:
+		print args_msg
+		args = parser.parse_args(args_msg.split(" "))
+	except KeyboardInterrupt:
+		print '>> Error in parsing'
+		# error_msg = StringIO.StringIO()
+		error = parser.format_help().replace("processmessagesfromdb.py","PSRI")
+		# error = error_msg.get
+		print error
+		server.WriteOutboxMessageToDb(error,msg.simnum,'skipped')
+		return True
+
+	person_list = getPersonnelofGroup(args.group.strip())
+
+	# print str(person_list)
+
+	person_list = re.findall("(?<=')\w+(?=')",str(person_list))
+
+	# print str(person_list)[1:-1]
+
+	personnel_number_list = getNumbersFromList('('+str(person_list)[1:-1]+')')
+
+	if args.message:
+		print msg.data
+		messagetosend = re.search("(?<=-m).+(?=(-|$))",msg.data).group(0).strip()
+		# messagetosend = re.search("(?<=-m).+",msg.data).group(0).strip()
+		messagetosend = "From: %s\n%s" % (args.sender.strip(),messagetosend)
+	else:
+		print ">> Message argument not defined" 
+
+	for pnl in personnel_number_list:
+		server.WriteOutboxMessageToDb(messagetosend,pnl[1])
+
+	return True
 
 def ProcessServerInfoRequest(msg):
 	parser = argparse.ArgumentParser(description="Request information from server\n PSIR [-options]")
@@ -304,8 +371,10 @@ def ProcessServerInfoRequest(msg):
 		
 def test():
     # msg = "-t -clabb -n10"
-    msg = gsmio.sms("1","09176023735","PSIR -T -CLABB -N 10","")
-    ProcessServerInfoRequest(msg)
+    # msg = gsmio.sms("1","09176023735","PSIR -T -CLABB -N 10","")
+    # msg = gsmio.sms("1","09176023735","SENDGM -GCOMMUNITY -M \"This is a test message GM message from GSM server. Please ignore for now.\"","")
+    msg = gsmio.sms("1","09176023735","Sendgm -gvalidation,maintenance -sEarl -m Test GM. Puro all caps kasi kanina. ","")    
+    ServerMessaging(msg)
 
 if __name__ == "__main__":
     main()

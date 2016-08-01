@@ -33,6 +33,18 @@ def up_one(p):
     out = os.path.abspath(os.path.join(p, '..'))
     return out  
 
+def RoundTime(date_time):
+    date_time = pd.to_datetime(date_time)
+    time_hour = int(date_time.strftime('%H'))
+
+    quotient = time_hour / 4
+    if quotient == 5:
+        date_time = datetime.combine(date_time.date() + timedelta(1), time(0,0,0))
+    else:
+        date_time = datetime.combine(date_time.date(), time((quotient+1)*4,0,0))
+            
+    return date_time
+
 def get_rt_window(rt_window_length,roll_window_size,num_roll_window_ops):
     ##INPUT:
     ##rt_window_length; float; length of real-time monitoring window in days
@@ -87,39 +99,8 @@ def uptoDB_gndmeas_alerts(df):
     engine=create_engine('mysql://root:senslope@192.168.1.102:3306/senslopedb')
     df.to_sql(name = 'gndmeas_alerts', con = engine, if_exists = 'append', schema = Namedb, index = True)
 
-def site_level_alerts_updater(df):
-    query = 'UPDATE senslopedb.site_level_alert SET updateTS = "{}" WHERE site = "{}" AND timestamp = "{}" AND source = "{}"'.format(pd.to_datetime(str(df.updateTS.values[0])),df.site.values[0],pd.to_datetime(str(df.timestamp.values[0])),df.source.values[0])
-    db, cur = SenslopeDBConnect(Namedb)
-    cur.execute(query)
-    db.commit()
-    db.close()
-    
-def uptoDB_site_level_alerts(df):
-    #INPUT: Dataframe containing site level alerts
-    #OUTPUT: Writes to sql database the alerts of sites who recently changed their alert status
-    
-    #Get the latest site_level_alert
-    query = 'SELECT s1.timestamp,s1.site,s1.source,s1.alert, COUNT(*) num FROM senslopedb.site_level_alert s1 JOIN senslopedb.site_level_alert s2 ON s1.site = s2.site AND s1.source = s2.source AND s1.timestamp <= s2.timestamp group by s1.timestamp,s1.site, s1.source HAVING COUNT(*) <= 1 ORDER BY site, source, num desc'
-    df2 = GetDBDataFrame(query)
-    
-    #Merge the two data frames to determine overlaps in alerts
-    overlap = pd.merge(df,df2,how = 'left', on = ['site','source','alert'],suffixes=['','_r'])    
-    
-    #Get the site with no changes in its latest alert
-    persistent_alerts = df[~overlap['timestamp_r'].isnull()]
-    persistent_alerts['updateTS'] = persistent_alerts['timestamp']
-    persistent_alerts['timestamp'] = overlap[~overlap['timestamp_r'].isnull()]['timestamp_r']
-    persistent_alerts = persistent_alerts.groupby('site')
-    persistent_alerts.apply(site_level_alerts_updater)
-    
-    #Get the site with change in its latest alert
-    changed_alerts = df[overlap['timestamp_r'].isnull()]
-    changed_alerts['updateTS'] = changed_alerts['timestamp']
-    changed_alerts = changed_alerts[['timestamp','site','source','alert','updateTS']].set_index('timestamp')
-    
-    engine=create_engine('mysql://root:senslope@192.168.1.102:3306/senslopedb')
-    changed_alerts.to_sql(name = 'site_level_alert', con = engine, if_exists = 'append', schema = Namedb, index = True)
-    
+
+
 def get_latest_ground_df(site=None):
     #INPUT: String containing site name    
     #OUTPUT: Dataframe of the last 4 recent ground measurement in the database
@@ -163,20 +144,28 @@ def crack_eval(df,end):
         
         #Based on alert table
         if time_delta >= 7:
-            if abs_disp >= 75:
-                crack_alert = 'l3'
-            elif abs_disp >= 3:
-                crack_alert = 'l2'
+            if time_delta < 8:
+                if abs_disp >= 75:
+                    crack_alert = 'l3'
+                elif abs_disp >= 3:
+                    crack_alert = 'l2'
+                else:
+                    crack_alert = 'l0'
             else:
-                crack_alert = 'l0'
-        elif time_delta >= 3:
+                if abs_disp >= (time_delta/7.)*75:
+                    crack_alert = 'l3'
+                elif abs_disp >= (time_delta/7.)*3:
+                    crack_alert = 'l3'
+                else:
+                    crack_alert = 'l0'
+        elif time_delta >= 2.75:
             if abs_disp >= 30:
                 crack_alert = 'l3'
             elif abs_disp >= 1.5:
                 crack_alert = 'l2'
             else:
                 crack_alert = 'l0'
-        elif time_delta >= 1:
+        elif time_delta >= 0.75:
             if abs_disp >= 10:
                 crack_alert = 'l3'
             elif abs_disp >= 0.5:
@@ -209,9 +198,9 @@ def crack_eval(df,end):
     else:
         crack_alert = 'l0'
         
-    #Impose the 4 hour validity of the groundmeasurement
+    #Impose the validity of the groundmeasurement
     try:
-        if end - df.timestamp.iloc[-1] > np.timedelta64(4,'h'):
+        if RoundTime(end) != RoundTime(df.timestamp.iloc[-1]):
             crack_alert = 'nd'
     except:
         print 'Timestamp error for '+' '.join(list(np.concatenate((df.site_id.values,df.crack_id.values))))
@@ -261,6 +250,29 @@ def PlotCrack(df):
     crack_name = ''.join(list(np.unique(df.crack_id.values)))
     markers = ['x','d','+','s','*']
     plt.plot(time,disp,label = crack_name,marker = markers[df.index[0]%len(markers)])
+
+def alert_toDB(df,end):
+    
+    query = "SELECT timestamp, site, source, alert FROM senslopedb.%s WHERE site = '%s' and source = 'ground' ORDER BY timestamp DESC LIMIT 1" %('site_level_alert', df.site.values[0])
+    
+    df2 = GetDBDataFrame(query)
+
+    if len(df2) == 0 or df2.alert.values[0] != df.alert.values[0]:
+        engine = create_engine('mysql://'+Userdb+':'+Passdb+'@'+Hostdb+':3306/'+Namedb)
+        df['updateTS'] = end
+        df.to_sql(name = 'site_level_alert', con = engine, if_exists = 'append', schema = Namedb, index = False)
+    elif df2.timestamp.values[0] == df.timestamp.values[0]:
+        db, cur = SenslopeDBConnect(Namedb)
+        query = "UPDATE senslopedb.%s SET updateTS='%s', alert='%s' WHERE site = '%s' and source = 'ground' and alert = '%s' and timestamp = '%s'" %('site_level_alert', end, df.alert.values[0], df2.site.values[0], df2.alert.values[0], pd.to_datetime(str(df2.timestamp.values[0])))
+        cur.execute(query)
+        db.commit()
+        db.close()
+    elif df2.alert.values[0] == df.alert.values[0]:
+        db, cur = SenslopeDBConnect(Namedb)
+        query = "UPDATE senslopedb.%s SET updateTS='%s' WHERE site = '%s' and source = 'sensor' and alert = '%s' and timestamp = '%s'" %('site_level_alert', end, df2.site.values[0], df2.alert.values[0], pd.to_datetime(str(df2.timestamp.values[0])))
+        cur.execute(query)
+        db.commit()
+        db.close()
 
 def GenerateGroundDataAlert(site=None,end=None):
         
@@ -325,7 +337,13 @@ def GenerateGroundDataAlert(site=None,end=None):
     ground_site_level = ground_alert_release.reset_index()
     ground_site_level['source'] = 'ground'
     
-    uptoDB_site_level_alerts(ground_site_level[['timestamp','site','source','alert']])
+    df_for_db = ground_site_level[['timestamp','site','source','alert']]    
+    df_for_db.dropna()
+    print df_for_db    
+    
+    site_DBdf = df_for_db.groupby('site')
+    site_DBdf.apply(alert_toDB,end)    
+    
     
     #Step 7: Displacement plot for each crack and site for the last 30 days
     start = end - timedelta(days = 30)

@@ -431,38 +431,22 @@ def RainfallAlert(siterainprops):
         datasource="ASTI" + str(n) + " (No Rain Gauge Data)"
         summary_writer(sum_index,r,datasource,twoyrmax,halfmax,summary,alert,alert_df,one,three)
 
-def site_level_alerts_updater(df):
-    query = 'UPDATE senslopedb.site_level_alert SET updateTS = "{}" WHERE site = "{}" AND timestamp = "{}" AND source = "{}"'.format(pd.to_datetime(str(df.updateTS.values[0])),df.site.values[0],pd.to_datetime(str(df.timestamp.values[0])),df.source.values[0])
-    db, cur = SenslopeDBConnect(Namedb)
-    cur.execute(query)
-    db.commit()
-    db.close()
+def alert_toDB(df):
     
-def uptoDB_site_level_alerts(df):
-    #INPUT: Dataframe containing site level alerts
-    #OUTPUT: Writes to sql database the alerts of sites who recently changed their alert status
+    query = "SELECT * FROM senslopedb.site_level_alert WHERE site = '%s' and source = 'rain' ORDER BY updateTS DESC LIMIT 1" %(df.site.values[0])
     
-    #Get the latest site_level_alert
-    query = 'SELECT s1.timestamp,s1.site,s1.source,s1.alert, COUNT(*) num FROM senslopedb.site_level_alert s1 JOIN senslopedb.site_level_alert s2 ON s1.site = s2.site AND s1.source = s2.source AND s1.timestamp <= s2.timestamp group by s1.timestamp,s1.site, s1.source HAVING COUNT(*) <= 1 ORDER BY site, source, num desc'
     df2 = GetDBDataFrame(query)
     
-    #Merge the two data frames to determine overlaps in alerts
-    overlap = pd.merge(df,df2,how = 'left', on = ['site','source','alert'],suffixes=['','_r'])    
-    
-    #Get the site with no changes in its latest alert
-    persistent_alerts = df[~overlap['timestamp_r'].isnull()]
-    persistent_alerts['updateTS'] = persistent_alerts['timestamp']
-    persistent_alerts['timestamp'] = overlap[~overlap['timestamp_r'].isnull()]['timestamp_r']
-    persistent_alerts = persistent_alerts.groupby('site')
-    persistent_alerts.apply(site_level_alerts_updater)
-    
-    #Get the site with change in its latest alert
-    changed_alerts = df[overlap['timestamp_r'].isnull()]
-    changed_alerts['updateTS'] = changed_alerts['timestamp']
-    changed_alerts = changed_alerts[['timestamp','site','source','alert','updateTS']].set_index('timestamp')
-    
-    engine=create_engine('mysql://root:senslope@192.168.1.102:3306/senslopedb')
-    changed_alerts.to_sql(name = 'site_level_alert', con = engine, if_exists = 'append', schema = Namedb, index = True)
+    if len(df2) == 0 or df2.alert.values[0] != df.alert.values[0]:
+        df['updateTS'] = end
+        engine = create_engine('mysql://'+Userdb+':'+Passdb+'@'+Hostdb+':3306/'+Namedb)
+        df.to_sql(name = 'site_level_alert', con = engine, if_exists = 'append', schema = Namedb, index = False)
+    elif df2.alert.values[0] == df.alert.values[0]:
+        db, cur = SenslopeDBConnect(Namedb)
+        query = "UPDATE senslopedb.site_level_alert SET updateTS='%s' WHERE site = '%s' and source = 'rain' and alert = '%s' and timestamp = '%s'" %(end, df2.site.values[0], df2.alert.values[0], pd.to_datetime(str(df2.timestamp.values[0])))
+        cur.execute(query)
+        db.commit()
+        db.close()
 
 
 ###############################################################################
@@ -550,6 +534,7 @@ rainprops['rain_arq'] = rainprops['rain_arq'].fillna(rainprops['name'])
 rainprops['site'] = rainprops['rain_arq']
 rainprops = rainprops[['site', 'max_rain_2year', 'rain_noah', 'rain_noah2', 'rain_noah3']]
 rainprops = rainprops.drop_duplicates(['site'], take_last = True)
+rainprops = rainprops.reset_index(drop = True)
 
 #empty dataframe
 index = range(len(rainprops))
@@ -582,15 +567,20 @@ engine=create_engine('mysql://root:senslope@192.168.1.102:3306/senslopedb')
 summary['timestamp'] = [str(end)]*len(summary)
 summary['source'] = 'rain'
 summary['site'] = summary['site'].map(lambda x: str(x)[:3])
+msl_raindf = summary.loc[summary.site == 'mes']
+msl_raindf.site = 'msl'
+msu_raindf = summary.loc[summary.site == 'mes']
+msu_raindf.site = 'msu'
+summary = summary.append(msl_raindf).append(msu_raindf)
+summary = summary.loc[summary.site != 'mes']
+summary = summary.reset_index(drop = True)
+summary = summary.sort('site')
 df_for_db = summary[['timestamp', 'site', 'source', 'alert']]
 df_for_db = df_for_db.dropna()
 
-#Write to site_level_alerts
-uptoDB_site_level_alerts(df_for_db)
-
-
-
-
+#Write to senslopedb.site_level_alerts
+site_DBdf = df_for_db.groupby('site')
+site_DBdf.apply(alert_toDB)
 
 #Summarizing rainfall data to rainfallalerts.txt
 if PrintRAlert:
@@ -619,8 +609,6 @@ if set_json:
             i += 1
         else:
             i += 1
-    print dfajson
-
 
 end_time = datetime.now()
 print "time = ", end_time - start_time

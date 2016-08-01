@@ -10,6 +10,9 @@ import cfgfileio as cfg
 import argparse
 import queryserverinfo as qsi
 import lockscript as lock
+import alertmessaging as amsg
+import memcache
+mc = memcache.Client(['127.0.0.1:11211'],debug=0)
 
 def updateLastMsgReceivedTable(txtdatetime,name,sim_num,msg):
     query = """insert into senslopedb.last_msg_received
@@ -688,18 +691,37 @@ def CheckMessageSource(msg):
     else:
         print "From unknown number ", msg.simnum
 
-def SpawnAlertGen(sitename):
-    c = cfg.config()
-    # spawn alert alert_gen
-    if lock.get_lock('alertgen'+sitename,False):
-        print "Alert gen spawned for", sitename
-        # command = "sleep 60 && ~/anaconda2/bin/python /home/dynaslope/Desktop/updews-pycodes/Analysis/alertgen.py " + sitename.lower()
-        # command += " && ~/anaconda2/bin/python /home/dynaslope/Desktop/updews-pycodes/Analysis/AlertAnalysis.py " + sitename.lower()
-        command = "sleep 60 && ~/anaconda2/bin/python %s %s && ~/anaconda2/bin/python %s %s" % (c.fileio.alertgenscript,sitename.lower(),c.fileio.alertanalysisscript,sitename.lower())
+# def SpawnAlertGen(sitename):
+#     c = cfg.config()
+#     # spawn alert alert_gens
+#     if lock.get_lock('alertgen'+sitename,False):
+#         print "Alert gen spawned for", sitename
+#         # command = "sleep 60 && ~/anaconda2/bin/python /home/dynaslope/Desktop/updews-pycodes/Analysis/alertgen.py " + sitename.lower()
+#         # command += " && ~/anaconda2/bin/python /home/dynaslope/Desktop/updews-pycodes/Analysis/AlertAnalysis.py " + sitename.lower()
+#         command = "sleep 60 && ~/anaconda2/bin/python %s %s && ~/anaconda2/bin/python %s %s" % (c.fileio.alertgenscript,sitename.lower(),c.fileio.alertanalysisscript,sitename.lower())
         
-        p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, stderr=subprocess.STDOUT)
+#         p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, stderr=subprocess.STDOUT)
+#     else:
+#         print "Aborting alert gen spawn for ", sitename
+
+def SpawnAlertGen(sitename):
+    # spawn alert alert_gens
+
+    alertgenlist = mc.get('alertgenlist')
+
+    if alertgenlist == None:
+        mc.set('alertgenlist',[])
+        print "Setting alertgenlist for the first time"
+        alertgenlist = []
+
+    if sitename.lower() in alertgenlist:
+        print sitename, "already in alert gen list"
     else:
-        print "Aborting alert gen spawn for ", sitename
+        print "Adding", sitename, "to alert gen list"
+        alertgenlist.insert(0, sitename.lower())
+        mc.set('alertgenlist',[])
+        mc.set('alertgenlist',alertgenlist)    
+
 
 def ProcessAllMessages(allmsgs,network):
     c = cfg.config()
@@ -711,7 +733,7 @@ def ProcessAllMessages(allmsgs,network):
         print '\n\n*******************************************************'
         #gets per text message
         msg = allmsgs.pop(0)
-        msg.data = msg.data.upper()
+        # msg.data = msg.data.upper()
                      
         msgname = checkNameOfNumber(msg.simnum)
         ##### Added for V1 sensors removes unnecessary characters pls see function PreProcessColumnV1(data)
@@ -721,7 +743,7 @@ def ProcessAllMessages(allmsgs,network):
         elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*.*",msg.data):
            msg.data = PreProcessColumnV1(msg.data)
            ProcessColumn(msg.data,msg.dt,msg.simnum)
-        elif re.search("(RO*U*TI*N*E )|(EVE*NT )", msg.data.upper()):
+        elif re.search("(R(O|0)*U*TI*N*E )|(EVE*NT )", msg.data.upper()):
             try:
                 gm = gndmeas.getGndMeas(msg.data)
                 RecordGroundMeasurements(gm)
@@ -763,8 +785,12 @@ def ProcessAllMessages(allmsgs,network):
             isMsgProcSuccess = ProcessCoordinatorMsg(msg.data, msg.simnum)
         elif re.search("EQINFO",msg.data):
             isMsgProcSuccess = ProcessEarthquake(msg)
-        elif re.search("^PSIR ",msg.data):
-            isMsgProcSuccess = qsi.ProcessServerInfoRequest(msg)            
+        elif re.search("^PSIR ",msg.data.upper()):
+            isMsgProcSuccess = qsi.ProcessServerInfoRequest(msg)
+        elif re.search("^SENDGM ",msg.data.upper()):
+            isMsgProcSuccess = qsi.ServerMessaging(msg)
+        elif re.search("^ACK \d+ .+",msg.data.upper()):
+            isMsgProcSuccess = amsg.processAckToAlert(msg)
         else:
             print '>> Unrecognized message format: '
             print 'NUM: ' , msg.simnum

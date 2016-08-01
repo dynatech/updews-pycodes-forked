@@ -42,7 +42,7 @@ def uptoDB(df):
 
 mag,eq_lat,eq_lon,ts = getEQ()
 
-#mag, eq_lat, eq_lon, ts = 7.2, 14.1667,121.0536,datetime.datetime.now()
+#mag, eq_lat, eq_lon, ts = 5.2, 11.02,124.68,datetime.datetime.now()
 
 critdist = getCritDist(mag)
 
@@ -63,6 +63,9 @@ if mag >=4:
         crits['alert'] = 'e1'
         crits['updateTS'] = ts
         crits['source'] = 'eq'
+        crits['name'] = crits['name'].str[:3]
+        
+        crits = crits.drop_duplicates('name')
         crits.rename(columns = {'name':'site'}, inplace = True)
         crits = crits[['timestamp','site','source','alert','updateTS']].set_index('timestamp')
     
