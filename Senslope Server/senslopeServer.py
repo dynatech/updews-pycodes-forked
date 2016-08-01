@@ -11,7 +11,7 @@ import SomsServerParser as SSP
 import math
 import cfgfileio as cfg
 
-if cfg.config().mode.sendmsg:
+if cfg.config().mode.script_mode == 'procmsg':
     sys.path.insert(0, cfg.config().fileio.websocketdir)
     import dewsSocketLeanLib as dsll
 #---------------------------------------------------------------------------------------------------------------------------

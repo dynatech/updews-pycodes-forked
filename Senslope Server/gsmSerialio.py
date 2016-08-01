@@ -7,7 +7,7 @@ from messaging.sms import SmsSubmit as smssubmit
 import cfgfileio as cfg
 import argparse
 
-if cfg.config().mode == 'gsmserver':
+if cfg.config().mode.script_mode == 'gsmserver':
     import RPi.GPIO as GPIO
 
     resetpin = cfg.config().gsmio.resetpin
