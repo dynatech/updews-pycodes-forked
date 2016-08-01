@@ -6,7 +6,7 @@ debug = False
 def main():
     network = sys.argv[1].upper()
 
-    if network not in ['GLOBE','SMART']:
+    if network[0:5] not in ['GLOBE','SMART']:
         print ">> Error in network selection", network
         sys.exit()
     
