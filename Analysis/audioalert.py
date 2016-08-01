@@ -1,12 +1,14 @@
 import subprocess
-import ConfigParser
 import os
 import time
 import signal   
+import querySenslopeDb as q
 
-gsm_alert = 'GSMAlert.txt'
+query = "SELECT * FROM senslopedb.smsalerts order by alert_id desc limit 100"
+alertsms = q.GetDBDataFrame(query)
+not_ack = alertsms.loc[alertsms.ack == 'None']
 
-if os.stat(gsm_alert).st_size != 0:
+if len(not_ack) != 0:
     cmd = 'mplayer alarm.wav'
     audioalert = subprocess.Popen(cmd, shell=True)
     time.sleep(5)
