@@ -14,21 +14,17 @@ def checkAlertMessage():
     dbio.createTable("runtimelog","runtime")
     server.logRuntimeStatus("alert","checked")
 
-    # print '>> Checking for alert sms'
-    # alertmsg = server.CheckAlertMessages()
-
-    alertfile = '/home/dynaslope/Desktop/updews-pycodes/Analysis/GSMAlert.txt'
+    alertfile = cfg.config().fileio.allalertsfile
     f = open(alertfile,'r')
     alertmsg = f.read()
     f.close()
-
-    # write alert message to db
 
     print alertmsg
     if not alertmsg:
         print '>> No alert msg read.'
         return
 
+    # write alert message to db
     server.writeAlertToDb(alertmsg)
 
 def getAlertStaffNumbers():
@@ -52,19 +48,12 @@ def sendAlertMessage():
 
     contacts = getAlertStaffNumbers()
 
-    query = "INSERT INTO smsoutbox (timestamp_written,recepients,sms_msg,send_status) VALUES "
-    
-    tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
+   
     for item in contacts:
-        message = message.replace("ALERT","AL3RT")
-        query += "('%s','%s','%s','unsent')," % (tsw,item[1],message)
-    query = query[:-1]
-
-    print query
+        # for multile contacts
+        for i in item[1].split(','):
+            server.WriteOutboxMessageToDb(message,i)
     
-    dbio.commitToDb(query, 'checkalertmsg', 'GSM')
-    # print 'done
-
     # set alert to 15 mins later
     ts_due = ts_due + td(seconds=60*15)
     query = "update smsalerts set ts_set = '%s' where alert_id = %s" % (ts_due.strftime("%Y-%m-%d %H:%M:%S"),alertmsg[0][0])
@@ -125,29 +114,5 @@ def main():
     except IndexError:
         print 'Error: No arguments passed.'
 
-
-
-
-    #     # server.WriteOutboxMessageToDb(alertmsg,c.smsalert.smartnum)
-    #     # server.WriteOutboxMessageToDb(alertmsg,c.smsalert.globenum)
-    #     query = """select nickname, numbers from dewslcontacts where grouptags like '%alert%'"""
-    #     contacts = dbio.querydatabase(query,'checkalert')
-    #     # print contacts
-
-    #     query = "INSERT INTO smsoutbox (timestamp_written,recepients,sms_msg,send_status) VALUES "
-        
-    #     tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
-    #     for item in contacts:
-    #         message = 'SENSOR ALERT:\n%s' % (alertmsg)
-    #         message = message.replace("ALERT","AL3RT")
-    #         query += "('%s','%s','%s','UNSENT')," % (tsw,item[1],message)
-    #     query = query[:-1]
-
-    #     if writetodb: dbio.commitToDb(query, 'checkalertmsg', 'GSM')
-    #     else: print query
-    #     print 'done'
-    # else:
-        
-        
 if __name__ == "__main__":
     main()

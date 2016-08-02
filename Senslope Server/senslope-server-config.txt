@@ -21,7 +21,7 @@ smartport = /dev/smartport
 resetpin = 38
 
 [SMSAlert]
-communityphonenumber = 09163938789
+communityphonenumber = 09175048863
 sunnumbers = 
 globenumbers=09166685391,09054537225,09068386258,09178825084,09163938789,09176023735
 smartnumbers=09288263063,09984405687,09228412065,09228120490,09253120491
@@ -37,7 +37,7 @@ FailWeaEN = Error! There is no weather information sent.  Please check your SMS 
 FailObvEN = Error! You did not put your name on the text message.  Please check your SMS and try again.
 
 [FileIO]
-allalertsfile = /home/dynaslope/Desktop/MonitoringOutput/all_alerts.txt
+allalertsfile = /home/dynaslope/Desktop/updews-pycodes/Analysis/GSMAlert.txt
 querylatestreportoutput = /home/dynaslope/Desktop/query_latest_report_output.txt
 alertgenscript = /home/dynaslope/Desktop/updews-pycodes/Analysis/alertgen.py
 alertanalysisscript = /home/dynaslope/Desktop/updews-pycodes/Analysis/AlertAnalysis.py
@@ -49,3 +49,6 @@ globe = 05,06,15,16,17,25,26,27,35,36,37,45,75,77,78,79,94,96,97
 
 [mode]
 script_mode = procmsg
+
+[io]
+proc_limit = 8

@@ -91,3 +91,7 @@ class config:
 			self.mode.procmsg = True
 			self.mode.logtoinstance = 'LOCAL'
 
+		self.io = Container()
+		self.io.proc_limit = cfg.get("io","proc_limit")
+		
+
