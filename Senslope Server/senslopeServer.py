@@ -11,7 +11,7 @@ import SomsServerParser as SSP
 import math
 import cfgfileio as cfg
 
-if cfg.config().mode.script_mode == 'procmsg':
+if cfg.config().mode.script_mode == 'gsmserver':
     sys.path.insert(0, cfg.config().fileio.websocketdir)
     import dewsSocketLeanLib as dsll
 #---------------------------------------------------------------------------------------------------------------------------
@@ -86,7 +86,7 @@ def WriteRawSmsToDb(msglist,sensor_nums):
         # if re.search(m.simnum[-10:],sensor_nums):
             web_flag = 'W'
             print m.data[:20]
-            if cfg.config().mode.sendmsg:
+            if cfg.config().mode.script_mode == 'gsmserver':
                 dsll.sendReceivedGSMtoDEWS(str(m.dt.replace("/","-")), m.simnum, m.data)
         else:
             web_flag = 'S'
@@ -168,7 +168,7 @@ def SendMessagesFromDb(network,limit=10):
     c = cfg.config()
     if not c.mode.sendmsg:
         return
-    allmsgs = dbio.getAllOutboxSmsFromDb("UNSENT",limit)
+    allmsgs = dbio.getAllOutboxSmsFromDb("UNSENT",network,limit)
     if len(allmsgs) <= 0:
         # print ">> No messages in outbox"
         return
@@ -321,6 +321,8 @@ def RunSenslopeServer(network):
             gsmio.resetGsm()
 
         elif m == -2:
-            print '>> Error in parsing mesages: No data returned by GSM'            
+            print '>> Error in parsing mesages: No data returned by GSM'
+            gsmio.resetGsm()            
         else:
             print '>> Error in parsing mesages: Error unknown'
+            gsmio.resetGsm()
