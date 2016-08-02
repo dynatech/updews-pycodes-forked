@@ -87,7 +87,7 @@ def processAckToAlert(msg):
     dbio.commitToDb(query,processAckToAlert)
 
     contacts = getAlertStaffNumbers()
-    message = "Alert ID %s ACK by %s on %s\n Actions done: %s" % (alert_id,name,msg.dt,remarks)
+    message = "Alert ID %s ACK by %s on %s\nActions done: %s" % (alert_id,name,msg.dt,remarks)
     query = "INSERT INTO smsoutbox (timestamp_written,recepients,sms_msg,send_status) VALUES "
     
     tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")

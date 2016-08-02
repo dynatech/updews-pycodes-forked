@@ -747,7 +747,7 @@ def ProcessAllMessages(allmsgs,network):
             try:
                 gm = gndmeas.getGndMeas(msg.data)
                 RecordGroundMeasurements(gm)
-                server.WriteOutboxMessageToDb("READ-SUCCESS: \n" + msg.data,c.smsalert.communitynum)
+                # server.WriteOutboxMessageToDb("READ-SUCCESS: \n" + msg.data,c.smsalert.communitynum)
                 server.WriteOutboxMessageToDb(c.reply.successen, msg.simnum)
             except ValueError as e:
                 print str(e)
