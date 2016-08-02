@@ -7,6 +7,7 @@ from datetime import timedelta as td
 import senslopedbio as dbio
 import senslopeServer as server
 import queryserverinfo as qsi
+import argparse
 #---------------------------------------------------------------------------------------------------------------------------
 
 def checkAlertMessage():
@@ -46,9 +47,8 @@ def sendAlertMessage():
     message = 'Alert ID %d:\n%s\n' % (alertmsg[0][0],alertmsg[0][1])
     message += 'Text ACK<space><alert id><space><remarks> to acknowledge.'
 
+    # send to alert staff
     contacts = getAlertStaffNumbers()
-
-   
     for item in contacts:
         # for multile contacts
         for i in item[1].split(','):
@@ -100,19 +100,58 @@ def processAckToAlert(msg):
 
     return True
 
-def main():
-    try:
-        if sys.argv[1] == 'test': 
-            writetodb = False
-        elif sys.argv[1] == 'checkalert':
-            checkAlertMessage()
-            sendAlertMessage()
-        elif sys.argv[1] == 'sendalert':
-            sendAlertMessage()
-        else: 
-            writetodb = True
-    except IndexError:
-        print 'Error: No arguments passed.'
+def updateShiftTags():
+    # remove tags to old shifts
+    today = dt.today().strftime("%Y-%m-%d %H:%M:%S")
+    print 'Updating shift tags for', today
 
+    query = "update senslopedb.dewslcontacts set grouptags = replace(grouptags,',alert-mon','') where grouptags like '%alert-mon%'"
+    dbio.commitToDb(query, 'updateShiftTags')
+
+    # update the tags of current shifts
+    query = """
+        update dewslcontacts as t1,
+        ( select timestamp,iompmt,iompct,oomps,oompmt,oompct from monshiftsched 
+          where timestamp < '%s' 
+          order by timestamp desc limit 1
+        ) as t2
+        set t1.grouptags = concat(t1.grouptags,',alert-mon')
+        where t1.nickname = t2.iompmt or
+        t1.nickname = t2.iompct or
+        t1.nickname = t2.oomps or
+        t1.nickname = t2.oompmt or
+        t1.nickname = t2.oompct
+    """ % (today)
+    dbio.commitToDb(query, 'updateShiftTags')
+
+def main():
+    parser = argparse.ArgumentParser(description="Request information from server\n PSIR [-options]")
+    parser.add_argument("-w", "--writetodb", help="write alert to db", action="store_true")
+    parser.add_argument("-c", "--checkalertmessage", help="check alert messages from db", action="store_true")
+    parser.add_argument("-s", "--sendalertmessage", help="send alert messages from db", action="store_true")
+    parser.add_argument("-u", "--updateshifts", help="update shifts with alert tag", action="store_true")
+    parser.add_argument("-cs", "--checksendalert", help="check alert then send", action="store_true")
+    
+    
+    try:
+        args = parser.parse_args()
+    except:
+        print '>> Error in parsing'
+        error = parser.format_help()
+        print error
+        return
+
+    if args.writetodb: 
+        writetodb = True
+    if args.checkalertmessage:
+        checkAlertMessage()
+    if args.sendalertmessage:
+        sendAlertMessage()
+    if args.checksendalert:
+        checkAlertMessage()
+        sendAlertMessage()
+    if args.updateshifts:
+        updateShiftTags()
+    
 if __name__ == "__main__":
     main()

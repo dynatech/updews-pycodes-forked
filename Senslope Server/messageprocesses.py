@@ -743,7 +743,15 @@ def ProcessAllMessages(allmsgs,network):
         elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*.*",msg.data):
            msg.data = PreProcessColumnV1(msg.data)
            ProcessColumn(msg.data,msg.dt,msg.simnum)
-        elif re.search("(R(O|0)*U*TI*N*E )|(EVE*NT )", msg.data.upper()):
+        elif re.search("EQINFO",msg.data):
+            isMsgProcSuccess = ProcessEarthquake(msg)
+        elif re.search("^PSIR ",msg.data.upper()):
+            isMsgProcSuccess = qsi.ProcessServerInfoRequest(msg)
+        elif re.search("^SENDGM ",msg.data.upper()):
+            isMsgProcSuccess = qsi.ServerMessaging(msg)
+        elif re.search("^ACK \d+ .+",msg.data.upper()):
+            isMsgProcSuccess = amsg.processAckToAlert(msg)   
+        elif re.search("^ *(R(O|0)*U*TI*N*E )|(EVE*NT )", msg.data.upper()):
             try:
                 gm = gndmeas.getGndMeas(msg.data)
                 RecordGroundMeasurements(gm)
@@ -783,14 +791,6 @@ def ProcessAllMessages(allmsgs,network):
             ProcessARQWeather(msg.data,msg.simnum)
         elif msg.data.split('*')[0] == 'COORDINATOR' or msg.data.split('*')[0] == 'GATEWAY':
             isMsgProcSuccess = ProcessCoordinatorMsg(msg.data, msg.simnum)
-        elif re.search("EQINFO",msg.data):
-            isMsgProcSuccess = ProcessEarthquake(msg)
-        elif re.search("^PSIR ",msg.data.upper()):
-            isMsgProcSuccess = qsi.ProcessServerInfoRequest(msg)
-        elif re.search("^SENDGM ",msg.data.upper()):
-            isMsgProcSuccess = qsi.ServerMessaging(msg)
-        elif re.search("^ACK \d+ .+",msg.data.upper()):
-            isMsgProcSuccess = amsg.processAckToAlert(msg)
         else:
             print '>> Unrecognized message format: '
             print 'NUM: ' , msg.simnum
