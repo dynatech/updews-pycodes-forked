@@ -121,10 +121,21 @@ def SitePublicAlert(PublicAlert, window):
 
     site_alert = q.GetDBDataFrame(query)
     
-    validity_site_alert = site_alert
+    validity_site_alert = site_alert.sort('updateTS', ascending = False)
     site_alert = site_alert.loc[site_alert.updateTS >= window.end - timedelta(hours=3)]
     
     list_ground_alerts = ','.join(site_alert.loc[(site_alert.source == 'sensor')|(site_alert.source == 'ground')].alert.values)
+    
+    latest_groundTS = validity_site_alert.loc[(validity_site_alert.source == 'ground')]
+    if len(latest_groundTS) != 0:
+        latest_groundTS = latest_groundTS.updateTS.values[0]
+    else:
+        latest_groundTS = '0000-00-00 00:00:00'
+    latest_sensorTS = validity_site_alert.loc[(validity_site_alert.source == 'sensor')]
+    if len(latest_sensorTS) != 0:
+        latest_sensorTS = latest_sensorTS.updateTS.values[0]
+    else:
+        latest_sensorTS = '0000-00-00 00:00:00'
     
     public_PrevAlert = validity_site_alert.loc[validity_site_alert.source == 'public'].alert.values[0]
     
@@ -158,9 +169,9 @@ def SitePublicAlert(PublicAlert, window):
         validity_A = site_alert.loc[(site_alert.alert == 'A3-SG')|(site_alert.alert == 'A3-S')|(site_alert.alert == 'A3-G')].timestamp.values
         validity = RoundTime(pd.to_datetime(str(max(list(validity_L) + list(validity_A) + list(validity_RED))))) + timedelta(2)
         # A3 is still valid
-        if validity >= window.end - timedelta(hours=3.5):
+        if validity > window.end + timedelta(hours=0.5):
             public_alert = 'A3'
-            # evaluates which triggers A2
+            # evaluates which triggers A3
             if ('L3' in SG_PAlert.alert.values or 'L2' in SG_PAlert.alert.values) and ('l3' in SG_PAlert.alert.values or 'l2' in SG_PAlert.alert.values):
                 alert_source = 'both ground and sensor'
                 internal_alert = 'A3-SG'
@@ -170,15 +181,80 @@ def SitePublicAlert(PublicAlert, window):
             else:
                 alert_source = 'ground'
                 internal_alert = 'A3-G'
+        
         # end of A3 validity
         else:
-            public_alert = 'A0'
-            alert_source = '-'
-            validity = '-'
-            if 'L' in list_ground_alerts or 'l' in list_ground_alerts:
-                internal_alert = 'A0'
+            
+            # evaluates which triggers A3
+            if ('L3' in SG_PAlert.alert.values or 'L2' in SG_PAlert.alert.values) and ('l3' in SG_PAlert.alert.values or 'l2' in SG_PAlert.alert.values):
+                alert_source = 'both ground and sensor'
+            elif 'L3' in SG_PAlert.alert.values:
+                alert_source = 'sensor'
             else:
-                internal_alert = 'ND'
+                alert_source = 'ground'
+
+            # both ground and sensor triggered
+            if alert_source == 'both ground and sensor':
+                # with data
+                if 'L' in list_ground_alerts and 'l' in list_ground_alerts:
+                    internal_alert = 'A0'
+                    public_alert = 'A0'
+                    alert_source = '-'
+                # without data
+                else:
+                    # within 3 days of 4hr-extension
+                    if latest_groundTS >= (window.end - timedelta(3)) and latest_sensorTS >= (window.end - timedelta(3)):
+                        validity = validity + timedelta(hours=4)
+                        internal_alert = 'A3-SG'
+                        public_alert = 'A3'
+                        
+                    else:
+                        public_alert = 'A0'
+                        alert_source = '-'
+                        validity = '-'
+                        internal_alert = 'ND'            
+
+            # sensor triggered
+            elif alert_source == 'sensor':
+                # with data
+                if 'L' in list_ground_alerts:
+                    internal_alert = 'A0'
+                    public_alert = 'A0'
+                    alert_source = '-'
+                # without data
+                else:
+                    # within 3 days of 4hr-extension
+                    if latest_groundTS >= (window.end - timedelta(3)):
+                        validity = validity + timedelta(hours=4)
+                        internal_alert = 'A3-S'
+                        public_alert = 'A3'
+                        
+                    else:
+                        public_alert = 'A0'
+                        alert_source = '-'
+                        validity = '-'
+                        internal_alert = 'ND'
+
+            # ground triggered
+            else:
+                # with data
+                if 'l' in list_ground_alerts:
+                    internal_alert = 'A0'
+                    public_alert = 'A0'
+                    alert_source = '-'
+                # without data
+                else:
+                    # within 3 days of 4hr-extension
+                    if latest_groundTS >= (window.end - timedelta(3)):
+                        validity = validity + timedelta(hours=4)
+                        internal_alert = 'A3-G'
+                        public_alert = 'A3'
+                        
+                    else:
+                        public_alert = 'A0'
+                        alert_source = '-'
+                        validity = '-'
+                        internal_alert = 'ND'
     
     #Public Alert A2
     elif 'L2' in site_alert.alert.values or 'l2' in site_alert.alert.values or 'A2-SG' in validity_site_alert.alert.values or 'A2-S' in validity_site_alert.alert.values or 'A2-G' in validity_site_alert.alert.values:
