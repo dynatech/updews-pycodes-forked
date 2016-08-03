@@ -235,7 +235,7 @@ def SitePublicAlert(PublicAlert, window):
                     if len(internal_alertDF) == 0 or pd.to_datetime(internal_alertDF.timestamp.values[0]) >= (window.end - timedelta(3)):
                         validity = validity + timedelta(hours=4)
                         internal_alert = 'ND-SG'
-                        public_alert = 'A2-SG'
+                        public_alert = 'A2'
                         
                     else:
                         public_alert = 'A0'
@@ -256,7 +256,7 @@ def SitePublicAlert(PublicAlert, window):
                     if len(internal_alertDF) == 0 or pd.to_datetime(internal_alertDF.timestamp.values[0]) >= (window.end - timedelta(3)):
                         validity = validity + timedelta(hours=4)
                         internal_alert = 'ND-S'
-                        public_alert = 'A2-S'
+                        public_alert = 'A2'
                         
                     else:
                         public_alert = 'A0'
@@ -277,7 +277,7 @@ def SitePublicAlert(PublicAlert, window):
                     if len(internal_alertDF) == 0 or pd.to_datetime(internal_alertDF.timestamp.values[0]) >= (window.end - timedelta(3)):
                         validity = validity + timedelta(hours=4)
                         internal_alert = 'ND-G'
-                        public_alert = 'A2-G'
+                        public_alert = 'A2'
                         
                     else:
                         public_alert = 'A0'
