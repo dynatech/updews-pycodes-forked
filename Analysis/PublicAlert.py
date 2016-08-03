@@ -83,7 +83,7 @@ def SitePublicAlert(PublicAlert, window):
         query += "or site = 'pob' "
     elif site == 'tga':
         query += "or site = 'tag' "
-    query += ") AND source = 'sensor' AND alert IN ('L2', 'L3') ORDER BY timestamp DESC LIMIT 4) "
+    query += ") AND source = 'sensor' AND alert IN ('L2', 'L3') ORDER BY timestamp DESC LIMIT 2) "
     
     query += " UNION ALL "
     
@@ -117,7 +117,7 @@ def SitePublicAlert(PublicAlert, window):
         query += "or site = 'mes' "
     elif site == 'msu':
         query += "or site = 'mes' "
-    query += ") AND source = 'ground' AND alert IN ('l2', 'l3') ORDER BY timestamp DESC LIMIT 4)"
+    query += ") AND source = 'ground' AND alert IN ('l2', 'l3') ORDER BY timestamp DESC LIMIT 2)"
 
     site_alert = q.GetDBDataFrame(query)
     
@@ -129,6 +129,11 @@ def SitePublicAlert(PublicAlert, window):
     public_PrevAlert = validity_site_alert.loc[validity_site_alert.source == 'public'].alert.values[0]
     
     internal_alertDF = site_alert.loc[(site_alert.source == 'internal')|(site_alert.alert == 'ND-L')|(site_alert.alert == 'ND-R')|(site_alert.alert == 'ND-E')|(site_alert.alert == 'ND-D')]
+    
+    Pub_PAlertTS = validity_site_alert.loc[(validity_site_alert.source == 'public') & (validity_site_alert.alert != 'A0')]
+
+    if len(Pub_PAlertTS) != 0:
+        SG_PAlert = validity_site_alert.loc[(validity_site_alert.updateTS >= Pub_PAlertTS.timestamp.values[0]) & ((validity_site_alert.source == 'sensor')|(validity_site_alert.source == 'ground'))]
     
     sensor_site = site + '%'
     if site == 'msl':
@@ -149,20 +154,22 @@ def SitePublicAlert(PublicAlert, window):
     #Public Alert A3
     if 'L3' in site_alert.alert.values or 'l3' in site_alert.alert.values or 'A3' in validity_site_alert.alert.values:
         validity_RED = validity_site_alert.loc[(validity_site_alert.alert == 'r1')|(validity_site_alert.alert == 'e1')|(validity_site_alert.alert == 'd1')].updateTS.values
-        validity_L = validity_site_alert.loc[(validity_site_alert.alert == 'L3')|(validity_site_alert.alert == 'l3')].updateTS.values
+        validity_L = validity_site_alert.loc[(validity_site_alert.alert == 'L3')|(validity_site_alert.alert == 'l3')|(validity_site_alert.alert == 'L2')|(validity_site_alert.alert == 'l2')].updateTS.values
         validity_A = site_alert.loc[(site_alert.alert == 'A3')].timestamp.values
         validity = RoundTime(pd.to_datetime(str(max(list(validity_L) + list(validity_A) + list(validity_RED))))) + timedelta(2)
         # A3 is still valid
         if validity >= window.end - timedelta(hours=3.5):
             public_alert = 'A3'
-            internal_alert = 'A3'            
             # evaluates which triggers A2
-            if 'L3' in validity_site_alert.alert.values and 'l3' in validity_site_alert.alert.values:
+            if ('L3' in SG_PAlert.alert.values or 'L2' in SG_PAlert.alert.values) and ('l3' in SG_PAlert.alert.values or 'l2' in SG_PAlert.alert.values):
                 alert_source = 'both ground and sensor'
-            elif 'L3' in validity_site_alert.alert.values:
+                internal_alert = 'A3-SG'
+            elif 'L3' in SG_PAlert.alert.values:
                 alert_source = 'sensor'
+                internal_alert = 'A3-S'
             else:
                 alert_source = 'ground'
+                internal_alert = 'A3-G'
         # end of A3 validity
         else:
             public_alert = 'A0'
@@ -183,49 +190,102 @@ def SitePublicAlert(PublicAlert, window):
         # A2 is still valid
         if validity > window.end + timedelta(hours=0.5):
             public_alert = 'A2'
-            if 'L' in list_ground_alerts or 'l' in list_ground_alerts:
-                internal_alert = 'A2'
-            else:
-                internal_alert = 'ND-L'
 
             # evaluates which triggers A2
-            if 'L2' in validity_site_alert.alert.values and 'l2' in validity_site_alert.alert.values:
+            if 'L2' in SG_PAlert.alert.values and 'l2' in SG_PAlert.alert.values:
                 alert_source = 'both ground and sensor'
-            elif 'L2' in validity_site_alert.alert.values:
+                if 'L' in list_ground_alerts or 'l' in list_ground_alerts:
+                    internal_alert = 'A2-SG'
+                else:
+                    internal_alert = 'ND-SG'
+            elif 'L2' in SG_PAlert.alert.values:
+                alert_source = 'sensor'
+                if 'L' in list_ground_alerts or 'l' in list_ground_alerts:
+                    internal_alert = 'A2-S'
+                else:
+                    internal_alert = 'ND-S'
+            else:
+                alert_source = 'ground'
+                if 'L' in list_ground_alerts or 'l' in list_ground_alerts:
+                    internal_alert = 'A2-G'
+                else:
+                    internal_alert = 'ND-G'
+
+        # end of A2 validity if with data with no significant mov't
+        else:
+    
+            # evaluates which triggers A2
+            if 'L2' in SG_PAlert.alert.values and 'l2' in SG_PAlert.alert.values:
+                alert_source = 'both ground and sensor'
+            elif 'L2' in SG_PAlert.alert.values:
                 alert_source = 'sensor'
             else:
                 alert_source = 'ground'
 
-        # end of A2 validity if with data with no significant mov't
-        else:
-            # with data
-            if 'L' in list_ground_alerts or 'l' in list_ground_alerts:
-                internal_alert = 'A0'
-                public_alert = 'A0'
-                alert_source = '-'
-            
-            # without data
-            else:
-                # within 3 days of 4hr-extension
-                if len(internal_alertDF) == 0 or pd.to_datetime(internal_alertDF.timestamp.values[0]) >= (window.end - timedelta(3)):
-                    validity = validity + timedelta(hours=4)
-                    internal_alert = 'ND-L'
-                    public_alert = 'A2'
-                    
-                    # evaluates which triggers A2
-                    if 'L2' in validity_site_alert.alert.values and 'l2' in validity_site_alert.alert.values:
-                        alert_source = 'both ground and sensor'
-                    elif 'L2' in validity_site_alert.alert.values:
-                        alert_source = 'sensor'
-                    else:
-                        alert_source = 'ground'
-
-                else:
+            # both ground and sensor triggered
+            if alert_source == 'both ground and sensor':
+                # with data
+                if 'L' in list_ground_alerts and 'l' in list_ground_alerts:
+                    internal_alert = 'A0'
                     public_alert = 'A0'
                     alert_source = '-'
-                    validity = '-'
-                    internal_alert = 'ND'
+                # without data
+                else:
+                    # within 3 days of 4hr-extension
+                    if len(internal_alertDF) == 0 or pd.to_datetime(internal_alertDF.timestamp.values[0]) >= (window.end - timedelta(3)):
+                        validity = validity + timedelta(hours=4)
+                        internal_alert = 'ND-SG'
+                        public_alert = 'A2-SG'
+                        
+                    else:
+                        public_alert = 'A0'
+                        alert_source = '-'
+                        validity = '-'
+                        internal_alert = 'ND'
 
+            # sensor triggered
+            elif alert_source == 'sensor':
+                # with data
+                if 'L' in list_ground_alerts:
+                    internal_alert = 'A0'
+                    public_alert = 'A0'
+                    alert_source = '-'
+                # without data
+                else:
+                    # within 3 days of 4hr-extension
+                    if len(internal_alertDF) == 0 or pd.to_datetime(internal_alertDF.timestamp.values[0]) >= (window.end - timedelta(3)):
+                        validity = validity + timedelta(hours=4)
+                        internal_alert = 'ND-S'
+                        public_alert = 'A2-S'
+                        
+                    else:
+                        public_alert = 'A0'
+                        alert_source = '-'
+                        validity = '-'
+                        internal_alert = 'ND'
+
+            # ground triggered
+            else:
+                # with data
+                if 'l' in list_ground_alerts:
+                    internal_alert = 'A0'
+                    public_alert = 'A0'
+                    alert_source = '-'
+                # without data
+                else:
+                    # within 3 days of 4hr-extension
+                    if len(internal_alertDF) == 0 or pd.to_datetime(internal_alertDF.timestamp.values[0]) >= (window.end - timedelta(3)):
+                        validity = validity + timedelta(hours=4)
+                        internal_alert = 'ND-G'
+                        public_alert = 'A2-G'
+                        
+                    else:
+                        public_alert = 'A0'
+                        alert_source = '-'
+                        validity = '-'
+                        internal_alert = 'ND'
+
+            
     #Public ALert A1
     elif 'r1' in site_alert.alert.values or 'e1' in site_alert.alert.values or 'd1' in site_alert.alert.values or 'A1' in validity_site_alert.alert.values:
         validity_RED = validity_site_alert.loc[(validity_site_alert.alert == 'r1')|(validity_site_alert.alert == 'e1')|(validity_site_alert.alert == 'd1')].updateTS.values
