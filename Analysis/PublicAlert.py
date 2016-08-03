@@ -181,7 +181,7 @@ def SitePublicAlert(PublicAlert, window):
                 internal_alert = 'ND'
     
     #Public Alert A2
-    elif 'L2' in site_alert.alert.values or 'l2' in site_alert.alert.values or 'A2' in validity_site_alert.alert.values:
+    elif 'L2' in site_alert.alert.values or 'l2' in site_alert.alert.values or 'A2-SG' in validity_site_alert.alert.values or 'A2-S' in validity_site_alert.alert.values or 'A2-G' in validity_site_alert.alert.values:
         validity_RED = validity_site_alert.loc[(validity_site_alert.alert == 'r1')|(validity_site_alert.alert == 'e1')|(validity_site_alert.alert == 'd1')].updateTS.values
         validity_L = validity_site_alert.loc[(validity_site_alert.alert == 'L2')|(validity_site_alert.alert == 'l2')].updateTS.values
         validity_A = site_alert.loc[(site_alert.alert == 'A2')].timestamp.values
