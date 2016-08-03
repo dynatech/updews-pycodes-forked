@@ -10,6 +10,8 @@ import multiprocessing
 import SomsServerParser as SSP
 import math
 import cfgfileio as cfg
+import memcache
+mc = memcache.Client(['127.0.0.1:11211'],debug=0)
 
 if cfg.config().mode.script_mode == 'gsmserver':
     sys.path.insert(0, cfg.config().fileio.websocketdir)
@@ -228,6 +230,11 @@ def writeAlertToDb(alertmsg):
 
     dbio.commitToDb(query,'writeAlertToDb','LOCAL')
 
+def saveToCache(key,value):
+    mc.set(key,value)
+
+def getValueFromCache(key):
+    value = mc.get(key)
         
 def RunSenslopeServer(network):
     minute_of_last_alert = dt.now().minute
