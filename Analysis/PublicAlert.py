@@ -337,7 +337,7 @@ def SitePublicAlert(PublicAlert, window):
                 # without data
                 else:
                     # within 3 days of 4hr-extension
-                    if len(internal_alertDF) == 0 or validity - pd.to_datetime(internal_alertDF.timestamp.values[0]) >= timedelta(3):
+                    if len(internal_alertDF) == 0 or window.end - validity > timedelta(3):
                         validity = validity + timedelta(hours=4)
                         internal_alert = 'ND-SG' + other_alerts
                         public_alert = 'A2'
@@ -358,7 +358,7 @@ def SitePublicAlert(PublicAlert, window):
                 # without data
                 else:
                     # within 3 days of 4hr-extension
-                    if len(internal_alertDF) == 0 or validity - pd.to_datetime(internal_alertDF.timestamp.values[0]) >= timedelta(3):
+                    if len(internal_alertDF) == 0 or window.end - validity > timedelta(3):
                         validity = validity + timedelta(hours=4)
                         internal_alert = 'ND-S' + other_alerts
                         public_alert = 'A2'
@@ -379,7 +379,7 @@ def SitePublicAlert(PublicAlert, window):
                 # without data
                 else:
                     # within 3 days of 4hr-extension
-                    if len(internal_alertDF) == 0 or validity - pd.to_datetime(internal_alertDF.timestamp.values[0]) >= timedelta(3):
+                    if len(internal_alertDF) == 0 or window.end - validity > timedelta(3):
                         validity = validity + timedelta(hours=4)
                         internal_alert = 'ND-G' + other_alerts
                         public_alert = 'A2'
@@ -461,7 +461,7 @@ def SitePublicAlert(PublicAlert, window):
             # without data
             else:
                 # within 3 days of 4hr-extension
-                if len(internal_alertDF) == 0 or validity - pd.to_datetime(internal_alertDF.timestamp.values[0]) >= timedelta(3):
+                if len(internal_alertDF) == 0 or window.end - validity > timedelta(3):
                     validity = validity + timedelta(hours=4)
                     public_alert = 'A1'
                     
@@ -471,7 +471,7 @@ def SitePublicAlert(PublicAlert, window):
                         alert_source = 'rain'
                     elif 'A1-E' in validity_site_alert.alert.values or 'ND-E' in validity_site_alert.alert.values:
                         internal_alert = 'ND-E'
-                        alert_source = 'eq'
+                        alert_source = 'eq' 
                     elif 'A1-D' in validity_site_alert.alert.values or 'ND-D' in validity_site_alert.alert.values:
                         internal_alert = 'ND-D'
                         alert_source = 'on demand'
