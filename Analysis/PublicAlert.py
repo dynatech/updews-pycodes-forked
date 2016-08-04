@@ -270,19 +270,19 @@ def SitePublicAlert(PublicAlert, window):
             # evaluates which triggers A2
             if 'L2' in SG_PAlert.alert.values and 'l2' in SG_PAlert.alert.values:
                 alert_source = 'both ground and sensor'
-                if 'L' in list_ground_alerts or 'l' in list_ground_alerts:
+                if 'L' in list_ground_alerts and 'l' in list_ground_alerts:
                     internal_alert = 'A2-SG'
                 else:
                     internal_alert = 'ND-SG'
             elif 'L2' in SG_PAlert.alert.values:
                 alert_source = 'sensor'
-                if 'L' in list_ground_alerts or 'l' in list_ground_alerts:
+                if 'L' in list_ground_alerts:
                     internal_alert = 'A2-S'
                 else:
                     internal_alert = 'ND-S'
             else:
                 alert_source = 'ground'
-                if 'L' in list_ground_alerts or 'l' in list_ground_alerts:
+                if 'l' in list_ground_alerts:
                     internal_alert = 'A2-G'
                 else:
                     internal_alert = 'ND-G'
