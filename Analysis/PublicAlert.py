@@ -163,10 +163,10 @@ def SitePublicAlert(PublicAlert, window):
         rain_alert = 'nd'
     
     #Public Alert A3
-    if 'L3' in site_alert.alert.values or 'l3' in site_alert.alert.values or 'A3-SG' in validity_site_alert.alert.values or 'A3-S' in validity_site_alert.alert.values or 'A3-G' in validity_site_alert.alert.values:
+    if 'L3' in site_alert.alert.values or 'l3' in site_alert.alert.values or 'A3' in validity_site_alert.alert.values:
         validity_RED = validity_site_alert.loc[(validity_site_alert.alert == 'r1')|(validity_site_alert.alert == 'e1')|(validity_site_alert.alert == 'd1')].updateTS.values
         validity_L = validity_site_alert.loc[(validity_site_alert.alert == 'L3')|(validity_site_alert.alert == 'l3')|(validity_site_alert.alert == 'L2')|(validity_site_alert.alert == 'l2')].updateTS.values
-        validity_A = site_alert.loc[(site_alert.alert == 'A3-SG')|(site_alert.alert == 'A3-S')|(site_alert.alert == 'A3-G')].timestamp.values
+        validity_A = site_alert.loc[(site_alert.alert == 'A3')].timestamp.values
         validity = RoundTime(pd.to_datetime(str(max(list(validity_L) + list(validity_A) + list(validity_RED))))) + timedelta(2)
         # A3 is still valid
         if validity > window.end + timedelta(hours=0.5):
@@ -257,10 +257,10 @@ def SitePublicAlert(PublicAlert, window):
                         internal_alert = 'ND'
     
     #Public Alert A2
-    elif 'L2' in site_alert.alert.values or 'l2' in site_alert.alert.values or 'A2-SG' in validity_site_alert.alert.values or 'A2-S' in validity_site_alert.alert.values or 'A2-G' in validity_site_alert.alert.values:
+    elif 'L2' in site_alert.alert.values or 'l2' in site_alert.alert.values or 'A2' in validity_site_alert.alert.values:
         validity_RED = validity_site_alert.loc[(validity_site_alert.alert == 'r1')|(validity_site_alert.alert == 'e1')|(validity_site_alert.alert == 'd1')].updateTS.values
         validity_L = validity_site_alert.loc[(validity_site_alert.alert == 'L2')|(validity_site_alert.alert == 'l2')].updateTS.values
-        validity_A = site_alert.loc[(site_alert.alert == 'A2-SG')|(site_alert.alert == 'A2-S')|(site_alert.alert == 'A2-G')].timestamp.values
+        validity_A = site_alert.loc[(site_alert.alert == 'A2')].timestamp.values
         validity = RoundTime(pd.to_datetime(str(max(list(validity_L) + list(validity_A) + list(validity_RED))))) + timedelta(1)
         
         # A2 is still valid
