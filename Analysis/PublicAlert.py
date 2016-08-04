@@ -128,17 +128,6 @@ def SitePublicAlert(PublicAlert, window):
     # public alert
     public_PrevAlert = validity_site_alert.loc[validity_site_alert.source == 'public'].alert.values[0]
     
-    # ND internal alert
-    internal_alertDF = site_alert.loc[(site_alert.alert == 'ND-SG')|(site_alert.alert == 'ND-S')|(site_alert.alert == 'ND-G')|
-        (site_alert.alert == 'ND-R')|(site_alert.alert == 'ND-E')|(site_alert.alert == 'ND-D')|
-        (site_alert.alert == 'ND-RE')|(site_alert.alert == 'ND-ED')|(site_alert.alert == 'ND-RD')|
-        (site_alert.alert == 'ND-SGR')|(site_alert.alert == 'ND-SGE')|(site_alert.alert == 'ND-SGD')|
-        (site_alert.alert == 'ND-SGRE')|(site_alert.alert == 'ND-SGED')|(site_alert.alert == 'ND-SGRD')|
-        (site_alert.alert == 'ND-SR')|(site_alert.alert == 'ND-SE')|(site_alert.alert == 'ND-SD')|
-        (site_alert.alert == 'ND-SRE')|(site_alert.alert == 'ND-SED')|(site_alert.alert == 'ND-SRD')|
-        (site_alert.alert == 'ND-GR')|(site_alert.alert == 'ND-GE')|(site_alert.alert == 'ND-GD')|
-        (site_alert.alert == 'ND-GRE')|(site_alert.alert == 'ND-GED')|(site_alert.alert == 'ND-GRD')]
-
     # timestamp of start of monitoring
     if 'A0' not in validity_site_alert.alert.values:
         query = "SELECT * FROM senslopedb.site_level_alert WHERE site = '%s' AND source = 'public' AND alert != 'A0' ORDER BY timestamp LIMIT 3" %site
@@ -337,7 +326,7 @@ def SitePublicAlert(PublicAlert, window):
                 # without data
                 else:
                     # within 3 days of 4hr-extension
-                    if len(internal_alertDF) == 0 or window.end - validity > timedelta(3):
+                    if RoundTime(window.end) - validity > timedelta(3):
                         validity = validity + timedelta(hours=4)
                         internal_alert = 'ND-SG' + other_alerts
                         public_alert = 'A2'
@@ -358,7 +347,7 @@ def SitePublicAlert(PublicAlert, window):
                 # without data
                 else:
                     # within 3 days of 4hr-extension
-                    if len(internal_alertDF) == 0 or window.end - validity > timedelta(3):
+                    if RoundTime(window.end) - validity > timedelta(3):
                         validity = validity + timedelta(hours=4)
                         internal_alert = 'ND-S' + other_alerts
                         public_alert = 'A2'
@@ -379,7 +368,7 @@ def SitePublicAlert(PublicAlert, window):
                 # without data
                 else:
                     # within 3 days of 4hr-extension
-                    if len(internal_alertDF) == 0 or window.end - validity > timedelta(3):
+                    if RoundTime(window.end) - validity > timedelta(3):
                         validity = validity + timedelta(hours=4)
                         internal_alert = 'ND-G' + other_alerts
                         public_alert = 'A2'
@@ -461,7 +450,7 @@ def SitePublicAlert(PublicAlert, window):
             # without data
             else:
                 # within 3 days of 4hr-extension
-                if len(internal_alertDF) == 0 or window.end - validity > timedelta(3):
+                if RoundTime(window.end) - validity > timedelta(3):
                     validity = validity + timedelta(hours=4)
                     public_alert = 'A1'
                     
