@@ -326,7 +326,7 @@ def SitePublicAlert(PublicAlert, window):
                 # without data
                 else:
                     # within 3 days of 4hr-extension
-                    if RoundTime(window.end) - validity > timedelta(3):
+                    if RoundTime(window.end) - validity < timedelta(3):
                         validity = validity + timedelta(hours=4)
                         internal_alert = 'ND-SG' + other_alerts
                         public_alert = 'A2'
@@ -347,7 +347,7 @@ def SitePublicAlert(PublicAlert, window):
                 # without data
                 else:
                     # within 3 days of 4hr-extension
-                    if RoundTime(window.end) - validity > timedelta(3):
+                    if RoundTime(window.end) - validity < timedelta(3):
                         validity = validity + timedelta(hours=4)
                         internal_alert = 'ND-S' + other_alerts
                         public_alert = 'A2'
@@ -368,7 +368,7 @@ def SitePublicAlert(PublicAlert, window):
                 # without data
                 else:
                     # within 3 days of 4hr-extension
-                    if RoundTime(window.end) - validity > timedelta(3):
+                    if RoundTime(window.end) - validity < timedelta(3):
                         validity = validity + timedelta(hours=4)
                         internal_alert = 'ND-G' + other_alerts
                         public_alert = 'A2'
@@ -450,7 +450,8 @@ def SitePublicAlert(PublicAlert, window):
             # without data
             else:
                 # within 3 days of 4hr-extension
-                if RoundTime(window.end) - validity > timedelta(3):
+                print validity
+                if RoundTime(window.end) - validity < timedelta(3):
                     validity = validity + timedelta(hours=4)
                     public_alert = 'A1'
                     
