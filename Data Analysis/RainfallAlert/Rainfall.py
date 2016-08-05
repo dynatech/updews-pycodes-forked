@@ -433,7 +433,7 @@ def RainfallAlert(siterainprops):
 
 def alert_toDB(df):
     
-    query = "SELECT * FROM senslopedb.site_level_alert WHERE site = '%s' AND source = 'rain' AND updateTS <= '%s' ORDER BY updateTS DESC LIMIT 1" %(df.site.values[0], window.end)
+    query = "SELECT * FROM senslopedb.site_level_alert WHERE site = '%s' AND source = 'rain' AND updateTS <= '%s' ORDER BY updateTS DESC LIMIT 1" %(df.site.values[0], end)
     
     df2 = GetDBDataFrame(query)
     
