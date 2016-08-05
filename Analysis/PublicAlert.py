@@ -186,6 +186,7 @@ def SitePublicAlert(PublicAlert, window):
         validity_L = validity_site_alert.loc[(validity_site_alert.alert == 'L3')|(validity_site_alert.alert == 'l3')|(validity_site_alert.alert == 'L2')|(validity_site_alert.alert == 'l2')].updateTS.values
         validity_A = site_alert.loc[(site_alert.alert == 'A3')].timestamp.values
         validity = RoundTime(pd.to_datetime(str(max(list(validity_L) + list(validity_A) + list(validity_RED))))) + timedelta(2)
+        
         # A3 is still valid
         if validity > window.end + timedelta(hours=0.5):
             public_alert = 'A3'
@@ -199,7 +200,7 @@ def SitePublicAlert(PublicAlert, window):
             else:
                 alert_source = 'ground'
                 internal_alert = 'A3-G' + other_alerts
-        
+            
         # end of A3 validity
         else:
             
@@ -273,7 +274,15 @@ def SitePublicAlert(PublicAlert, window):
                         alert_source = '-'
                         validity = '-'
                         internal_alert = 'ND'
-    
+
+        # replace S or G by s or g if L2 or l2 triggered only
+        if 'S' in internal_alert:
+            if 'L3' not in SG_PAlert:
+                internal_alert = internal_alert.replace('S', 's')
+        if 'G' in internal_alert:
+            if 'l3' not in SG_PAlert:
+                internal_alert = internal_alert.replace('G', 'g')
+
     #Public Alert A2
     elif 'L2' in site_alert.alert.values or 'l2' in site_alert.alert.values or 'A2' in validity_site_alert.alert.values:
         validity_RED = validity_site_alert.loc[(validity_site_alert.alert == 'r1')|(validity_site_alert.alert == 'e1')|(validity_site_alert.alert == 'd1')].updateTS.values
