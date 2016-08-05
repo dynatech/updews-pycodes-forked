@@ -433,7 +433,7 @@ def RainfallAlert(siterainprops):
 
 def alert_toDB(df):
     
-    query = "SELECT * FROM senslopedb.site_level_alert WHERE site = '%s' and source = 'rain' ORDER BY updateTS DESC LIMIT 1" %(df.site.values[0])
+    query = "SELECT * FROM senslopedb.site_level_alert WHERE site = '%s' AND source = 'rain' AND updateTS <= '%s' ORDER BY updateTS DESC LIMIT 1" %(df.site.values[0], window.end)
     
     df2 = GetDBDataFrame(query)
     
@@ -520,7 +520,7 @@ if PrintASTIdata:
 #1. setting monitoring window
 roll_window_numpts, end, start, offsetstart, monwin = set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_window_ops)
 
-index = pd.date_range(end-timedelta(10), periods=11, freq='D')
+index = pd.date_range(end-timedelta(rt_window_length), periods=rt_window_length+1, freq='D')
 columns=['maxhalf','max']
 base = pd.DataFrame(index=index, columns=columns)
 
