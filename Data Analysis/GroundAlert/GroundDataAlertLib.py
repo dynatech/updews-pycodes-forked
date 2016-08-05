@@ -253,7 +253,7 @@ def PlotCrack(df):
 
 def alert_toDB(df,end):
     
-    query = "SELECT timestamp, site, source, alert FROM senslopedb.%s WHERE site = '%s' and source = 'ground' ORDER BY timestamp DESC LIMIT 1" %('site_level_alert', df.site.values[0])
+    query = "SELECT timestamp, site, source, alert FROM senslopedb.%s WHERE site = '%s' and source = 'ground' AND updateTS <= '%s' ORDER BY timestamp DESC LIMIT 1" %('site_level_alert', df.site.values[0], end)
     
     df2 = GetDBDataFrame(query)
 
