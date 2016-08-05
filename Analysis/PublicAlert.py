@@ -35,7 +35,7 @@ def getmode(li):
 def alert_toDB(df, table_name, window, source):
     # writes df to senslopedb.table_name; mode: append on change else upates 'updateTS'
     
-    query = "SELECT * FROM senslopedb.%s WHERE site = '%s' and source = '%s' ORDER BY timestamp DESC LIMIT 1" %(table_name, df.site.values[0], source)
+    query = "SELECT * FROM senslopedb.%s WHERE site = '%s' AND source = '%s' AND updateTS <= '%s' ORDER BY timestamp DESC LIMIT 1" %(table_name, df.site.values[0], source, window.end)
     
     df2 = q.GetDBDataFrame(query)
     
@@ -148,6 +148,16 @@ def SitePublicAlert(PublicAlert, window):
                     start_monitor = pd.to_datetime(prev_PAlert.timestamp.values[1])
             else:
                 start_monitor = pd.to_datetime(prev_PAlert.timestamp.values[2])
+    elif 'r1' in site_alert.alert.values or 'e1' in site_alert.alert.values or 'd1' in site_alert.alert.values \
+            or 'l2' in site_alert.alert.values or 'l3' in site_alert.alert.values \
+            or 'L2' in site_alert.alert.values  or 'L3' in site_alert.alert.values:
+        start_monitor = window.end
+        if 'l3' in site_alert.alert.values or 'L3' in site_alert.alert.values:
+            print 'Public Alert- A3'
+        if 'l2' in site_alert.alert.values or 'L2' in site_alert.alert.values:
+            print 'Public Alert- A2'
+        if 'r1' in site_alert.alert.values or 'e1' in site_alert.alert.values or 'd1' in site_alert.alert.values:
+            print 'Public Alert- A1'
 
     # LLMC ground/sensor alert within the non-A0 public alert
     try:
@@ -397,83 +407,54 @@ def SitePublicAlert(PublicAlert, window):
         # A1 is still valid
         if validity > window.end + timedelta(hours=0.5):
             public_alert = 'A1'
-            # rain (re)trigger
-            if 'r1' in site_alert.alert.values:
-                alert_source = 'rain'
-                if 'L' in list_ground_alerts or 'l' in list_ground_alerts:
-                    internal_alert = 'A1-R'
-                else:
-                    internal_alert = 'ND-R'
-                    if validity == window.end:
-                        validity = validity + timedelta(hours=4)
-            # earthquake (re)trigger
-            elif 'e1' in site_alert.alert.values:
-                alert_source = 'eq'
-                if 'L' in list_ground_alerts or 'l' in list_ground_alerts:
-                    internal_alert = 'A1-E'
-                else:
-                    internal_alert = 'ND-E'
-                    if validity == window.end:
-                        validity = validity + timedelta(hours=4)
-            # on demand (re)trigger
-            elif 'd1' in site_alert.alert.values:
-                alert_source = 'on demand'
-                if 'L' in list_ground_alerts or 'l' in list_ground_alerts:
-                    internal_alert = 'A1-D'
-                else:
-                    internal_alert = 'ND-D'
-                    if validity == window.end:
-                        validity = validity + timedelta(hours=4)
-            # A1 is still valid
+            
+            # identifies which triggered A1
+            RED_source = []
+            if 'R' in other_alerts:
+                RED_source += ['rain']
+            if 'E' in other_alerts:
+                RED_source += ['eq']
+            if 'D' in other_alerts:
+                RED_source += ['on demand']
+            alert_source = ','.join(RED_source)
+
+            # identifies if with ground data
+            if 'L' in list_ground_alerts or 'l' in list_ground_alerts:
+                internal_alert = 'A1-' + other_alerts
             else:
-                if 'L' in list_ground_alerts or 'l' in list_ground_alerts:
-                    if 'A1-R' in validity_site_alert.alert.values or 'ND-R' in validity_site_alert.alert.values:
-                        internal_alert = 'A1-R'
-                        alert_source = 'rain'
-                    elif 'A1-E' in validity_site_alert.alert.values or 'ND-E' in validity_site_alert.alert.values:
-                        internal_alert = 'A1-E'
-                        alert_source = 'eq'
-                    elif 'A1-D' in validity_site_alert.alert.values or 'ND-D' in validity_site_alert.alert.values:
-                        internal_alert = 'A1-D'
-                        alert_source = 'on demand'
-                else:
-                    if 'A1-R' in validity_site_alert.alert.values or 'ND-R' in validity_site_alert.alert.values:
-                        internal_alert = 'ND-R'
-                        alert_source = 'rain'
-                    elif 'A1-E' in validity_site_alert.alert.values or 'ND-E' in validity_site_alert.alert.values:
-                        internal_alert = 'ND-E'
-                        alert_source = 'eq'
-                    elif 'A1-D' in validity_site_alert.alert.values or 'ND-D' in validity_site_alert.alert.values:
-                        internal_alert = 'ND-D'
-                        alert_source = 'on demand'
+                internal_alert = 'ND-' + other_alerts
 
         # end of A1 validity if with data with no significant mov't
         else:
-            # with data
+            # with ground data
             if 'L' in list_ground_alerts or 'l' in list_ground_alerts:
                 internal_alert = 'A0'
                 public_alert = 'A0'
                 alert_source = '-'
                 validity = '-'
             
-            # without data
+            # without ground data
             else:
                 # within 3 days of 4hr-extension
-                print validity
                 if RoundTime(window.end) - validity < timedelta(3):
                     validity = validity + timedelta(hours=4)
                     public_alert = 'A1'
-                    
-                    # evaluates which triggers A1
-                    if 'A1-R' in validity_site_alert.alert.values or 'ND-R' in validity_site_alert.alert.values:
-                        internal_alert = 'ND-R'
-                        alert_source = 'rain'
-                    elif 'A1-E' in validity_site_alert.alert.values or 'ND-E' in validity_site_alert.alert.values:
-                        internal_alert = 'ND-E'
-                        alert_source = 'eq' 
-                    elif 'A1-D' in validity_site_alert.alert.values or 'ND-D' in validity_site_alert.alert.values:
-                        internal_alert = 'ND-D'
-                        alert_source = 'on demand'
+
+                    # identifies which triggered A1
+                    RED_source = []
+                    if 'R' in other_alerts:
+                        RED_source += ['rain']
+                    if 'E' in other_alerts:
+                        RED_source += ['eq']
+                    if 'D' in other_alerts:
+                        RED_source += ['on demand']
+                    alert_source = ','.join(RED_source)
+        
+                    # identifies if with ground data
+                    if 'L' in list_ground_alerts or 'l' in list_ground_alerts:
+                        internal_alert = 'A1-' + other_alerts
+                    else:
+                        internal_alert = 'ND-' + other_alerts
 
                 else:
                     public_alert = 'A0'
