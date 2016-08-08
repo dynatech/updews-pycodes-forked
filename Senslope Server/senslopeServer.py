@@ -232,6 +232,23 @@ def saveToCache(key,value):
 
 def getValueFromCache(key):
     value = mc.get(key)
+
+def trySendingMessages(network):
+    start = dt.now()
+    while True:
+        SendMessagesFromDb(network)
+        print '.',
+        time.sleep(2)
+        if (dt.now()-start).seconds > 30:
+            break
+
+def deleteMessagesfromGSM():
+    print "\n>> Deleting all read messages"
+    try:
+        gsmio.gsmcmd('AT+CMGD=0,2').strip()
+        print 'OK'
+    except ValueError:
+        print '>> Error deleting messages'
         
 def RunSenslopeServer(network):
     minute_of_last_alert = dt.now().minute
@@ -270,48 +287,16 @@ def RunSenslopeServer(network):
             except MySQLdb.ProgrammingError:
                 print ">> Error: May be an empty line.. skipping message storing"
             
-            # if not reading from database, uncomment the following line
-            # ProcessAllMessages(allmsgs,network)
-            
-            # delete all read messages
-            print "\n>> Deleting all read messages"
-            try:
-                gsmio.gsmcmd('AT+CMGD=0,2').strip()
-                print 'OK'
-            except ValueError:
-                print '>> Error deleting messages'
+            deleteMessagesfromGSM()
                 
             print dt.today().strftime("\n" + network + " Server active as of %A, %B %d, %Y, %X")
             logRuntimeStatus(network,"alive")
 
-            start = dt.now()
-            SendMessagesFromDb(network,limit=5)
-            end = dt.now()
-
-            send_time = (end-start).seconds
-            sleep_time = 30-send_time
-
-            if sleep_time > 0:
-                print ">> Sleeping for", sleep_time, "seconds"
-                time.sleep(sleep_time)
+            trySendingMessages(network)
             
         elif m == 0:
-            start = dt.now()
-
-            while True:
-                SendMessagesFromDb(network)
-                print '.',
-                time.sleep(2)
-                if (dt.now()-start).seconds > 30:
-                    break
+            trySendingMessages(network)
             
-            # send_time = (end-start).seconds
-            # sleep_time = 30-send_time
-
-            # if sleep_time > 0:
-            #     print ">> Sleeping for", sleep_time, "seconds"
-            #     time.sleep(sleep_time)
-
             gsmio.gsmflush()
             today = dt.today()
             if (today.minute % 10 == 0):
@@ -320,8 +305,6 @@ def RunSenslopeServer(network):
                 checkIfActive = False
             else:
                 checkIfActive = True
-                
-            # SendMessagesFromDb(network)
                 
         elif m == -1:
             print'GSM MODULE MAYBE INACTIVE'
