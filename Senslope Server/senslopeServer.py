@@ -300,7 +300,7 @@ def RunSenslopeServer(network):
 
             while True:
                 SendMessagesFromDb(network)
-                print '.'
+                print '.',
                 time.sleep(2)
                 if (dt.now()-start).seconds > 30:
                     break

@@ -100,15 +100,16 @@ def gsmcmd(cmd):
         now = time.time()
         gsm.write(cmd+'\r\n')
         while a.find('OK')<0 and time.time()<now+30:
-                #print cmd
-                #gsm.write(cmd+'\r\n')
-                a += gsm.read(gsm.inWaiting())
-                #a += gsm.read()
-                #print '+' + a
-                #print a
-                time.sleep(0.5)
+            #print cmd
+            #gsm.write(cmd+'\r\n')
+            a += gsm.read(gsm.inWaiting())
+            #a += gsm.read()
+            #print '+' + a
+            #print a
+            time.sleep(0.5)
         if time.time()>now+30:
-                a = '>> Error: GSM Unresponsive'
+            a = '>> Error: GSM Unresponsive'
+            raise CustomGSMResetException(">> Raising exception to reset code from GSM module reset")
         return a
     except serial.SerialException:
         print "NO SERIAL COMMUNICATION (gsmcmd)"
@@ -195,7 +196,7 @@ def countmsg():
         
         try:
             c = int( b.split(',')[1] )
-            print '>> Received', c, 'message/s'
+            print '\n>> Received', c, 'message/s'
             return c
         except IndexError:
             print 'count_msg b = ',b
