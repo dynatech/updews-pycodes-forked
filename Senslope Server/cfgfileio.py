@@ -72,6 +72,7 @@ class config:
 		
 		self.fileio = Container()
 		self.fileio.allalertsfile = cfg.get("FileIO","allalertsfile")
+		self.fileio.eqprocfile = cfg.get("FileIO","eqprocfile")
 		self.fileio.queryoutput = cfg.get("FileIO","querylatestreportoutput")
 		self.fileio.alertgenscript = cfg.get("FileIO","alertgenscript")
 		self.fileio.alertanalysisscript = cfg.get("FileIO","alertanalysisscript")
@@ -94,6 +95,6 @@ class config:
 			self.mode.logtoinstance = 'LOCAL'
 
 		self.io = Container()
-		self.io.proc_limit = cfg.get("io","proc_limit")
+		self.io.proc_limit = cfg.getint("io","proc_limit")
 		
 

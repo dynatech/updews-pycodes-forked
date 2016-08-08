@@ -478,7 +478,7 @@ def ProcessEarthquake(msg):
 
     dbio.commitToDb(query, 'earthquake')
 
-    subprocess.Popen(["python","/home/dynaslope/Desktop/updews-pycodes/Data Analysis/eq_alert_gen.py"])
+    subprocess.Popen(["python",cfg.config().fileio.eqprocfile])
 
     return True
 
@@ -573,26 +573,12 @@ def ProcessRain(line,sender):
         msgdatetime = re.search("\d{02}\/\d{02}\/\d{02},\d{02}:\d{02}:\d{02}",line).group(0)
 
         txtdatetime = dt.strptime(msgdatetime,'%m/%d/%y,%H:%M:%S')
-        # temporary adjust (wrong set values)
-        if msgtable=="PUGW":
-            txtdatetime = txtdatetime + td(days=1) # add one day
-        elif msgtable=="PLAW":
-            txtdatetime = txtdatetime + td(days=1)
         
-
         txtdatetime = txtdatetime.strftime('%Y-%m-%d %H:%M:00')
         
         # data = items.group(3)
         data = line.split(",",3)[3]
 
-        # if msgtable in ('MAGW'):
-        #     print '>> Adjusting rain value',
-        #     rain_val_str = data.split(',')[3]
-        #     rain_val_adj = float(rain_val_str) - 0.254
-        #     data = data.replace(rain_val_str,str(rain_val_adj))
-        #     print 'data adj >>', data
-
-        
     except IndexError and AttributeError:
         print '\n>> Error: Rain message format is not recognized'
         print line
@@ -691,19 +677,6 @@ def CheckMessageSource(msg):
     else:
         print "From unknown number ", msg.simnum
 
-# def SpawnAlertGen(sitename):
-#     c = cfg.config()
-#     # spawn alert alert_gens
-#     if lock.get_lock('alertgen'+sitename,False):
-#         print "Alert gen spawned for", sitename
-#         # command = "sleep 60 && ~/anaconda2/bin/python /home/dynaslope/Desktop/updews-pycodes/Analysis/alertgen.py " + sitename.lower()
-#         # command += " && ~/anaconda2/bin/python /home/dynaslope/Desktop/updews-pycodes/Analysis/AlertAnalysis.py " + sitename.lower()
-#         command = "sleep 60 && ~/anaconda2/bin/python %s %s && ~/anaconda2/bin/python %s %s" % (c.fileio.alertgenscript,sitename.lower(),c.fileio.alertanalysisscript,sitename.lower())
-        
-#         p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, stderr=subprocess.STDOUT)
-#     else:
-#         print "Aborting alert gen spawn for ", sitename
-
 def SpawnAlertGen(sitename):
     # spawn alert alert_gens
 
@@ -778,6 +751,8 @@ def ProcessAllMessages(allmsgs,network):
             except IndexError:
                 print "\n\n>> Error: Possible data type error"
                 print msg.data
+            except ValueError:
+                print ">> Value error detected"
         elif re.search("[A-Z]{4}\*[A-F0-9]+\*[0-9]+$",msg.data):
             #ProcessColumn(msg.data)
             ProcessColumn(msg.data,msg.dt,msg.simnum)

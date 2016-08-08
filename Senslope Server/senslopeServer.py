@@ -126,19 +126,16 @@ def getGsmId(number):
         return -1
 
 def WriteOutboxMessageToDb(message,recepients,send_status='UNSENT'):
-
-    gsm_id = getGsmId(recepients)
-
-    print send_status
-
-    if gsm_id == -1:
-        return
-    else:
-        query = "INSERT INTO smsoutbox (timestamp_written,recepients,sms_msg,send_status,gsm_id) VALUES "
-        tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
-        query += "('%s','%s','%s','%s','%s')" % (tsw,recepients,message,send_status,gsm_id)
-        print query
-        dbio.commitToDb(query, "WriteOutboxMessageToDb", 'gsm')
+    for r in recepients.split(","):
+        gsm_id = getGsmId(r)
+        if gsm_id == -1:
+            continue
+        else:
+            query = "INSERT INTO smsoutbox (timestamp_written,recepients,sms_msg,send_status,gsm_id) VALUES "
+            tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
+            query += "('%s','%s','%s','%s','%s')" % (tsw,r,message,send_status,gsm_id)
+            print query
+            dbio.commitToDb(query, "WriteOutboxMessageToDb", 'gsm')
     
 def CheckAlertMessages():
     c = cfg.config()
@@ -300,15 +297,20 @@ def RunSenslopeServer(network):
             
         elif m == 0:
             start = dt.now()
-            SendMessagesFromDb(network)
-            end = dt.now()
-            
-            send_time = (end-start).seconds
-            sleep_time = 30-send_time
 
-            if sleep_time > 0:
-                print ">> Sleeping for", sleep_time, "seconds"
-                time.sleep(sleep_time)
+            while True:
+                SendMessagesFromDb(network)
+                print '.'
+                time.sleep(2)
+                if (dt.now()-start).seconds > 30:
+                    break
+            
+            # send_time = (end-start).seconds
+            # sleep_time = 30-send_time
+
+            # if sleep_time > 0:
+            #     print ">> Sleeping for", sleep_time, "seconds"
+            #     time.sleep(sleep_time)
 
             gsmio.gsmflush()
             today = dt.today()
