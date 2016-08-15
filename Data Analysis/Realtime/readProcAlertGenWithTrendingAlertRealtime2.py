@@ -469,7 +469,7 @@ def plot_disp_vel(colname, xz,xy,xz_vel,xy_vel,
         xzd_plotoffset=0
         
     # defining cumulative (surface) displacement plot with user-defined exclusion of certain nodes    
-    excludenodelist=[14]
+    excludenodelist=[]
     col_mask=((xz == xz) | xz.isnull()) & ([a in excludenodelist for a in xz.columns])
     cs_xz=xz.mask(col_mask).sum(axis=1)################   
     cs_xy=xy.mask(col_mask).sum(axis=1)
