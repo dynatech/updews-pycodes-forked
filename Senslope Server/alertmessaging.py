@@ -88,15 +88,11 @@ def processAckToAlert(msg):
 
     contacts = getAlertStaffNumbers()
     message = "Alert ID %s ACK by %s on %s\nActions done: %s" % (alert_id,name,msg.dt,remarks)
-    query = "INSERT INTO smsoutbox (timestamp_written,recepients,sms_msg,send_status) VALUES "
     
     tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
     for item in contacts:
         message = message.replace("ALERT","AL3RT")
-        query += "('%s','%s','%s','unsent')," % (tsw,item[1],message)
-    query = query[:-1]
-
-    dbio.commitToDb(query, 'checkalertmsg', 'GSM')
+        server.WriteOutboxMessageToDb(message,item[1])
 
     return True
 

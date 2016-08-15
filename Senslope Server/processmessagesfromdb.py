@@ -11,7 +11,7 @@ def main():
 
     lockscript.get_lock('processmessages')
             
-    dbio.createTable("runtimelog","runtime")
+    # dbio.createTable("runtimelog","runtime")
     # logRuntimeStatus("procfromdb","startup")
 
     # force backup

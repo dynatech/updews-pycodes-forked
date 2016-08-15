@@ -126,19 +126,16 @@ def getGsmId(number):
         return -1
 
 def WriteOutboxMessageToDb(message,recepients,send_status='UNSENT'):
-
-    gsm_id = getGsmId(recepients)
-
-    print send_status
-
-    if gsm_id == -1:
-        return
-    else:
-        query = "INSERT INTO smsoutbox (timestamp_written,recepients,sms_msg,send_status,gsm_id) VALUES "
-        tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
-        query += "('%s','%s','%s','%s','%s')" % (tsw,recepients,message,send_status,gsm_id)
-        print query
-        dbio.commitToDb(query, "WriteOutboxMessageToDb", 'gsm')
+    for r in recepients.split(","):
+        gsm_id = getGsmId(r)
+        if gsm_id == -1:
+            continue
+        else:
+            query = "INSERT INTO smsoutbox (timestamp_written,recepients,sms_msg,send_status,gsm_id) VALUES "
+            tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
+            query += "('%s','%s','%s','%s','%s')" % (tsw,r,message,send_status,gsm_id)
+            print query
+            dbio.commitToDb(query, "WriteOutboxMessageToDb", 'gsm')
     
 def CheckAlertMessages():
     c = cfg.config()
@@ -235,6 +232,23 @@ def saveToCache(key,value):
 
 def getValueFromCache(key):
     value = mc.get(key)
+
+def trySendingMessages(network):
+    start = dt.now()
+    while True:
+        SendMessagesFromDb(network)
+        print '.',
+        time.sleep(2)
+        if (dt.now()-start).seconds > 30:
+            break
+
+def deleteMessagesfromGSM():
+    print "\n>> Deleting all read messages"
+    try:
+        gsmio.gsmcmd('AT+CMGD=0,2').strip()
+        print 'OK'
+    except ValueError:
+        print '>> Error deleting messages'
         
 def RunSenslopeServer(network):
     minute_of_last_alert = dt.now().minute
@@ -273,43 +287,16 @@ def RunSenslopeServer(network):
             except MySQLdb.ProgrammingError:
                 print ">> Error: May be an empty line.. skipping message storing"
             
-            # if not reading from database, uncomment the following line
-            # ProcessAllMessages(allmsgs,network)
-            
-            # delete all read messages
-            print "\n>> Deleting all read messages"
-            try:
-                gsmio.gsmcmd('AT+CMGD=0,2').strip()
-                print 'OK'
-            except ValueError:
-                print '>> Error deleting messages'
+            deleteMessagesfromGSM()
                 
             print dt.today().strftime("\n" + network + " Server active as of %A, %B %d, %Y, %X")
             logRuntimeStatus(network,"alive")
 
-            start = dt.now()
-            SendMessagesFromDb(network,limit=5)
-            end = dt.now()
-
-            send_time = (end-start).seconds
-            sleep_time = 30-send_time
-
-            if sleep_time > 0:
-                print ">> Sleeping for", sleep_time, "seconds"
-                time.sleep(sleep_time)
+            trySendingMessages(network)
             
         elif m == 0:
-            start = dt.now()
-            SendMessagesFromDb(network)
-            end = dt.now()
+            trySendingMessages(network)
             
-            send_time = (end-start).seconds
-            sleep_time = 30-send_time
-
-            if sleep_time > 0:
-                print ">> Sleeping for", sleep_time, "seconds"
-                time.sleep(sleep_time)
-
             gsmio.gsmflush()
             today = dt.today()
             if (today.minute % 10 == 0):
@@ -318,8 +305,6 @@ def RunSenslopeServer(network):
                 checkIfActive = False
             else:
                 checkIfActive = True
-                
-            # SendMessagesFromDb(network)
                 
         elif m == -1:
             print'GSM MODULE MAYBE INACTIVE'

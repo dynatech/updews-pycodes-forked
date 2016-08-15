@@ -114,7 +114,7 @@ def getGndMeas(text):
   try:
     wrecord = re.search("(?<="+meas[-1]+" )[A-Z]+",data_field).group(0)
     recisvalid = False
-    for keyword in ["ARAW","ULAN","BAGYO","LIMLIM","AMBON","ULAP"]:
+    for keyword in ["ARAW","ULAN","BAGYO","LIMLIM","AMBON","ULAP","SUN","RAIN","CLOUD","DILIM","HAMOG"]:
         if keyword in wrecord:
             recisvalid = True
             print "valid"
