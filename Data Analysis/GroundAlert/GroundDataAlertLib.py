@@ -9,7 +9,7 @@ import sys
 import platform
 from sqlalchemy import create_engine
 import matplotlib.pyplot as plt
-
+plt.ioff()
 #Include the path of "Data Analysis" folder for the python scripts searching
 path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 if not path in sys.path:
@@ -133,6 +133,7 @@ def crack_eval(df,end):
     #OUTPUT: crack alert according to protocol table
     
     #^&*()
+    df = df[df.timestamp <= end]
     print df
     
     #Obtain the time difference and displacement between the latest values
@@ -256,23 +257,25 @@ def alert_toDB(df,end):
     query = "SELECT timestamp, site, source, alert FROM senslopedb.%s WHERE site = '%s' and source = 'ground' ORDER BY timestamp DESC LIMIT 1" %('site_level_alert', df.site.values[0])
     
     df2 = GetDBDataFrame(query)
-
-    if len(df2) == 0 or df2.alert.values[0] != df.alert.values[0]:
-        engine = create_engine('mysql://'+Userdb+':'+Passdb+'@'+Hostdb+':3306/'+Namedb)
-        df['updateTS'] = end
-        df.to_sql(name = 'site_level_alert', con = engine, if_exists = 'append', schema = Namedb, index = False)
-    elif df2.timestamp.values[0] == df.timestamp.values[0]:
-        db, cur = SenslopeDBConnect(Namedb)
-        query = "UPDATE senslopedb.%s SET updateTS='%s', alert='%s' WHERE site = '%s' and source = 'ground' and alert = '%s' and timestamp = '%s'" %('site_level_alert', end, df.alert.values[0], df2.site.values[0], df2.alert.values[0], pd.to_datetime(str(df2.timestamp.values[0])))
-        cur.execute(query)
-        db.commit()
-        db.close()
-    elif df2.alert.values[0] == df.alert.values[0]:
-        db, cur = SenslopeDBConnect(Namedb)
-        query = "UPDATE senslopedb.%s SET updateTS='%s' WHERE site = '%s' and source = 'sensor' and alert = '%s' and timestamp = '%s'" %('site_level_alert', end, df2.site.values[0], df2.alert.values[0], pd.to_datetime(str(df2.timestamp.values[0])))
-        cur.execute(query)
-        db.commit()
-        db.close()
+    try:
+        if len(df2) == 0 or df2.alert.values[0] != df.alert.values[0]:
+            engine = create_engine('mysql://'+Userdb+':'+Passdb+'@'+Hostdb+':3306/'+Namedb)
+            df['updateTS'] = end
+            df.to_sql(name = 'site_level_alert', con = engine, if_exists = 'append', schema = Namedb, index = False)
+        elif df2.timestamp.values[0] == df.timestamp.values[0]:
+            db, cur = SenslopeDBConnect(Namedb)
+            query = "UPDATE senslopedb.%s SET updateTS='%s', alert='%s' WHERE site = '%s' and source = 'ground' and alert = '%s' and timestamp = '%s'" %('site_level_alert', pd.to_datetime(str(end)), df.alert.values[0], df2.site.values[0], df2.alert.values[0], pd.to_datetime(str(df2.timestamp.values[0])))
+            cur.execute(query)
+            db.commit()
+            db.close()
+        elif df2.alert.values[0] == df.alert.values[0]:
+            db, cur = SenslopeDBConnect(Namedb)
+            query = "UPDATE senslopedb.%s SET updateTS='%s' WHERE site = '%s' and source = 'ground' and alert = '%s' and timestamp = '%s'" %('site_level_alert', pd.to_datetime(str(end)), df2.site.values[0], df2.alert.values[0], pd.to_datetime(str(df2.timestamp.values[0])))
+            cur.execute(query)
+            db.commit()
+            db.close()
+    except:
+        print "Cannot write to db {}".format(df.site.values[0])
 
 def GenerateGroundDataAlert(site=None,end=None):
         
@@ -305,7 +308,7 @@ def GenerateGroundDataAlert(site=None,end=None):
         roll_window_numpts, end, start, offsetstart, monwin = set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_window_ops)
     
 #    Use this so set the end time    
-#    end = datetime(2016,06,24,12,00,00)
+#    end = datetime(2016,8,12,11,30)
 
 ############################################ MAIN ############################################
 
