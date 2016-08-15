@@ -97,13 +97,13 @@ alert_headers = ts,id,ND,xz_disp,xy_disp,disp_alert,min_vel,max_vel,vel_alert,no
 ###        OTHERS        ###
 ############################
 data_dt = 0.5				;time interval between data points, in hours
-rt_window_length = 3.		;length of real-time monitoring window, in days
+rt_window_length = 3		;length of real-time monitoring window, in days
 roll_window_length = 3.		;length of rolling/moving window operations in hours
 num_roll_window_ops = 2		;number of rolling window operations in the whole monitoring analysis
 col_pos_interval = '4H'   	;string expression indicating interval between two adjacent column position dates ex: '1D'= 1 day
-num_col_pos = 7            	;number of column position dates to plot 
+num_col_pos = 19            	;number of column position dates to plot 
 alert_time_int = 30 		;timeframe of alert files to be saved, in days
-to_fill = 1					;to forward fill (1 or 0)
+to_fill = 1				;to forward fill (1 or 0)
 to_smooth = 1				;to smooth xz and xy through moving average (1 or 0)
 
 with_TrendingNodeAlert = False
@@ -114,8 +114,8 @@ test_specific_sites = False
 # REAL-TIME MODULE CONSTANTS #
 ##############################
 test_specific_time = False
-use_specific_time = 2016-06-04 07:30:00
-realtime_specific_sites = gamb
+use_specific_time = 2016-08-15 19:30:00
+realtime_specific_sites = imuta,imutb,imusc,umita,pugt,pugb,blct,blcb,marta,martb,pepta,pepsb,peptc
 realtime_test_specific_sites = True 
 RT_to_fill = 1
 RT_to_smooth = 0
