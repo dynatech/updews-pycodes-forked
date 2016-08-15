@@ -453,7 +453,7 @@ def plot_disp_vel(colname, xz,xy,xz_vel,xy_vel,
 #     xy_vel; array of floats; velocity along the planes defined by xa-ya
 #==============================================================================
 
-
+   
     #setting up zeroing and offseting parameters
     
     if disp_offset=='max':
@@ -467,6 +467,15 @@ def plot_disp_vel(colname, xz,xy,xz_vel,xy_vel,
         disp_zero=True
     else:
         xzd_plotoffset=0
+        
+    # defining cumulative (surface) displacement plot with user-defined exclusion of certain nodes    
+    excludenodelist=[14]
+    col_mask=((xz == xz) | xz.isnull()) & ([a in excludenodelist for a in xz.columns])
+    cs_xz=xz.mask(col_mask).sum(axis=1)
+    cs_xy=xy.mask(col_mask).sum(axis=1)
+    cs_xz=cs_xz-cs_xz.values[0]+xzd_plotoffset*(len(xz.columns))
+    cs_xy=cs_xy-cs_xy.values[0]+xzd_plotoffset*(len(xz.columns))
+    
         
    
 
@@ -560,6 +569,13 @@ def plot_disp_vel(colname, xz,xy,xz_vel,xy_vel,
         ax_xzv=fig.add_subplot(143)
         ax_xzv.invert_yaxis()
         ax_xyv=fig.add_subplot(144,sharex=ax_xzv,sharey=ax_xzv)
+
+        #plotting cumulative (surface) displacments
+        cs_xz.plot(ax=ax_xzd,color='0.4',linewidth=0.5,legend=False)
+        cs_xy.plot(ax=ax_xyd,color='0.4',linewidth=0.5,legend=False)
+        ax_xzd.fill_between(cs_xz.index,cs_xz.values,xzd_plotoffset*(len(xz.columns)),color='0.8')
+        ax_xyd.fill_between(cs_xy.index,cs_xy.values,xzd_plotoffset*(len(xz.columns)),color='0.8')
+       
        
         #assigning non-repeating colors to subplots axis
         ax_xzd=nonrepeat_colors(ax_xzd,len(xz.columns))
@@ -881,12 +897,17 @@ for s in sensorlist:
     # create, fill and smooth dataframes from series lists
     xz,hasRawValue=create_fill_smooth_df(xz_series_list,num_nodes,monwin, roll_window_numpts,to_fill,to_smooth)
     xy=create_fill_smooth_df(xy_series_list,num_nodes,monwin, roll_window_numpts,to_fill,to_smooth)[0]
-    
+
+
+
     # computing instantaneous velocity
     vel_xz, vel_xy = compute_node_inst_vel(xz,xy,roll_window_numpts)
+
     
     # computing cumulative displacements
     cs_x, cs_xz, cs_xy=compute_col_pos(xz,xy,monwin.index[-1], col_pos_interval, col_pos_num)
+    
+    
                                                                                                                           
     # Alert generation
     alert_out=alert_generation(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velL2, T_velL3, k_ac_ax,
