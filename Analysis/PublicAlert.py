@@ -233,7 +233,7 @@ def SitePublicAlert(PublicAlert, window):
                 else:
                     # within 3 days of 4hr-extension
                     if latest_groundTS >= (window.end - timedelta(3)) and latest_sensorTS >= (window.end - timedelta(3)):
-                        validity = validity + timedelta(hours=4)
+                        validity = RoundTime(window.end) + timedelta(hours=4)
                         internal_alert = 'A3-SG' + other_alerts
                         public_alert = 'A3'
                         
@@ -254,7 +254,7 @@ def SitePublicAlert(PublicAlert, window):
                 else:
                     # within 3 days of 4hr-extension
                     if latest_groundTS >= (window.end - timedelta(3)):
-                        validity = validity + timedelta(hours=4)
+                        validity = RoundTime(window.end) + timedelta(hours=4)
                         internal_alert = 'A3-S' + other_alerts
                         public_alert = 'A3'
                         
@@ -275,7 +275,7 @@ def SitePublicAlert(PublicAlert, window):
                 else:
                     # within 3 days of 4hr-extension
                     if latest_groundTS >= (window.end - timedelta(3)):
-                        validity = validity + timedelta(hours=4)
+                        validity = RoundTime(window.end) + timedelta(hours=4)
                         internal_alert = 'A3-G' + other_alerts
                         public_alert = 'A3'
                         
@@ -346,7 +346,7 @@ def SitePublicAlert(PublicAlert, window):
                 else:
                     # within 3 days of 4hr-extension
                     if RoundTime(window.end) - validity < timedelta(3):
-                        validity = validity + timedelta(hours=4)
+                        validity = RoundTime(window.end) + timedelta(hours=4)
                         internal_alert = 'ND-SG' + other_alerts
                         public_alert = 'A2'
                         
@@ -367,7 +367,7 @@ def SitePublicAlert(PublicAlert, window):
                 else:
                     # within 3 days of 4hr-extension
                     if RoundTime(window.end) - validity < timedelta(3):
-                        validity = validity + timedelta(hours=4)
+                        validity = RoundTime(window.end) + timedelta(hours=4)
                         internal_alert = 'ND-S' + other_alerts
                         public_alert = 'A2'
                         
@@ -388,7 +388,7 @@ def SitePublicAlert(PublicAlert, window):
                 else:
                     # within 3 days of 4hr-extension
                     if RoundTime(window.end) - validity < timedelta(3):
-                        validity = validity + timedelta(hours=4)
+                        validity = RoundTime(window.end) + timedelta(hours=4)
                         internal_alert = 'ND-G' + other_alerts
                         public_alert = 'A2'
                         
@@ -437,7 +437,7 @@ def SitePublicAlert(PublicAlert, window):
             else:
                 # within 3 days of 4hr-extension
                 if RoundTime(window.end) - validity < timedelta(3):
-                    validity = validity + timedelta(hours=4)
+                    validity = RoundTime(window.end) + timedelta(hours=4)
                     public_alert = 'A1'
 
                     # identifies which triggered A1
