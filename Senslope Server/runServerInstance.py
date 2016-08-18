@@ -21,5 +21,6 @@ if __name__ == '__main__':
             break
     	except gsmSerialio.CustomGSMResetException:
     	    print "> Resetting system because of GSM failure"
+            gsmSerialio.resetGsm()
     	    continue
         
