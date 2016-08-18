@@ -287,10 +287,10 @@ def SitePublicAlert(PublicAlert, window):
 
         # replace S or G by s or g if L2 or l2 triggered only
         if 'S' in internal_alert:
-            if 'L3' not in SG_PAlert:
+            if 'L3' not in SG_PAlert.alert.values:
                 internal_alert = internal_alert.replace('S', 's')
         if 'G' in internal_alert:
-            if 'l3' not in SG_PAlert:
+            if 'l3' not in SG_PAlert.alert.values:
                 internal_alert = internal_alert.replace('G', 'g')
 
     #Public Alert A2
