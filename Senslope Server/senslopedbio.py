@@ -123,8 +123,9 @@ def getAllOutboxSmsFromDb(send_status,network,limit=10):
     while True:
         try:
             query = """select sms_id, timestamp_written, recepients, sms_msg from %s.smsoutbox
-                where send_status = '%s' and gsm_id = '%s' limit %d""" % (gsmdbinstance.name, send_status,network,limit)
-        
+                where send_status like '%s%s%s' and gsm_id = '%s' limit %d""" % (gsmdbinstance.name,'%',send_status,'%',network,limit)
+                # where send_status = '%s' and gsm_id = '%s' limit %d""" % (gsmdbinstance.name,send_status,network,limit)
+                
             # print query
             a = cur.execute(query)
             out = []

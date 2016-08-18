@@ -37,7 +37,6 @@ def resetGsm():
         time.sleep(2)
         powerGsm(True)
         print 'done'
-        raise CustomGSMResetException(">> Raising exception to reset code from GSM module reset")
     except ImportError:
         return
        
@@ -60,10 +59,11 @@ def gsmInit(network):
         gsm.open()
     
     #gsmflush()
-    gsm.write('AT\r\n')
-    time.sleep(1)
+    for i in range(0,4):
+        gsm.write('AT\r\n')
+        time.sleep(1)
     print 'Switching to no-echo mode', gsmcmd('ATE0').strip('\r\n')
-    print 'Switching to text mode', gsmcmd('AT+CMGF=0').rstrip('\r\n')
+    print 'Switching to PDU mode', gsmcmd('AT+CMGF=0').rstrip('\r\n')
     print 'Disabling unsolicited CMTI', gsmcmd('AT+CNMI=2,0,0,0,0').rstrip('\r\n')
 
     return gsm

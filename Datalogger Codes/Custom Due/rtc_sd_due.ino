@@ -272,7 +272,18 @@ unsigned int processConfigLine(char *ptr){
 		return 0;
 
 	}
-
+        else if(str.startsWith("PIEZO")){
+			indexOfValue =str.indexOf("=");
+			indexOfValue++; // get index of the number
+			sptr = &str[indexOfValue];
+			str2 = String(sptr);
+			value = str2.toInt();
+			PIEZO = value;
+			//sprintf(buff,"PIEZO = %d",PIEZO);
+			//Serial.println(buff);
+                        dueFlashStorage.write(18, PIEZO);
+			return 0;
+	}
 	else if(str.startsWith("print_mode")){
 		indexOfValue =str.indexOf("=");
 		indexOfValue++; // get index of the number
@@ -529,6 +540,9 @@ void getValuesfromEEPROM(){
    
   PRINT_MODE = (int)dueFlashStorage.read(13);
   Serial.print("PRINT_MODE : "); Serial.println(PRINT_MODE); 
+  
+  PIEZO = (int)dueFlashStorage.read(18);
+  Serial.print("PIEZO: "); Serial.println(PIEZO);
   
  
 

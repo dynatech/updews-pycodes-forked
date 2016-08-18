@@ -156,13 +156,19 @@ void GET_DATA(char *columnPointer, int CMD){
 		can_snd_data_array->data[0] = CMD; //command with long
 //                Serial1.print("ARQWAIT");
 //                Serial.println("ARQWAIT -- GET_DATA 2nd ");
-		if (CMD > 100){
+		if (CMD > 100 && CMD < 255){
 			if (PRINT_MODE == 1) {Serial.println("  -- function called: GET_DATA( polling )");}
 			CanInitialize(40000,temp_can_rcv_data_array,numberofnodes);
 			CanInitialize(40000,can_rcv_data_array,numberofnodes);
 			Broadcast_CMD(can_snd_data_array, can_rcv_data_array , numOfNodes , TIMEOUT,t_unique_ids);
-
-		} else {
+		} else if (CMD == 255){
+                          clear_can_array(can_rcv_data_array);
+                          CanInitialize(40000,temp_can_rcv_data_array,numberofnodes);
+			  CanInitialize(40000,can_rcv_data_array,numberofnodes);
+                          if (PIEZO)  {
+                            Poll_Piezo(can_snd_data_array, can_rcv_data_array , TIMEOUT);
+                          }
+                } else {
 			if (PRINT_MODE == 1) {Serial.println("  -- function called: GET_DATA( broadcast )");}
 			cmd_error = 3; // force while condition
 			while( cmd_error >= 3 ) {
@@ -450,6 +456,82 @@ int Broadcast_CMD( TX_CAN_FRAME* toSend,RX_CAN_FRAME* canRcvDataArray,unsigned i
 				dataptr++;
 				} 
         }
+	CAN.disable();
+	error = 0;
+	return error;
+}
+int Poll_Piezo ( TX_CAN_FRAME* toSend,RX_CAN_FRAME* canRcvDataArray, unsigned long timeout) {
+//	if (PRINT_MODE == 1) {Serial.println("  -- function: Poll_Piezo -- called"); }
+        Serial.println("  -- function: Poll_Piezo -- called");
+	RX_CAN_FRAME *dataptr,*c_dataptr;
+	TX_CAN_FRAME *txdataptr;
+	int ctrid, k=0,x,retry=0;;
+	unsigned int msgId;
+	int error;
+	unsigned int rx_error_cnt,tx_error_cnt ;
+	unsigned long msgHolder[8];
+	char *columnPointer = columnData;
+	bool ctimeout;
+	int r_f_count = 0; // repeating frame count
+	int first_frame = 1;
+	int repeating = 0;    
+	int illegal_limit = 0;
+	//char temp[10];
+
+	//CAN.enable();
+	Turn_on_column();
+	error = 0;
+	dataptr = canRcvDataArray;
+
+	for (int i = 0; i<1; i++){
+		CAN.enable_interrupt(CAN_IER_MB0);
+		CAN.enable_interrupt(CAN_IER_MB1);
+		CAN.mailbox_set_id(1, 255*8, false);                       //set MB1 transfer ID
+		CAN.mailbox_set_id(0, 255*8, false);                       //MB0 receive ID
+		CAN.mailbox_set_databyte(1, 0, 0x00);
+		CAN.mailbox_set_databyte(1, 1, 0x00); 
+		CAN.global_send_transfer_cmd(CAN_TCR_MB1); // Broadcast command
+		
+		Serial.print("255"); Serial.println(" polled.");
+		if (CanCheckTimeout(timeout) == true){
+			if (PRINT_MODE == 1){
+				Serial.print("      Timeout broadcast after receiving "); Serial.print(i); Serial.println(" messages");
+			}
+			Serial1.print("ARQWAIT");
+			if ( retry <= 3) {
+				retry++;
+				Serial.println(" CMD resent. ");
+				CAN.global_send_transfer_cmd(CAN_TCR_MB1);
+				delay(timeout);
+			} else {
+				retry = 0;
+				Serial.println(" retry limit reached");
+				continue;
+			}
+		}
+		CAN.get_rx_buff(&incoming);
+		if ((incoming.id) == 255){
+                                //LABOLABO YUNG DATA FRAME DITO NALANG INADJUST KESA SA PIEZO MISMO
+				store_can_frame((incoming.id),incoming.data[0],incoming.data[1],incoming.data[2],incoming.data[3],incoming.data[4],incoming.data[5],incoming.data[6],incoming.data[7]);
+				dataptr->id = (incoming.id);
+				dataptr->data[0]=incoming.data[0];		dataptr->data[1]=incoming.data[1];
+				dataptr->data[2]=incoming.data[2];		dataptr->data[3]=incoming.data[3];
+				dataptr->data[4]=incoming.data[4];		dataptr->data[5]=incoming.data[5];
+				dataptr->data[6]=incoming.data[6];		dataptr->data[7]=incoming.data[7];
+				dataptr++;
+		} else {
+			i--;
+			Serial.print(" !@#$ id: "); Serial.print(incoming.id);Serial.print("_");
+			Serial.print(incoming.data[0]);Serial.print("_");
+			Serial.print(incoming.data[1]);Serial.print("_");
+			Serial.print(incoming.data[2]);Serial.print("_");
+			Serial.print(incoming.data[3]);Serial.print("_");
+			Serial.print(incoming.data[4]);Serial.print("_");
+			Serial.print(incoming.data[5]);Serial.print("_");
+			Serial.print(incoming.data[6]);Serial.print("_");
+			Serial.println(incoming.data[7]);
+		}
+	}
 	CAN.disable();
 	error = 0;
 	return error;
