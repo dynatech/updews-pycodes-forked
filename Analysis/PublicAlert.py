@@ -35,7 +35,7 @@ def getmode(li):
 def alert_toDB(df, table_name, window, source):
     # writes df to senslopedb.table_name; mode: append on change else upates 'updateTS'
     
-    query = "SELECT * FROM senslopedb.%s WHERE site = '%s' AND source = '%s' AND updateTS <= '%s' ORDER BY timestamp DESC LIMIT 1" %(table_name, df.site.values[0], source, window.end)
+    query = "SELECT * FROM senslopedb.%s WHERE site = '%s' AND source = '%s' AND updateTS <= '%s' ORDER BY updateTS DESC LIMIT 1" %(table_name, df.site.values[0], source, window.end)
     
     df2 = q.GetDBDataFrame(query)
     
@@ -69,17 +69,17 @@ def SitePublicAlert(PublicAlert, window):
         query += "or site = 'mes' "
     elif site == 'msu':
         query += "or site = 'mes' "
-    query += ") ORDER BY timestamp DESC) AS sub GROUP BY source)"
+    query += ") ORDER BY updateTS DESC) AS sub GROUP BY source)"
     
     query += " UNION ALL "
     
     # last 2 positive alert in sensor**
-    query += "(SELECT * FROM senslopedb.site_level_alert WHERE site = '%s' AND source = 'sensor' AND alert IN ('L2', 'L3') ORDER BY timestamp DESC LIMIT 2) " %site
+    query += "(SELECT * FROM senslopedb.site_level_alert WHERE site = '%s' AND source = 'sensor' AND alert IN ('L2', 'L3') ORDER BY updateTS DESC LIMIT 2) " %site
     
     query += " UNION ALL "
     
     # latest positive alert in rain***
-    query += "(SELECT * FROM senslopedb.site_level_alert WHERE site = '%s' AND source = 'rain' AND alert = 'r1' ORDER BY timestamp DESC LIMIT 1)" %site
+    query += "(SELECT * FROM senslopedb.site_level_alert WHERE site = '%s' AND source = 'rain' AND alert = 'r1' ORDER BY updateTS DESC LIMIT 1)" %site
     
     query += " UNION ALL "
     
@@ -99,7 +99,7 @@ def SitePublicAlert(PublicAlert, window):
         query += "or site = 'mes' "
     elif site == 'msu':
         query += "or site = 'mes' "
-    query += ") AND source = 'ground' AND alert IN ('l2', 'l3') ORDER BY timestamp DESC LIMIT 2)"
+    query += ") AND source = 'ground' AND alert IN ('l2', 'l3') ORDER BY updateTS DESC LIMIT 2)"
     
     # dataframe of *,**,***, and ****
     site_alert = q.GetDBDataFrame(query)
