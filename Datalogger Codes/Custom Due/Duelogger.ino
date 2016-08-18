@@ -12,7 +12,7 @@
  * 
  */
 //constants
-#define BUILDNUMBER "REV_28"
+#define BUILDNUMBER "REV_43"
 #define BAUD 115200
 #define BAUDARQ 9600
 //#define TIMEOUT 1500
@@ -61,6 +61,8 @@ char MASTERNAME[6] = "XXXXX";
 char ColumnCommand = 'T'; 
 unsigned int numOfNodes = 11;
 char TIMESTAMP[19];
+
+int PIEZO = 0;
 
 int lastSec, lastMin, lastHr;
 char columnData[2500];

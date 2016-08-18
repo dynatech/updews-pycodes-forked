@@ -30,6 +30,18 @@ void getdataBroadcastNew(int mode,char readCode){
 		Serial.println(parsedData);
 		strncat(allData,"+" ,1);
 		strncat(allData,parsedData ,strlen(parsedData));
+
+                if (PIEZO == 1) {		
+    		  Serial1.print("ARQWAIT");        
+    		  GET_DATA(columnData,255); // piezo
+    		  Serial1.print("ARQWAIT");
+    		  Serial.println(columnData);
+    		  parsedData = parser(columnData,8);
+    		  writeData(parsedData);													//write data to sdcard
+    		  Serial.println(parsedData);
+    		  strncat(allData,"+" ,1);
+    		  strncat(allData,parsedData ,strlen(parsedData));
+                }
 			   
 		printData(allData, mode);
 
@@ -79,7 +91,19 @@ void getdataBroadcastNew(int mode,char readCode){
 		Serial.print("parsedData: ");													//write data to sdcard
 		Serial.println(parsedData);
 		strncat(allData,"+" ,1);
-		strncat(allData,parsedData ,strlen(parsedData));		
+		strncat(allData,parsedData ,strlen(parsedData));
+
+                if (PIEZO == 1) {		
+    		  Serial1.print("ARQWAIT");        
+    		  GET_DATA(columnData,255); // piezo
+    		  Serial1.print("ARQWAIT");
+    		  Serial.println(columnData);
+    		  parsedData = parser(columnData,8);
+    		  writeData(parsedData);													//write data to sdcard
+    		  Serial.println(parsedData);
+    		  strncat(allData,"+" ,1);
+    		  strncat(allData,parsedData ,strlen(parsedData));
+                }		
                 
 		printData(allData, mode);
 			

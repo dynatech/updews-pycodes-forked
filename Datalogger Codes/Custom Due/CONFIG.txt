@@ -1,0 +1,21 @@
+dateLastAccessed = 04212016
+MasterName = MADTA
+dataloggerVersion = 2
+sensorVersion = 3
+numOfNodes = 11
+columnIDs = 2267,2764,2898,2949,2918,2912,3006,3086,3088,3129,2624
+ColumnCommand = S
+column_cool_off = 30
+sampling_max_num_of_retry = 2
+turn_on_delay = 30
+enable_find_node_ids = 0
+repeating_frames_limit = 10
+repeating_retry_limit = 3
+allowed_missing_nodes = 0
+print_mode = 0
+PIEZO = 0
+ENDOFCONFIG
+ENDOFCONFIG
+ENDOFCONFIG
+ENDOFCONFIG
+ENDOFCONFIG
