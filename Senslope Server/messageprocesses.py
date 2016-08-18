@@ -1,4 +1,4 @@
-import os,time,serial,re,sys
+import os,time,serial,re,sys,traceback
 import MySQLdb, subprocess
 from datetime import datetime as dt
 from datetime import timedelta as td
@@ -700,83 +700,94 @@ def ProcessAllMessages(allmsgs,network):
     c = cfg.config()
     read_success_list = []
     read_fail_list = []
-    
-    while allmsgs:
-        isMsgProcSuccess = True
-        print '\n\n*******************************************************'
-        #gets per text message
-        msg = allmsgs.pop(0)
-        # msg.data = msg.data.upper()
-                     
-        msgname = checkNameOfNumber(msg.simnum)
-        ##### Added for V1 sensors removes unnecessary characters pls see function PreProcessColumnV1(data)
-        if re.search("\*FF",msg.data):
-            ProcessPiezometer(msg.data, msg.simnum)
-        # elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*\d+T?$",msg.data):
-        elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*.*",msg.data):
-           msg.data = PreProcessColumnV1(msg.data)
-           ProcessColumn(msg.data,msg.dt,msg.simnum)
-        elif re.search("EQINFO",msg.data):
-            isMsgProcSuccess = ProcessEarthquake(msg)
-        elif re.search("^PSIR ",msg.data.upper()):
-            isMsgProcSuccess = qsi.ProcessServerInfoRequest(msg)
-        elif re.search("^SENDGM ",msg.data.upper()):
-            isMsgProcSuccess = qsi.ServerMessaging(msg)
-        elif re.search("^ACK \d+ .+",msg.data.upper()):
-            isMsgProcSuccess = amsg.processAckToAlert(msg)   
-        elif re.search("^ *(R(O|0)*U*TI*N*E )|(EVE*NT )", msg.data.upper()):
-            try:
-                gm = gndmeas.getGndMeas(msg.data)
-                RecordGroundMeasurements(gm)
-                # server.WriteOutboxMessageToDb("READ-SUCCESS: \n" + msg.data,c.smsalert.communitynum)
-                server.WriteOutboxMessageToDb(c.reply.successen, msg.simnum)
-            except ValueError as e:
-                print str(e)
-                errortype = re.search("(WEATHER|DATE|TIME|GROUND MEASUREMENTS|NAME)", str(e).upper()).group(0)
-                print ">> Error in manual ground measurement SMS", errortype
 
-                server.WriteOutboxMessageToDb("READ-FAIL: (%s)\n%s" % (errortype,msg.data),c.smsalert.communitynum)
-                server.WriteOutboxMessageToDb(str(e), msg.simnum)
-            except:
-                server.WriteOutboxMessageToDb("READ-FAIL: (Unhandled) \n" + msg.data,c.smsalert.communitynum)
-              
-        elif re.search("^[A-Z]{4,5}\*[xyabcXYABC]\*[A-F0-9]+\*[0-9]+T?$",msg.data):
-            try:
-                dlist = ProcTwoAccelColData(msg.data,msg.simnum,msg.dt)
-                if dlist:
-                    if len(dlist[0][0]) == 6:
-                        WriteSomsDataToDb(dlist,msg.dt)
-                    else:
-                        WriteTwoAccelDataToDb(dlist,msg.dt)
-            except IndexError:
-                print "\n\n>> Error: Possible data type error"
-                print msg.data
-            except ValueError:
-                print ">> Value error detected"
-        elif re.search("[A-Z]{4}\*[A-F0-9]+\*[0-9]+$",msg.data):
-            #ProcessColumn(msg.data)
-            ProcessColumn(msg.data,msg.dt,msg.simnum)
-        #check if message is from rain gauge
-        # elif re.search("^\w{4},[\d\/:,]+,[\d,\.]+$",msg.data):
-        elif re.search("^\w{4},[\d\/:,]+",msg.data):
-            ProcessRain(msg.data,msg.simnum)
-        elif re.search(r'(\w{4})[-](\d{1,2}[.]\d{02}),(\d{01}),(\d{1,2})/(\d{1,2}),#(\d),(\d),(\d{1,2}),(\d)[*](\d{10})',msg.data):
-            ProcessStats(msg.data,msg.dt)
-        elif re.search("ARQ\+[0-9\.\+/\- ]+$",msg.data):
-            ProcessARQWeather(msg.data,msg.simnum)
-        elif msg.data.split('*')[0] == 'COORDINATOR' or msg.data.split('*')[0] == 'GATEWAY':
-            isMsgProcSuccess = ProcessCoordinatorMsg(msg.data, msg.simnum)
-        else:
-            print '>> Unrecognized message format: '
-            print 'NUM: ' , msg.simnum
-            print 'MSG: ' , msg.data
-            CheckMessageSource(msg)            
-            isMsgProcSuccess = False
-            
-        if isMsgProcSuccess:
-            read_success_list.append(msg.num)
-        else:
-            read_fail_list.append(msg.num)
+    cur_num = 0
+    
+    try:
+        while allmsgs:
+            isMsgProcSuccess = True
+            print '\n\n*******************************************************'
+            #gets per text message
+            msg = allmsgs.pop(0)
+            # msg.data = msg.data.upper()
+            cur_num = msg.num
+                         
+            msgname = checkNameOfNumber(msg.simnum)
+            ##### Added for V1 sensors removes unnecessary characters pls see function PreProcessColumnV1(data)
+            if re.search("\*FF",msg.data):
+                ProcessPiezometer(msg.data, msg.simnum)
+            # elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*\d+T?$",msg.data):
+            elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*.*",msg.data):
+               msg.data = PreProcessColumnV1(msg.data)
+               ProcessColumn(msg.data,msg.dt,msg.simnum)
+            elif re.search("EQINFO",msg.data):
+                isMsgProcSuccess = ProcessEarthquake(msg)
+            elif re.search("^PSIR ",msg.data.upper()):
+                isMsgProcSuccess = qsi.ProcessServerInfoRequest(msg)
+            elif re.search("^SENDGM ",msg.data.upper()):
+                isMsgProcSuccess = qsi.ServerMessaging(msg)
+            elif re.search("^ACK \d+ .+",msg.data.upper()):
+                isMsgProcSuccess = amsg.processAckToAlert(msg)   
+            elif re.search("^ *(R(O|0)*U*TI*N*E )|(EVE*NT )", msg.data.upper()):
+                try:
+                    gm = gndmeas.getGndMeas(msg.data)
+                    RecordGroundMeasurements(gm)
+                    # server.WriteOutboxMessageToDb("READ-SUCCESS: \n" + msg.data,c.smsalert.communitynum)
+                    server.WriteOutboxMessageToDb(c.reply.successen, msg.simnum)
+                except ValueError as e:
+                    print str(e)
+                    errortype = re.search("(WEATHER|DATE|TIME|GROUND MEASUREMENTS|NAME)", str(e).upper()).group(0)
+                    print ">> Error in manual ground measurement SMS", errortype
+
+                    server.WriteOutboxMessageToDb("READ-FAIL: (%s)\n%s" % (errortype,msg.data),c.smsalert.communitynum)
+                    server.WriteOutboxMessageToDb(str(e), msg.simnum)
+                except:
+                    server.WriteOutboxMessageToDb("READ-FAIL: (Unhandled) \n" + msg.data,c.smsalert.communitynum)
+                  
+            elif re.search("^[A-Z]{4,5}\*[xyabcXYABC]\*[A-F0-9]+\*[0-9]+T?$",msg.data):
+                try:
+                    dlist = ProcTwoAccelColData(msg.data,msg.simnum,msg.dt)
+                    if dlist:
+                        if len(dlist[0][0]) == 6:
+                            WriteSomsDataToDb(dlist,msg.dt)
+                        else:
+                            WriteTwoAccelDataToDb(dlist,msg.dt)
+                except IndexError:
+                    print "\n\n>> Error: Possible data type error"
+                    print msg.data
+                except ValueError:
+                    print ">> Value error detected"
+            elif re.search("[A-Z]{4}\*[A-F0-9]+\*[0-9]+$",msg.data):
+                #ProcessColumn(msg.data)
+                ProcessColumn(msg.data,msg.dt,msg.simnum)
+            #check if message is from rain gauge
+            # elif re.search("^\w{4},[\d\/:,]+,[\d,\.]+$",msg.data):
+            elif re.search("^\w{4},[\d\/:,]+",msg.data):
+                ProcessRain(msg.data,msg.simnum)
+            elif re.search(r'(\w{4})[-](\d{1,2}[.]\d{02}),(\d{01}),(\d{1,2})/(\d{1,2}),#(\d),(\d),(\d{1,2}),(\d)[*](\d{10})',msg.data):
+                ProcessStats(msg.data,msg.dt)
+            elif re.search("ARQ\+[0-9\.\+/\- ]+$",msg.data):
+                ProcessARQWeather(msg.data,msg.simnum)
+            elif msg.data.split('*')[0] == 'COORDINATOR' or msg.data.split('*')[0] == 'GATEWAY':
+                isMsgProcSuccess = ProcessCoordinatorMsg(msg.data, msg.simnum)
+            else:
+                print '>> Unrecognized message format: '
+                print 'NUM: ' , msg.simnum
+                print 'MSG: ' , msg.data
+                CheckMessageSource(msg)            
+                isMsgProcSuccess = False
+                
+            if isMsgProcSuccess:
+                read_success_list.append(msg.num)
+            else:
+                read_fail_list.append(msg.num)
+    # method for updating the read_status all messages that have been processed
+    # so that they will not be processed again in another run
+    except:
+        # print all the traceback routine so that the error can be traced
+        print (traceback.format_exc())
+        print ">> Setting message read_status to fatal error"
+        dbio.setReadStatus("FATAL ERROR",cur_num)
         
     return read_success_list, read_fail_list
     
