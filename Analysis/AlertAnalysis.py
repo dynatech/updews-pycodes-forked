@@ -255,12 +255,15 @@ def trending_alertgen(trending_alert, monitoring, lgd, window, config):
         
         if len(palert) != 0:
             palert['site']=monitoring.colprops.name
-            palert = palert[['site', 'disp_alert', 'vel_alert', 'col_alert']].reset_index()
+            palert = palert[['timestamp', 'site', 'disp_alert', 'vel_alert', 'col_alert']].reset_index()
             palert = palert[['timestamp', 'site', 'id', 'disp_alert', 'vel_alert', 'col_alert']]
             
             engine = create_engine('mysql://'+q.Userdb+':'+q.Passdb+'@'+q.Hostdb+':3306/'+q.Namedb)
-            palert.to_sql(name = 'node_level_alert', con = engine, if_exists = 'append', schema = q.Namedb, index = False)
-            
+            for i in palert.index:
+                try:
+                    palert.loc[palert.index == i].to_sql(name = 'node_level_alert', con = engine, if_exists = 'append', schema = q.Namedb, index = False)
+                except:
+                    print 'data already written in senslopedb.node_level_alert'
 
     alert['TNL'] = alert.col_alert.values
     
@@ -306,8 +309,6 @@ def alert_toDB(df, table_name, window):
         db.close()
 
 def main(site=''):
-    
-    start_time = datetime.now()
 
     if site == '':
         site = sys.argv[1].lower()
@@ -332,14 +333,6 @@ def main(site=''):
     
     alert_toDB(site_level_alert, 'column_level_alert', window)
 
-    print site_level_alert
-    
-    end_time = datetime.now()
-    print 'run time = ', str(end_time - start_time)
+    print 'TNL alert \n', site_level_alert
     
     return site_level_alert
-        
-################################################################################
-
-if __name__ == "__main__":
-    main()
