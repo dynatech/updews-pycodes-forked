@@ -133,7 +133,7 @@ def SitePublicAlert(PublicAlert, window):
     if 'A0' not in validity_site_alert.alert.values:
         query = "SELECT * FROM senslopedb.site_level_alert WHERE site = '%s' AND source = 'public' AND alert != 'A0' ORDER BY timestamp DESC LIMIT 3" %site
         prev_PAlert = q.GetDBDataFrame(query)
-        print 'Public Alert-', prev_PAlert.alert.values[-1]
+        print 'Public Alert-', prev_PAlert.alert.values[0]
         # one prev alert
         if len(prev_PAlert) == 1:
             start_monitor = pd.to_datetime(prev_PAlert.timestamp.values[0])
