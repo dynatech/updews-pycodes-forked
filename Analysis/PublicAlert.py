@@ -167,6 +167,7 @@ def SitePublicAlert(PublicAlert, window):
         if 'r1' in site_alert.alert.values or 'e1' in site_alert.alert.values or 'd1' in site_alert.alert.values:
             print 'Public Alert- A1'
 
+    retriggerTS = []
     # LLMC ground/sensor alert within the non-A0 public alert
     try:
         SG_PAlert = validity_site_alert.loc[(validity_site_alert.updateTS >= start_monitor) & ((validity_site_alert.source == 'sensor')|(validity_site_alert.source == 'ground'))]
@@ -178,7 +179,21 @@ def SitePublicAlert(PublicAlert, window):
             other_alerts += 'E'
         if 'd1' in RED_alert.alert.values:
             other_alerts += 'D'
+        #last L2/L3 retriggger
+        for i in ['l2', 'l3', 'L2', 'L3']:
+            try:
+                retriggerTS += [i + '_' + str(pd.to_datetime(max(SG_PAlert.loc[SG_PAlert.alert == i].updateTS.values)))]
+            except:
+                continue        
+        #last RED retriggger
+        for i in ['r1', 'e1', 'd1']:
+            try:
+                retriggerTS += [i + '_' + str(pd.to_datetime(max(RED_alert.loc[RED_alert.alert == i].updateTS.values)))]
+            except:
+                continue
+        retriggerTS = ';'.join(retriggerTS)
     except:
+        retriggerTS = ''
         print 'Public Alert- A0'
     
     # latest column alert within 3hrs
@@ -484,9 +499,9 @@ def SitePublicAlert(PublicAlert, window):
     
     nonND_alert = site_alert.loc[(site_alert.source != 'public')&(site_alert.alert != 'nd')&(site_alert.alert != 'ND')].dropna()
     if len(nonND_alert) != 0:
-        PublicAlert.loc[alert_index] = [pd.to_datetime(str(nonND_alert.sort('updateTS', ascending = False).updateTS.values[0])), PublicAlert.site.values[0], 'public', public_alert, window.end, alert_source, internal_alert, validity, sensor_alert, rain_alert]
+        PublicAlert.loc[alert_index] = [pd.to_datetime(str(nonND_alert.sort('updateTS', ascending = False).updateTS.values[0])), PublicAlert.site.values[0], 'public', public_alert, window.end, alert_source, internal_alert, validity, sensor_alert, rain_alert, retriggerTS]
     else:
-        PublicAlert.loc[alert_index] = [window.end, PublicAlert.site.values[0], 'public', public_alert, window.end, alert_source, internal_alert, validity, 'ND', 'nd']
+        PublicAlert.loc[alert_index] = [window.end, PublicAlert.site.values[0], 'public', public_alert, window.end, alert_source, internal_alert, validity, 'ND', 'nd', retriggerTS]
         
     InternalAlert = PublicAlert.loc[PublicAlert.site == site][['timestamp', 'site', 'internal_alert', 'updateTS']]
     InternalAlert['source'] = 'internal'
@@ -527,12 +542,12 @@ def main():
     
     window,config = rtw.getwindow()
     
-    PublicAlert = pd.DataFrame({'timestamp': [window.end]*len(q.GetRainProps()), 'site': q.GetRainProps().name.values, 'source': ['public']*len(q.GetRainProps()), 'alert': [np.nan]*len(q.GetRainProps()), 'updateTS': [window.end]*len(q.GetRainProps()), 'palert_source': [np.nan]*len(q.GetRainProps()), 'internal_alert': [np.nan]*len(q.GetRainProps()), 'validity': [np.nan]*len(q.GetRainProps()), 'sensor_alert': [np.nan]*len(q.GetRainProps()), 'rain_alert': [np.nan]*len(q.GetRainProps())})
-    PublicAlert = PublicAlert[['timestamp', 'site', 'source', 'alert', 'updateTS', 'palert_source', 'internal_alert', 'validity', 'sensor_alert', 'rain_alert']]
+    PublicAlert = pd.DataFrame({'timestamp': [window.end]*len(q.GetRainProps()), 'site': q.GetRainProps().name.values, 'source': ['public']*len(q.GetRainProps()), 'alert': [np.nan]*len(q.GetRainProps()), 'updateTS': [window.end]*len(q.GetRainProps()), 'palert_source': [np.nan]*len(q.GetRainProps()), 'internal_alert': [np.nan]*len(q.GetRainProps()), 'validity': [np.nan]*len(q.GetRainProps()), 'sensor_alert': [np.nan]*len(q.GetRainProps()), 'rain_alert': [np.nan]*len(q.GetRainProps()), 'retriggerTS': [np.nan]*len(q.GetRainProps())})
+    PublicAlert = PublicAlert[['timestamp', 'site', 'source', 'alert', 'updateTS', 'palert_source', 'internal_alert', 'validity', 'sensor_alert', 'rain_alert', 'retriggerTS']]
 
     Site_Public_Alert = PublicAlert.groupby('site')
     PublicAlert = Site_Public_Alert.apply(SitePublicAlert, window=window)
-    PublicAlert = PublicAlert[['timestamp', 'site', 'alert', 'palert_source', 'internal_alert', 'validity', 'sensor_alert', 'rain_alert']]
+    PublicAlert = PublicAlert[['timestamp', 'site', 'alert', 'palert_source', 'internal_alert', 'validity', 'sensor_alert', 'rain_alert', 'retriggerTS']]
     PublicAlert = PublicAlert.rename(columns = {'palert_source': 'source'})
     PublicAlert = PublicAlert.sort('site')
     print PublicAlert
