@@ -113,13 +113,13 @@ def SitePublicAlert(PublicAlert, window):
     list_ground_alerts = ','.join(site_alert.loc[(site_alert.source == 'sensor')|(site_alert.source == 'ground')].alert.values)
     
     # timestamp of latest ground alert
-    latest_groundTS = validity_site_alert.loc[(validity_site_alert.source == 'ground')]
+    latest_groundTS = validity_site_alert.loc[(validity_site_alert.source == 'ground')&(validity_site_alert.alert != 'nd')]
     if len(latest_groundTS) != 0:
         latest_groundTS = latest_groundTS.updateTS.values[0]
     else:
         latest_groundTS = '0000-00-00 00:00:00'
     # timestamp of latest sensor alert
-    latest_sensorTS = validity_site_alert.loc[(validity_site_alert.source == 'sensor')]
+    latest_sensorTS = validity_site_alert.loc[(validity_site_alert.source == 'sensor')&(validity_site_alert.alert != 'ND')]
     if len(latest_sensorTS) != 0:
         latest_sensorTS = latest_sensorTS.updateTS.values[0]
     else:
@@ -240,7 +240,7 @@ def SitePublicAlert(PublicAlert, window):
                 # without data
                 else:
                     # within 3 days of 4hr-extension
-                    if pd.to_datetime(latest_groundTS) >= pd.to_datetime(window.end - timedelta(3)) and pd.to_datetime(latest_sensorTS) >= pd.to_datetime(window.end - timedelta(3)):
+                    if RoundTime(window.end) - validity < timedelta(3):
                         validity = RoundTime(window.end) + timedelta(hours=4)
                         internal_alert = 'A3-SG' + other_alerts
                         public_alert = 'A3'
@@ -261,7 +261,7 @@ def SitePublicAlert(PublicAlert, window):
                 # without data
                 else:
                     # within 3 days of 4hr-extension
-                    if pd.to_datetime(latest_groundTS) >= pd.to_datetime(window.end - timedelta(3)):
+                    if RoundTime(window.end) - validity < timedelta(3):
                         validity = RoundTime(window.end) + timedelta(hours=4)
                         internal_alert = 'A3-S' + other_alerts
                         public_alert = 'A3'
@@ -282,7 +282,7 @@ def SitePublicAlert(PublicAlert, window):
                 # without data
                 else:
                     # within 3 days of 4hr-extension
-                    if pd.to_datetime(latest_groundTS) >= pd.to_datetime(window.end - timedelta(3)):
+                    if RoundTime(window.end) - validity < timedelta(3):
                         validity = RoundTime(window.end) + timedelta(hours=4)
                         internal_alert = 'A3-G' + other_alerts
                         public_alert = 'A3'
@@ -486,7 +486,7 @@ def SitePublicAlert(PublicAlert, window):
     if len(nonND_alert) != 0:
         PublicAlert.loc[alert_index] = [pd.to_datetime(str(nonND_alert.sort('updateTS', ascending = False).updateTS.values[0])), PublicAlert.site.values[0], 'public', public_alert, window.end, alert_source, internal_alert, validity, sensor_alert, rain_alert]
     else:
-        PublicAlert.loc[alert_index] = [window.end, PublicAlert.site.values[0], 'public', 'A0', window.end, '-', 'ND', '-', 'ND', 'nd']
+        PublicAlert.loc[alert_index] = [window.end, PublicAlert.site.values[0], 'public', public_alert, window.end, alert_source, internal_alert, validity, 'ND', 'nd']
         
     InternalAlert = PublicAlert.loc[PublicAlert.site == site][['timestamp', 'site', 'internal_alert', 'updateTS']]
     InternalAlert['source'] = 'internal'
