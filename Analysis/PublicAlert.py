@@ -133,7 +133,6 @@ def SitePublicAlert(PublicAlert, window):
     if 'A0' not in validity_site_alert.alert.values:
         query = "SELECT * FROM senslopedb.site_level_alert WHERE site = '%s' AND source = 'public' AND alert != 'A0' ORDER BY timestamp DESC LIMIT 3" %site
         prev_PAlert = q.GetDBDataFrame(query)
-        print prev_PAlert
         print 'Public Alert-', prev_PAlert.alert.values[-1]
         # one prev alert
         if len(prev_PAlert) == 1:
@@ -170,11 +169,8 @@ def SitePublicAlert(PublicAlert, window):
 
     # LLMC ground/sensor alert within the non-A0 public alert
     try:
-        print start_monitor
         SG_PAlert = validity_site_alert.loc[(validity_site_alert.updateTS >= start_monitor) & ((validity_site_alert.source == 'sensor')|(validity_site_alert.source == 'ground'))]
         RED_alert = validity_site_alert.loc[(validity_site_alert.updateTS >= start_monitor) & ((validity_site_alert.source == 'rain')|(validity_site_alert.source == 'eq')|(validity_site_alert.source == 'on demand'))]
-        print SG_PAlert
-        print RED_alert
         other_alerts = ''
         if 'r1' in RED_alert.alert.values:
             other_alerts += 'R'
@@ -244,7 +240,7 @@ def SitePublicAlert(PublicAlert, window):
                 # without data
                 else:
                     # within 3 days of 4hr-extension
-                    if latest_groundTS >= (window.end - timedelta(3)) and latest_sensorTS >= (window.end - timedelta(3)):
+                    if pd.to_datetime(latest_groundTS) >= pd.to_datetime(window.end - timedelta(3)) and pd.to_datetime(latest_sensorTS) >= pd.to_datetime(window.end - timedelta(3)):
                         validity = RoundTime(window.end) + timedelta(hours=4)
                         internal_alert = 'A3-SG' + other_alerts
                         public_alert = 'A3'
@@ -265,7 +261,7 @@ def SitePublicAlert(PublicAlert, window):
                 # without data
                 else:
                     # within 3 days of 4hr-extension
-                    if latest_groundTS >= (window.end - timedelta(3)):
+                    if pd.to_datetime(latest_groundTS) >= pd.to_datetime(window.end - timedelta(3)):
                         validity = RoundTime(window.end) + timedelta(hours=4)
                         internal_alert = 'A3-S' + other_alerts
                         public_alert = 'A3'
@@ -286,7 +282,7 @@ def SitePublicAlert(PublicAlert, window):
                 # without data
                 else:
                     # within 3 days of 4hr-extension
-                    if latest_groundTS >= (window.end - timedelta(3)):
+                    if pd.to_datetime(latest_groundTS) >= pd.to_datetime(window.end - timedelta(3)):
                         validity = RoundTime(window.end) + timedelta(hours=4)
                         internal_alert = 'A3-G' + other_alerts
                         public_alert = 'A3'
