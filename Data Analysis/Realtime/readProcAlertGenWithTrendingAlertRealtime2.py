@@ -158,7 +158,7 @@ def create_fill_smooth_df(series_list,num_nodes,monwin, roll_window_numpts, to_f
     #returning rounded-off values within monitoring window and the nan_df
     return np.round(df[(df.index>=monwin.index[0])&(df.index<=monwin.index[-1])],6), hasRawValue
 
-def compute_col_pos(xz,xy,col_pos_end, col_pos_interval, col_pos_number, excludenodelist):
+def compute_col_pos(xz,xy,col_pos_end, col_pos_interval, col_pos_number):
 
     ##DESCRIPTION:
     ##returns rounded values of cumulative displacements
@@ -178,13 +178,6 @@ def compute_col_pos(xz,xy,col_pos_end, col_pos_interval, col_pos_number, exclude
     num_nodes=len(xz.columns.tolist())
     for n in np.arange(1,1+num_nodes):
         x[n]=gf.x_from_xzxy(seg_len, xz.loc[:,n].values, xy.loc[:,n].values)
-        
-    # resetting excluded nodes to vertical position   
-    col_mask=((xz == xz) | xz.isnull()) & ([a in excludenodelist for a in xz.columns])
-    xz=xz.mask(col_mask).fillna(0.)
-    xy=xy.mask(col_mask).fillna(0.)
-    x=x.mask(col_mask).fillna(seg_len)
-        
         
     #getting dates for column positions
     colposdates=pd.date_range(end=col_pos_end, freq=col_pos_interval,periods=col_pos_number, name='ts',closed=None)
@@ -464,12 +457,7 @@ def plot_disp_vel(colname, xz,xy,xz_vel,xy_vel,excludenodelist,
 #==============================================================================
 
    
-    # resetting excluded nodes to vertical position (0 horizontal displacement)
-    col_mask=((xz == xz) | xz.isnull()) & ([a in excludenodelist for a in xz.columns])
-    xz=xz.mask(col_mask).fillna(0)   
-    xy=xy.mask(col_mask).fillna(0)
-   
-      
+  
     #setting up zeroing and offseting parameters
     
     if disp_offset=='max':
@@ -902,24 +890,30 @@ for s in sensorlist:
     xz_series_list,xy_series_list = create_series_list(proc_monitoring,monwin,colname,num_nodes)
     
     # create xz,xy dataframe for error analysis, and analyze noise of unsmoothed data and the effect on column position    
-#    xz=create_fill_smooth_df(xz_series_list,num_nodes,monwin, roll_window_numpts,0,0)[0]
-#    xy=create_fill_smooth_df(xy_series_list,num_nodes,monwin, roll_window_numpts,0,0)[0] 
-#    xz_mx,xz_mn,xy_mx,xy_mn, xz_mxc, xz_mnc, xy_mxc,xy_mnc=err.cml_noise_profiling(xz,xy)
+    xz=create_fill_smooth_df(xz_series_list,num_nodes,monwin, roll_window_numpts,0,0)[0]
+    xy=create_fill_smooth_df(xy_series_list,num_nodes,monwin, roll_window_numpts,0,0)[0] 
+    xz_mx,xz_mn,xy_mx,xy_mn, xz_mxc, xz_mnc, xy_mxc,xy_mnc=err.cml_noise_profiling(xz,xy)
 
     # create, fill and smooth dataframes from series lists
     xz,hasRawValue=create_fill_smooth_df(xz_series_list,num_nodes,monwin, roll_window_numpts,to_fill,to_smooth)
     xy=create_fill_smooth_df(xy_series_list,num_nodes,monwin, roll_window_numpts,to_fill,to_smooth)[0]
-
+    
+    #user-defined list of nodes to exclude (reset to vertical) in the plots
+    excludenodelist=[1]    
+    
+    # resetting excluded nodes to vertical position   
+    col_mask=((xz == xz) | xz.isnull()) & ([a in excludenodelist for a in xz.columns])
+    xz=xz.mask(col_mask).fillna(0.)
+    xy=xy.mask(col_mask).fillna(0.)
+    
 
 
     # computing instantaneous velocity
     vel_xz, vel_xy = compute_node_inst_vel(xz,xy,roll_window_numpts)
 
-    #user-defined list of nodes to exclude (reset to vertical) in the plots
-    excludenodelist=[]    
     
     # computing cumulative displacements
-    cs_x, cs_xz, cs_xy=compute_col_pos(xz,xy,monwin.index[-1], col_pos_interval, col_pos_num,excludenodelist)
+    cs_x, cs_xz, cs_xy=compute_col_pos(xz,xy,monwin.index[-1], col_pos_interval, col_pos_num)
     
     
                                                                                                                           
@@ -929,27 +923,25 @@ for s in sensorlist:
     
     print '\n',alert_out,'\n'
     
-    
-  
 #    #11. Plotting column positions
     if PrintColPos:
         ax=plot_column_positions(colname,cs_x,cs_xz,cs_xy)
         
         #plotting error band for column positions        
-#        try:
-#            xl=cs_x.mean().values               
-#            ax[0].fill_betweenx(xl[::-1], xz_mxc, xz_mnc, where=xz_mxc >= xz_mnc, facecolor='0.7',linewidth=0)
-#            ax[1].fill_betweenx(xl[::-1], xy_mxc, xy_mnc, where=xy_mxc >= xy_mnc, facecolor='0.7',linewidth=0)
-#        except KeyboardInterrupt:
-#            print 'no column position error band'
-#        plt.savefig(RTfilepath+colname+' colpos '+str(end.strftime('%Y-%m-%d %H-%M')),
-#                    dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
+        try:
+            xl=cs_x.mean().values               
+            ax[0].fill_betweenx(xl[::-1], xz_mxc, xz_mnc, where=xz_mxc >= xz_mnc, facecolor='0.7',linewidth=0)
+            ax[1].fill_betweenx(xl[::-1], xy_mxc, xy_mnc, where=xy_mxc >= xy_mnc, facecolor='0.7',linewidth=0)
+        except KeyboardInterrupt:
+            print 'no column position error band'
+        plt.savefig(RTfilepath+colname+' colpos '+str(end.strftime('%Y-%m-%d %H-%M')),
+                    dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
 
 
 #
     #12. Plotting displacement and velocity
     if PrintDispVel:
-        plot_disp_vel(colname, xz,xy, vel_xz, vel_xy,excludenodelist,xz_mx,xz_mn,xy_mx,xy_mn)
+        plot_disp_vel(colname, xz,xy, vel_xz, vel_xy,xz_mx,xz_mn,xy_mx,xy_mn)
         plt.savefig(RTfilepath+colname+' disp_vel '+str(end.strftime('%Y-%m-%d %H-%M')),
                     dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
 
