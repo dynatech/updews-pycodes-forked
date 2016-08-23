@@ -308,7 +308,7 @@ def GenerateGroundDataAlert(site=None,end=None):
         roll_window_numpts, end, start, offsetstart, monwin = set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_window_ops)
     
 #    Use this so set the end time    
-#    end = datetime(2016,8,12,11,30)
+#    end = datetime(2016,8,23,11,30)
 
 ############################################ MAIN ############################################
 
