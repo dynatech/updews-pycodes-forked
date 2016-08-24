@@ -873,6 +873,10 @@ for s in sensorlist:
     colname,num_nodes,seg_len= s.name,s.nos,s.seglen
     print colname, end
 
+    #user-defined list of nodes to exclude (reset and fix to vertical position) in the analysis
+    excludenodelist=[]         
+
+
     # list of working nodes     
     node_list = range(1, num_nodes + 1)
     not_working = node_status.loc[(node_status.site == colname) & (node_status.node <= num_nodes)]
@@ -892,31 +896,24 @@ for s in sensorlist:
     # create xz,xy dataframe for error analysis, and analyze noise of unsmoothed data and the effect on column position    
     xz=create_fill_smooth_df(xz_series_list,num_nodes,monwin, roll_window_numpts,0,0)[0]
     xy=create_fill_smooth_df(xy_series_list,num_nodes,monwin, roll_window_numpts,0,0)[0] 
-    xz_mx,xz_mn,xy_mx,xy_mn, xz_mxc, xz_mnc, xy_mxc,xy_mnc=err.cml_noise_profiling(xz,xy)
+    xz_mx,xz_mn,xy_mx,xy_mn, xz_mxc, xz_mnc, xy_mxc,xy_mnc=err.cml_noise_profiling(xz,xy,excludenodelist)
 
     # create, fill and smooth dataframes from series lists
     xz,hasRawValue=create_fill_smooth_df(xz_series_list,num_nodes,monwin, roll_window_numpts,to_fill,to_smooth)
     xy=create_fill_smooth_df(xy_series_list,num_nodes,monwin, roll_window_numpts,to_fill,to_smooth)[0]
     
-    #user-defined list of nodes to exclude (reset to vertical) in the plots
-    excludenodelist=[1]    
-    
-    # resetting excluded nodes to vertical position   
+    # resetting and fixing excluded nodes to vertical position   
     col_mask=((xz == xz) | xz.isnull()) & ([a in excludenodelist for a in xz.columns])
     xz=xz.mask(col_mask).fillna(0.)
     xy=xy.mask(col_mask).fillna(0.)
     
-
-
     # computing instantaneous velocity
     vel_xz, vel_xy = compute_node_inst_vel(xz,xy,roll_window_numpts)
 
-    
     # computing cumulative displacements
     cs_x, cs_xz, cs_xy=compute_col_pos(xz,xy,monwin.index[-1], col_pos_interval, col_pos_num)
     
     
-                                                                                                                          
     # Alert generation
     alert_out=alert_generation(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velL2, T_velL3, k_ac_ax,
                                num_nodes_to_check,end,proc_file_path,CSVFormat)
