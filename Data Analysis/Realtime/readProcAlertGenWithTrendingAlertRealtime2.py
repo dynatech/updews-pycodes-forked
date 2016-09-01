@@ -178,7 +178,7 @@ def compute_col_pos(xz,xy,col_pos_end, col_pos_interval, col_pos_number):
     num_nodes=len(xz.columns.tolist())
     for n in np.arange(1,1+num_nodes):
         x[n]=gf.x_from_xzxy(seg_len, xz.loc[:,n].values, xy.loc[:,n].values)
-
+        
     #getting dates for column positions
     colposdates=pd.date_range(end=col_pos_end, freq=col_pos_interval,periods=col_pos_number, name='ts',closed=None)
 
@@ -187,6 +187,9 @@ def compute_col_pos(xz,xy,col_pos_end, col_pos_interval, col_pos_number):
     xz=xz[revcols]
     xy=xy[revcols]
     x=x[revcols]
+    
+    
+    
 
     #getting cumulative displacements
     cs_x=pd.DataFrame()
@@ -438,9 +441,9 @@ def vel_classify(vel):
         print "ERROR computing velocity classification ###################################"
         return 
     
-def plot_disp_vel(colname, xz,xy,xz_vel,xy_vel,
+def plot_disp_vel(colname, xz,xy,xz_vel,xy_vel,excludenodelist,
                   xz_mx=0,xz_mn=0,xy_mx=0,xy_mn=0, 
-                  disp_offset='max',disp_zero=True):
+                  disp_offset='mean',disp_zero=True):
 #==============================================================================
 # 
 #     DESCRIPTION:
@@ -454,6 +457,7 @@ def plot_disp_vel(colname, xz,xy,xz_vel,xy_vel,
 #==============================================================================
 
    
+  
     #setting up zeroing and offseting parameters
     
     if disp_offset=='max':
@@ -468,17 +472,13 @@ def plot_disp_vel(colname, xz,xy,xz_vel,xy_vel,
     else:
         xzd_plotoffset=0
         
-    # defining cumulative (surface) displacement plot with user-defined exclusion of certain nodes    
-    excludenodelist=[]
-    col_mask=((xz == xz) | xz.isnull()) & ([a in excludenodelist for a in xz.columns])
-    cs_xz=xz.mask(col_mask).sum(axis=1)################   
-    cs_xy=xy.mask(col_mask).sum(axis=1)
+    # defining cumulative (surface) displacement    
+    cs_xz=xz.sum(axis=1)   
+    cs_xy=xy.sum(axis=1)
     cs_xz=cs_xz-cs_xz.values[0]+xzd_plotoffset*(len(xz.columns))
     cs_xy=cs_xy-cs_xy.values[0]+xzd_plotoffset*(len(xz.columns))
     
-        
-   
-
+     
     #creating noise envelope
 #    check if xz_mx, xz_mn, xy_mx, xy_mn are all arrays
     try:
@@ -873,6 +873,10 @@ for s in sensorlist:
     colname,num_nodes,seg_len= s.name,s.nos,s.seglen
     print colname, end
 
+    #user-defined list of nodes to exclude (reset and fix to vertical position) in the analysis
+    excludenodelist=[]         
+
+
     # list of working nodes     
     node_list = range(1, num_nodes + 1)
     not_working = node_status.loc[(node_status.site == colname) & (node_status.node <= num_nodes)]
@@ -892,29 +896,30 @@ for s in sensorlist:
     # create xz,xy dataframe for error analysis, and analyze noise of unsmoothed data and the effect on column position    
     xz=create_fill_smooth_df(xz_series_list,num_nodes,monwin, roll_window_numpts,0,0)[0]
     xy=create_fill_smooth_df(xy_series_list,num_nodes,monwin, roll_window_numpts,0,0)[0] 
-    xz_mx,xz_mn,xy_mx,xy_mn, xz_mxc, xz_mnc, xy_mxc,xy_mnc=err.cml_noise_profiling(xz,xy)
+    xz_mx,xz_mn,xy_mx,xy_mn, xz_mxc, xz_mnc, xy_mxc,xy_mnc=err.cml_noise_profiling(xz,xy,excludenodelist)
 
     # create, fill and smooth dataframes from series lists
     xz,hasRawValue=create_fill_smooth_df(xz_series_list,num_nodes,monwin, roll_window_numpts,to_fill,to_smooth)
     xy=create_fill_smooth_df(xy_series_list,num_nodes,monwin, roll_window_numpts,to_fill,to_smooth)[0]
-
-
-
+    
+    # resetting and fixing excluded nodes to vertical position   
+    col_mask=((xz == xz) | xz.isnull()) & ([a in excludenodelist for a in xz.columns])
+    xz=xz.mask(col_mask).fillna(0.)
+    xy=xy.mask(col_mask).fillna(0.)
+    
     # computing instantaneous velocity
     vel_xz, vel_xy = compute_node_inst_vel(xz,xy,roll_window_numpts)
 
-    
     # computing cumulative displacements
     cs_x, cs_xz, cs_xy=compute_col_pos(xz,xy,monwin.index[-1], col_pos_interval, col_pos_num)
     
     
-                                                                                                                          
     # Alert generation
     alert_out=alert_generation(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velL2, T_velL3, k_ac_ax,
                                num_nodes_to_check,end,proc_file_path,CSVFormat)
     
     print '\n',alert_out,'\n'
-  
+    
 #    #11. Plotting column positions
     if PrintColPos:
         ax=plot_column_positions(colname,cs_x,cs_xz,cs_xy)
