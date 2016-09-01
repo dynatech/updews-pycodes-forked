@@ -11,6 +11,7 @@ import querySenslopeDb as q
 import genproc as g
 import AlertAnalysis as A
 
+#import PlotColposDispvel as plotter
 
 def node_alert2(disp_vel, colname, num_nodes, T_disp, T_velL2, T_velL3, k_ac_ax,lastgooddata,window,config):
     disp_vel = disp_vel.reset_index(level=1)    
@@ -302,7 +303,12 @@ def main(name=''):
     
     
     alert = nodal_dv.apply(node_alert2, colname=monitoring.colprops.name, num_nodes=monitoring.colprops.nos, T_disp=config.io.t_disp, T_velL2=config.io.t_vell2, T_velL3=config.io.t_vell3, k_ac_ax=config.io.k_ac_ax, lastgooddata=lgd,window=window,config=config)
-    alert = column_alert(alert, config.io.num_nodes_to_check, config.io.k_ac_ax)       
+    alert = column_alert(alert, config.io.num_nodes_to_check, config.io.k_ac_ax)
+    
+    not_working = q.GetNodeStatus(1).loc[q.GetNodeStatus(1).site == name].node.values
+    
+    for i in not_working:
+        alert = alert.loc[alert.id != i]
 
     if 'L3' in list(alert.col_alert.values):
         site_alert = 'L3'
@@ -321,8 +327,10 @@ def main(name=''):
         alert_toDB(column_level_alert, 'column_level_alert', window)
     
     write_site_alert(monitoring.colprops.name, window)
+    
+    #plotter.main(monitoring, window, config)
 
-    print datetime.now()-start
+    print 'run time =', datetime.now()-start
     
     return column_level_alert
 

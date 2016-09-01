@@ -274,6 +274,11 @@ def trending_alertgen(trending_alert, monitoring, lgd, window, config):
             if len(nodal_palertDF) >= 3:
                 alert.loc[alert.id == i, 'TNL'] = max(getmode(list(nodal_palertDF.col_alert.values)))
     
+    not_working = q.GetNodeStatus(1).loc[q.GetNodeStatus(1).site == monitoring.colprops.name].node.values
+    
+    for i in not_working:
+        alert = alert.loc[alert.id != i]
+    
     if 'L3' in alert.TNL.values:
         site_alert = 'L3'
     elif 'L2' in alert.TNL.values:
@@ -332,7 +337,5 @@ def main(site=''):
     site_level_alert['updateTS'] = [window.end]
     
     alert_toDB(site_level_alert, 'column_level_alert', window)
-
-    print 'TNL alert \n', site_level_alert
     
     return site_level_alert
