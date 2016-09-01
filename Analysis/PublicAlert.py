@@ -331,21 +331,21 @@ def SitePublicAlert(PublicAlert, window):
             if 'L2' in SG_PAlert.alert.values and 'l2' in SG_PAlert.alert.values:
                 alert_source = 'both ground and sensor'
                 if 'L' in list_ground_alerts and 'l' in list_ground_alerts:
-                    internal_alert = 'A2-SG' + other_alerts
+                    internal_alert = 'A2-sg' + other_alerts
                 else:
-                    internal_alert = 'ND-SG' + other_alerts
+                    internal_alert = 'ND-sg' + other_alerts
             elif 'L2' in SG_PAlert.alert.values:
                 alert_source = 'sensor'
                 if 'L' in list_ground_alerts:
-                    internal_alert = 'A2-S' + other_alerts
+                    internal_alert = 'A2-s' + other_alerts
                 else:
-                    internal_alert = 'ND-S' + other_alerts
+                    internal_alert = 'ND-s' + other_alerts
             else:
                 alert_source = 'ground'
                 if 'l' in list_ground_alerts:
-                    internal_alert = 'A2-G' + other_alerts
+                    internal_alert = 'A2-g' + other_alerts
                 else:
-                    internal_alert = 'ND-G' + other_alerts
+                    internal_alert = 'ND-g' + other_alerts
 
         # end of A2 validity if with data with no significant mov't
         else:
@@ -370,7 +370,7 @@ def SitePublicAlert(PublicAlert, window):
                     # within 3 days of 4hr-extension
                     if RoundTime(window.end) - validity < timedelta(3):
                         validity = RoundTime(window.end) + timedelta(hours=4)
-                        internal_alert = 'ND-SG' + other_alerts
+                        internal_alert = 'ND-sg' + other_alerts
                         public_alert = 'A2'
                         
                     else:
@@ -391,7 +391,7 @@ def SitePublicAlert(PublicAlert, window):
                     # within 3 days of 4hr-extension
                     if RoundTime(window.end) - validity < timedelta(3):
                         validity = RoundTime(window.end) + timedelta(hours=4)
-                        internal_alert = 'ND-S' + other_alerts
+                        internal_alert = 'ND-s' + other_alerts
                         public_alert = 'A2'
                         
                     else:
@@ -412,7 +412,7 @@ def SitePublicAlert(PublicAlert, window):
                     # within 3 days of 4hr-extension
                     if RoundTime(window.end) - validity < timedelta(3):
                         validity = RoundTime(window.end) + timedelta(hours=4)
-                        internal_alert = 'ND-G' + other_alerts
+                        internal_alert = 'ND-g' + other_alerts
                         public_alert = 'A2'
                         
                     else:
