@@ -555,7 +555,7 @@ def main():
     PublicAlert.to_csv('PublicAlert.txt', header=True, index=None, sep='\t', mode='w')
     
     dfjson = PublicAlert.to_json(orient="records", date_format="iso")
-    dfjson = dfjson.replace('T', ' ').replace('.000Z', '')
+    dfjson = dfjson.replace('T', ' ').replace('.000Z', '').replace('retrigger S','retriggerTS')
     with open('PublicAlert.json', 'w') as w:
         w.write(dfjson)
             
