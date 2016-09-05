@@ -230,7 +230,7 @@ def SitePublicAlert(PublicAlert, window):
             elif 'L3' in SG_PAlert.alert.values:
                 alert_source = 'sensor'
                 internal_alert = 'A3-S' + other_alerts
-            else:
+            elif 'l3' in SG_PAlert.alert.values:
                 alert_source = 'ground'
                 internal_alert = 'A3-G' + other_alerts
             
@@ -242,7 +242,7 @@ def SitePublicAlert(PublicAlert, window):
                 alert_source = 'both ground and sensor'
             elif 'L3' in SG_PAlert.alert.values:
                 alert_source = 'sensor'
-            else:
+            elif 'l3' in SG_PAlert.alert.values:
                 alert_source = 'ground'
 
             # both ground and sensor triggered
@@ -340,7 +340,7 @@ def SitePublicAlert(PublicAlert, window):
                     internal_alert = 'A2-s' + other_alerts
                 else:
                     internal_alert = 'ND-s' + other_alerts
-            else:
+            elif 'l2' in SG_PAlert.alert.values:
                 alert_source = 'ground'
                 if 'l' in list_ground_alerts:
                     internal_alert = 'A2-g' + other_alerts
@@ -355,7 +355,7 @@ def SitePublicAlert(PublicAlert, window):
                 alert_source = 'both ground and sensor'
             elif 'L2' in SG_PAlert.alert.values:
                 alert_source = 'sensor'
-            else:
+            elif 'l2' in SG_PAlert.alert.values:
                 alert_source = 'ground'
 
             # both ground and sensor triggered
