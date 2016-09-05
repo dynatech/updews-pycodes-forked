@@ -33,7 +33,7 @@ def getTimeFromSms(text):
     
 def getDateFromSms(text):
   # timetxt = ""
-  mon_re1 = "[JFMASOND][AEPUCO][NBRYLGTVC]"
+  mon_re1 = "[JFMASOND][AEPUCO][NBRYLGTVCP]"
   mon_re2 = "[A-Z]{4,9}"
   day_re1 = "\d{1,2}"
   year_re1 = "(201[678]){0,1}"
