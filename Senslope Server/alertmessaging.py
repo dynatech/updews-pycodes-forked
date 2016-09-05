@@ -63,7 +63,7 @@ def sendAlertMessage():
 
 def processAckToAlert(msg):
     try:
-        alert_id = re.search("(?<=K )\d+(?= )",msg.data).group(0)
+        alert_id = re.search("(?<=K )\d+(?= )",msg.data,re.IGNORECASE).group(0)
     except:
         errmsg = "Error in parsing alert id. Please try again"
         server.WriteOutboxMessageToDb(errmsg,msg.simnum)
@@ -87,7 +87,7 @@ def processAckToAlert(msg):
     dbio.commitToDb(query,processAckToAlert)
 
     contacts = getAlertStaffNumbers()
-    message = "Alert ID %s ACK by %s on %s\nActions done: %s" % (alert_id,name,msg.dt,remarks)
+    message = "Alert ID %s ACK by %s on %s\nRemarks: %s" % (alert_id,name,msg.dt,remarks)
     
     tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
     for item in contacts:
