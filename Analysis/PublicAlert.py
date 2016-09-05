@@ -534,7 +534,10 @@ def SitePublicAlert(PublicAlert, window):
     alert_toDB(InternalAlert, 'site_level_alert', window, 'internal')
     
     SitePublicAlert = PublicAlert.loc[PublicAlert.site == site][['timestamp', 'site', 'source', 'alert', 'updateTS']]
-    alert_toDB(SitePublicAlert, 'site_level_alert', window, 'public')
+    try:    
+        alert_toDB(SitePublicAlert, 'site_level_alert', window, 'public')
+    except:
+        print 'duplicate'
     
     GSMAlert = PublicAlert.loc[PublicAlert.site == site][['site', 'alert', 'palert_source']]
     public_CurrAlert = SitePublicAlert.alert.values[0]
@@ -546,7 +549,7 @@ def SitePublicAlert(PublicAlert, window):
         node_alert = list(set(node_alertDF.id.values))
         node_alert.sort()
         node_alert = str(node_alert)[1:len(str(node_alert))-1].replace(' ', '')
-        GSMAlert['node'] = [node_alert]
+        GSMAlert['palert_source'] = [GSMAlert.palert_source.values[0] + '(' + node_alert + ')']
     
     if public_CurrAlert != 'A0':
         if len(validity_A) == 0:
