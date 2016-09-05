@@ -539,6 +539,15 @@ def SitePublicAlert(PublicAlert, window):
     GSMAlert = PublicAlert.loc[PublicAlert.site == site][['site', 'alert', 'palert_source']]
     public_CurrAlert = SitePublicAlert.alert.values[0]
     
+    #node_level_alert
+    if alert_source == 'sensor' or alert_source == 'both ground and sensor':
+        query = "SELECT * FROM senslopedb.node_level_alert WHERE site LIKE '%s' AND timestamp >= '%s' ORDER BY timestamp DESC" %(sensor_site,start_monitor)
+        node_alertDF = q.GetDBDataFrame(query)
+        node_alert = list(set(node_alertDF.id.values))
+        node_alert.sort()
+        node_alert = str(node_alert)[1:len(str(node_alert))-1].replace(' ', '')
+        GSMAlert['node'] = [node_alert]
+    
     if public_CurrAlert != 'A0':
         if len(validity_A) == 0:
             GSMAlert.to_csv('GSMAlert.txt', header = False, index = None, sep = ':', mode = 'a')
