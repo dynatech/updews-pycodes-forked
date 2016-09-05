@@ -333,19 +333,32 @@ def SitePublicAlert(PublicAlert, window):
                 if 'L' in list_ground_alerts and 'l' in list_ground_alerts:
                     internal_alert = 'A2-sg' + other_alerts
                 else:
-                    internal_alert = 'ND-sg' + other_alerts
+                    if 'L' not in list_ground_alerts and 'l' not in list_ground_alerts:
+                        internal_alert = 'A2-s0g0' + other_alerts
+                    else:
+                        if 'L' in list_ground_alerts:
+                            internal_alert = 'A2-s'
+                        else:
+                            internal_alert = 'A2-s0'
+                        if 'l' in list_ground_alerts:
+                            internal_alert = 'A2-g'
+                        else:
+                            internal_alert = 'A2-g0'
+                        internal_alert += other_alerts
+
+                    
             elif 'L2' in SG_PAlert.alert.values:
                 alert_source = 'sensor'
                 if 'L' in list_ground_alerts:
                     internal_alert = 'A2-s' + other_alerts
                 else:
-                    internal_alert = 'ND-s' + other_alerts
+                    internal_alert = 'A2-s0' + other_alerts
             elif 'l2' in SG_PAlert.alert.values:
                 alert_source = 'ground'
                 if 'l' in list_ground_alerts:
                     internal_alert = 'A2-g' + other_alerts
                 else:
-                    internal_alert = 'ND-g' + other_alerts
+                    internal_alert = 'A2-g0' + other_alerts
 
         # end of A2 validity if with data with no significant mov't
         else:
@@ -370,7 +383,18 @@ def SitePublicAlert(PublicAlert, window):
                     # within 3 days of 4hr-extension
                     if RoundTime(window.end) - validity < timedelta(3):
                         validity = RoundTime(window.end) + timedelta(hours=4)
-                        internal_alert = 'ND-sg' + other_alerts
+                        if 'L' not in list_ground_alerts and 'l' not in list_ground_alerts:
+                            internal_alert = 'A2-s0g0' + other_alerts
+                        else:
+                            if 'L' in list_ground_alerts:
+                                internal_alert = 'A2-s'
+                            else:
+                                internal_alert = 'A2-s0'
+                            if 'l' in list_ground_alerts:
+                                internal_alert = 'A2-g'
+                            else:
+                                internal_alert = 'A2-g0'
+                            internal_alert += other_alerts
                         public_alert = 'A2'
                         
                     else:
@@ -391,7 +415,7 @@ def SitePublicAlert(PublicAlert, window):
                     # within 3 days of 4hr-extension
                     if RoundTime(window.end) - validity < timedelta(3):
                         validity = RoundTime(window.end) + timedelta(hours=4)
-                        internal_alert = 'ND-s' + other_alerts
+                        internal_alert = 'A2-s0' + other_alerts
                         public_alert = 'A2'
                         
                     else:
@@ -401,7 +425,7 @@ def SitePublicAlert(PublicAlert, window):
                         internal_alert = 'ND'
 
             # ground triggered
-            else:
+            elif alert_source == 'ground':
                 # with data
                 if 'l' in list_ground_alerts:
                     internal_alert = 'A0'
@@ -412,7 +436,7 @@ def SitePublicAlert(PublicAlert, window):
                     # within 3 days of 4hr-extension
                     if RoundTime(window.end) - validity < timedelta(3):
                         validity = RoundTime(window.end) + timedelta(hours=4)
-                        internal_alert = 'ND-g' + other_alerts
+                        internal_alert = 'ND-g0' + other_alerts
                         public_alert = 'A2'
                         
                     else:
