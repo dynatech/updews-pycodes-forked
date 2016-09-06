@@ -545,11 +545,15 @@ def SitePublicAlert(PublicAlert, window):
     #node_level_alert
     if alert_source == 'sensor' or alert_source == 'both ground and sensor':
         query = "SELECT * FROM senslopedb.node_level_alert WHERE site LIKE '%s' AND timestamp >= '%s' ORDER BY timestamp DESC" %(sensor_site,start_monitor)
-        node_alertDF = q.GetDBDataFrame(query)
-        node_alert = list(set(node_alertDF.id.values))
-        node_alert.sort()
-        node_alert = str(node_alert)[1:len(str(node_alert))-1].replace(' ', '')
-        GSMAlert['palert_source'] = [GSMAlert.palert_source.values[0] + '(' + node_alert + ')']
+        allnode_alertDF = q.GetDBDataFrame(query)
+        column_name = set(allnode_alertDF.site.values)
+        colnode_source = ''
+        for i in column_name:
+            node_alertDF = allnode_alertDF.loc[allnode_alertDF.site == i]
+            node_alert = list(set(node_alertDF.id.values))
+            node_alert = str(node_alert)[1:len(str(node_alert))-1].replace(' ', '')
+            colnode_source += str(i) + ':' + node_alert + ' '
+        GSMAlert['palert_source'] = [GSMAlert.palert_source.values[0] + '(' + colnode_source + ')']
     
     if public_CurrAlert != 'A0':
         if len(validity_A) == 0:
