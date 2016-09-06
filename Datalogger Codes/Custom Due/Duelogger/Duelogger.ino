@@ -321,6 +321,12 @@ void printData(char *rawcolData, int mode ) {
         cutoff[i] = 133;  //7 chars for raw soms
         break;
       }
+      case 'F': {
+        idfier[i]='p';
+        cutoff[i] = 135;  //7 chars for raw soms
+        break;
+      }
+            
       default: {
         idfier[i]= '0';
         cutoff[i] = 0;
@@ -409,13 +415,30 @@ void printData(char *rawcolData, int mode ) {
       sprintf(charnum, "%d", loopnum-(((loopnum)/10)*10));
       strncat(subcolumnData, charnum, 1);
       strncat(subcolumnData, "#", 1);
-      strncat(subcolumnData, MASTERNAME, 5);
-      strncat(subcolumnData, "*", 1);
-      sprintf(charnum, "%c", idfier[i]);
-      strncat(subcolumnData, charnum, 1);
-      strncat(subcolumnData, "*", 1);
-      strncat(subcolumnData, columnPointer, cutoff[i]);
-      strncat(subcolumnData, "<<", 2);
+      // special piezo case
+      if (idfier[i] == 'p'){
+        strncat(subcolumnData, MASTERNAME, 5);
+        strncat(subcolumnData, "PZ", 2);
+        strncat(subcolumnData, "*", 1);
+        //strncat(subcolumnData, "*", 1);
+        strncat(subcolumnData, columnPointer, cutoff[i]);
+        strncat(subcolumnData, "<<", 2);
+      
+      } else {
+        strncat(subcolumnData, MASTERNAME, 5);
+        strncat(subcolumnData, "*", 1);
+        sprintf(charnum, "%c", idfier[i]);
+        strncat(subcolumnData, charnum, 1);
+        strncat(subcolumnData, "*", 1);
+        strncat(subcolumnData, columnPointer, cutoff[i]);
+        strncat(subcolumnData, "<<", 2);
+      }
+      //strncat(subcolumnData, "*", 1);
+      //sprintf(charnum, "%c", idfier[i]);
+      //strncat(subcolumnData, charnum, 1);
+      //strncat(subcolumnData, "*", 1);
+      //strncat(subcolumnData, columnPointer, cutoff[i]);
+      //strncat(subcolumnData, "<<", 2);
       
       columnPointer = columnPointer + cutoff[i];
       if (partnum == 0) {
