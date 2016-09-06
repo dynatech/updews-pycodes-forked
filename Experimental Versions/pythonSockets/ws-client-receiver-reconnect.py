@@ -20,9 +20,9 @@ if __name__ == '__main__':
 
     log.startLogging(sys.stdout)
 
-	url = "www.dewslandslide.com"
-	port = 5050
-	fullUrl = "ws://" + url + ":" + port
+    url = "www.dewslandslide.com"
+    port = 5050
+    fullUrl = "ws://" + url + ":" + port
 
     factory = dsl.MyClientFactory(fullUrl)
 

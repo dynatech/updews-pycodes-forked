@@ -211,7 +211,7 @@ def formatReceivedGSMtext(timestamp, sender, message):
     return jsonText    
     
 def sendDataToDEWS(msg, port=None):
-   host = "www.dewslandslide.com"
+    host = "www.dewslandslide.com"
     # host = "www.codesword.com"
     
     if port == None:
