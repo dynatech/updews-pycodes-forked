@@ -9,4 +9,6 @@ from websocket import create_connection
 import time
 import dewsSocketLeanLib as dsll
 
-dsll.connRecvReconn("www.codesword.com", 5050)
+url = "www.dewslandslide.com"
+port = 5050
+dsll.connRecvReconn(url, port)

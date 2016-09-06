@@ -20,7 +20,11 @@ if __name__ == '__main__':
 
     log.startLogging(sys.stdout)
 
-    factory = dsl.MyClientFactory(u"ws://www.codesword.com:5050")
+	url = "www.dewslandslide.com"
+	port = 5050
+	fullUrl = "ws://" + url + ":" + port
 
-    reactor.connectTCP("www.codesword.com", 5050, factory)
+    factory = dsl.MyClientFactory(fullUrl)
+
+    reactor.connectTCP(url, port, factory)
     reactor.run()
