@@ -475,10 +475,42 @@ def SitePublicAlert(PublicAlert, window):
         else:
             # with ground data
             if 'L' in list_ground_alerts or 'l' in list_ground_alerts:
-                internal_alert = 'A0'
-                public_alert = 'A0'
-                alert_source = '-'
-                validity = '-'
+                # if nd rainfall alert                
+                if rain_alert == 'nd':
+                    query = "SELECT * FROM senslopedb.site_level_alert WHERE site = '%s' AND source = 'rain' ORDER BY TIMESTAMP DESC LIMIT 2" %site
+                    rain_alertDF = q.GetDBDataFrame(query)
+                    # if rainfall alert is nd from r1
+                    if rain_alertDF.alert.values[1] == 'r1':
+                        # within 1-day cap of 4H extension for nd
+                        if RoundTime(window.end) - validity < timedelta(1):
+                            validity = RoundTime(window.end) + timedelta(hours=4)
+                            public_alert = 'A1'
+                            # identifies which triggered A1
+                            RED_source = []
+                            if 'R' in other_alerts:
+                                RED_source += ['rain']
+                            if 'E' in other_alerts:
+                                RED_source += ['eq']
+                            if 'D' in other_alerts:
+                                RED_source += ['on demand']
+                            alert_source = ','.join(RED_source)
+                            internal_alert = 'A1-' + other_alerts   
+                        # end of 1-day cap of 4H extension for nd
+                        else:
+                            public_alert = 'A0'
+                            alert_source = '-'
+                            validity = '-'
+                            internal_alert = 'ND'
+                    else:
+                        internal_alert = 'A0'
+                        public_alert = 'A0'
+                        alert_source = '-'
+                        validity = '-'
+                else:
+                    internal_alert = 'A0'
+                    public_alert = 'A0'
+                    alert_source = '-'
+                    validity = '-'
             
             # without ground data
             else:
