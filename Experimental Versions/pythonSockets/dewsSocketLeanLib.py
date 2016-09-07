@@ -57,7 +57,7 @@ def identifyMobileNetwork(contactNumber):
         # //Mix of Smart, Sun, Talk & Text
         networkSmart = "00,07,08,09,10,11,12,14,18,19,20,21,22,23,24,25,28,29,30,31,32,33,34,38,39,40,42,43,44,46,47,48,49,50,89,98,99"
         # //Mix of Globe and TM
-        networkGlobe = "05,06,15,16,17,25,26,27,35,36,37,45,75,77,78,79,94,96,97"
+        networkGlobe = "05,06,15,16,17,25,26,27,35,36,37,45,75,77,78,79,94,95,96,97"
 
         if networkSmart.find(curSimPrefix) >= 0:
             print "Py Smart Network!\n";
@@ -210,10 +210,13 @@ def formatReceivedGSMtext(timestamp, sender, message):
     jsonText = """{"type":"smsrcv","timestamp":"%s","sender":"%s","msg":"%s"}""" % (timestamp, sender, message)
     return jsonText    
     
-def sendDataToDEWS(msg):
-#    host = "www.dewslandslide.com"
-    host = "www.codesword.com"
-    port = 5050
+def sendDataToDEWS(msg, port=None):
+    host = "www.dewslandslide.com"
+    # host = "www.codesword.com"
+    
+    if port == None:
+        port = 5050
+    
     success = sendDataToWSS(host, port, msg)
     return success
 
@@ -226,12 +229,12 @@ def filterSpecialCharacters(message):
     
     return message
 
-def sendReceivedGSMtoDEWS(timestamp, sender, message):
+def sendReceivedGSMtoDEWS(timestamp, sender, message, port=None):
     # Filter out characters (") and (\)
     message = filterSpecialCharacters(message)
     
     jsonText = formatReceivedGSMtext(timestamp, sender, message)
-    success = sendDataToDEWS(jsonText)
+    success = sendDataToDEWS(jsonText, port)
     return success
 
 #Connect to WebSocket Server and attempt to reconnect when disconnected

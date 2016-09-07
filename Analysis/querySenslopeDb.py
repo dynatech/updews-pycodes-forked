@@ -1,3 +1,4 @@
+
 #import MySQLdb
 import ConfigParser
 from datetime import datetime as dtm
@@ -260,6 +261,8 @@ def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid
             toTime_query =  " AND timestamp <= '%s'" %toTime
         elif toTime:
             toTime_query = ''
+        
+        query = query+ " AND batt >= 3.16 AND batt <= 3.4 "
             
         query = query + toTime_query
         query = query + " UNION ALL"
@@ -273,6 +276,8 @@ def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid
         query = query + " AND msgid in (12, 33)"
         query = query+ " AND timestamp > '%s'" %fromTime
         query = query + toTime_query
+        
+        query = query+ " AND batt >= 3.16 AND batt <= 3.4 "
 
     elif (len(siteid) == 4):
         query = "select timestamp,'%s' as 'name',id,xvalue,yvalue,zvalue from senslopedb.%s " % (siteid,siteid)
