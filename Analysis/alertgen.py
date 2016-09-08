@@ -13,6 +13,18 @@ import AlertAnalysis as A
 
 #import PlotColposDispvel as plotter
 
+def RoundTime(date_time):
+    # rounds time to 4/8/12 AM/PM
+    time_hour = int(date_time.strftime('%H'))
+
+    quotient = time_hour / 4
+    if quotient == 5:
+        date_time = datetime.combine(date_time.date() + timedelta(1), time(0,0,0))
+    else:
+        date_time = datetime.combine(date_time.date(), time((quotient+1)*4,0,0))
+            
+    return date_time
+
 def node_alert2(disp_vel, colname, num_nodes, T_disp, T_velL2, T_velL3, k_ac_ax,lastgooddata,window,config):
     disp_vel = disp_vel.reset_index(level=1)    
     valid_data = pd.to_datetime(window.end - timedelta(hours=3))
@@ -327,8 +339,19 @@ def main(name=''):
         alert_toDB(column_level_alert, 'column_level_alert', window)
     
     write_site_alert(monitoring.colprops.name, window)
-    
-    #plotter.main(monitoring, window, config)
+
+#######################
+
+#    query = "SELECT * FROM senslopedb.site_level_alert WHERE site = '%s' and source = 'public' ORDER BY updateTS DESC LIMIT 1" %monitoring.colprops.name[0:3]
+#    public_alert = q.GetDBDataFrame(query)
+#    if public_alert.alert.values[0] != 'A0' or RoundTime(pd.to_datetime(public_alert.timestamp.values[0])) == RoundTime(window.end):
+#        plot_time = ['07:30:00', '19:30:00']
+#        if str(window.end.time()) in plot_time:
+#            plotter.main(monitoring, window, config)
+#    elif RoundTime(pd.to_datetime(public_alert.timestamp.values[0])) == RoundTime(window.end):
+#        plotter.main(monitoring, window, config)
+
+#######################
 
     print 'run time =', datetime.now()-start
     
@@ -337,4 +360,4 @@ def main(name=''):
 ################################################################################
 
 if __name__ == "__main__":
-    main()
+    main('gamb')

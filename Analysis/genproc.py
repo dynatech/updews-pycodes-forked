@@ -51,7 +51,27 @@ def accel_to_lin_xz_xy(seg_len,xa,ya,za):
     
     return np.round(xz,4),np.round(xy,4)
 
-def smooth (df, offsetstart, end, roll_window_numpts, to_smooth):
+def fill_smooth (df, offsetstart, end, roll_window_numpts, to_smooth, to_fill):    
+    if to_fill:
+        # filling NAN values
+        df = df.fillna(method = 'pad')
+        
+        #Checking, resolving and reporting fill process    
+        print 'Post-filling report: '
+        if df.isnull().values.any():
+            for n in ['xz', 'xy']:
+                if df[n].isnull().values.all():
+                    print '     ',n, 'NaN all values'
+                    df[n]=0
+                elif np.isnan(df[n].values[0]):
+                    print '     ',n, 'NaN 1st value'
+                    df[n]=df[n].fillna(method='bfill')
+        else: 
+            print '     All numerical values.'
+
+    #dropping rows outside monitoring window
+    df=df[(df.index>=offsetstart)&(df.index<=end)]
+    
     if to_smooth and len(df)>1:
         df=pd.rolling_mean(df,window=roll_window_numpts,min_periods=1)[roll_window_numpts-1:]
         return np.round(df, 4)
@@ -122,7 +142,7 @@ def genproc(col, offsetstart, end=datetime.now()):
     
     nodal_proc_monitoring = monitoring.groupby('id')
     
-    filled_smoothened = nodal_proc_monitoring.apply(smooth, offsetstart=offsetstart, end=end, roll_window_numpts=window.numpts, to_smooth=config.io.to_smooth)
+    filled_smoothened = nodal_proc_monitoring.apply(fill_smooth, offsetstart=offsetstart, end=end, roll_window_numpts=window.numpts, to_smooth=config.io.to_smooth, to_fill=config.io.to_fill)
     filled_smoothened = filled_smoothened[['xz', 'xy','name']].reset_index()
     
     monitoring = filled_smoothened.set_index('ts')   
