@@ -217,7 +217,7 @@ def GetUnemptyASTIdata(r, rainprops, offsetstart):
         ASTIdata = GetASTIdata(r, rain_noah, offsetstart)
         if len(ASTIdata) != 0:
             latest_ts = pd.to_datetime(ASTIdata.index.values[0])
-            if end - latest_ts < timedelta(hours=1):
+            if end - latest_ts < timedelta(1):
                 return ASTIdata, n
     return pd.DataFrame(data = None), n
 
