@@ -40,6 +40,8 @@ def RoundTime(date_time):
     quotient = time_hour / 4
     if quotient == 5:
         date_time = datetime.combine(date_time.date() + timedelta(1), time(0,0,0))
+    elif time_hour % 4 == 0:
+        date_time = datetime.combine(date_time.date(), time((quotient)*4,0,0))
     else:
         date_time = datetime.combine(date_time.date(), time((quotient+1)*4,0,0))
             
@@ -101,13 +103,17 @@ def uptoDB_gndmeas_alerts(df):
 
 
 
-def get_latest_ground_df(site=None):
+def get_latest_ground_df(site=None,end = None):
     #INPUT: String containing site name    
-    #OUTPUT: Dataframe of the last 4 recent ground measurement in the database
-    if site == None:
+    #OUTPUT: Dataframe of the last 10 recent ground measurement in the database
+    if site == None and end == None:
         query = 'SELECT g1.timestamp,g1.site_id,g1.crack_id,g1.meas, COUNT(*) num FROM senslopedb.gndmeas g1 JOIN senslopedb.gndmeas g2 ON g1.site_id = g2.site_id AND g1.crack_id = g2.crack_id AND g1.timestamp <= g2.timestamp group by g1.timestamp,g1.site_id, g1.crack_id HAVING COUNT(*) <= 4 ORDER BY site_id, crack_id, num desc'
+    elif end != None and site != None:
+        query = 'SELECT g1.timestamp,g1.site_id,g1.crack_id,g1.meas, COUNT(*) num FROM senslopedb.gndmeas g1 JOIN senslopedb.gndmeas g2 ON g1.site_id = g2.site_id AND g1.crack_id = g2.crack_id AND g1.timestamp <= g2.timestamp  AND g1.site_id = "{}" AND g1.timestamp <= "{}" AND g2.timestamp <= "{}" group by g1.timestamp,g1.site_id, g1.crack_id HAVING COUNT(*) <= 4 ORDER BY site_id, crack_id, num desc'.format(site,end,end)
+    elif site == None and end != None:
+        query = 'SELECT g1.timestamp,g1.site_id,g1.crack_id,g1.meas, COUNT(*) num FROM senslopedb.gndmeas g1 JOIN senslopedb.gndmeas g2 ON g1.site_id = g2.site_id AND g1.crack_id = g2.crack_id AND g1.timestamp <= g2.timestamp  AND g1.timestamp <= "{}" AND g2.timestamp <= "{}" group by g1.timestamp,g1.site_id, g1.crack_id HAVING COUNT(*) <= 4 ORDER BY site_id, crack_id, num desc'.format(end,end)
     else:
-        query = 'SELECT g1.timestamp,g1.site_id,g1.crack_id,g1.meas, COUNT(*) num FROM senslopedb.gndmeas g1 JOIN senslopedb.gndmeas g2 ON g1.site_id = g2.site_id AND g1.crack_id = g2.crack_id AND g1.timestamp <= g2.timestamp group by g1.timestamp,g1.site_id, g1.crack_id HAVING COUNT(*) <= 4 AND site_id = "{}" ORDER BY site_id, crack_id, num desc'.format(site)
+        query = 'SELECT g1.timestamp,g1.site_id,g1.crack_id,g1.meas, COUNT(*) num FROM senslopedb.gndmeas g1 JOIN senslopedb.gndmeas g2 ON g1.site_id = g2.site_id AND g1.crack_id = g2.crack_id AND g1.timestamp <= g2.timestamp AND g1.site_id = "{}" group by g1.timestamp,g1.site_id, g1.crack_id HAVING COUNT(*) <= 4 ORDER BY site_id, crack_id, num desc'.format(site)
 
     df = GetDBDataFrame(query)
     return df[['timestamp','site_id','crack_id','meas']]
@@ -135,74 +141,75 @@ def crack_eval(df,end):
     #^&*()
     df = df[df.timestamp <= end]
     print df
-    
-    #Obtain the time difference and displacement between the latest values
-    if len(df) >= 2:
-        time_delta = (df.timestamp.iloc[-1]  - df.timestamp.iloc[-2]) / np.timedelta64(1,'D')
-        abs_disp = np.abs(df.meas.iloc[-1]-df.meas.iloc[-2])
-        
-        crack_alert = 'nd'    
-        
-        #Based on alert table
-        if time_delta >= 7:
-            if time_delta < 8:
-                if abs_disp >= 75:
-                    crack_alert = 'l3'
-                elif abs_disp >= 3:
-                    crack_alert = 'l2'
-                else:
-                    crack_alert = 'l0'
-            else:
-                if abs_disp >= (time_delta/7.)*75:
-                    crack_alert = 'l3'
-                elif abs_disp >= (time_delta/7.)*3:
-                    crack_alert = 'l3'
-                else:
-                    crack_alert = 'l0'
-        elif time_delta >= 2.75:
-            if abs_disp >= 30:
-                crack_alert = 'l3'
-            elif abs_disp >= 1.5:
-                crack_alert = 'l2'
-            else:
-                crack_alert = 'l0'
-        elif time_delta >= 0.75:
-            if abs_disp >= 10:
-                crack_alert = 'l3'
-            elif abs_disp >= 0.5:
-                crack_alert = 'l2'
-            else:
-                crack_alert = 'l0'
-        else:
-            if abs_disp >= 5:
-                crack_alert = 'l3'
-            elif abs_disp >= 0.5:
-                crack_alert = 'l2'
-            else:
-                crack_alert = 'l0'
-        
-        #Perform p value computation for specific crack
-        if abs_disp >= 0.5 and abs_disp <= 1:
-            if len(df) >= 4:
-                #get the last 4 data values for the current feature
-                last_cur_feature_measure = df.meas.values
-                last_cur_feature_time = (df.timestamp.values - df.timestamp.values[0])/np.timedelta64(1,'D')
-    
-                #perform linear regression to get p value
-                m, b, r, p, std = stats.linregress(last_cur_feature_time,last_cur_feature_measure)
-                #^&*()
-                print p
-                
-                #Evaluate p value
-                if p > 0.05:
-                    crack_alert = 'l0p'
-    else:
-        crack_alert = 'l0'
-        
-    #Impose the validity of the groundmeasurement
+        #Impose the validity of the groundmeasurement
     try:
         if RoundTime(end) != RoundTime(df.timestamp.iloc[-1]):
             crack_alert = 'nd'
+        else:
+            #Obtain the time difference and displacement between the latest values
+            if len(df) >= 2:
+                time_delta = (df.timestamp.iloc[-1]  - df.timestamp.iloc[-2]) / np.timedelta64(1,'D')
+                abs_disp = np.abs(df.meas.iloc[-1]-df.meas.iloc[-2])
+                
+                crack_alert = 'nd'    
+                
+                #Based on alert table
+                if time_delta >= 7:
+                    if time_delta < 8:
+                        if abs_disp >= 75:
+                            crack_alert = 'l3'
+                        elif abs_disp >= 3:
+                            crack_alert = 'l2'
+                        else:
+                            crack_alert = 'l0'
+                    else:
+                        if abs_disp >= (time_delta/7.)*75:
+                            crack_alert = 'l3'
+                        elif abs_disp >= (time_delta/7.)*3:
+                            crack_alert = 'l3'
+                        else:
+                            crack_alert = 'l0'
+                elif time_delta >= 2.75:
+                    if abs_disp >= 30:
+                        crack_alert = 'l3'
+                    elif abs_disp >= 1.5:
+                        crack_alert = 'l2'
+                    else:
+                        crack_alert = 'l0'
+                elif time_delta >= 0.75:
+                    if abs_disp >= 10:
+                        crack_alert = 'l3'
+                    elif abs_disp >= 0.5:
+                        crack_alert = 'l2'
+                    else:
+                        crack_alert = 'l0'
+                else:
+                    if abs_disp >= 5:
+                        crack_alert = 'l3'
+                    elif abs_disp >= 0.5:
+                        crack_alert = 'l2'
+                    else:
+                        crack_alert = 'l0'
+                
+                #Perform p value computation for specific crack
+                if abs_disp >= 0.5 and abs_disp <= 1:
+                    if len(df) >= 4:
+                        #get the last 4 data values for the current feature
+                        last_cur_feature_measure = df.meas.values
+                        last_cur_feature_time = (df.timestamp.values - df.timestamp.values[0])/np.timedelta64(1,'D')
+            
+                        #perform linear regression to get p value
+                        m, b, r, p, std = stats.linregress(last_cur_feature_time,last_cur_feature_measure)
+                        #^&*()
+                        print p
+                        
+                        #Evaluate p value
+                        if p > 0.05:
+                            crack_alert = 'l0p'
+            else:
+                crack_alert = 'l0'
+        
+
     except:
         print 'Timestamp error for '+' '.join(list(np.concatenate((df.site_id.values,df.crack_id.values))))
         crack_alert = 'nd'
@@ -313,8 +320,8 @@ def GenerateGroundDataAlert(site=None,end=None):
 ############################################ MAIN ############################################
 
     #Step 1: Get the ground data from local database 
-    df = get_latest_ground_df(site)
-    
+    df = get_latest_ground_df(site,end)
+    end = pd.to_datetime(end)
     #lower caps all site_id names while cracks should be in title form
     df['site_id'] = map(lambda x: x.lower(),df['site_id'])
     df['crack_id'] = map(lambda x: x.title(),df['crack_id'])
@@ -350,7 +357,7 @@ def GenerateGroundDataAlert(site=None,end=None):
     
     #Step 7: Displacement plot for each crack and site for the last 30 days
     start = end - timedelta(days = 30)
-    ground_data_to_plot = get_ground_df(start,end)
+    ground_data_to_plot = get_ground_df(start,end,site)
     ground_data_to_plot['site_id'] = map(lambda x: x.lower(),ground_data_to_plot['site_id'])
     ground_data_to_plot['crack_id'] = map(lambda x: x.title(),ground_data_to_plot['crack_id'])
     

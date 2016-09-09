@@ -45,6 +45,8 @@ def RoundTime(date_time):
     quotient = time_hour / 4
     if quotient == 5:
         date_time = datetime.combine(date_time.date() + timedelta(1), time(0,0,0))
+    elif time_hour % 4 == 0:
+        date_time = datetime.combine(date_time.date(), time((quotient)*4,0,0))
     else:
         date_time = datetime.combine(date_time.date(), time((quotient+1)*4,0,0))
             
@@ -141,81 +143,84 @@ def crack_eval(df,out_folder,end):
     #INPUT: df containing crack parameters
     #OUTPUT: crack alert according to protocol table
     
-    #Obtain the time difference and displacement between the latest values
-    if len(df) >= 2:
-        time_delta = (df.timestamp.iloc[-1]  - df.timestamp.iloc[-2]) / np.timedelta64(1,'D')
-        abs_disp = np.abs(df.meas.iloc[-1]-df.meas.iloc[-2])
-        
-        crack_alert = 'nd'    
-        
-        #Based on alert table
-        if time_delta >= 7:
-            if time_delta < 8:
-                if abs_disp >= 75:
-                    crack_alert = 'l3'
-                elif abs_disp >= 3:
-                    crack_alert = 'l2'
-                else:
-                    crack_alert = 'l0'
-            else:
-                if abs_disp >= (time_delta/7.)*75:
-                    crack_alert = 'l3'
-                elif abs_disp >= (time_delta/7.)*3:
-                    crack_alert = 'l3'
-                else:
-                    crack_alert = 'l0'
-        elif time_delta >= 2.75:
-            if abs_disp >= 30:
-                crack_alert = 'l3'
-            elif abs_disp >= 1.5:
-                crack_alert = 'l2'
-            else:
-                crack_alert = 'l0'
-        elif time_delta >= 0.75:
-            if abs_disp >= 10:
-                crack_alert = 'l3'
-            elif abs_disp >= 0.5:
-                crack_alert = 'l2'
-            else:
-                crack_alert = 'l0'
-        else:
-            if abs_disp >= 5:
-                crack_alert = 'l3'
-            elif abs_disp >= 0.5:
-                crack_alert = 'l2'
-            else:
-                crack_alert = 'l0'
-        
-        #Perform p value computation for specific crack
-        if abs_disp >= 0.5 and abs_disp <= 1:
-            if len(df) >= 4:
-                #get the last 4 data values for the current feature
-                last_cur_feature_measure = df.tail(4).meas.values
-                last_cur_feature_time = (df.timestamp.tail(4).values - df.timestamp.values[0])/np.timedelta64(1,'D')
-    
-                #perform linear regression to get p value
-                m, b, r, p, std = stats.linregress(last_cur_feature_time,last_cur_feature_measure)
-                #^&*()
-                print p
-                
-                #Evaluate p value
-                if p > 0.05:
-                    crack_alert = 'l0p'
-                    
-        #Perform Trending Test if alert is not L0
-        if (crack_alert != 'l0' and crack_alert != 'l0p'):
-            trend_alert = check_trending(df,out_folder,plot = True)
-            if trend_alert != 'Legit':
-                crack_alert = 'l0t'
-        
-        
-    else:
-        crack_alert = 'l0'
-        
     #Impose the validity of the groundmeasurement
     try:
         if RoundTime(end) != RoundTime(df.timestamp.iloc[-1]):
             crack_alert = 'nd'
+        else:
+    
+            #Obtain the time difference and displacement between the latest values
+            if len(df) >= 2:
+                time_delta = (df.timestamp.iloc[-1]  - df.timestamp.iloc[-2]) / np.timedelta64(1,'D')
+                abs_disp = np.abs(df.meas.iloc[-1]-df.meas.iloc[-2])
+                
+                crack_alert = 'nd'    
+                
+                #Based on alert table
+                if time_delta >= 7:
+                    if time_delta < 8:
+                        if abs_disp >= 75:
+                            crack_alert = 'l3'
+                        elif abs_disp >= 3:
+                            crack_alert = 'l2'
+                        else:
+                            crack_alert = 'l0'
+                    else:
+                        if abs_disp >= (time_delta/7.)*75:
+                            crack_alert = 'l3'
+                        elif abs_disp >= (time_delta/7.)*3:
+                            crack_alert = 'l3'
+                        else:
+                            crack_alert = 'l0'
+                elif time_delta >= 2.75:
+                    if abs_disp >= 30:
+                        crack_alert = 'l3'
+                    elif abs_disp >= 1.5:
+                        crack_alert = 'l2'
+                    else:
+                        crack_alert = 'l0'
+                elif time_delta >= 0.75:
+                    if abs_disp >= 10:
+                        crack_alert = 'l3'
+                    elif abs_disp >= 0.5:
+                        crack_alert = 'l2'
+                    else:
+                        crack_alert = 'l0'
+                else:
+                    if abs_disp >= 5:
+                        crack_alert = 'l3'
+                    elif abs_disp >= 0.5:
+                        crack_alert = 'l2'
+                    else:
+                        crack_alert = 'l0'
+                
+                #Perform p value computation for specific crack
+                if abs_disp >= 0.5 and abs_disp <= 1:
+                    if len(df) >= 4:
+                        #get the last 4 data values for the current feature
+                        last_cur_feature_measure = df.tail(4).meas.values
+                        last_cur_feature_time = (df.timestamp.tail(4).values - df.timestamp.values[0])/np.timedelta64(1,'D')
+            
+                        #perform linear regression to get p value
+                        m, b, r, p, std = stats.linregress(last_cur_feature_time,last_cur_feature_measure)
+                        #^&*()
+                        print p
+                        
+                        #Evaluate p value
+                        if p > 0.05:
+                            crack_alert = 'l0p'
+                            
+                #Perform Trending Test if alert is not L0
+                if (crack_alert != 'l0' and crack_alert != 'l0p'):
+                    trend_alert = check_trending(df,out_folder,plot = True)
+                    if trend_alert != 'Legit':
+                        crack_alert = 'l0t'
+                
+                
+            else:
+                crack_alert = 'l0'
+        
+
     except:
         print 'Timestamp error for '+' '.join(list(np.concatenate((df.site_id.values,df.crack_id.values))))
         crack_alert = 'nd'
