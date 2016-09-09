@@ -287,11 +287,11 @@ def parseRecvMsg(payload):
             #   write status to raspi database
             if writeStatus < 0:
                 # if write unsuccessful
-                ack_json = """{"type":"gsmack","timestamp":"%s","recipients":"%s","send_status":"FAIL"}""" % (timestamp, recipients)
+                ack_json = """{"type":"ackrpi","timestamp":"%s","recipients":"%s","send_status":"FAIL"}""" % (timestamp, recipients)
                 pass
             else:
                 # if write SUCCESSFUL
-                ack_json = """{"type":"gsmack","timestamp":"%s","recipients":"%s","send_status":"SENT"}""" % (timestamp, recipients)
+                ack_json = """{"type":"ackrpi","timestamp":"%s","recipients":"%s","send_status":"SENT-PI"}""" % (timestamp, recipients)
                 pass
 
             sendDataToDEWS(ack_json)
