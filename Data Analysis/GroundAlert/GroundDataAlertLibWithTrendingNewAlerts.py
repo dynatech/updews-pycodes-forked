@@ -4,11 +4,16 @@ import pandas as pd
 import numpy as np
 import ConfigParser
 from scipy import stats
+from scipy.interpolate import splev, splrep, UnivariateSpline
+from scipy.signal import gaussian
+from scipy.ndimage import filters
 import os
 import sys
 import platform
 from sqlalchemy import create_engine
 import matplotlib.pyplot as plt
+import Fukuzono
+
 plt.ioff()
 #Include the path of "Data Analysis" folder for the python scripts searching
 path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -107,13 +112,13 @@ def get_latest_ground_df(site=None,end = None):
     #INPUT: String containing site name    
     #OUTPUT: Dataframe of the last 10 recent ground measurement in the database
     if site == None and end == None:
-        query = 'SELECT g1.timestamp,g1.site_id,g1.crack_id,g1.meas, COUNT(*) num FROM senslopedb.gndmeas g1 JOIN senslopedb.gndmeas g2 ON g1.site_id = g2.site_id AND g1.crack_id = g2.crack_id AND g1.timestamp <= g2.timestamp group by g1.timestamp,g1.site_id, g1.crack_id HAVING COUNT(*) <= 4 ORDER BY site_id, crack_id, num desc'
+        query = 'SELECT g1.timestamp,g1.site_id,g1.crack_id,g1.meas, COUNT(*) num FROM senslopedb.gndmeas g1 JOIN senslopedb.gndmeas g2 ON g1.site_id = g2.site_id AND g1.crack_id = g2.crack_id AND g1.timestamp <= g2.timestamp group by g1.timestamp,g1.site_id, g1.crack_id HAVING COUNT(*) <= 10 ORDER BY site_id, crack_id, num desc'
     elif end != None and site != None:
-        query = 'SELECT g1.timestamp,g1.site_id,g1.crack_id,g1.meas, COUNT(*) num FROM senslopedb.gndmeas g1 JOIN senslopedb.gndmeas g2 ON g1.site_id = g2.site_id AND g1.crack_id = g2.crack_id AND g1.timestamp <= g2.timestamp  AND g1.site_id = "{}" AND g1.timestamp <= "{}" AND g2.timestamp <= "{}" group by g1.timestamp,g1.site_id, g1.crack_id HAVING COUNT(*) <= 4 ORDER BY site_id, crack_id, num desc'.format(site,end,end)
+        query = 'SELECT g1.timestamp,g1.site_id,g1.crack_id,g1.meas, COUNT(*) num FROM senslopedb.gndmeas g1 JOIN senslopedb.gndmeas g2 ON g1.site_id = g2.site_id AND g1.crack_id = g2.crack_id AND g1.timestamp <= g2.timestamp  AND g1.site_id = "{}" AND g1.timestamp <= "{}" AND g2.timestamp <= "{}" group by g1.timestamp,g1.site_id, g1.crack_id HAVING COUNT(*) <= 10 ORDER BY site_id, crack_id, num desc'.format(site,end,end)
     elif site == None and end != None:
-        query = 'SELECT g1.timestamp,g1.site_id,g1.crack_id,g1.meas, COUNT(*) num FROM senslopedb.gndmeas g1 JOIN senslopedb.gndmeas g2 ON g1.site_id = g2.site_id AND g1.crack_id = g2.crack_id AND g1.timestamp <= g2.timestamp  AND g1.timestamp <= "{}" AND g2.timestamp <= "{}" group by g1.timestamp,g1.site_id, g1.crack_id HAVING COUNT(*) <= 4 ORDER BY site_id, crack_id, num desc'.format(end,end)
+        query = 'SELECT g1.timestamp,g1.site_id,g1.crack_id,g1.meas, COUNT(*) num FROM senslopedb.gndmeas g1 JOIN senslopedb.gndmeas g2 ON g1.site_id = g2.site_id AND g1.crack_id = g2.crack_id AND g1.timestamp <= g2.timestamp  AND g1.timestamp <= "{}" AND g2.timestamp <= "{}" group by g1.timestamp,g1.site_id, g1.crack_id HAVING COUNT(*) <= 10 ORDER BY site_id, crack_id, num desc'.format(end,end)
     else:
-        query = 'SELECT g1.timestamp,g1.site_id,g1.crack_id,g1.meas, COUNT(*) num FROM senslopedb.gndmeas g1 JOIN senslopedb.gndmeas g2 ON g1.site_id = g2.site_id AND g1.crack_id = g2.crack_id AND g1.timestamp <= g2.timestamp AND g1.site_id = "{}" group by g1.timestamp,g1.site_id, g1.crack_id HAVING COUNT(*) <= 4 ORDER BY site_id, crack_id, num desc'.format(site)
+        query = 'SELECT g1.timestamp,g1.site_id,g1.crack_id,g1.meas, COUNT(*) num FROM senslopedb.gndmeas g1 JOIN senslopedb.gndmeas g2 ON g1.site_id = g2.site_id AND g1.crack_id = g2.crack_id AND g1.timestamp <= g2.timestamp AND g1.site_id = "{}" group by g1.timestamp,g1.site_id, g1.crack_id HAVING COUNT(*) <= 10 ORDER BY site_id, crack_id, num desc'.format(site)
 
     df = GetDBDataFrame(query)
     return df[['timestamp','site_id','crack_id','meas']]
@@ -134,78 +139,58 @@ def get_ground_df(start = '',end = '',site=None):
     
     return GetDBDataFrame(query)
     
-def crack_eval(df,end):
+def crack_eval(df,out_folder,end):
     #INPUT: df containing crack parameters
     #OUTPUT: crack alert according to protocol table
-    
-    #^&*()
-    df = df[df.timestamp <= end]
-    print df
-        #Impose the validity of the groundmeasurement
+
+    #Impose the validity of the groundmeasurement
+
     try:
         if RoundTime(end) != RoundTime(df.timestamp.iloc[-1]):
             crack_alert = 'nd'
         else:
-            #Obtain the time difference and displacement between the latest values
+            #Obtain the time difference and displacement between the latest values (Return l0 if only one value is present)
             if len(df) >= 2:
                 time_delta = (df.timestamp.iloc[-1]  - df.timestamp.iloc[-2]) / np.timedelta64(1,'D')
                 abs_disp = np.abs(df.meas.iloc[-1]-df.meas.iloc[-2])
-                
+                cur_vel = abs_disp / time_delta
                 crack_alert = 'nd'    
                 
-                #Based on alert table
-                if time_delta >= 7:
-                    if time_delta < 8:
-                        if abs_disp >= 75:
-                            crack_alert = 'l3'
-                        elif abs_disp >= 3:
-                            crack_alert = 'l2'
-                        else:
-                            crack_alert = 'l0'
-                    else:
-                        if abs_disp >= (time_delta/7.)*75:
-                            crack_alert = 'l3'
-                        elif abs_disp >= (time_delta/7.)*3:
-                            crack_alert = 'l3'
-                        else:
-                            crack_alert = 'l0'
-                elif time_delta >= 2.75:
-                    if abs_disp >= 30:
-                        crack_alert = 'l3'
-                    elif abs_disp >= 1.5:
-                        crack_alert = 'l2'
-                    else:
-                        crack_alert = 'l0'
-                elif time_delta >= 0.75:
-                    if abs_disp >= 10:
-                        crack_alert = 'l3'
-                    elif abs_disp >= 0.5:
-                        crack_alert = 'l2'
-                    else:
-                        crack_alert = 'l0'
+                #1cm Reliability Cap
+                if abs_disp < 1:
+                    crack_alert = 'l0'
                 else:
-                    if abs_disp >= 5:
+                    #Based on alert table (convert velocity to cm/hour)
+                    cur_vel = cur_vel/24.
+                    if cur_vel >= 1.8:
                         crack_alert = 'l3'
-                    elif abs_disp >= 0.5:
+                    elif cur_vel >= 0.25:
                         crack_alert = 'l2'
                     else:
                         crack_alert = 'l0'
+                    #Perform p value computation for specific crack
+                    if abs_disp == 1:
+                        if len(df) >= 4:
+                            #get the last 4 data values for the current feature
+                            last_cur_feature_measure = df.tail(4).meas.values
+                            last_cur_feature_time = (df.timestamp.tail(4).values - df.timestamp.values[0])/np.timedelta64(1,'D')
                 
-                #Perform p value computation for specific crack
-                if abs_disp >= 0.5 and abs_disp <= 1:
-                    if len(df) >= 4:
-                        #get the last 4 data values for the current feature
-                        last_cur_feature_measure = df.meas.values
-                        last_cur_feature_time = (df.timestamp.values - df.timestamp.values[0])/np.timedelta64(1,'D')
-            
-                        #perform linear regression to get p value
-                        m, b, r, p, std = stats.linregress(last_cur_feature_time,last_cur_feature_measure)
-                        #^&*()
-                        print p
-                        
-                        #Evaluate p value
-                        if p > 0.05:
-                            crack_alert = 'l0p'
+                            #perform linear regression to get p value
+                            m, b, r, p, std = stats.linregress(last_cur_feature_time,last_cur_feature_measure)
+                            #^&*()
+                            print p
+                            
+                            #Evaluate p value
+                            if p > 0.05:
+                                crack_alert = 'l0p'
+                                
+                    #Perform Trending Test if alert is not L0
+                    if (crack_alert != 'l0' and crack_alert != 'l0p'):
+                        trend_alert = check_trending(df,out_folder,plot = True)
+                        if trend_alert != 'Legit':
+                            crack_alert = 'l0t'
+                
+                
             else:
                 crack_alert = 'l0'
         
@@ -214,6 +199,7 @@ def crack_eval(df,end):
         print 'Timestamp error for '+' '.join(list(np.concatenate((df.site_id.values,df.crack_id.values))))
         crack_alert = 'nd'
     
+    print crack_alert
     return crack_alert
 
 def site_eval(df):
@@ -225,6 +211,8 @@ def site_eval(df):
         site_alert = 'l3'
     elif 'l2' in crack_alerts:
         site_alert = 'l2'
+    elif 'l0t' in crack_alerts:
+        site_alert = 'l0t'
     elif 'l0p' in crack_alerts:
         site_alert = 'l0p'
     elif 'l0' in crack_alerts:
@@ -232,10 +220,11 @@ def site_eval(df):
     else:
         site_alert = 'nd'
     
+    print crack_alerts
     #Determine which crack has an l2 or l3 alert
-    mask = np.logical_or(crack_alerts == 'l3', crack_alerts == 'l2')
+    mask = np.logical_or(np.logical_or(crack_alerts == 'l3', crack_alerts == 'l2'),crack_alerts == 'l0t')
     cracks_to_check = df.crack_id.values[mask]
-    
+    print cracks_to_check
     return pd.Series([site_alert,', '.join(list(cracks_to_check))], index = ['site_alert','cracks_to_check'])
 
 def PlotSite(df,tsn,print_out_path):
@@ -243,12 +232,13 @@ def PlotSite(df,tsn,print_out_path):
     site_name = ''.join(list(np.unique(df.site_id.values)))
     plt.figure(figsize = (12,9))
     cracks.agg(PlotCrack)
-    plt.xlabel('')
-    plt.ylabel(site_name)
-    plt.legend(loc='upper left')
+    plt.xlabel('Timestamp', fontsize = 15)
+    plt.ylabel('Displacement (cm)', fontsize = 15)
+    plt.suptitle('{} Ground Measurements for {}'.format(site_name.upper(),pd.to_datetime(df.timestamp.values[-1]).strftime('%b %d, %Y %H:%M')),fontsize = 18)
+    plt.legend(loc='upper left',fancybox = True, framealpha = 0.5)
     plt.grid(True)
     plt.xticks(rotation = 45)
-    plt.savefig(print_out_path+tsn+'_'+site_name,dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
+    plt.savefig(print_out_path+tsn+'_'+site_name,dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w',bbox_inches = 'tight')
     plt.close()
 
     
@@ -284,6 +274,135 @@ def alert_toDB(df,end):
     except:
         print "Cannot write to db {}".format(df.site.values[0])
 
+def moving_average(series,sigma = 3):
+    b = gaussian(39,sigma)
+    average = filters.convolve1d(series,b/b.sum())
+    var = filters.convolve1d(np.power(series-average,2),b/b.sum())
+    return average,var
+
+def check_trending(df,out_folder,plot = False):
+    ##### Get the data from the crack dataframe    
+    cur_t = (df.timestamp.values - df.timestamp.values[0])/np.timedelta64(1,'D')
+    cur_x = df.meas.values
+    
+    ##### Interpolate the last 10 data points
+    _,var = moving_average(cur_x)
+    sp = UnivariateSpline(cur_t,cur_x,w=1/np.sqrt(var))
+    
+    t_n = np.linspace(cur_t[0],cur_t[-1],1000)
+    x_n = sp(t_n)
+    v_n = sp.derivative(n=1)(t_n)
+    a_n = sp.derivative(n=2)(t_n)
+    
+    v_s = abs(sp.derivative(n=1)(cur_t))
+    a_s = abs(sp.derivative(n=2)(cur_t))
+    
+    
+    ##### Federico et al. constants    
+    slope = 1.49905955613175
+    intercept = -3.00263765777028
+    t_crit = 4.53047399738543
+    var_v_log = 215.515369339559
+    v_log_mean = 2.232839766
+    sum_res_square = 49.8880017417971
+    n = 30.
+    
+    ##### Trending Alert Evaluation
+    cur_v = v_s[-1]
+    cur_a = a_s[-1]
+    delta = t_crit*np.sqrt(1/(n-2)*sum_res_square*(1/n + (np.log(cur_v) - v_log_mean)**2/var_v_log))
+    
+    log_a_t = slope * np.log(cur_v) + intercept
+    log_a_t_up = log_a_t + delta
+    log_a_t_down = log_a_t - delta
+    
+    a_t_up = np.e**log_a_t_up
+    a_t_down = np.e**log_a_t_down
+    
+    ##### Plot points in the confidence interval envelope
+    if plot == True:
+        ##### Plotting Colors
+        tableau20 = [(31, 119, 180), (174, 199, 232), (255, 127, 14), (255, 187, 120),    
+                     (44, 160, 44), (152, 223, 138), (214, 39, 40), (255, 152, 150),    
+                     (148, 103, 189), (197, 176, 213), (140, 86, 75), (196, 156, 148),    
+                     (227, 119, 194), (247, 182, 210), (127, 127, 127), (199, 199, 199),    
+                     (188, 189, 34), (219, 219, 141), (23, 190, 207), (158, 218, 229)]
+        
+        for i in range(len(tableau20)):    
+            r, g, b = tableau20[i]    
+            tableau20[i] = (r / 255., g / 255., b / 255.)
+        #################
+        
+        v_theo = np.linspace(min(v_s),max(v_s),10000)
+        uncertainty = t_crit*np.sqrt(1/(n-2)*sum_res_square*(1/n + (np.log(v_theo) - v_log_mean)**2/var_v_log))
+        
+        log_a_theo = slope * np.log(v_theo) + intercept
+        log_a_theo_up = log_a_theo + uncertainty
+        log_a_theo_down = log_a_theo - uncertainty
+        
+        a_theo = np.e**log_a_theo
+        a_theo_up = np.e**log_a_theo_up
+        a_theo_down = np.e**log_a_theo_down
+        
+        fig = plt.figure()
+        fig.set_size_inches(15,8)
+        fig.suptitle('{} Crack {} {}'.format(str(df.site_id.values[0]).upper(),str(df.crack_id.values[0]).title(),pd.to_datetime(df.timestamp.values[-1]).strftime("%b %m, %Y %H:%M")))
+        ax1 = fig.add_subplot(121)
+        ax1.get_xaxis().tick_bottom()    
+        ax1.get_yaxis().tick_left()
+        ax1.grid()
+        l1 = ax1.plot(v_theo,a_theo,c = tableau20[0],label = 'Fukuzono (1985)')
+        ax1.plot(v_theo,a_theo_up,'--',c = tableau20[0])
+        ax1.plot(v_theo,a_theo_down,'--', c = tableau20[0])
+        ax1.plot(v_s,a_s,c = tableau20[10])
+        l2 = ax1.plot(v_s[:-1],a_s[:-1],'o',c = tableau20[19],label = 'Previous')
+        l3 = ax1.plot(v_s[-1],a_s[-1],'*',c = tableau20[6],label = 'Current')
+
+        
+        lns = l1 + l2 + l3
+        labs = [l.get_label() for l in lns]
+        ax1.legend(lns,labs,loc = 'upper left',fancybox = True, framealpha = 0.5)        
+        
+        ax1.set_xlabel('velocity (cm/day)')
+        ax1.set_ylabel('acceleration (cm/day$^2$)')
+        ax1.set_xscale('log')
+        ax1.set_yscale('log')
+        
+        ax2 = fig.add_subplot(222)
+        ax2.grid()
+        ax2.plot(cur_t,cur_x,'.',c = tableau20[0],label = 'Data')
+        ax2.plot(t_n,x_n,c = tableau20[12],label = 'Interpolation')
+        ax2.set_ylabel('disp (meters)')
+        
+        ax3 = fig.add_subplot(224, sharex = ax2)
+        ax3.grid()
+        ax3.plot(t_n,v_n, color = tableau20[4],label = 'Velocity')
+        ax3.set_ylabel('velocity (cm/day)')
+        ax3.set_xlabel('time (days)')
+        ax3.legend(loc = 'upper left',fancybox = True, framealpha = 0.5)
+        
+        ax4 = ax3.twinx()
+        ax4.plot(t_n,a_n,'-r',label = 'Acceleration')
+        ax4.set_ylabel('acceleration (m/day$^2$)')
+        ax4.legend(loc = 'upper right',fancybox = True, framealpha = 0.5)
+
+        tsn = pd.to_datetime(df.timestamp.values[-1]).strftime("%Y-%m-%d_%H-%M-%S")
+        out_filename = out_folder + '{} {} {}'.format(tsn,str(df.site_id.values[0]),str(df.crack_id.values[0]))
+        print out_filename        
+        plt.savefig(out_filename,facecolor='w', edgecolor='w',orientation='landscape',mode='w',bbox_inches = 'tight')
+        
+        print cur_a, a_t_up, a_t_down
+    if (cur_a <= a_t_up and cur_a >= a_t_down):
+        #Reject alert if v and a have opposite signs
+        if v_n[-1]*a_n[-1] >= 0:
+            return 'Legit'
+        else:
+            return 'Reject'
+    else:
+        return 'Reject'
+    
+    
+
 def GenerateGroundDataAlert(site=None,end=None):
         
     start_time = datetime.now()
@@ -307,27 +426,29 @@ def GenerateGroundDataAlert(site=None,end=None):
     
     GrndMeasPlotsPath = cfg.get('I/O','GrndMeasPlotsPath')
     print_out_path = out_path + GrndMeasPlotsPath
-    if not os.path.exists(print_out_path):
-        os.makedirs(print_out_path)
+    print_out_path2 = out_path + GrndMeasPlotsPath + 'TrendingPlots/'
+    for path in [print_out_path,print_out_path2]:
+        if not os.path.exists(path):
+            os.makedirs(path)
     
     #Set the monitoring window
     if end == None:
         roll_window_numpts, end, start, offsetstart, monwin = set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_window_ops)
     
 #    Use this so set the end time    
-#    end = datetime(2016,8,23,11,30)
+#    end = datetime(2016,8,12,11,30)
 
 ############################################ MAIN ############################################
 
     #Step 1: Get the ground data from local database 
     df = get_latest_ground_df(site,end)
-    end = pd.to_datetime(end)
+    
     #lower caps all site_id names while cracks should be in title form
     df['site_id'] = map(lambda x: x.lower(),df['site_id'])
     df['crack_id'] = map(lambda x: x.title(),df['crack_id'])
     
     #Step 2: Evaluate the alerts per crack
-    crack_alerts = df.groupby(['site_id','crack_id']).apply(crack_eval,end).reset_index(name = 'crack_alerts')
+    crack_alerts = df.groupby(['site_id','crack_id']).apply(crack_eval,print_out_path2,end).reset_index(name = 'crack_alerts')
     
     #Step 3: Evaluate alerts per site
     site_alerts = crack_alerts.groupby(['site_id']).apply(site_eval).reset_index()    
@@ -356,12 +477,12 @@ def GenerateGroundDataAlert(site=None,end=None):
     
     
     #Step 7: Displacement plot for each crack and site for the last 30 days
-    start = end - timedelta(days = 30)
+    start = pd.to_datetime(end) - timedelta(days = 30)
     ground_data_to_plot = get_ground_df(start,end,site)
     ground_data_to_plot['site_id'] = map(lambda x: x.lower(),ground_data_to_plot['site_id'])
     ground_data_to_plot['crack_id'] = map(lambda x: x.title(),ground_data_to_plot['crack_id'])
     
-    tsn=end.strftime("%Y-%m-%d_%H-%M-%S")
+    tsn=pd.to_datetime(end).strftime("%Y-%m-%d_%H-%M-%S")
     site_data_to_plot = ground_data_to_plot.groupby('site_id')
     site_data_to_plot.apply(PlotSite,tsn,print_out_path)
     
