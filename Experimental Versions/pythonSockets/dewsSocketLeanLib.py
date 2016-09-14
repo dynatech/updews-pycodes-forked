@@ -109,6 +109,19 @@ def getAllSMSoutbox(send_status='SENT',limit=20):
     except MySQLdb.OperationalError:
         print '9.',
 
+def setSendStatus(send_status,sms_id_list):
+    if len(sms_id_list) <= 0:
+        return
+
+    try:
+        queryUpdate = "update smsoutbox set send_status = '%s' where sms_id in (%s) " % (send_status, str(sms_id_list)[1:-1].replace("L",""))
+        print queryUpdate
+        qpi.ExecuteQuery(queryUpdate)
+        return 0
+    except IndexError:
+        print '>> Error in writing extracting database data to files..'
+        return -1
+
 def sendMessageToGSM(recipients, msg, timestamp = None):
     db, cur = qpi.SenslopeDBConnect('senslopedb')
     print '>> Connected to database'
@@ -269,7 +282,7 @@ def sendAckSentGSMtoDEWS(ts_written, ts_sent, recipient, port=None):
 #   to DEWS Web Socket Server
 def sendAllAckSentGSMtoDEWS(host, port):
     #Load all sms messages with "SENT" status
-    allmsgs = getAllSMSoutbox('SENT',50)
+    allmsgs = getAllSMSoutbox('SENT',10)
 
     #Return if no messages were found
     if len(allmsgs) == 0:
@@ -280,6 +293,7 @@ def sendAllAckSentGSMtoDEWS(host, port):
         #Connect to the web socket server  
         ws = create_connection("ws://%s:%s" % (host, port))
         print "Successfully connected to ws://%s:%s" % (host, port)
+        acklist = []
 
         #Send all messages to the web socket server
         for msg in allmsgs:
@@ -293,13 +307,15 @@ def sendAllAckSentGSMtoDEWS(host, port):
             #send acknowledgement to a message
             jsonAckText = formatAckSentGSMtext(ts_written, ts_sent, sim_num)
             ws.send(jsonAckText)
+            acklist.append(sms_id)
 
         #Close conenction to the web socket server
         ws.close()
         print "Successfully closed WSS connection"
-        
-        #TODO: change the send status to "SENT-WSS" for successful sending
 
+        #Change the send status to "SENT-WSS" for successful sending
+        setSendStatus("SENT-WSS",acklist)
+        
         #returns 0 on successful sending of data
         return 0
     except:
@@ -307,8 +323,6 @@ def sendAllAckSentGSMtoDEWS(host, port):
         
         #returns -1 on failure to send data
         return -1
-
-    pass
 
 #Connect to WebSocket Server and attempt to reconnect when disconnected
 #Receive and process messages as well
