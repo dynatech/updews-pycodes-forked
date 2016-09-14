@@ -280,9 +280,9 @@ def sendAckSentGSMtoDEWS(ts_written, ts_sent, recipient, port=None):
 
 # Send Acknowledgement for ALL outbox sms with send_status "SEND"
 #   to DEWS Web Socket Server
-def sendAllAckSentGSMtoDEWS(host, port):
+def sendAllAckSentGSMtoDEWS(host="www.dewslandslide.com", port=5050):
     #Load all sms messages with "SENT" status
-    allmsgs = getAllSMSoutbox('SENT',10)
+    allmsgs = getAllSMSoutbox('SENT',20)
 
     #Return if no messages were found
     if len(allmsgs) == 0:
