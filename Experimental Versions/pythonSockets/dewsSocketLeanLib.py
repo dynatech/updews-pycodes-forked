@@ -93,6 +93,22 @@ def writeToSMSoutbox(number, msg, timestamp = None, mobNetwork = None):
         print '>> Error in writing extracting database data to files..'
         return -1
 
+def getAllSMSoutbox(send_status='SENT',limit=20):
+    try:
+        query = """SELECT sms_id, timestamp_written, timestamp_sent, recepients 
+            FROM smsoutbox
+            WHERE send_status = '%s' 
+            AND timestamp_written IS NOT NULL 
+            AND timestamp_sent IS NOT NULL 
+            ORDER BY sms_id ASC LIMIT %d""" % (send_status,limit)
+            
+        print query
+        result = qpi.GetDBResultset(query)
+        return result
+
+    except MySQLdb.OperationalError:
+        print '9.',
+
 def sendMessageToGSM(recipients, msg, timestamp = None):
     db, cur = qpi.SenslopeDBConnect('senslopedb')
     print '>> Connected to database'
@@ -210,6 +226,11 @@ def formatReceivedGSMtext(timestamp, sender, message):
     jsonText = """{"type":"smsrcv","timestamp":"%s","sender":"%s","msg":"%s"}""" % (timestamp, sender, message)
     return jsonText    
     
+#No filtering yet for special characters
+def formatAckSentGSMtext(ts_written, ts_sent, recipient):
+    jsonText = """{"type":"ackgsm","timestamp_written":"%s","timestamp_sent":"%s","recipients":"%s"}""" % (ts_written, ts_sent, recipient)
+    return jsonText   
+
 def sendDataToDEWS(msg, port=None):
     host = "www.dewslandslide.com"
     # host = "www.codesword.com"
@@ -236,6 +257,58 @@ def sendReceivedGSMtoDEWS(timestamp, sender, message, port=None):
     jsonText = formatReceivedGSMtext(timestamp, sender, message)
     success = sendDataToDEWS(jsonText, port)
     return success
+
+# Send an acknowledgement message to DEWS Web Socket Server
+#   to let it know that the message has been sent already by the GSM
+def sendAckSentGSMtoDEWS(ts_written, ts_sent, recipient, port=None):
+    jsonText = formatAckSentGSMtext(ts_written, ts_sent, recipient)
+    success = sendDataToDEWS(jsonText, port)
+    return success
+
+# Send Acknowledgement for ALL outbox sms with send_status "SEND"
+#   to DEWS Web Socket Server
+def sendAllAckSentGSMtoDEWS(host, port):
+    #Load all sms messages with "SENT" status
+    allmsgs = getAllSMSoutbox('SENT',50)
+
+    #Return if no messages were found
+    if len(allmsgs) == 0:
+        print "No smsoutbox messages for acknowledgement"
+        return
+
+    try:     
+        #Connect to the web socket server  
+        ws = create_connection("ws://%s:%s" % (host, port))
+        print "Successfully connected to ws://%s:%s" % (host, port)
+
+        #Send all messages to the web socket server
+        for msg in allmsgs:
+            sms_id = msg[0]
+            ts_written = msg[1]
+            ts_sent = msg[2]
+            sim_num = msg[3]
+
+            print "id:%s, ts_written:%s, ts_sent:%s, sim_num:%s" % (sms_id, ts_written, ts_sent, sim_num)
+
+            #send acknowledgement to a message
+            jsonAckText = formatAckSentGSMtext(ts_written, ts_sent, sim_num)
+            ws.send(jsonAckText)
+
+        #Close conenction to the web socket server
+        ws.close()
+        print "Successfully closed WSS connection"
+        
+        #TODO: change the send status to "SENT-WSS" for successful sending
+
+        #returns 0 on successful sending of data
+        return 0
+    except:
+        print "Failed to send data. Please check your internet connection"        
+        
+        #returns -1 on failure to send data
+        return -1
+
+    pass
 
 #Connect to WebSocket Server and attempt to reconnect when disconnected
 #Receive and process messages as well
