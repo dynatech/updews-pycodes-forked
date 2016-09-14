@@ -69,12 +69,18 @@ def processAckToAlert(msg):
         server.WriteOutboxMessageToDb(errmsg,msg.simnum)
         return True
 
+    # check to see if message from chatter box
     try:
         name = qsi.getNameofStaff(msg.simnum)
     except:
-        errmsg = "You are not permitted to acknowledge."
-        server.WriteOutboxMessageToDb(errmsg,msg.simnum)
-        return True
+        try:
+            chat_footer = re.search("-[A-Za-z ]+ from .+$",msg.data).group(0)
+            name = re.search("(?<=-)[A-Za-z]+(?= )",chat_footer).group(0)
+            msg.data = msg.data.replace(chat_footer,"")
+        except:
+            errmsg = "You are not permitted to acknowledge."
+            server.WriteOutboxMessageToDb(errmsg,msg.simnum)
+            return True
 
     try:
         remarks = re.search("(?<=\d ).+(?=$)",msg.data).group(0)
