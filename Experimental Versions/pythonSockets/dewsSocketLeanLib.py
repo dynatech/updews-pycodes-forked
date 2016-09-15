@@ -93,6 +93,35 @@ def writeToSMSoutbox(number, msg, timestamp = None, mobNetwork = None):
         print '>> Error in writing extracting database data to files..'
         return -1
 
+def getAllSMSoutbox(send_status='SENT',limit=20):
+    try:
+        query = """SELECT sms_id, timestamp_written, timestamp_sent, recepients 
+            FROM smsoutbox
+            WHERE send_status = '%s' 
+            AND timestamp_written IS NOT NULL 
+            AND timestamp_sent IS NOT NULL 
+            ORDER BY sms_id ASC LIMIT %d""" % (send_status,limit)
+            
+        print query
+        result = qpi.GetDBResultset(query)
+        return result
+
+    except MySQLdb.OperationalError:
+        print '9.',
+
+def setSendStatus(send_status,sms_id_list):
+    if len(sms_id_list) <= 0:
+        return
+
+    try:
+        queryUpdate = "update smsoutbox set send_status = '%s' where sms_id in (%s) " % (send_status, str(sms_id_list)[1:-1].replace("L",""))
+        print queryUpdate
+        qpi.ExecuteQuery(queryUpdate)
+        return 0
+    except IndexError:
+        print '>> Error in writing extracting database data to files..'
+        return -1
+
 def sendMessageToGSM(recipients, msg, timestamp = None):
     db, cur = qpi.SenslopeDBConnect('senslopedb')
     print '>> Connected to database'
@@ -210,6 +239,11 @@ def formatReceivedGSMtext(timestamp, sender, message):
     jsonText = """{"type":"smsrcv","timestamp":"%s","sender":"%s","msg":"%s"}""" % (timestamp, sender, message)
     return jsonText    
     
+#No filtering yet for special characters
+def formatAckSentGSMtext(ts_written, ts_sent, recipient):
+    jsonText = """{"type":"ackgsm","timestamp_written":"%s","timestamp_sent":"%s","recipients":"%s"}""" % (ts_written, ts_sent, recipient)
+    return jsonText   
+
 def sendDataToDEWS(msg, port=None):
     host = "www.dewslandslide.com"
     # host = "www.codesword.com"
@@ -236,6 +270,59 @@ def sendReceivedGSMtoDEWS(timestamp, sender, message, port=None):
     jsonText = formatReceivedGSMtext(timestamp, sender, message)
     success = sendDataToDEWS(jsonText, port)
     return success
+
+# Send an acknowledgement message to DEWS Web Socket Server
+#   to let it know that the message has been sent already by the GSM
+def sendAckSentGSMtoDEWS(ts_written, ts_sent, recipient, port=None):
+    jsonText = formatAckSentGSMtext(ts_written, ts_sent, recipient)
+    success = sendDataToDEWS(jsonText, port)
+    return success
+
+# Send Acknowledgement for ALL outbox sms with send_status "SEND"
+#   to DEWS Web Socket Server
+def sendAllAckSentGSMtoDEWS(host="www.dewslandslide.com", port=5050):
+    #Load all sms messages with "SENT" status
+    allmsgs = getAllSMSoutbox('SENT',20)
+
+    #Return if no messages were found
+    if len(allmsgs) == 0:
+        print "No smsoutbox messages for acknowledgement"
+        return
+
+    try:     
+        #Connect to the web socket server  
+        ws = create_connection("ws://%s:%s" % (host, port))
+        print "Successfully connected to ws://%s:%s" % (host, port)
+        acklist = []
+
+        #Send all messages to the web socket server
+        for msg in allmsgs:
+            sms_id = msg[0]
+            ts_written = msg[1]
+            ts_sent = msg[2]
+            sim_num = msg[3]
+
+            print "id:%s, ts_written:%s, ts_sent:%s, sim_num:%s" % (sms_id, ts_written, ts_sent, sim_num)
+
+            #send acknowledgement to a message
+            jsonAckText = formatAckSentGSMtext(ts_written, ts_sent, sim_num)
+            ws.send(jsonAckText)
+            acklist.append(sms_id)
+
+        #Close conenction to the web socket server
+        ws.close()
+        print "Successfully closed WSS connection"
+
+        #Change the send status to "SENT-WSS" for successful sending
+        setSendStatus("SENT-WSS",acklist)
+        
+        #returns 0 on successful sending of data
+        return 0
+    except:
+        print "Failed to send data. Please check your internet connection"        
+        
+        #returns -1 on failure to send data
+        return -1
 
 #Connect to WebSocket Server and attempt to reconnect when disconnected
 #Receive and process messages as well
@@ -287,11 +374,11 @@ def parseRecvMsg(payload):
             #   write status to raspi database
             if writeStatus < 0:
                 # if write unsuccessful
-                ack_json = """{"type":"ackrpi","timestamp":"%s","recipients":"%s","send_status":"FAIL"}""" % (timestamp, recipients)
+                ack_json = """{"type":"ackrpi","timestamp_written":"%s","recipients":"%s","send_status":"FAIL"}""" % (timestamp, recipients)
                 pass
             else:
                 # if write SUCCESSFUL
-                ack_json = """{"type":"ackrpi","timestamp":"%s","recipients":"%s","send_status":"SENT-PI"}""" % (timestamp, recipients)
+                ack_json = """{"type":"ackrpi","timestamp_written":"%s","recipients":"%s","send_status":"SENT-PI"}""" % (timestamp, recipients)
                 pass
 
             sendDataToDEWS(ack_json)

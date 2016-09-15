@@ -770,6 +770,9 @@ def ProcessAllMessages(allmsgs,network):
                 ProcessARQWeather(msg.data,msg.simnum)
             elif msg.data.split('*')[0] == 'COORDINATOR' or msg.data.split('*')[0] == 'GATEWAY':
                 isMsgProcSuccess = ProcessCoordinatorMsg(msg.data, msg.simnum)
+            elif re.search("^MANUAL RESET",msg.data):
+                server.WriteOutboxMessageToDb("SENSORPOLL SENSLOPE", msg.simnum)
+                isMsgProcSuccess = True
             else:
                 print '>> Unrecognized message format: '
                 print 'NUM: ' , msg.simnum
@@ -794,7 +797,7 @@ def ProcessAllMessages(allmsgs,network):
 def RecordGroundMeasurements(gnd_meas):
     # print gnd_meas
     
-    dbio.createTable("gndmeas","gndmeas")
+    # dbio.createTable("gndmeas","gndmeas")
     
     query = "INSERT INTO gndmeas (timestamp, meas_type, site_id, observer_name, crack_id, meas, weather) VALUES " + gnd_meas
     query += "ON DUPLICATE KEY UPDATE meas = values(meas)"
