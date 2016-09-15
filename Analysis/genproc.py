@@ -57,17 +57,17 @@ def fill_smooth (df, offsetstart, end, roll_window_numpts, to_smooth, to_fill):
         df = df.fillna(method = 'pad')
         
         #Checking, resolving and reporting fill process    
-        print 'Post-filling report: '
+#        print 'Post-filling report: '
         if df.isnull().values.any():
             for n in ['xz', 'xy']:
                 if df[n].isnull().values.all():
-                    print '     ',n, 'NaN all values'
+#                    print '     ',n, 'NaN all values'
                     df[n]=0
                 elif np.isnan(df[n].values[0]):
-                    print '     ',n, 'NaN 1st value'
+#                    print '     ',n, 'NaN 1st value'
                     df[n]=df[n].fillna(method='bfill')
-        else: 
-            print '     All numerical values.'
+#        else: 
+#            print '     All numerical values.'
 
     #dropping rows outside monitoring window
     df=df[(df.index>=offsetstart)&(df.index<=end)]
