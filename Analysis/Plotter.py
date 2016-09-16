@@ -2,11 +2,11 @@
 import matplotlib as mpl
 mpl.use('Agg')
 import matplotlib.pyplot as plt
-plt.ion()
+import matplotlib.dates as md
+plt.ioff()
 
 import os
 import pandas as pd
-from pandas.stats.api import ols
 import numpy as np
 from datetime import timedelta
 
@@ -19,51 +19,6 @@ def col_pos(colpos_dfts, col_pos_end, col_pos_interval, col_pos_number, num_node
     colpos_dfts['cs_xy'] = cumsum_df.xy.values
     
     return np.round(colpos_dfts, 4)
-    
-def compute_node_inst_vel(xz,xy,roll_window_numpts): 
-
-    ##DESCRIPTION:
-    ##returns rounded-off values of velocity of xz and xy
-
-    ##INPUT:
-    ##xz; dataframe; horizontal linear displacements along the planes defined by xa-za
-    ##xy; dataframe; horizontal linear displacements along the planes defined by xa-ya
-    ##roll_window_numpts; integer; number of data points per rolling window
-
-    ##OUTPUT:
-    ##np.round(vel_xz,4), np.round(vel_xy,4)
-
-    # getting slice for latest 3-hours + 1 rolling window operation    
-    xz=xz.iloc[-(2*roll_window_numpts-1):]
-    xy=xy.iloc[-(2*roll_window_numpts-1):]
-    
-    #setting up time units in days
-    td=xz.index.values-xz.index.values[0]
-    td=pd.Series(td/np.timedelta64(1,'D'),index=xz.index)
-
-    #setting up dataframe for velocity values
-    vel_xz=pd.DataFrame(data=None, index=xz.index[roll_window_numpts-1:])
-    vel_xy=pd.DataFrame(data=None, index=xy.index[roll_window_numpts-1:])
- 
-    #performing moving window linear regression
-    num_nodes=len(xz.columns.tolist())
-    for n in range(1,1+num_nodes):
-        try:
-            lr_xz=ols(y=xz[n],x=td,window=roll_window_numpts,intercept=True)
-            lr_xy=ols(y=xy[n],x=td,window=roll_window_numpts,intercept=True)
-
-            vel_xz[n]=np.round(lr_xz.beta.x.values,4)
-            vel_xy[n]=np.round(lr_xy.beta.x.values,4)
-
-        except:
-            print " ERROR in computing velocity" 
-            vel_xz[n]=np.zeros(len(vel_xz.index))
-            vel_xy[n]=np.zeros(len(vel_xy.index))
-
-    #returning rounded-off values
-    return np.round(vel_xz,4), np.round(vel_xy,4)
-
-
                 
 def nonrepeat_colors(ax,NUM_COLORS,color='gist_rainbow'):
     cm = plt.get_cmap(color)
@@ -196,6 +151,8 @@ def plot_disp_vel(df, colname, max_min_df, window, config, disp_offset = 'mean')
     dfts = df.groupby('ts')
     cs_df = dfts[['xz', 'xy']].sum()    
     cs_df = cs_df - cs_df.values[0] + xzd_plotoffset * num_nodes
+    print cs_df
+    cs_df = cs_df.sort_index()
     
     #creating noise envelope
     first_row = df.loc[df.ts == window.start].sort_values('id').set_index('id')[['xz', 'xy']]
@@ -212,13 +169,15 @@ def plot_disp_vel(df, colname, max_min_df, window, config, disp_offset = 'mean')
     noise_df = nodal_max_min_df.apply(noise_envelope, tsdf = sorted(set(df.ts)))
     nodal_noise_df = noise_df.groupby('id')
     noise_df = nodal_noise_df.apply(df_add_offset_col, offset = xzd_plotoffset, num_nodes = num_nodes)
-    noise_df = noise_df.set_index('ts')
+    noise_df = noise_df.sort('ts', ascending = True).set_index('ts')
+    nodal_noise_df = noise_df.groupby('id')
     
     #zeroing and offseting xz,xy
     df0 = nodal_df.apply(df_zero_initial_row, window = window)
     nodal_df0 = df0.groupby('id')
     df0off = nodal_df0.apply(df_add_offset_col, offset = xzd_plotoffset, num_nodes = num_nodes)
-    df0off = df0off.set_index('ts')
+    df0off = df0off.sort('ts', ascending = True).set_index('ts')
+    nodal_df0off = df0off.groupby('id')
     
     try:
         fig=plt.figure()
@@ -226,15 +185,16 @@ def plot_disp_vel(df, colname, max_min_df, window, config, disp_offset = 'mean')
         #creating subplots        
         ax_xzd=fig.add_subplot(141)
         ax_xyd=fig.add_subplot(142,sharex=ax_xzd,sharey=ax_xzd)
+        
         ax_xzv=fig.add_subplot(143)
         ax_xzv.invert_yaxis()
         ax_xyv=fig.add_subplot(144,sharex=ax_xzv,sharey=ax_xzv)
         
-        #plotting cumulative (surface) displacments
-        cs_df['xz'].plot(ax=ax_xzd,color='0.4',linewidth=0.5,legend=False)
-        cs_df['xy'].plot(ax=ax_xyd,color='0.4',linewidth=0.5,legend=False)
-        ax_xzd.fill_between(cs_df.index,cs_df['xz'].values,xzd_plotoffset*(num_nodes),color='0.8')
-        ax_xyd.fill_between(cs_df.index,cs_df['xy'].values,xzd_plotoffset*(num_nodes),color='0.8')       
+    #    #plotting cumulative (surface) displacments
+    #    cs_df['xz'].plot(ax=ax_xzd,color='0.4',linewidth=0.5,legend=False)
+    #    cs_df['xy'].plot(ax=ax_xyd,color='0.4',linewidth=0.5,legend=False)
+    #    ax_xzd.fill_between(cs_df.index,cs_df['xz'].values,xzd_plotoffset*(num_nodes),color='0.8')
+    #    ax_xyd.fill_between(cs_df.index,cs_df['xy'].values,xzd_plotoffset*(num_nodes),color='0.8')       
        
         #assigning non-repeating colors to subplots axis
         ax_xzd=nonrepeat_colors(ax_xzd,num_nodes)
@@ -245,12 +205,9 @@ def plot_disp_vel(df, colname, max_min_df, window, config, disp_offset = 'mean')
         #plotting displacement for xz
         curax=ax_xzd
         plt.sca(curax)
-        for i in range(1, num_nodes+1):
-            df0off.loc[df0off.id == i, ['xz']].plot(ax=curax,legend=False)
-        for i in range(1, num_nodes+1):
-            noise_df.loc[noise_df.id == i, ['xz_maxlist']].plot(ax=curax,ls=':',legend=False)
-        for i in range(1, num_nodes+1):
-            noise_df.loc[noise_df.id == i, ['xz_minlist']].plot(ax=curax,ls=':',legend=False)
+        nodal_df0off['xz'].apply(plt.plot)
+        nodal_noise_df['xz_maxlist'].apply(plt.plot, ls=':')
+        nodal_noise_df['xz_minlist'].apply(plt.plot, ls=':')
         curax.set_title('3-day displacement\n XZ axis',fontsize='small')
         curax.set_ylabel('displacement scale, m', fontsize='small')
         y = df0off.loc[df0off.index == window.start].sort_values('id')['xz'].values
@@ -262,12 +219,9 @@ def plot_disp_vel(df, colname, max_min_df, window, config, disp_offset = 'mean')
         #plotting displacement for xy
         curax=ax_xyd
         plt.sca(curax)
-        for i in range(1, num_nodes+1):
-            df0off.loc[df0off.id == i, ['xy']].plot(ax=curax,legend=False)
-        for i in range(1, num_nodes+1):
-            noise_df.loc[noise_df.id == i, ['xy_maxlist']].plot(ax=curax,ls=':',legend=False)
-        for i in range(1, num_nodes+1):
-            noise_df.loc[noise_df.id == i, ['xy_minlist']].plot(ax=curax,ls=':',legend=False)
+        nodal_df0off['xy'].apply(plt.plot)
+        nodal_noise_df['xy_maxlist'].apply(plt.plot, ls=':')
+        nodal_noise_df['xy_minlist'].apply(plt.plot, ls=':')
         curax.set_title('3-day displacement\n XY axis',fontsize='small')
         y = df0off.loc[df0off.index == window.start].sort_values('id')['xy'].values
         x = window.start
@@ -313,17 +267,14 @@ def plot_disp_vel(df, colname, max_min_df, window, config, disp_offset = 'mean')
             vel_xy = vel_xy.loc[(vel_xy.ts >= window.end - timedelta(hours=3)) & (vel_xy.ts <= window.end)]
             velplot,L2,L3 = vel_classify(vel_xy, config)
             velplot.plot(ax=curax,marker='.',legend=False)
-            for i in range(1, num_nodes+1):
-                nodal_L2 = L2.loc[L2.id == i, ['ts', 'vel_xy']]
-                nodal_L2 = nodal_L2.set_index('ts')
-                nodal_L2['vel_xy'] = nodal_L2['vel_xy'] * i
-                nodal_L2.plot(ax=curax,marker='^',ms=8,mfc='y',lw=0,legend=False)
-            for i in range(1, num_nodes+1):
-                nodal_L3 = L3.loc[L3.id == i, ['ts', 'vel_xy']]
-                nodal_L3 = nodal_L3.set_index('ts')
-                nodal_L3['vel_xy'] = nodal_L3['vel_xy'] * i
-                nodal_L3.plot(ax=curax,marker='^',ms=10,mfc='r',lw=0,legend=False)
-        
+            L2 = L2.sort_values('ts', ascending = True).set_index('ts')
+            nodal_L2 = L2.groupby('id')
+            L3 = L3.sort_values('ts', ascending = True).set_index('ts')
+            nodal_L3 = L3.groupby('id')
+            
+            nodal_L2['vel_xy'].apply(plt.plot,marker='^',ms=8,mfc='y',lw=0,)
+            nodal_L3['vel_xy'].apply(plt.plot,marker='^',ms=10,mfc='r',lw=0,)
+                   
             y = sorted(set(df.id))
             x = window.end - timedelta(hours=3)
             z = sorted(set(df.id))
@@ -331,18 +282,18 @@ def plot_disp_vel(df, colname, max_min_df, window, config, disp_offset = 'mean')
                 curax.annotate(str(j),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')            
             curax.set_title('3-hr velocity alerts\n XY axis',fontsize='small')            
         except:
-            print "ERROR plotting xz velocity class"
+            print "ERROR plotting xy velocity class"
             
             
         # rotating xlabel
         
         for tick in ax_xzd.xaxis.get_minor_ticks():
             tick.label.set_rotation('vertical')
-            tick.label.set_fontsize(6)
+            tick.label.set_fontsize(8)
             
         for tick in ax_xyd.xaxis.get_minor_ticks():
             tick.label.set_rotation('vertical')
-            tick.label.set_fontsize(6)
+            tick.label.set_fontsize(8)
     
         for tick in ax_xzv.xaxis.get_minor_ticks():
             tick.label.set_rotation('vertical')
@@ -354,11 +305,11 @@ def plot_disp_vel(df, colname, max_min_df, window, config, disp_offset = 'mean')
     
         for tick in ax_xzd.xaxis.get_major_ticks():
             tick.label.set_rotation('vertical')
-            tick.label.set_fontsize(6)
+            tick.label.set_fontsize(8)
             
         for tick in ax_xyd.xaxis.get_major_ticks():
             tick.label.set_rotation('vertical')
-            tick.label.set_fontsize(6)
+            tick.label.set_fontsize(8)
     
         for tick in ax_xzv.xaxis.get_major_ticks():
             tick.label.set_rotation('vertical')
@@ -367,6 +318,13 @@ def plot_disp_vel(df, colname, max_min_df, window, config, disp_offset = 'mean')
         for tick in ax_xyv.xaxis.get_major_ticks():
             tick.label.set_rotation('vertical')
             tick.label.set_fontsize(8)
+                
+        for item in ([ax_xzd.xaxis.label, ax_xzv.yaxis.label, ax_xyd.xaxis.label, ax_xyv.yaxis.label]):
+            item.set_fontsize(8)
+            
+        dfmt = md.DateFormatter('%m-%d\n%H:%M')
+        ax_xzd.xaxis.set_major_formatter(dfmt)
+        ax_xyd.xaxis.set_major_formatter(dfmt)
             
         fig.tight_layout()
         
@@ -429,12 +387,12 @@ def main(monitoring, window, config):
 
     # plot column position
     plot_column_positions(colposdf,colname,window.end)
-    print output_path+config.io.outputfilepath+colname+'ColPos:'+str(window.end.strftime('%Y-%m-%d_%H-%M'))+'.png'
+    print output_path+config.io.outputfilepath+colname+'_ColPos_'+str(window.end.strftime('%Y-%m-%d_%H-%M'))+'.png'
     plt.savefig(output_path+config.io.outputfilepath+colname+'ColPos_'+str(window.end.strftime('%Y-%m-%d_%H-%M'))+'.png',
                 dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
     
     # plot displacement and velocity
     plot_disp_vel(monitoring_vel, colname, max_min_df, window, config)
-    plt.savefig(output_path+config.io.outputfilepath+colname+'DispVel_'+str(window.end.strftime('%Y-%m-%d %H-%M'))+'.png',
+    plt.savefig(output_path+config.io.outputfilepath+colname+'_DispVel_'+str(window.end.strftime('%Y-%m-%d_%H-%M'))+'.png',
                 dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
     
