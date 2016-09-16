@@ -237,16 +237,14 @@ def plot_disp_vel(df, colname, max_min_df, window, config, disp_offset = 'mean')
             vel_xz = vel_xz.loc[(vel_xz.ts >= window.end - timedelta(hours=3)) & (vel_xz.ts <= window.end)]
             velplot,L2,L3 = vel_classify(vel_xz, config)  
             velplot.plot(ax=curax,marker='.',legend=False)
-            for i in range(1, num_nodes+1):
-                nodal_L2 = L2.loc[L2.id == i, ['ts', 'vel_xz']]
-                nodal_L2 = nodal_L2.set_index('ts')
-                nodal_L2['vel_xz'] = nodal_L2['vel_xz'] * i
-                nodal_L2.plot(ax=curax,marker='^',ms=8,mfc='y',lw=0,legend=False)
-            for i in range(1, num_nodes+1):
-                nodal_L3 = L3.loc[L3.id == i, ['ts', 'vel_xz']]
-                nodal_L3 = nodal_L3.set_index('ts')
-                nodal_L3['vel_xz'] = nodal_L3['vel_xz'] * i
-                nodal_L3.plot(ax=curax,marker='^',ms=10,mfc='r',lw=0,legend=False)
+
+            L2 = L2.sort_values('ts', ascending = True).set_index('ts')
+            nodal_L2 = L2.groupby('id')
+            nodal_L2['vel_xz'].apply(plt.plot,marker='^',ms=8,mfc='y',lw=0,)
+
+            L3 = L3.sort_values('ts', ascending = True).set_index('ts')
+            nodal_L3 = L3.groupby('id')
+            nodal_L3['vel_xz'].apply(plt.plot,marker='^',ms=10,mfc='r',lw=0,)
             
             y = sorted(set(df.id))
             x = window.end - timedelta(hours=3)
@@ -267,12 +265,13 @@ def plot_disp_vel(df, colname, max_min_df, window, config, disp_offset = 'mean')
             vel_xy = vel_xy.loc[(vel_xy.ts >= window.end - timedelta(hours=3)) & (vel_xy.ts <= window.end)]
             velplot,L2,L3 = vel_classify(vel_xy, config)
             velplot.plot(ax=curax,marker='.',legend=False)
+            
             L2 = L2.sort_values('ts', ascending = True).set_index('ts')
             nodal_L2 = L2.groupby('id')
+            nodal_L2['vel_xy'].apply(plt.plot,marker='^',ms=8,mfc='y',lw=0,)
+
             L3 = L3.sort_values('ts', ascending = True).set_index('ts')
             nodal_L3 = L3.groupby('id')
-            
-            nodal_L2['vel_xy'].apply(plt.plot,marker='^',ms=8,mfc='y',lw=0,)
             nodal_L3['vel_xy'].apply(plt.plot,marker='^',ms=10,mfc='r',lw=0,)
                    
             y = sorted(set(df.id))
