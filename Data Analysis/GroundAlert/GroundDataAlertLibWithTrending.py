@@ -45,7 +45,10 @@ def RoundTime(date_time):
 
     quotient = time_hour / 4
     if quotient == 5:
-        date_time = datetime.combine(date_time.date() + timedelta(1), time(0,0,0))
+        if time_float % 4 > 3.5:
+            date_time = datetime.combine(date_time.date() + timedelta(1), time(4,0,0))
+        else:
+            date_time = datetime.combine(date_time.date() + timedelta(1), time(0,0,0))
     elif time_float % 4 > 3.5:
         date_time = datetime.combine(date_time.date(), time((quotient + 2)*4,0,0))
     else:
