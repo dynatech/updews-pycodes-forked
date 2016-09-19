@@ -36,14 +36,15 @@ def up_one(p):
 def RoundTime(date_time):
     date_time = pd.to_datetime(date_time)
     time_hour = int(date_time.strftime('%H'))
+    time_float = float(date_time.strftime('%H')) + float(date_time.strftime('%M'))/60
 
     quotient = time_hour / 4
     if quotient == 5:
         date_time = datetime.combine(date_time.date() + timedelta(1), time(0,0,0))
-    elif time_hour % 4 == 0:
-        date_time = datetime.combine(date_time.date(), time((quotient)*4,0,0))
+    elif time_float % 4 > 3.5:
+        date_time = datetime.combine(date_time.date(), time((quotient + 2)*4,0,0))
     else:
-        date_time = datetime.combine(date_time.date(), time((quotient+1)*4,0,0))
+        date_time = datetime.combine(date_time.date(), time((quotient + 1)*4,0,0))
             
     return date_time
 
@@ -95,11 +96,20 @@ def set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_w
 
     return roll_window_numpts, end, start, offsetstart, monwin
 
-def uptoDB_gndmeas_alerts(df):
-    #INPUT: Dataframe containing all alerts
+def uptoDB_gndmeas_alerts(df,df2):
+    #INPUT: Dataframe containing all alerts df, previous alert data frame df2
     #OUTPUT: Writes to sql all ground measurement related alerts database
+        
+    #Merges the two data frame according to site and alerts
+    df3 = pd.merge(df.reset_index(),df2.reset_index(),how = 'left',on = ['site','alert'])
+    df3 = df3[df3.timestamp_y.isnull()]
+    df3 = df3[['timestamp_x','site','alert','cracks_x']]
+    df3.columns = ['timestamp','site','alert','cracks']
+    df3 = df3.set_index('timestamp')
+    
     engine=create_engine('mysql://root:senslope@192.168.1.102:3306/senslopedb')
-    df.to_sql(name = 'gndmeas_alerts', con = engine, if_exists = 'append', schema = Namedb, index = True)
+    df3.to_sql(name = 'gndmeas_alerts', con = engine, if_exists = 'append', schema = Namedb, index = True)
+
 
 
 
@@ -284,6 +294,12 @@ def alert_toDB(df,end):
     except:
         print "Cannot write to db {}".format(df.site.values[0])
 
+def GetPreviousAlert(end):
+    query = 'SELECT * FROM senslopedb.gndmeas_alerts WHERE timestamp = "{}"'.format(end)
+    df = GetDBDataFrame(query)
+    
+    return df
+
 def GenerateGroundDataAlert(site=None,end=None):
         
     start_time = datetime.now()
@@ -341,7 +357,10 @@ def GenerateGroundDataAlert(site=None,end=None):
     print ground_alert_release
     
     #Step 5: Upload the results to the gndmeas_alerts database
-    uptoDB_gndmeas_alerts(ground_alert_release)
+    
+    ##Get the previous alert database
+    ground_alert_previous = GetPreviousAlert(end)
+    uptoDB_gndmeas_alerts(ground_alert_release,ground_alert_previous)
     
     #Step 6: Upload to site_level_alert        
     ground_site_level = ground_alert_release.reset_index()
