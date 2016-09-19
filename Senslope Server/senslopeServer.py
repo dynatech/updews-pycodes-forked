@@ -206,6 +206,11 @@ def SendMessagesFromDb(network,limit=10):
 
     dbio.setSendStatus("FAIL",fail_success_list)
     dbio.setSendStatus("SENT",send_success_list)
+
+    #Get all outbox messages with send_status "SENT" and attempt to send
+    #   chatterbox acknowledgements
+    #   send_status will be changed to "SENT-WSS" if successful
+    dsll.sendAllAckSentGSMtoDEWS()    
     
 def getSensorNumbers():
     querys = "SELECT sim_num from site_column_sim_nums"

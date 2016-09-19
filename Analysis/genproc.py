@@ -57,17 +57,17 @@ def fill_smooth (df, offsetstart, end, roll_window_numpts, to_smooth, to_fill):
         df = df.fillna(method = 'pad')
         
         #Checking, resolving and reporting fill process    
-        print 'Post-filling report: '
+#        print 'Post-filling report: '
         if df.isnull().values.any():
             for n in ['xz', 'xy']:
                 if df[n].isnull().values.all():
-                    print '     ',n, 'NaN all values'
+#                    print '     ',n, 'NaN all values'
                     df[n]=0
                 elif np.isnan(df[n].values[0]):
-                    print '     ',n, 'NaN 1st value'
+#                    print '     ',n, 'NaN 1st value'
                     df[n]=df[n].fillna(method='bfill')
-        else: 
-            print '     All numerical values.'
+#        else: 
+#            print '     All numerical values.'
 
     #dropping rows outside monitoring window
     df=df[(df.index>=offsetstart)&(df.index<=end)]
@@ -95,7 +95,7 @@ def node_inst_vel(filled_smoothened, roll_window_numpts, start):
     
     return filled_smoothened
 
-def genproc(col, offsetstart, end=datetime.now()):
+def genproc(col, offsetstart, end=datetime.now(), realtime=False):
     
     window,config = rtw.getwindow()
     
@@ -142,7 +142,14 @@ def genproc(col, offsetstart, end=datetime.now()):
     
     nodal_proc_monitoring = monitoring.groupby('id')
     
-    filled_smoothened = nodal_proc_monitoring.apply(fill_smooth, offsetstart=offsetstart, end=end, roll_window_numpts=window.numpts, to_smooth=config.io.to_smooth, to_fill=config.io.to_fill)
+    if not realtime:
+        to_smooth = config.io.to_smooth
+        to_fill = config.io.to_fill
+    else:
+        to_smooth = config.io.rt_to_smooth
+        to_fill = config.io.rt_to_fill
+    
+    filled_smoothened = nodal_proc_monitoring.apply(fill_smooth, offsetstart=offsetstart, end=end, roll_window_numpts=window.numpts, to_smooth=to_smooth, to_fill=to_fill)
     filled_smoothened = filled_smoothened[['xz', 'xy','name']].reset_index()
     
     monitoring = filled_smoothened.set_index('ts')   

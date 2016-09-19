@@ -1,17 +1,15 @@
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
-from pandas.stats.api import ols
 from sqlalchemy import create_engine
 import sys
 
-import cfgfileio as cfg
 import rtwindow as rtw
 import querySenslopeDb as q
 import genproc as g
 import AlertAnalysis as A
 
-#import PlotColposDispvel as plotter
+import Plotter
 
 def RoundTime(date_time):
     # rounds time to 4/8/12 AM/PM
@@ -19,9 +17,10 @@ def RoundTime(date_time):
 
     quotient = time_hour / 4
     if quotient == 5:
-        date_time = datetime.combine(date_time.date() + timedelta(1), time(0,0,0))
+        date_time = pd.to_datetime(date_time.date() + timedelta(1))
     else:
-        date_time = datetime.combine(date_time.date(), time((quotient+1)*4,0,0))
+        time = (quotient+1)*4
+        date_time = pd.to_datetime(date_time.date()) + timedelta(hours=time)
             
     return date_time
 
@@ -342,14 +341,14 @@ def main(name=''):
 
 #######################
 
-#    query = "SELECT * FROM senslopedb.site_level_alert WHERE site = '%s' and source = 'public' ORDER BY updateTS DESC LIMIT 1" %monitoring.colprops.name[0:3]
-#    public_alert = q.GetDBDataFrame(query)
-#    if public_alert.alert.values[0] != 'A0' or RoundTime(pd.to_datetime(public_alert.timestamp.values[0])) == RoundTime(window.end):
-#        plot_time = ['07:30:00', '19:30:00']
-#        if str(window.end.time()) in plot_time:
-#            plotter.main(monitoring, window, config)
-#    elif RoundTime(pd.to_datetime(public_alert.timestamp.values[0])) == RoundTime(window.end):
-#        plotter.main(monitoring, window, config)
+    query = "SELECT * FROM senslopedb.site_level_alert WHERE site = '%s' and source = 'public' ORDER BY updateTS DESC LIMIT 1" %monitoring.colprops.name[0:3]
+    public_alert = q.GetDBDataFrame(query)
+    if public_alert.alert.values[0] != 'A0' or RoundTime(pd.to_datetime(public_alert.timestamp.values[0])) == RoundTime(window.end):
+        plot_time = ['07:30:00', '19:30:00']
+        if str(window.end.time()) in plot_time:
+            Plotter.main(monitoring, window, config)
+    elif RoundTime(pd.to_datetime(public_alert.timestamp.values[0])) == RoundTime(window.end):
+        Plotter.main(monitoring, window, config)
 
 #######################
 

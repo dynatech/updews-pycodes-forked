@@ -256,7 +256,7 @@ def SitePublicAlert(PublicAlert, window):
                 else:
                     # within 3 days of 4hr-extension
                     if RoundTime(window.end) - validity < timedelta(3):
-                        validity = RoundTime(window.end) + timedelta(hours=4)
+                        validity = RoundTime(window.end)
                         internal_alert = 'A3-SG' + other_alerts
                         public_alert = 'A3'
                         
@@ -277,7 +277,7 @@ def SitePublicAlert(PublicAlert, window):
                 else:
                     # within 3 days of 4hr-extension
                     if RoundTime(window.end) - validity < timedelta(3):
-                        validity = RoundTime(window.end) + timedelta(hours=4)
+                        validity = RoundTime(window.end)
                         internal_alert = 'A3-S' + other_alerts
                         public_alert = 'A3'
                         
@@ -298,7 +298,7 @@ def SitePublicAlert(PublicAlert, window):
                 else:
                     # within 3 days of 4hr-extension
                     if RoundTime(window.end) - validity < timedelta(3):
-                        validity = RoundTime(window.end) + timedelta(hours=4)
+                        validity = RoundTime(window.end)
                         internal_alert = 'A3-G' + other_alerts
                         public_alert = 'A3'
                         
@@ -382,7 +382,7 @@ def SitePublicAlert(PublicAlert, window):
                 else:
                     # within 3 days of 4hr-extension
                     if RoundTime(window.end) - validity < timedelta(3):
-                        validity = RoundTime(window.end) + timedelta(hours=4)
+                        validity = RoundTime(window.end)
                         if 'L' not in list_ground_alerts and 'l' not in list_ground_alerts:
                             internal_alert = 'A2-s0g0' + other_alerts
                         else:
@@ -414,7 +414,7 @@ def SitePublicAlert(PublicAlert, window):
                 else:
                     # within 3 days of 4hr-extension
                     if RoundTime(window.end) - validity < timedelta(3):
-                        validity = RoundTime(window.end) + timedelta(hours=4)
+                        validity = RoundTime(window.end)
                         internal_alert = 'A2-s0' + other_alerts
                         public_alert = 'A2'
                         
@@ -435,7 +435,7 @@ def SitePublicAlert(PublicAlert, window):
                 else:
                     # within 3 days of 4hr-extension
                     if RoundTime(window.end) - validity < timedelta(3):
-                        validity = RoundTime(window.end) + timedelta(hours=4)
+                        validity = RoundTime(window.end)
                         internal_alert = 'ND-g0' + other_alerts
                         public_alert = 'A2'
                         
@@ -483,7 +483,7 @@ def SitePublicAlert(PublicAlert, window):
                     if rain_alertDF.alert.values[1] == 'r1':
                         # within 1-day cap of 4H extension for nd
                         if RoundTime(window.end) - validity < timedelta(1):
-                            validity = RoundTime(window.end) + timedelta(hours=4)
+                            validity = RoundTime(window.end)
                             public_alert = 'A1'
                             # identifies which triggered A1
                             RED_source = []
@@ -516,7 +516,7 @@ def SitePublicAlert(PublicAlert, window):
             else:
                 # within 3 days of 4hr-extension
                 if RoundTime(window.end) - validity < timedelta(3):
-                    validity = RoundTime(window.end) + timedelta(hours=4)
+                    validity = RoundTime(window.end)
                     public_alert = 'A1'
 
                     # identifies which triggered A1
