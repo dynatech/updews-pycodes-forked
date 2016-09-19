@@ -95,7 +95,7 @@ def node_inst_vel(filled_smoothened, roll_window_numpts, start):
     
     return filled_smoothened
 
-def genproc(col, offsetstart, end=datetime.now()):
+def genproc(col, offsetstart, end=datetime.now(), realtime=False):
     
     window,config = rtw.getwindow()
     
@@ -142,7 +142,14 @@ def genproc(col, offsetstart, end=datetime.now()):
     
     nodal_proc_monitoring = monitoring.groupby('id')
     
-    filled_smoothened = nodal_proc_monitoring.apply(fill_smooth, offsetstart=offsetstart, end=end, roll_window_numpts=window.numpts, to_smooth=config.io.to_smooth, to_fill=config.io.to_fill)
+    if not realtime:
+        to_smooth = config.io.to_smooth
+        to_fill = config.io.to_fill
+    else:
+        to_smooth = config.io.rt_to_smooth
+        to_fill = config.io.rt_to_fill
+    
+    filled_smoothened = nodal_proc_monitoring.apply(fill_smooth, offsetstart=offsetstart, end=end, roll_window_numpts=window.numpts, to_smooth=to_smooth, to_fill=to_fill)
     filled_smoothened = filled_smoothened[['xz', 'xy','name']].reset_index()
     
     monitoring = filled_smoothened.set_index('ts')   
