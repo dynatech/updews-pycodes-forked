@@ -131,7 +131,8 @@ def rangeFilterAccel2(dff):
     dff.loc[y_index,'y'] = dff.loc[y_index,'y'] + 4096
     dff.loc[z_index,'z'] = dff.loc[z_index,'z'] + 4096
     
-    x_range = ((dff.x > 1126) | (dff.x < 100))
+#    x_range = ((dff.x > 1126) | (dff.x < 100))
+    x_range = abs(dff.x) > 1126
     y_range = abs(dff.y) > 1126
     z_range = abs(dff.z) > 1126
     
