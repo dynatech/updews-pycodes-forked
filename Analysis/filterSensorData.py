@@ -111,7 +111,7 @@ def rangeFilterAccel(df):
     dff.z[(dff.z<-2970) & (dff.z>-3072)] = dff.z[(dff.z<-2970) & (dff.z>-3072)] + 4096
     
     
-    dff.x[((dff.x > 1126) | (dff.x < 100))] = np.nan
+    dff.x[abs(dff.x) > 1126] = np.nan
     dff.y[abs(dff.y) > 1126] = np.nan
     dff.z[abs(dff.z) > 1126] = np.nan
 
