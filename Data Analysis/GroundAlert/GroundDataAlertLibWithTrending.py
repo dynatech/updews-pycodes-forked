@@ -445,6 +445,15 @@ def GetPreviousAlert(end):
     
     return df
 
+def FixMesData(df):
+    if df.site_id.values[0] == 'mes':
+        if df.crack_id.values[0] in ['A','B','C','D','E','F']:
+            df.replace(to_replace = {'site_id':{'mes':'msl'}},inplace = True)
+        else:
+            df.replace(to_replace = {'site_id':{'mes':'msu'}},inplace = True)
+    
+    return df
+
 def GenerateGroundDataAlert(site=None,end=None):
         
     start_time = datetime.now()
@@ -488,6 +497,9 @@ def GenerateGroundDataAlert(site=None,end=None):
     #lower caps all site_id names while cracks should be in title form
     df['site_id'] = map(lambda x: x.lower(),df['site_id'])
     df['crack_id'] = map(lambda x: x.title(),df['crack_id'])
+    
+    #Apply mes data fix
+    df = df.groupby(['site_id','crack_id']).apply(FixMesData)      
     
     #Step 2: Evaluate the alerts per crack
     crack_alerts = df.groupby(['site_id','crack_id']).apply(crack_eval,print_out_path2,end).reset_index(name = 'crack_alerts')
