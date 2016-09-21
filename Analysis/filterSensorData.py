@@ -111,7 +111,7 @@ def rangeFilterAccel(df):
     dff.z[(dff.z<-2970) & (dff.z>-3072)] = dff.z[(dff.z<-2970) & (dff.z>-3072)] + 4096
     
     
-    dff.x[((dff.x > 1126) | (dff.x < 100))] = np.nan
+    dff.x[abs(dff.x) > 1126] = np.nan
     dff.y[abs(dff.y) > 1126] = np.nan
     dff.z[abs(dff.z) > 1126] = np.nan
 
@@ -131,7 +131,8 @@ def rangeFilterAccel2(dff):
     dff.loc[y_index,'y'] = dff.loc[y_index,'y'] + 4096
     dff.loc[z_index,'z'] = dff.loc[z_index,'z'] + 4096
     
-    x_range = ((dff.x > 1126) | (dff.x < 100))
+#    x_range = ((dff.x > 1126) | (dff.x < 100))
+    x_range = abs(dff.x) > 1126
     y_range = abs(dff.y) > 1126
     z_range = abs(dff.z) > 1126
     

@@ -8,7 +8,7 @@ from scipy.interpolate import splev, splrep, UnivariateSpline
 from scipy.signal import gaussian
 from scipy.ndimage import filters
 from matplotlib.patches import Rectangle
-from matplotlib.offsetbox import AnchoredText
+import matplotlib.patches as mpatches
 import Fukuzono
 import sys
 
@@ -516,6 +516,7 @@ for i in np.arange(num_pts,len(t)+1):
     ax1.get_xaxis().tick_bottom()    
     ax1.get_yaxis().tick_left()
     ax1.grid()
+    ax1.fill_between(v_theo,a_theo_up,a_theo_down,facecolor = tableau20[1],alpha = 0.5)
     l1 = ax1.plot(v_theo,a_theo,c = tableau20[0],label = 'Fukuzono (1985)')
     ax1.plot(v_theo,a_theo_up,'--',c = tableau20[0])
     ax1.plot(v_theo,a_theo_down,'--', c = tableau20[0])
@@ -523,6 +524,7 @@ for i in np.arange(num_pts,len(t)+1):
     l2 = ax1.plot(cur_v0,cur_a0,'o',c=tableau20[4],label = 'L0 Points',picker = 5)
     l3 = ax1.plot(cur_v2,cur_a2,'s',c = tableau20[16],label = 'L2 Points',picker = 5)
     l4 = ax1.plot(cur_v3,cur_a3,'^',c = tableau20[6],label = 'L3 Points',picker = 5)
+
     ax1.set_xlabel('Velocity (cm/day)')
     ax1.set_ylabel('Acceleration (cm/day$^2$)')
     ax1.set_xscale('log')
@@ -611,6 +613,7 @@ ax.spines["right"].set_visible(False)
 ax.get_xaxis().tick_bottom()    
 ax.get_yaxis().tick_left() 
 ax.grid()
+ax.fill_between(v_theo,a_theo_up,a_theo_down,facecolor = tableau20[1],alpha = 0.5)
 ax.plot(v_theo,a_theo,c=tableau20[0],label = 'Fukuzono (1985)')
 ax.plot(v_theo,a_theo_up,'--',c=tableau20[0])
 ax.plot(v_theo,a_theo_down,'--',c=tableau20[0])
@@ -651,14 +654,35 @@ ax.grid()
 ax.get_xaxis().tick_bottom()    
 ax.get_yaxis().tick_left() 
 ax.plot(t,x,'-',c = tableau20[0])
-ax.plot(t_l0,x_l0,'o',c = tableau20[4],label = 'L0 disp')
-ax.plot(t_l2,x_l2,'s',c = tableau20[16],label = 'L2 disp')
-ax.plot(t_l3,x_l3,'^',c=tableau20[6],label = 'L3 disp')
+l1 = ax.plot(t_l0,x_l0,'o',c = tableau20[4],label = 'L0 disp')
+l2 = ax.plot(t_l2,x_l2,'s',c = tableau20[16],label = 'L2 disp')
+l3 = ax.plot(t_l3,x_l3,'^',c=tableau20[6],label = 'L3 disp')
+patch_l2 = mpatches.Patch(color = tableau20[2], label = 'New L2')
+patch_l3 = mpatches.Patch(color = tableau20[6], label = 'New L3')
+patch_legit = mpatches.Patch(color = tableau20[12], label = 'Trending')
+
 ax.set_xlabel('Time (days)')
 ax.set_ylabel('Displacement (meters)')
 ax.set_ylim(top = max(x)+0.01,bottom = min(x)-0.01)
-ax.legend(loc = 'upper left',fancybox = True)
-ax.set_title(site.upper()+" Crack " + crack + " Displacement vs. Time with Alerts")
+
+for i,j in new_l2_ranges:
+    ax.axvspan(i,j,facecolor = tableau20[2],ec = None,alpha = 0.5)
+
+for i,j in new_l3_ranges:
+    ax.axvspan(i,j,facecolor = tableau20[6],ec = None, alpha = 0.5)
+
+for i,j in legit_ranges:
+    ax.axvspan(i,j,facecolor = tableau20[12],ec = None, alpha = 0.5)
+
+lns = l1 + l2 + l3
+lns.append(patch_legit)
+lns.append(patch_l2)
+lns.append(patch_l3)
+
+labs = [l.get_label() for l in lns]
+
+ax.legend(lns,labs, loc = 'upper left',fancybox = True)
+fig.suptitle(site.upper()+" Crack " + crack + " Displacement vs. Time with Alerts")
 fig5_out_path = out_path + " {} Crack {} Displacement vs Time ".format(site.upper(),crack)
 plt.savefig(fig5_out_path,facecolor='w', edgecolor='w',orientation='landscape',mode='w',bbox_inches = 'tight')
 
