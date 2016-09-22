@@ -132,7 +132,7 @@ for i in range(len(tableau20)):
 
 
 crack = 'B'
-site = 'mes'
+site = 'msl'
 size = 1
 num_pts = 10
 sample_size = '1H'
@@ -212,6 +212,7 @@ old_alerts = []
 new_alerts = []
 legit_range = []
 trend_alerts = []
+all_vel = []
 
 for i in np.arange(0,num_pts-1):
     v = np.append(v,np.nan)
@@ -219,6 +220,7 @@ for i in np.arange(0,num_pts-1):
     old_alerts.append(np.nan)
     new_alerts.append(np.nan)
     trend_alerts.append(np.nan)
+    all_vel.append(np.nan)
 
 for i in np.arange(num_pts,len(t)+1):
 #    if i != len(t)-20:
@@ -366,6 +368,7 @@ for i in np.arange(num_pts,len(t)+1):
     vel = abs_disp/time_delta
         #conversion from cm/day to cm/hr
     vel = vel/24.
+    all_vel.append(vel)
     #new alert table
     if vel >= 1.8:
         crack_alert = 'L3'
@@ -453,6 +456,7 @@ data['a'] = a
 data['old_alert'] = old_alerts
 data['new_alert'] = new_alerts
 data['trend_alert'] = trend_alerts
+data['all_vel'] = all_vel
 data.drop_duplicates(inplace = True)
 v_min = min(np.concatenate((v_0,v_2,v_3)))
 v_max = max(np.concatenate((v_0,v_2,v_3)))
@@ -639,7 +643,8 @@ t_l3 = data[data.old_alert == 'L3'].t.values
 x_l0 = data[data.old_alert == 'L0'].x.values
 x_l2 = data[data.old_alert == 'L2'].x.values
 x_l3 = data[data.old_alert == 'L3'].x.values
-
+all_vel = data.all_vel.values
+    
 new_l2_ranges = stitch_intervals(zip(data.shift()[data.new_alert == 'L2'].t.values,data[data.new_alert == 'L2'].t.values))
 new_l3_ranges = stitch_intervals(zip(data.shift()[data.new_alert == 'L3'].t.values,data[data.new_alert == 'L3'].t.values))
 
@@ -651,8 +656,8 @@ fig.set_size_inches(15,8)
 plt.tick_params(axis="both", which="both", bottom="off", top="off",labelbottom="on", left="off", right="off", labelleft="on") 
 ax = fig.add_subplot(111)
 ax.grid()
-ax.get_xaxis().tick_bottom()    
-ax.get_yaxis().tick_left() 
+ax.get_xaxis().tick_bottom()
+ax.get_yaxis().tick_left()
 ax.plot(t,x,'-',c = tableau20[0])
 l1 = ax.plot(t_l0,x_l0,'o',c = tableau20[4],label = 'L0 disp')
 l2 = ax.plot(t_l2,x_l2,'s',c = tableau20[16],label = 'L2 disp')
@@ -664,6 +669,8 @@ patch_legit = mpatches.Patch(color = tableau20[12], label = 'Trending')
 ax.set_xlabel('Time (days)')
 ax.set_ylabel('Displacement (meters)')
 ax.set_ylim(top = max(x)+0.01,bottom = min(x)-0.01)
+
+
 
 for i,j in new_l2_ranges:
     ax.axvspan(i,j,facecolor = tableau20[2],ec = None,alpha = 0.5)
