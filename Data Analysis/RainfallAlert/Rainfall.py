@@ -20,7 +20,7 @@ if not path in sys.path:
     sys.path.insert(1,path)
 del path   
 
-from querySenslopeDb import *
+import querySenslopeDb as q
 
 ############################################################
 ##      TIME FUNCTIONS                                    ##    
@@ -84,22 +84,24 @@ def GetResampledData(r, start, end):
     ##end; datetime; end of rainfall data
     
     ##OUTPUT:
-    ##rainfall; dataframe containing start to end of rainfall data resampled to 15min
+    ##rainfall; dataframe containing start to end of rainfall data resampled to 30min
     
     #raw data from senslope rain gauge
-    rainfall = GetRawRainData(r, start)
+    rainfall = q.GetRawRainData(r, start)
     rainfall = rainfall.set_index('ts')
     rainfall = rainfall.loc[rainfall['rain']>=0]
     
-    #data resampled to 15mins
+    if rainfall.index[-1:] <= end-timedelta(1):
+        return pd.DataFrame(data=None)
+    
+    #data resampled to 30mins
     if rainfall.index[-1:]<end:
-        blankdf_time=pd.date_range(start=start, end=end, freq='15Min',name='timestamp', closed=None)
-        blankdf=pd.DataFrame(data=np.nan*np.ones(len(blankdf_time)), index=blankdf_time,columns=['rain'])
-        blankdf=blankdf[-1:]
+        blankdf=pd.DataFrame({'ts': [end], 'rain': [0]})
+        blankdf=blankdf.set_index('ts')
         rainfall=rainfall.append(blankdf)
     rainfall=rainfall[(rainfall.index>=start)]
     rainfall=rainfall[(rainfall.index<=end)]
-    rainfall=rainfall.resample('15min',how='sum')
+    rainfall=rainfall.resample('30min',how='sum', label='right')
 
     return rainfall
 
@@ -116,24 +118,17 @@ def SensorPlot(r,offsetstart,end,tsn, data, halfmax, twoyrmax):
     
     ##OUTPUT:
     ##rainfall2, rainfall3; dataframe containing one-day and three-day cumulative rainfall
-    ##also prints cumulative rainfall to csv & plots thresholds and cumulative rainfall
         
     if PrintPlot:
         plt.xticks(rotation=70, size=5)       
         
     #getting the rolling sum for the last24 hours
-    rainfall2=pd.rolling_sum(data,96,min_periods=1)
+    rainfall2=pd.rolling_sum(data,48,min_periods=1)
     rainfall2=np.round(rainfall2,4)
-
-    if PrintCumSum:
-        rainfall2.to_csv(CumSum_file_path+r+' 1d'+CSVFormat,sep=',',mode='w')
     
     #getting the rolling sum for the last 3 days
-    rainfall3=pd.rolling_sum(data,288,min_periods=1)
+    rainfall3=pd.rolling_sum(data,144,min_periods=1)
     rainfall3=np.round(rainfall3,4)
-
-    if PrintCumSum:
-        rainfall3.to_csv(CumSum_file_path+r+' 3d'+CSVFormat,sep=',',mode='w')
     
     if PrintPlot:
         #assigning the thresholds to their own columns for plotting 
@@ -179,16 +174,14 @@ def GetASTIdata(site, rain_noah, offsetstart):
         if not math.isnan(rain_noah):
             rain_noah = int(rain_noah)
     
-        db, cur = SenslopeDBConnect(Namedb)
+        db, cur = q.SenslopeDBConnect(q.Namedb)
         
         query = "select timestamp,rval from senslopedb.rain_noah_%s" % str(rain_noah)
         query = query + " where timestamp >= timestamp('%s')" % offsetstart
         query = query + " order by timestamp desc"
-        df =  GetDBDataFrame(query)
+        df =  q.GetDBDataFrame(query)
         df.columns = ['timestamp','rain']
         df.timestamp = pd.to_datetime(df.timestamp)
-        if PrintASTIdata:
-            df.to_csv(ASTIpath + site + CSVFormat, sep = ',', mode = 'w', index = False, header = False)
         df.set_index('timestamp', inplace = True)
         return df
     except:
@@ -237,32 +230,31 @@ def ASTIplot(r,offsetstart,end,tsn, data, halfmax, twoyrmax):
     ##also prints cumulative rainfall to csv & plots thresholds and cumulative rainfall
 
     try:
-        #data is resampled to 15mins
+
+        #adds blank dataframe if last data is more than 3.5hrs
+        if data.index[-1:]<end:
+            blankdf=pd.DataFrame({'ts': [end], 'rain': [0]})
+            blankdf=blankdf.set_index('ts')
+            data=data.append(blankdf)
+        
+        #data is resampled to 30mins
         rainfall = data
         rainfall = rainfall.loc[rainfall['rain']>=0]
         rainfall = rainfall[(rainfall.index>=offsetstart)]
         rainfall = rainfall[(rainfall.index<=end)]
-        rainfall = rainfall.resample('15min',how='sum')
+        rainfall = rainfall.resample('30min',how='sum', label='right')
     
         if PrintPlot:
             plt.xticks(rotation=70, size=5)
         
         #getting the rolling sum for the last24 hours
-        rainfall2 = rainfall.rolling(min_periods=1,window=96,center=False).sum()
+        rainfall2 = rainfall.rolling(min_periods=1,window=48,center=False).sum()
         rainfall2=np.round(rainfall2,4)
 
-        #prints rolling sum from 24hrs to csv file
-        if PrintCumSum:
-            rainfall2.to_csv(CumSum_file_path+r+' 1d'+CSVFormat,sep=',',mode='w')
-        
         #getting the rolling sum for the last 3 days
-        rainfall3 = rainfall.rolling(min_periods=1,window=288,center=False).sum()
+        rainfall3 = rainfall.rolling(min_periods=1,window=144,center=False).sum()
         rainfall3=np.round(rainfall3,4)
 
-        #prints rolling sum from 72hrs to csv file
-        if PrintCumSum:
-            rainfall3.to_csv(CumSum_file_path+r+' 3d'+CSVFormat,sep=',',mode='w')
-        
         if PrintPlot:
             #assigning the thresholds to their own columns for plotting 
             sub=base
@@ -306,26 +298,9 @@ def onethree_val_writer(colname, one, three):
     ##one, three; float; cumulative sum for one day and three days
 
     try:
-        one, three = one, three
-        
-        #adds blank dataframe if last data is more than 3.5hrs
-        if end - pd.to_datetime(one.index[-1:]) > timedelta(hours=3.5):
-            blankdf_time=pd.date_range(start=start, end=end, freq='15Min',name='timestamp', closed=None)
-            blankdf=pd.DataFrame(data=np.nan*np.ones(len(blankdf_time)), index=blankdf_time,columns=['rain'])
-            blankdf=blankdf[-1:]
-            one=one.append(blankdf)
-        
-        #returns null is last data is more than 3.5hrs
+                
+        #returns null if last data is more than 3.5hrs
         one = float(one.rain[-1:])
-     
-        #adds blank dataframe if last data is more than 3.5hrs
-        if end - pd.to_datetime(three.index[-1:]) > timedelta(hours=3.5):
-            blankdf_time=pd.date_range(start=start, end=end, freq='15Min',name='timestamp', closed=None)
-            blankdf=pd.DataFrame(data=np.nan*np.ones(len(blankdf_time)), index=blankdf_time,columns=['rain'])
-            blankdf=blankdf[-1:]
-            three=three.append(blankdf)
-
-        #returns null is last data is more than 3.5hrs
         three = float(three.rain[-1:])
 
     except:
@@ -435,14 +410,14 @@ def alert_toDB(df):
     
     query = "SELECT * FROM senslopedb.site_level_alert WHERE site = '%s' AND source = 'rain' AND updateTS <= '%s' ORDER BY updateTS DESC LIMIT 1" %(df.site.values[0], end)
     
-    df2 = GetDBDataFrame(query)
+    df2 = q.GetDBDataFrame(query)
     
     if len(df2) == 0 or df2.alert.values[0] != df.alert.values[0]:
         df['updateTS'] = end
-        engine = create_engine('mysql://'+Userdb+':'+Passdb+'@'+Hostdb+':3306/'+Namedb)
-        df.to_sql(name = 'site_level_alert', con = engine, if_exists = 'append', schema = Namedb, index = False)
+        engine = create_engine('mysql://'+q.Userdb+':'+q.Passdb+'@'+q.Hostdb+':3306/'+q.Namedb)
+        df.to_sql(name = 'site_level_alert', con = engine, if_exists = 'append', schema = q.Namedb, index = False)
     elif df2.alert.values[0] == df.alert.values[0]:
-        db, cur = SenslopeDBConnect(Namedb)
+        db, cur = q.SenslopeDBConnect(q.Namedb)
         query = "UPDATE senslopedb.site_level_alert SET updateTS='%s' WHERE site = '%s' and source = 'rain' and alert = '%s' and timestamp = '%s'" %(end, df2.site.values[0], df2.alert.values[0], pd.to_datetime(str(df2.timestamp.values[0])))
         cur.execute(query)
         db.commit()
@@ -470,37 +445,19 @@ roll_window_length = cfg.getfloat('I/O','roll_window_length')
 #number of rolling window operations in the whole monitoring analysis
 num_roll_window_ops = cfg.getfloat('I/O','num_roll_window_ops')
 
-#string expression indicating interval between two adjacent column position dates ex: '1D'= 1 day
-col_pos_interval= cfg.get('I/O','col_pos_interval') 
-#number of column position dates to plot
-col_pos_num= cfg.getfloat('I/O','num_col_pos')
-
 
 #INPUT/OUTPUT FILES
 
 #local file paths
 output_file_path = output_path + cfg.get('I/O', 'OutputFilePath')
-CumSum_file_path = output_path + cfg.get('I/O', 'CumSumFilePath')
-ASTIpath = output_path + cfg.get('I/O', 'ASTIpath')
 RainfallPlotsPath = output_path + cfg.get('I/O', 'RainfallPlotsPath')
 
 #file names
 CSVFormat = cfg.get('I/O','CSVFormat')
-rainfallalert = cfg.get('I/O','rainfallalert')
-
-#ALERT CONSTANTS
-T_disp = cfg.getfloat('I/O','T_disp')  #m
-T_velA1 = cfg.getfloat('I/O','T_velA1') #m/day
-T_velA2 = cfg.getfloat('I/O','T_velA2')  #m/day
-k_ac_ax = cfg.getfloat('I/O','k_ac_ax')
-num_nodes_to_check = cfg.getint('I/O','num_nodes_to_check')
 
 #To Output File or not
 PrintPlot = cfg.getboolean('I/O','PrintPlot')
 PrintSummaryAlert = cfg.getboolean('I/O','PrintSummaryAlert')
-PrintCumSum = cfg.getboolean('I/O','PrintCumSum')
-PrintRAlert = cfg.getboolean('I/O','PrintRAlert')
-PrintASTIdata = cfg.getboolean('I/O','PrintASTIdata')
 
 #creates directory if it doesn't exist
 if not os.path.exists(output_file_path):
@@ -508,12 +465,6 @@ if not os.path.exists(output_file_path):
 if PrintPlot or PrintSummaryAlert:
     if not os.path.exists(RainfallPlotsPath):
         os.makedirs(RainfallPlotsPath)
-if PrintCumSum:
-    if not os.path.exists(CumSum_file_path):
-        os.makedirs(CumSum_file_path)
-if PrintASTIdata:
-    if not os.path.exists(ASTIpath):
-        os.makedirs(ASTIpath)
     
 ################################     MAIN     ################################
 
@@ -527,7 +478,7 @@ base = pd.DataFrame(index=index, columns=columns)
 tsn=end.strftime("%Y-%m-%d_%H-%M-%S")
 
 #rainprops containing noah id and threshold
-rainprops = GetRainProps()
+rainprops = q.GetRainProps()
 rainprops['rain_arq'] = rainprops['rain_arq'].fillna(rainprops['rain_senslope'])
 rainprops = rainprops[['name', 'rain_arq', 'max_rain_2year', 'rain_noah', 'rain_noah2', 'rain_noah3']]
 rainprops['rain_arq'] = rainprops['rain_arq'].fillna(rainprops['name'])
@@ -581,15 +532,6 @@ df_for_db = df_for_db.dropna()
 #Write to senslopedb.site_level_alerts
 site_DBdf = df_for_db.groupby('site')
 site_DBdf.apply(alert_toDB)
-
-#Summarizing rainfall data to rainfallalerts.txt
-if PrintRAlert:
-    with open (output_file_path+rainfallalert, 'wb') as t:
-        t.write('As of ' + end.strftime('%Y-%m-%d %H:%M') + ':\n')
-        t.write ('nd: ' + ','.join(sorted(alert[3])) + '\n')
-        t.write ('r0: ' + ','.join(sorted(alert[0])) + '\n')
-        t.write ('r1a: ' + ','.join(sorted(alert[1])) + '\n')
-        t.write ('r1b: ' + ','.join(sorted(alert[2])) + '\n')
 
 #Printing of alerts using JSON format
 if set_json:
