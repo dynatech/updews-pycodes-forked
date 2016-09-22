@@ -153,6 +153,7 @@ def crack_eval(df,end):
     
     #^&*()
     df = df[df.timestamp <= end]
+    df.sort_values('timestamp',inplace = True)
     print df
         #Impose the validity of the groundmeasurement
     try:

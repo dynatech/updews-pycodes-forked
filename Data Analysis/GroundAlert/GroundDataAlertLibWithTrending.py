@@ -156,6 +156,8 @@ def crack_eval(df,out_folder,end):
     #OUTPUT: crack alert according to protocol table
     
     #Impose the validity of the groundmeasurement
+    df = df[df.timestamp <= end]
+    df.sort_values('timestamp',inplace = True)
     try:
         if RoundTime(end) != RoundTime(df.timestamp.iloc[-1]):
             crack_alert = 'nd'
