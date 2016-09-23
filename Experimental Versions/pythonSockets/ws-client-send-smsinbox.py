@@ -10,4 +10,5 @@ import dewsSocketLeanLib as dsll
 port = 5050
 host = "www.dewslandslide.com"
 
-dsll.sendBatchReceivedGSMtoDEWS(host, port, 5000)
+# Send 100 messages from smsinbox to the websocket server
+dsll.sendBatchReceivedGSMtoDEWS(host, port, 100)
