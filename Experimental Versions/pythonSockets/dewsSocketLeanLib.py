@@ -100,14 +100,30 @@ def getAllSMSoutbox(send_status='SENT',limit=20):
             WHERE send_status = '%s' 
             AND timestamp_written IS NOT NULL 
             AND timestamp_sent IS NOT NULL 
-            ORDER BY sms_id ASC LIMIT %d""" % (send_status,limit)
+            ORDER BY sms_id ASC LIMIT %d""" % (send_status, limit)
             
         print query
         result = qpi.GetDBResultset(query)
         return result
 
     except MySQLdb.OperationalError:
-        print '9.',
+        print 'getAllSMSoutbox DB Error',
+
+def getAllSMSinbox(web_flag='W',read_status='READ-SUCCESS',limit=20):
+    try:
+        #sms_id, timestamp, sender, message
+        query = """SELECT sms_id, timestamp, sim_num, sms_msg
+                FROM smsinbox
+                WHERE web_flag = '%s'
+                AND read_status = '%s'
+                ORDER BY sms_id ASC LIMIT %d """ % (web_flag, read_status, limit)
+
+        print query
+        result = qpi.GetDBResultset(query)
+        return result
+
+    except MySQLdb.OperationalError:
+        print 'getAllSMSinbox DB Error',
 
 def setSendStatus(send_status,sms_id_list):
     if len(sms_id_list) <= 0:
@@ -119,9 +135,22 @@ def setSendStatus(send_status,sms_id_list):
         qpi.ExecuteQuery(queryUpdate)
         return 0
     except IndexError:
-        print '>> Error in writing extracting database data to files..'
+        print 'setSendStatus >> Error in writing extracting database data to files..'
         return -1
 
+def setWebFlag(web_flag, sms_id_list):
+    if len(sms_id_list) <= 0:
+        return
+
+    try:
+        queryUpdate = "update smsinbox set web_flag = '%s' where sms_id in (%s)" % (web_flag, str(sms_id_list)[1:-1].replace("L",""))
+        print queryUpdate
+        qpi.ExecuteQuery(queryUpdate)
+        return 0
+    except IndexError:
+        print 'setWebFlag >> Error in writing extracting database data to files..'
+        return -1
+    
 def sendMessageToGSM(recipients, msg, timestamp = None):
     db, cur = qpi.SenslopeDBConnect('senslopedb')
     print '>> Connected to database'
@@ -278,11 +307,58 @@ def sendAckSentGSMtoDEWS(ts_written, ts_sent, recipient, port=None):
     success = sendDataToDEWS(jsonText, port)
     return success
 
+# Send smsinbox messages to the Web Socket Server
+# This is mostly used for contingency purposes only
+def sendBatchReceivedGSMtoDEWS(host="www.codesword.com", port=5050, limit=20):
+    #Load smsinbox messages with web_flag = 'W' and read_status = 'READ-SUCCESS'
+    allmsgs = getAllSMSinbox('W','READ-SUCCESS',limit)
+
+    #Return if no messages were found
+    if len(allmsgs) == 0:
+        print "No smsinbox messages for batch sending"
+        return
+
+    try:
+        #Connect to the web socket server
+        ws = create_connection("ws://%s:%s" % (host, port))
+        print "Successfully connected to ws://%s:%s" % (host, port)
+        batchlist = []
+
+        #Send all messages to the web socket server
+        for msg in allmsgs:
+            sms_id = msg[0]
+            ts = msg[1]
+            sim_num = msg[2]
+            sms_msg = filterSpecialCharacters(msg[3])
+
+            print "id:%s, ts:%s, sim_num:%s, sms_msg:%s" % (sms_id, ts, sim_num, sms_msg)
+
+            #sms batch sending
+            jsonBatchSendText = formatReceivedGSMtext(ts, sim_num, sms_msg)
+            ws.send(jsonBatchSendText)
+            batchlist.append(sms_id)
+
+        #Close connection to the web socket server
+        ws.close()
+        print "Successfully closed WSS connection"
+
+        #Change the web flag status to "WSS" for successful sending
+        setWebFlag("WSS",batchlist)
+
+        #returns 0 on successful sending of data
+        return 0
+    except:
+        print "Failed to send data. Please check your internet connection"        
+        
+        #returns -1 on failure to send data
+        return -1
+    
+
 # Send Acknowledgement for ALL outbox sms with send_status "SEND"
 #   to DEWS Web Socket Server
-def sendAllAckSentGSMtoDEWS(host="www.dewslandslide.com", port=5050):
+def sendAllAckSentGSMtoDEWS(host="www.dewslandslide.com", port=5050, limit=20):
     #Load all sms messages with "SENT" status
-    allmsgs = getAllSMSoutbox('SENT',20)
+    allmsgs = getAllSMSoutbox('SENT',limit)
 
     #Return if no messages were found
     if len(allmsgs) == 0:
@@ -304,7 +380,7 @@ def sendAllAckSentGSMtoDEWS(host="www.dewslandslide.com", port=5050):
 
             print "id:%s, ts_written:%s, ts_sent:%s, sim_num:%s" % (sms_id, ts_written, ts_sent, sim_num)
 
-            #send acknowledgement to a message
+            #send acknowledgement message
             jsonAckText = formatAckSentGSMtext(ts_written, ts_sent, sim_num)
             ws.send(jsonAckText)
             acklist.append(sms_id)
