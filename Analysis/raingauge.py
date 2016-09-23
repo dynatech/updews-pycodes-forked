@@ -6,23 +6,27 @@ from sqlalchemy import create_engine
 
 def to_MySQL(df, table_name):
     engine = create_engine('mysql://'+q.Userdb+':'+q.Passdb+'@'+q.Hostdb+':3306/'+q.Namedb)
+    if table_name == 'rain_gauge':
+        site = df['dev_id'].values[0]
+    elif table_name == 'rain_props':
+        site = df['name'].values[0]
     try:
         df.to_sql(name = table_name, con = engine, if_exists = 'append', schema = q.Namedb, index = False)
-        print 'success'
+        print site, ': success'
     except:
         try:
             db, cur = q.SenslopeDBConnect(q.Namedb)
             if table_name == 'rain_gauge':
-                query = "DELETE FROM %s WHERE dev_id = '%s'" %(table_name, df['dev_id'].values[0])
+                query = "DELETE FROM %s WHERE dev_id = '%s'" %(table_name, site)
             elif table_name == 'rain_props':
-                query = "DELETE FROM %s WHERE name = '%s'" %(table_name, df['name'].values[0])
+                query = "DELETE FROM %s WHERE name = '%s'" %(table_name, site)
             cur.execute(query)
             db.commit()
             db.close()
             df.to_sql(name = table_name, con = engine, if_exists = 'append', schema = q.Namedb, index = False)
-            print 'updated'
+            print site, ': updated'
         except:
-            print 'error'
+            print site, ': error'
 
 def updateDB():
     NOAHRG = pd.read_json('http://weather.asti.dost.gov.ph/home/index.php/api/devices')
@@ -100,7 +104,6 @@ def Distance(name):
     return NearGauge[0:3]
 
 def NearRGdf(df):
-    print df['name'].values[0]
     if df['name'].values[0] == 'loo':
         d = Distance('loo')
     else:
