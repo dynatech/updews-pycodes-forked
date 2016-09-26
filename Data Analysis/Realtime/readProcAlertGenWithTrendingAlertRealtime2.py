@@ -1,3 +1,4 @@
+
 ##### IMPORTANT matplotlib declarations must always be FIRST to make sure that matplotlib works with cron-based automation
 import matplotlib as mpl
 mpl.use('Agg')
@@ -11,6 +12,7 @@ from pandas.stats.api import ols
 import numpy as np
 import ConfigParser
 import sys
+from scipy.stats import spearmanr
 
 import generic_functions as gf
 import generateProcMonitoring as genproc
@@ -45,7 +47,7 @@ def set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_w
     ##num_roll_window_ops
     
     ##OUTPUT:
-    ##roll_window_numpts, end, start, offsetstart, monwin
+    ##roll_window_numpts, end, start, offsetstart, monwin 
     
     roll_window_numpts=int(1+roll_window_length/data_dt)
     end, start, offsetstart=gf.get_rt_window(rt_window_length,roll_window_numpts,num_roll_window_ops,end)
@@ -157,6 +159,12 @@ def create_fill_smooth_df(series_list,num_nodes,monwin, roll_window_numpts, to_f
     
     #returning rounded-off values within monitoring window and the nan_df
     return np.round(df[(df.index>=monwin.index[0])&(df.index<=monwin.index[-1])],6), hasRawValue
+    
+def check_increasing(a):
+    sp,pval=spearmanr(np.arange(len(a)),a.values)
+    if np.abs(sp)>0.5:return int(10*(np.round(np.abs(sp),1)-0.5)) 
+    return 0
+
 
 def compute_col_pos(xz,xy,col_pos_end, col_pos_interval, col_pos_number):
 
@@ -441,7 +449,7 @@ def vel_classify(vel):
         print "ERROR computing velocity classification ###################################"
         return 
     
-def plot_disp_vel(colname, xz,xy,xz_vel,xy_vel,excludenodelist,
+def plot_disp_vel(colname, xz,xy,xz_vel,xy_vel,excludenodelist,xz_tr,xy_tr,
                   xz_mx=0,xz_mn=0,xy_mx=0,xy_mn=0, 
                   disp_offset='mean',disp_zero=True):
 #==============================================================================
@@ -596,7 +604,17 @@ def plot_disp_vel(colname, xz,xy,xz_vel,xy_vel,excludenodelist,
         x = xz.index[0]
         z = xz.columns
         for i,j in zip(y,z):
-           curax.annotate(str(j),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')
+           if xz_tr.values[j-1]>3:
+               curax.annotate(str(j)+'++++',xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'large')
+           elif xz_tr.values[j-1]>2:
+               curax.annotate(str(j)+'+++',xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'large')
+           elif xz_tr.values[j-1]>1:
+               curax.annotate(str(j)+'++',xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'medium')
+           elif xz_tr.values[j-1]>0:
+               curax.annotate(str(j)+'+',xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'medium')
+           else:
+               curax.annotate(str(j),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')
+             
         
         #plotting displacement for xy
         curax=ax_xyd
@@ -609,7 +627,16 @@ def plot_disp_vel(colname, xz,xy,xz_vel,xy_vel,excludenodelist,
         x = xy.index[0]
         z = xy.columns
         for i,j in zip(y,z):
-           curax.annotate(str(j),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')
+           if xy_tr.values[j-1]>3:
+               curax.annotate(str(j)+'++++',xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'large')
+           elif xy_tr.values[j-1]>2:
+               curax.annotate(str(j)+'+++',xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'large')
+           elif xy_tr.values[j-1]>1:
+               curax.annotate(str(j)+'++',xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'medium')
+           elif xy_tr.values[j-1]>0:
+               curax.annotate(str(j)+'+',xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'medium')
+           else:
+               curax.annotate(str(j),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')
         
         #plotting velocity for xz
         curax=ax_xzv
@@ -907,6 +934,14 @@ for s in sensorlist:
     xz=xz.mask(col_mask).fillna(0.)
     xy=xy.mask(col_mask).fillna(0.)
     
+       
+    inc_xz=xz.apply(check_increasing)
+    inc_xy=xy.apply(check_increasing)
+    
+    print inc_xz[inc_xz>0]    
+    print inc_xy[inc_xy>0]
+    
+#    continue
     # computing instantaneous velocity
     vel_xz, vel_xy = compute_node_inst_vel(xz,xy,roll_window_numpts)
 
@@ -938,7 +973,7 @@ for s in sensorlist:
 #
     #12. Plotting displacement and velocity
     if PrintDispVel:
-        plot_disp_vel(colname, xz,xy, vel_xz, vel_xy,xz_mx,xz_mn,xy_mx,xy_mn)
+        plot_disp_vel(colname, xz,xy, vel_xz, vel_xy,excludenodelist,inc_xz,inc_xy,xz_mx,xz_mn,xy_mx,xy_mn)
         plt.savefig(RTfilepath+colname+' disp_vel '+str(end.strftime('%Y-%m-%d %H-%M')),
                     dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
 
