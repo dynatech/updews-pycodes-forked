@@ -172,7 +172,8 @@ def plot_cracks(which_site,zeroed=True):
         curax.set_xlim(min_date,max_date)
         plt.xticks(rotation = 45)
         plt.savefig(print_out_path+"/"+str(sitelist[s])+' Ground Data Plot.png', dpi=600, facecolor ='w', edgecolor = 'w', orientation = 'landscape',mode = 'w',pad_inches = 0.5,bbox_inches = 'tight')
-        print "Done! Figure was saved to path {}".format(str(print_out_path+"/"+str(sitelist[s])+' Ground Data Plot.png'))
+        cursite.to_csv(print_out_path+"/"+str(sitelist[s])+' Ground Data Plot.csv')
+        print "Done! Figure and csv file was saved to path {}".format(str(print_out_path+"/"+str(sitelist[s])+' Ground Data Plot'))
         
             
     
