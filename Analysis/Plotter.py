@@ -103,7 +103,7 @@ def vel_classify(df, config):
     vel=pd.DataFrame(index=sorted(set(df.ts)))
     nodal_df = df.groupby('id')
     velplot = nodal_df.apply(vel_plot, velplot=vel)
-    velplot = velplot.reset_index().loc[velplot.reset_index().id == 15][['level_1'] + range(1, len(set(df.id))+1)].rename(columns = {'level_1': 'ts'}).set_index('ts')
+    velplot = velplot.reset_index().loc[velplot.reset_index().id == len(set(df.id))][['level_1'] + range(1, len(set(df.id))+1)].rename(columns = {'level_1': 'ts'}).set_index('ts')
     df = df.set_index(['ts', 'id'])
     try:
         L2mask = (df.abs()>config.io.t_vell2)&(df.abs()<=config.io.t_vell3)        
@@ -251,11 +251,11 @@ def plot_disp_vel(df, colname, max_min_df, window, config, disp_offset = 'mean')
         vel_xz = vel_xz.loc[(vel_xz.ts >= window.end - timedelta(hours=3)) & (vel_xz.ts <= window.end)]
         velplot,L2,L3 = vel_classify(vel_xz, config)  
         velplot.plot(ax=curax,marker='.',legend=False)
-
+    
         L2 = L2.sort_values('ts', ascending = True).set_index('ts')
         nodal_L2 = L2.groupby('id')
         nodal_L2['vel_xz'].apply(plt.plot,marker='^',ms=8,mfc='y',lw=0,)
-
+    
         L3 = L3.sort_values('ts', ascending = True).set_index('ts')
         nodal_L3 = L3.groupby('id')
         nodal_L3['vel_xz'].apply(plt.plot,marker='^',ms=10,mfc='r',lw=0,)
@@ -279,7 +279,7 @@ def plot_disp_vel(df, colname, max_min_df, window, config, disp_offset = 'mean')
         L2 = L2.sort_values('ts', ascending = True).set_index('ts')
         nodal_L2 = L2.groupby('id')
         nodal_L2['vel_xy'].apply(plt.plot,marker='^',ms=8,mfc='y',lw=0,)
-
+    
         L3 = L3.sort_values('ts', ascending = True).set_index('ts')
         nodal_L3 = L3.groupby('id')
         nodal_L3['vel_xy'].apply(plt.plot,marker='^',ms=10,mfc='r',lw=0,)
