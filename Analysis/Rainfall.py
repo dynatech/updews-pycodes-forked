@@ -102,7 +102,7 @@ def GetResampledData(r, start, end):
     except:
         return pd.DataFrame(data=None)
 
-def SensorPlot(r,end,tsn, data, halfmax, twoyrmax, base, PrintPlot, RainfallPlotsPath):
+def SensorPlot(name, r,end,tsn, data, halfmax, twoyrmax, base, PrintPlot, RainfallPlotsPath):
     
     ##INPUT:
     ##r; str; site
@@ -149,7 +149,7 @@ def SensorPlot(r,end,tsn, data, halfmax, twoyrmax, base, PrintPlot, RainfallPlot
         plt.plot(plot5.index,plot5,color="#963bd6", label = '2yr max rainfall')  # 2-yr max rainfall
         plt.legend(loc='upper left', fontsize = 8)        
         plt.title(r)
-        plt.savefig(RainfallPlotsPath+tsn+"_"+r, dpi=160, 
+        plt.savefig(RainfallPlotsPath+tsn+"_"+name, dpi=160, 
             facecolor='w', edgecolor='w',orientation='landscape',mode='w')
         plt.close()
     
@@ -281,7 +281,7 @@ def RainfallAlert(siterainprops, start, end, offsetstart, tsn, summary, alert, a
             r = siterainprops['rain_senslope'].values[0]
             #from rain_senslope, plots and alerts are processed
             rainfall = GetResampledData(r, start, end)
-            one, three = SensorPlot(r, end, tsn, rainfall, halfmax, twoyrmax, base, PrintPlot, RainfallPlotsPath)
+            one, three = SensorPlot(name, r, end, tsn, rainfall, halfmax, twoyrmax, base, PrintPlot, RainfallPlotsPath)
             
             datasource="rain_senslope"
             summary_writer(sum_index,name,datasource,twoyrmax,halfmax,summary,alert,alert_df,one,three)
@@ -289,7 +289,7 @@ def RainfallAlert(siterainprops, start, end, offsetstart, tsn, summary, alert, a
                     
         else:
             #plots and alerts are processed if senslope rain gauge data is updated
-            one, three = SensorPlot(r, end, tsn, rainfall, halfmax, twoyrmax, base, PrintPlot, RainfallPlotsPath)
+            one, three = SensorPlot(name,r, end, tsn, rainfall, halfmax, twoyrmax, base, PrintPlot, RainfallPlotsPath)
             
             datasource = "rain_arq"
             summary_writer(sum_index,name,datasource,twoyrmax,halfmax,summary,alert,alert_df,one,three)
@@ -298,7 +298,7 @@ def RainfallAlert(siterainprops, start, end, offsetstart, tsn, summary, alert, a
         #if no data from senslope rain gauge, data is gathered from nearest senslope rain gauge from other site or noah rain gauge
         col = list(siterainprops['RG1'].values) + list(siterainprops['RG2'].values) + list(siterainprops['RG3'].values)
         rainfall, r = GetUnemptyOtherRGdata(col, start, end)
-        one, three = SensorPlot(r, end, tsn, rainfall, halfmax, twoyrmax, base, PrintPlot, RainfallPlotsPath)
+        one, three = SensorPlot(name, r, end, tsn, rainfall, halfmax, twoyrmax, base, PrintPlot, RainfallPlotsPath)
         
         datasource = "Other Rain Gauge: %s" %r
         summary_writer(sum_index,name,datasource,twoyrmax,halfmax,summary,alert,alert_df,one,three)

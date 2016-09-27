@@ -8,4 +8,4 @@ Created on Thu Mar 31 18:16:53 2016
 from GroundDataAlertLib import *
 
 #Call the GenerateGroundDataAlert() function
-GenerateGroundDataAlert(end = '2016-09-22 7:00')
+GenerateGroundDataAlert()
