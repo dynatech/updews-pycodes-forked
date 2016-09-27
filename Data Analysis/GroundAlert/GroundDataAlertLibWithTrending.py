@@ -116,7 +116,7 @@ def uptoDB_gndmeas_alerts(df,df2):
     df3 = df3.set_index('timestamp')
     
     engine=create_engine('mysql://root:senslope@192.168.1.102:3306/senslopedb')
-    df3.to_sql(name = 'gndmeas_alerts', con = engine, if_exists = 'append', schema = Namedb, index = True)
+    df3.to_sql(name = 'gndmeas_alerts_with_trending', con = engine, if_exists = 'append', schema = Namedb, index = True)
 
 
 
@@ -412,6 +412,7 @@ def check_trending(df,out_folder,plot = False):
         ax2.grid()
         ax2.plot(cur_t,cur_x,'.',c = tableau20[0],label = 'Data')
         ax2.plot(t_n,x_n,c = tableau20[12],label = 'Interpolation')
+        ax2.legend(loc = 'upper left',fancybox = True, framealpha = 0.5)
         ax2.set_ylabel('disp (meters)')
         
         ax3 = fig.add_subplot(224, sharex = ax2)
@@ -442,9 +443,11 @@ def check_trending(df,out_folder,plot = False):
         return 'Reject'    
     
 def GetPreviousAlert(end):
-    query = 'SELECT * FROM senslopedb.gndmeas_alerts WHERE timestamp = "{}"'.format(end)
-    df = GetDBDataFrame(query)
-    
+    try:
+        query = 'SELECT * FROM senslopedb.gndmeas_alerts_with_trending WHERE timestamp = "{}"'.format(end)
+        df = GetDBDataFrame(query)
+    except:
+        df = pd.DataFrame(columns = ['timestamp','site','alert','cracks'])
     return df
 
 def FixMesData(df):
@@ -495,7 +498,7 @@ def GenerateGroundDataAlert(site=None,end=None):
 
     #Step 1: Get the ground data from local database 
     df = get_latest_ground_df(site,end)
-    
+    end = pd.to_datetime(end)
     #lower caps all site_id names while cracks should be in title form
     df['site_id'] = map(lambda x: x.lower(),df['site_id'])
     df['crack_id'] = map(lambda x: x.title(),df['crack_id'])
@@ -524,26 +527,26 @@ def GenerateGroundDataAlert(site=None,end=None):
     uptoDB_gndmeas_alerts(ground_alert_release,ground_alert_previous)
     
     #Step 6: Upload to site_level_alert        
-    ground_site_level = ground_alert_release.reset_index()
-    ground_site_level['source'] = 'ground'
-    
-    df_for_db = ground_site_level[['timestamp','site','source','alert']]    
-    df_for_db.dropna()
-    print df_for_db    
-    
-    site_DBdf = df_for_db.groupby('site')
-    site_DBdf.apply(alert_toDB,end)    
+#    ground_site_level = ground_alert_release.reset_index()
+#    ground_site_level['source'] = 'ground'
+#    
+#    df_for_db = ground_site_level[['timestamp','site','source','alert']]    
+#    df_for_db.dropna()
+#    print df_for_db    
+#    
+#    site_DBdf = df_for_db.groupby('site')
+#    site_DBdf.apply(alert_toDB,end)    
     
     
     #Step 7: Displacement plot for each crack and site for the last 30 days
-    start = pd.to_datetime(end) - timedelta(days = 30)
-    ground_data_to_plot = get_ground_df(start,end,site)
-    ground_data_to_plot['site_id'] = map(lambda x: x.lower(),ground_data_to_plot['site_id'])
-    ground_data_to_plot['crack_id'] = map(lambda x: x.title(),ground_data_to_plot['crack_id'])
-    
-    tsn=pd.to_datetime(end).strftime("%Y-%m-%d_%H-%M-%S")
-    site_data_to_plot = ground_data_to_plot.groupby('site_id')
-    site_data_to_plot.apply(PlotSite,tsn,print_out_path)
+#    start = pd.to_datetime(end) - timedelta(days = 30)
+#    ground_data_to_plot = get_ground_df(start,end,site)
+#    ground_data_to_plot['site_id'] = map(lambda x: x.lower(),ground_data_to_plot['site_id'])
+#    ground_data_to_plot['crack_id'] = map(lambda x: x.title(),ground_data_to_plot['crack_id'])
+#    
+#    tsn=pd.to_datetime(end).strftime("%Y-%m-%d_%H-%M-%S")
+#    site_data_to_plot = ground_data_to_plot.groupby('site_id')
+#    site_data_to_plot.apply(PlotSite,tsn,print_out_path)
     
     end_time = datetime.now()
     print "time = ",end_time-start_time
