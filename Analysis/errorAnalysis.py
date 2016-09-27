@@ -93,7 +93,7 @@ def cml_noise_profiling(df):
      
     nodal_df = df.groupby('id')
     max_min_df = nodal_df.apply(max_min, num_nodes = num_nodes, mx_mn_df = mx_mn_df)
-    max_min_df = max_min_df.reset_index().loc[max_min_df.reset_index().id == 15][['level_1', 'xz_maxlist', 'xz_minlist', 'xy_maxlist', 'xy_minlist']].rename(columns = {'level_1': 'id'}).set_index('id')
+    max_min_df = max_min_df.reset_index().loc[max_min_df.reset_index().id == num_nodes][['level_1', 'xz_maxlist', 'xz_minlist', 'xy_maxlist', 'xy_minlist']].rename(columns = {'level_1': 'id'}).set_index('id')
     for_cml = max_min_df.sort_index(ascending = False)
     max_min_cml = for_cml.cumsum()
             

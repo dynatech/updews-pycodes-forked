@@ -106,7 +106,7 @@ def vel_classify(df, config):
     vel=pd.DataFrame(index=sorted(set(df.ts)))
     nodal_df = df.groupby('id')
     velplot = nodal_df.apply(vel_plot, velplot=vel)
-    velplot = velplot.reset_index().loc[velplot.reset_index().id == 15][['level_1'] + range(1, len(set(df.id))+1)].rename(columns = {'level_1': 'ts'}).set_index('ts')
+    velplot = velplot.reset_index().loc[velplot.reset_index().id == len(set(df.id))][['level_1'] + range(1, len(set(df.id))+1)].rename(columns = {'level_1': 'ts'}).set_index('ts')
     df = df.set_index(['ts', 'id'])
     try:
         L2mask = (df.abs()>config.io.t_vell2)&(df.abs()<=config.io.t_vell3)        
