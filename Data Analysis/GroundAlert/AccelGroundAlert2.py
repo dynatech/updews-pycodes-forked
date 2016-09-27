@@ -131,8 +131,8 @@ for i in range(len(tableau20)):
 
 
 
-crack = 'B'
-site = 'msl'
+crack = 'C'
+site = 'imu'
 size = 1
 num_pts = 10
 sample_size = '1H'
