@@ -382,6 +382,10 @@ def GetRawRainData(siteid = "", fromTime = "", toTime=""):
         elif siteid in newsite:
         
             query = "select timestamp, r15m from senslopedb.%s " % (siteid)
+            
+        else:
+            
+            query = "select timestamp, rval from senslopedb.%s " % (siteid)
         
         if not fromTime:
             fromTime = "2010-01-01"
@@ -390,6 +394,8 @@ def GetRawRainData(siteid = "", fromTime = "", toTime=""):
         
         if toTime:
             query = query + " and timestamp < '%s'" % toTime
+    
+        query = query + " order by timestamp"
     
         df =  GetDBDataFrame(query)
         
@@ -551,34 +557,31 @@ def GetRainNOAHList():
         db, cur = SenslopeDBConnect(Namedb)
         cur.execute("use "+ Namedb)
         
-        query = 'SELECT DISTINCT LEFT(name,3) as name, rain_noah, rain_noah2, rain_noah3 FROM site_rain_props'
+        query = 'SELECT * FROM rain_props'
         
-        df = psql.read_sql(query, db)
+        df = GetDBDataFrame(query)
 
-        noahlist = []
-        for idx in df.index:
-            noah1 = df.ix[idx]['rain_noah']
-            noah2 = df.ix[idx]['rain_noah2']
-            noah3 = df.ix[idx]['rain_noah3']
-            
-            if np.isnan(noah1) == False:
-                noahlist.append(int(noah1))
-            if np.isnan(noah2) == False:
-                noahlist.append(int(noah2))
-            if np.isnan(noah3) == False:
-                noahlist.append(int(noah3))        
+        RG1 = list(df[(df['RG1'].str.contains('rain_noah_', case=False) == True)]['RG1'].values)
+        RG2 = list(df[(df['RG2'].str.contains('rain_noah_', case=False) == True)]['RG2'].values)
+        RG3 = list(df[(df['RG3'].str.contains('rain_noah_', case=False) == True)]['RG3'].values)
+        RG = RG1 + RG2 + RG3
+
+        df = pd.DataFrame({'RG': RG})
+        df['RG'] = df.RG.apply(lambda x: int(x[len('rain_noah_'):len(x)]))
+        
+        noahlist = sorted(set(df['RG'].values))
         
         return noahlist
 
     except:
         raise ValueError('Could not get sensor list from database')
 
-def GetRainProps():
+def GetRainProps(table_name='site_rain_props'):
     try:
         db, cur = SenslopeDBConnect(Namedb)
         cur.execute("use "+ Namedb)
         
-        query = 'SELECT name, max_rain_2year, rain_senslope, rain_arq, rain_noah, rain_noah2, rain_noah3 FROM site_rain_props'
+        query = 'SELECT * FROM %s' %table_name
         
         df = psql.read_sql(query, db)
         
@@ -673,7 +676,6 @@ def GetSingleLGDPM(site, node, startTS):
 #        query = query + "ORDER BY timestamp DESC LIMIT 2"
 #    else:
     query = query + "ORDER BY timestamp DESC LIMIT 240"
-    print query
     lgdpm = GetDBDataFrame(query)
     lgdpm['name'] = site 
 
