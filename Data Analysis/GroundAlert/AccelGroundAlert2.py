@@ -131,8 +131,8 @@ for i in range(len(tableau20)):
 
 
 
-crack = 'C'
-site = 'imu'
+crack = 'A'
+site = 'par'
 size = 1
 num_pts = 10
 sample_size = '1H'
@@ -373,7 +373,7 @@ for i in np.arange(num_pts,len(t)+1):
     if vel >= 1.8:
         crack_alert = 'L3'
         na_color = tableau20[6]
-    elif vel >= 0.75:
+    elif vel >= 0.25:
         crack_alert = 'L2'
         na_color = tableau20[16]
     else:
@@ -653,43 +653,50 @@ legit_ranges = stitch_intervals(legit_range)
 
 fig = plt.figure()
 fig.set_size_inches(15,8)
-plt.tick_params(axis="both", which="both", bottom="off", top="off",labelbottom="on", left="off", right="off", labelleft="on") 
-ax = fig.add_subplot(111)
+ax = fig.add_subplot(211)
 ax.grid()
-ax.get_xaxis().tick_bottom()
-ax.get_yaxis().tick_left()
-ax.plot(t,x,'-',c = tableau20[0])
-l1 = ax.plot(t_l0,x_l0,'o',c = tableau20[4],label = 'L0 disp')
-l2 = ax.plot(t_l2,x_l2,'s',c = tableau20[16],label = 'L2 disp')
-l3 = ax.plot(t_l3,x_l3,'^',c=tableau20[6],label = 'L3 disp')
+ax.plot(t,x*100,'-',c = tableau20[0])
+l1 = ax.plot(t_l0,x_l0*100,'o',c = tableau20[4],label = 'L0 disp')
+l2 = ax.plot(t_l2,x_l2*100,'s',c = tableau20[16],label = 'L2 disp')
+l3 = ax.plot(t_l3,x_l3*100,'^',c=tableau20[6],label = 'L3 disp')
 patch_l2 = mpatches.Patch(color = tableau20[2], label = 'New L2')
 patch_l3 = mpatches.Patch(color = tableau20[6], label = 'New L3')
 patch_legit = mpatches.Patch(color = tableau20[12], label = 'Trending')
 
-ax.set_xlabel('Time (days)')
-ax.set_ylabel('Displacement (meters)')
+
+ax.set_ylabel('Displacement (cm)')
 ax.set_ylim(top = max(x)+0.01,bottom = min(x)-0.01)
-
-
-
-for i,j in new_l2_ranges:
-    ax.axvspan(i,j,facecolor = tableau20[2],ec = None,alpha = 0.5)
-
-for i,j in new_l3_ranges:
-    ax.axvspan(i,j,facecolor = tableau20[6],ec = None, alpha = 0.5)
-
-for i,j in legit_ranges:
-    ax.axvspan(i,j,facecolor = tableau20[12],ec = None, alpha = 0.5)
 
 lns = l1 + l2 + l3
 lns.append(patch_legit)
-lns.append(patch_l2)
-lns.append(patch_l3)
 
 labs = [l.get_label() for l in lns]
 
 ax.legend(lns,labs, loc = 'upper left',fancybox = True)
-fig.suptitle(site.upper()+" Crack " + crack + " Displacement vs. Time with Alerts")
+
+ax2 = fig.add_subplot(212,sharex = ax)
+ax2.grid()
+ax2.plot(t,all_vel,'-',c = tableau20[12])
+l1 = ax2.plot(t,all_vel,'o',c = tableau20[10],label = 'Crack Velocity')
+all_time = np.arange(min(t),max(t),0.001)
+l2 = ax2.plot(all_time,1.8*np.ones(len(all_time)),'--',c = tableau20[6],label = 'New L3')
+l3 = ax2.plot(all_time,0.25*np.ones(len(all_time)),'--',c = tableau20[16],label = 'New L2')
+for i,j in legit_ranges:
+    ax2.axvspan(i,j,facecolor = tableau20[12],ec = None, alpha = 0.5)
+    ax.axvspan(i,j,facecolor = tableau20[12],ec = None, alpha = 0.5)
+
+lns = l1 + l2 + l3
+lns.append(patch_legit)
+labs = [l.get_label() for l in lns]
+
+ax2.legend(lns,labs,loc = 'upper right', fancybox = True,framealpha = 0.5)
+ax2.set_xlabel('Time (days)')
+ax2.set_ylabel('Velocity (cm/hr)')
+
+
+
+
+fig.suptitle(site.upper()+" Crack " + crack + " Displacement vs. Time with Old and New Alerts")
 fig5_out_path = out_path + " {} Crack {} Displacement vs Time ".format(site.upper(),crack)
 plt.savefig(fig5_out_path,facecolor='w', edgecolor='w',orientation='landscape',mode='w',bbox_inches = 'tight')
 
