@@ -123,7 +123,7 @@ def noise_envelope(df, tsdf):
     df['ts'] = tsdf
     return df
 
-def plot_disp_vel(df, colname, max_min_df, window, config, disp_offset = 'mean'):
+def plot_disp_vel(df, colname, max_min_df, window, config, plotvel, disp_offset = 'mean'):
 #==============================================================================
 # 
 #     DESCRIPTION:
@@ -198,9 +198,10 @@ def plot_disp_vel(df, colname, max_min_df, window, config, disp_offset = 'mean')
     
     nodal_df0off = df0off.groupby('id')
     
-    try:
-        fig=plt.figure()
-           
+#    try:
+    fig=plt.figure()
+    
+    if plotvel:
         #creating subplots        
         ax_xzd=fig.add_subplot(141)
         ax_xyd=fig.add_subplot(142,sharex=ax_xzd,sharey=ax_xzd)
@@ -208,46 +209,52 @@ def plot_disp_vel(df, colname, max_min_df, window, config, disp_offset = 'mean')
         ax_xzv=fig.add_subplot(143)
         ax_xzv.invert_yaxis()
         ax_xyv=fig.add_subplot(144,sharex=ax_xzv,sharey=ax_xzv)
-        
-        #plotting cumulative (surface) displacments
-        ax_xzd.plot(cs_df.index, cs_df['xz'].values,color='0.4',linewidth=0.5)
-        ax_xyd.plot(cs_df.index, cs_df['xy'].values,color='0.4',linewidth=0.5)
-        ax_xzd.fill_between(cs_df.index,cs_df['xz'].values,xzd_plotoffset*(num_nodes),color='0.8')
-        ax_xyd.fill_between(cs_df.index,cs_df['xy'].values,xzd_plotoffset*(num_nodes),color='0.8')       
-       
-        #assigning non-repeating colors to subplots axis
-        ax_xzd=nonrepeat_colors(ax_xzd,num_nodes)
-        ax_xyd=nonrepeat_colors(ax_xyd,num_nodes)
+    else:
+        #creating subplots        
+        ax_xzd=fig.add_subplot(121)
+        ax_xyd=fig.add_subplot(122,sharex=ax_xzd,sharey=ax_xzd)            
+    
+    #plotting cumulative (surface) displacments
+    ax_xzd.plot(cs_df.index, cs_df['xz'].values,color='0.4',linewidth=0.5)
+    ax_xyd.plot(cs_df.index, cs_df['xy'].values,color='0.4',linewidth=0.5)
+    ax_xzd.fill_between(cs_df.index,cs_df['xz'].values,xzd_plotoffset*(num_nodes),color='0.8')
+    ax_xyd.fill_between(cs_df.index,cs_df['xy'].values,xzd_plotoffset*(num_nodes),color='0.8')       
+   
+    #assigning non-repeating colors to subplots axis
+    ax_xzd=nonrepeat_colors(ax_xzd,num_nodes)
+    ax_xyd=nonrepeat_colors(ax_xyd,num_nodes)
+    if plotvel:
         ax_xzv=nonrepeat_colors(ax_xzv,num_nodes)
         ax_xyv=nonrepeat_colors(ax_xyv,num_nodes)
+
+    #plotting displacement for xz
+    curax=ax_xzd
+    plt.sca(curax)
+    nodal_df0off['xz'].apply(plt.plot)
+    nodal_noise_df['xz_maxlist'].apply(plt.plot, ls=':')
+    nodal_noise_df['xz_minlist'].apply(plt.plot, ls=':')
+    curax.set_title('displacement\n XZ axis',fontsize='small')
+    curax.set_ylabel('displacement scale, m', fontsize='small')
+    y = df0off.loc[df0off.index == window.start].sort_values('id')['xz'].values
+    x = window.start
+    z = sorted(set(df.id))
+    for i,j in zip(y,z):
+       curax.annotate(str(j),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')
     
-        #plotting displacement for xz
-        curax=ax_xzd
-        plt.sca(curax)
-        nodal_df0off['xz'].apply(plt.plot)
-        nodal_noise_df['xz_maxlist'].apply(plt.plot, ls=':')
-        nodal_noise_df['xz_minlist'].apply(plt.plot, ls=':')
-        curax.set_title('3-day displacement\n XZ axis',fontsize='small')
-        curax.set_ylabel('displacement scale, m', fontsize='small')
-        y = df0off.loc[df0off.index == window.start].sort_values('id')['xz'].values
-        x = window.start
-        z = sorted(set(df.id))
-        for i,j in zip(y,z):
-           curax.annotate(str(j),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')
-        
-        #plotting displacement for xy
-        curax=ax_xyd
-        plt.sca(curax)
-        nodal_df0off['xy'].apply(plt.plot)
-        nodal_noise_df['xy_maxlist'].apply(plt.plot, ls=':')
-        nodal_noise_df['xy_minlist'].apply(plt.plot, ls=':')
-        curax.set_title('3-day displacement\n XY axis',fontsize='small')
-        y = df0off.loc[df0off.index == window.start].sort_values('id')['xy'].values
-        x = window.start
-        z = sorted(set(df.id))
-        for i,j in zip(y,z):
-           curax.annotate(str(j),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')
-    
+    #plotting displacement for xy
+    curax=ax_xyd
+    plt.sca(curax)
+    nodal_df0off['xy'].apply(plt.plot)
+    nodal_noise_df['xy_maxlist'].apply(plt.plot, ls=':')
+    nodal_noise_df['xy_minlist'].apply(plt.plot, ls=':')
+    curax.set_title('displacement\n XY axis',fontsize='small')
+    y = df0off.loc[df0off.index == window.start].sort_values('id')['xy'].values
+    x = window.start
+    z = sorted(set(df.id))
+    for i,j in zip(y,z):
+       curax.annotate(str(j),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')
+
+    if plotvel:
         #plotting velocity for xz
         curax=ax_xzv
         plt.sca(curax)
@@ -270,8 +277,8 @@ def plot_disp_vel(df, colname, max_min_df, window, config, disp_offset = 'mean')
         for i,j in zip(y,z):
             curax.annotate(str(j),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')            
         curax.set_ylabel('node ID', fontsize='small')
-        curax.set_title('3-hr velocity alerts\n XZ axis',fontsize='small')  
-        
+        curax.set_title('velocity alerts\n XZ axis',fontsize='small')  
+    
         #plotting velocity for xy        
         curax=ax_xyv
         plt.sca(curax)   
@@ -293,34 +300,27 @@ def plot_disp_vel(df, colname, max_min_df, window, config, disp_offset = 'mean')
         z = sorted(set(df.id))
         for i,j in zip(y,z):
             curax.annotate(str(j),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')            
-        curax.set_title('3-hr velocity alerts\n XY axis',fontsize='small')                        
-            
-        # rotating xlabel
+        curax.set_title('velocity alerts\n XY axis',fontsize='small')                        
         
-        for tick in ax_xzd.xaxis.get_minor_ticks():
-            tick.label.set_rotation('vertical')
-            tick.label.set_fontsize(6)
-            
-        for tick in ax_xyd.xaxis.get_minor_ticks():
-            tick.label.set_rotation('vertical')
-            tick.label.set_fontsize(6)
+    # rotating xlabel
     
-        for tick in ax_xzv.xaxis.get_minor_ticks():
-            tick.label.set_rotation('vertical')
-            tick.label.set_fontsize(6)
+    for tick in ax_xzd.xaxis.get_minor_ticks():
+        tick.label.set_rotation('vertical')
+        tick.label.set_fontsize(6)
+        
+    for tick in ax_xyd.xaxis.get_minor_ticks():
+        tick.label.set_rotation('vertical')
+        tick.label.set_fontsize(6)
     
-        for tick in ax_xyv.xaxis.get_minor_ticks():
-            tick.label.set_rotation('vertical')
-            tick.label.set_fontsize(6)
-    
-        for tick in ax_xzd.xaxis.get_major_ticks():
-            tick.label.set_rotation('vertical')
-            tick.label.set_fontsize(6)
-            
-        for tick in ax_xyd.xaxis.get_major_ticks():
-            tick.label.set_rotation('vertical')
-            tick.label.set_fontsize(6)
-    
+    for tick in ax_xzd.xaxis.get_major_ticks():
+        tick.label.set_rotation('vertical')
+        tick.label.set_fontsize(6)
+        
+    for tick in ax_xyd.xaxis.get_major_ticks():
+        tick.label.set_rotation('vertical')
+        tick.label.set_fontsize(6)
+
+    if plotvel:
         for tick in ax_xzv.xaxis.get_major_ticks():
             tick.label.set_rotation('vertical')
             tick.label.set_fontsize(6)
@@ -328,23 +328,35 @@ def plot_disp_vel(df, colname, max_min_df, window, config, disp_offset = 'mean')
         for tick in ax_xyv.xaxis.get_major_ticks():
             tick.label.set_rotation('vertical')
             tick.label.set_fontsize(6)
-                
-        for item in ([ax_xzd.xaxis.label, ax_xzv.yaxis.label, ax_xyd.xaxis.label, ax_xyv.yaxis.label]):
+            
+        for tick in ax_xzv.xaxis.get_minor_ticks():
+            tick.label.set_rotation('vertical')
+            tick.label.set_fontsize(6)
+    
+        for tick in ax_xyv.xaxis.get_minor_ticks():
+            tick.label.set_rotation('vertical')
+            tick.label.set_fontsize(6)
+            
+    for item in ([ax_xzd.xaxis.label, ax_xyd.xaxis.label]):
+        item.set_fontsize(8)
+
+    if plotvel:
+        for item in ([ax_xyv.yaxis.label, ax_xzv.yaxis.label]):
             item.set_fontsize(8)
-            
-        dfmt = md.DateFormatter('%m-%d\n%H:%M')
-        ax_xzd.xaxis.set_major_formatter(dfmt)
-        ax_xyd.xaxis.set_major_formatter(dfmt)
-            
-        fig.tight_layout()
         
-        fig.subplots_adjust(top=0.85)        
-        fig.suptitle(colname+" as of "+str(velplot.index[-1]),fontsize='medium')
-        line=mpl.lines.Line2D((0.5,0.5),(0.1,0.8))
-        fig.lines=line,
+    dfmt = md.DateFormatter('%m-%d\n%H:%M')
+    ax_xzd.xaxis.set_major_formatter(dfmt)
+    ax_xyd.xaxis.set_major_formatter(dfmt)
         
-    except:      
-        print colname, "ERROR in plotting displacements and velocities"
+    fig.tight_layout()
+    
+    fig.subplots_adjust(top=0.85)        
+    fig.suptitle(colname+" as of "+str(window.end),fontsize='medium')
+    line=mpl.lines.Line2D((0.5,0.5),(0.1,0.8))
+    fig.lines=line,
+        
+#    except:      
+#        print colname, "ERROR in plotting displacements and velocities"
     return
 
 
@@ -370,7 +382,7 @@ def df_add_offset_col(df, offset, num_nodes):
     return np.round(df,4)
     
     
-def main(monitoring, window, config):
+def main(monitoring, window, config, plotvel=True):
 
     colname = monitoring.colprops.name
     num_nodes = monitoring.colprops.nos
@@ -402,36 +414,73 @@ def main(monitoring, window, config):
                 dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
     
     # plot displacement and velocity
-    plot_disp_vel(monitoring_vel, colname, max_min_df, window, config)
+    plot_disp_vel(monitoring_vel, colname, max_min_df, window, config, plotvel)
     plt.savefig(output_path+config.io.outputfilepath+'realtime/'+colname+'_DispVel_'+str(window.end.strftime('%Y-%m-%d_%H-%M'))+'.png',
                 dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
     
 ##########################################################
 
 while True:
-    try:
-        col = q.GetSensorList(raw_input('sensor name: '))
-        break
-    except:
-        print 'sensor name is not in the list'
-        continue
-
-while True:
-    test_specific_time = raw_input('test specific time? (Y/N): ').lower()
-    if test_specific_time == 'y' or test_specific_time == 'n':
+    plot_all_data = raw_input('plot from start to end of data? (Y/N): ').lower()
+    if plot_all_data == 'y' or plot_all_data == 'n':
         break
 
-while True:
-    try:
-        if test_specific_time == 'y':
-            end = pd.to_datetime(raw_input('plot end timestamp (format: 2016-12-31 23:30): '))
-            window, config = rtw.getwindow(end)
-        elif test_specific_time == 'n':
-            window, config = rtw.getwindow()
-        break
-    except:
-        print 'invalid datetime format'
-        continue
+if plot_all_data == 'n':
+    while True:
+        try:
+            col = q.GetSensorList(raw_input('sensor name: '))
+            break
+        except:
+            print 'sensor name is not in the list'
+            continue
+    
+    while True:
+        test_specific_time = raw_input('test specific time? (Y/N): ').lower()
+        if test_specific_time == 'y' or test_specific_time == 'n':
+            break
+    
+    while True:
+        try:
+            if test_specific_time == 'y':
+                end = pd.to_datetime(raw_input('plot end timestamp (format: 2016-12-31 23:30): '))
+                window, config = rtw.getwindow(end)
+            elif test_specific_time == 'n':
+                window, config = rtw.getwindow()
+            break
+        except:
+            print 'invalid datetime format'
+            continue
+    
+    monitoring = g.genproc(col[0], window, config, realtime=True)
+    main(monitoring, window, config)
+    
+elif plot_all_data == 'y':
+    while True:
+        try:
+            col = q.GetSensorList(raw_input('sensor name: '))
+            break
+        except:
+            print 'sensor name is not in the list'
+            continue
+        
+    while True:
+        try:
+            col_pos_interval = int(raw_input('interval between column position dates, in days: '))
+            break
+        except:
+            print 'enter an integer'
+            continue
 
-monitoring = g.genproc(col[0], window, config, realtime=True)
-main(monitoring, window, config)
+    
+    window, config = rtw.getwindow()
+
+    query = "SELECT * FROM senslopedb.%s ORDER BY timestamp LIMIT 1" %col[0].name
+    start_data = q.GetDBDataFrame(query)
+    window.offsetstart = pd.to_datetime(start_data['timestamp'].values[0])
+    window.numpts = int(1+config.io.roll_window_length/config.io.data_dt)
+    window.start = window.offsetstart + timedelta(days=config.io.rt_window_length+((config.io.num_roll_window_ops*window.numpts-1)/48.))
+    config.io.col_pos_interval = str(col_pos_interval) + 'D'
+    config.io.num_col_pos = (window.end - window.start).days/col_pos_interval + 1
+    
+    monitoring = g.genproc(col[0], window, config)
+    main(monitoring, window, config, plotvel=False)
