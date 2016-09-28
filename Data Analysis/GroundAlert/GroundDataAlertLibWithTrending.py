@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 import ConfigParser
 from scipy import stats
-from scipy.interpolate import splev, splrep, UnivariateSpline
+from scipy.interpolate import UnivariateSpline
 from scipy.signal import gaussian
 from scipy.ndimage import filters
 import os
@@ -12,7 +12,6 @@ import sys
 import platform
 from sqlalchemy import create_engine
 import matplotlib.pyplot as plt
-import Fukuzono
 
 plt.ioff()
 #Include the path of "Data Analysis" folder for the python scripts searching
