@@ -131,8 +131,8 @@ for i in range(len(tableau20)):
 
 
 
-crack = 'A'
-site = 'par'
+crack = 'B'
+site = 'msl'
 size = 1
 num_pts = 10
 sample_size = '1H'
@@ -665,7 +665,7 @@ patch_legit = mpatches.Patch(color = tableau20[12], label = 'Trending')
 
 
 ax.set_ylabel('Displacement (cm)')
-ax.set_ylim(top = max(x)+0.01,bottom = min(x)-0.01)
+ax.set_ylim(top = max(x*100)+0.01,bottom = min(x*100)-0.01)
 
 lns = l1 + l2 + l3
 lns.append(patch_legit)
@@ -677,8 +677,8 @@ ax.legend(lns,labs, loc = 'upper left',fancybox = True)
 ax2 = fig.add_subplot(212,sharex = ax)
 ax2.grid()
 ax2.plot(t,all_vel,'-',c = tableau20[12])
-l1 = ax2.plot(t,all_vel,'o',c = tableau20[10],label = 'Crack Velocity')
-all_time = np.arange(min(t),max(t),0.001)
+l1 = ax2.plot(t,all_vel,'o',c = tableau20[19],label = 'Crack Velocity')
+all_time = np.arange(min(ax2.get_xlim()),max(ax2.get_xlim()),0.001)
 l2 = ax2.plot(all_time,1.8*np.ones(len(all_time)),'--',c = tableau20[6],label = 'New L3')
 l3 = ax2.plot(all_time,0.25*np.ones(len(all_time)),'--',c = tableau20[16],label = 'New L2')
 for i,j in legit_ranges:
