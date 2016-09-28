@@ -148,7 +148,7 @@ def SensorPlot(name, r,end,tsn, data, halfmax, twoyrmax, base, PrintPlot, Rainfa
         plt.plot(plot4.index,plot4,color="#fbb714", label = 'half of 2yr max rainfall') # half of 2-yr max rainfall
         plt.plot(plot5.index,plot5,color="#963bd6", label = '2yr max rainfall')  # 2-yr max rainfall
         plt.legend(loc='upper left', fontsize = 8)        
-        plt.title(r)
+        plt.title(name)
         plt.savefig(RainfallPlotsPath+tsn+"_"+name, dpi=160, 
             facecolor='w', edgecolor='w',orientation='landscape',mode='w')
         plt.close()
