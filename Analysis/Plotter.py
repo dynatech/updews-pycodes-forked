@@ -60,6 +60,7 @@ def plot_column_positions(df,colname,end):
 
     try:
         fig=plt.figure()
+
         ax_xz=fig.add_subplot(121)
         ax_xy=fig.add_subplot(122,sharex=ax_xz,sharey=ax_xz)
         
@@ -85,11 +86,9 @@ def plot_column_positions(df,colname,end):
             tick.label.set_rotation('vertical')
             tick.label.set_fontsize(10)        
     
-        fig.tight_layout()
-        fig.subplots_adjust(top=0.9)        
+        plt.tight_layout(pad = 0.5)
+        fig.subplots_adjust(top=0.945)        
         fig.suptitle(colname+" as of "+str(end),fontsize='medium')
-        
-        plt.legend(fontsize='x-small')        
     
     except:        
         print colname, "ERROR in plotting column position"
@@ -393,8 +392,11 @@ def main(monitoring, window, config):
 
     # plot column position
     plot_column_positions(colposdf,colname,window.end)
+
+    lgd = plt.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize='x-small')
+
     plt.savefig(output_path+config.io.outputfilepath+colname+'ColPos_'+str(window.end.strftime('%Y-%m-%d_%H-%M'))+'.png',
-                dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
+                dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w', bbox_extra_artists=(lgd,), bbox_inches='tight')
     
     # plot displacement and velocity
     plot_disp_vel(monitoring_vel, colname, max_min_df, window, config)

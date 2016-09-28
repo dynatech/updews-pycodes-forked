@@ -8,7 +8,7 @@ plt.ion()
 import os
 import pandas as pd
 import numpy as np
-from datetime import timedelta
+from datetime import date, time, datetime, timedelta
 
 import rtwindow as rtw
 import querySenslopeDb as q
@@ -29,7 +29,7 @@ def nonrepeat_colors(ax,NUM_COLORS,color='gist_rainbow'):
     return ax
     
     
-def subplot_colpos(dfts, ax_xz, ax_xy):
+def subplot_colpos(dfts, ax_xz, ax_xy, plot_all_data, i):
     #current column position x
     curcolpos_x = dfts.x.values
 
@@ -43,12 +43,18 @@ def subplot_colpos(dfts, ax_xz, ax_xy):
     #current column position xy
     curax=ax_xy
     curcolpos_xy = dfts.cs_xy.values
-    curax.plot(curcolpos_xy,curcolpos_x,'.-', label=str(pd.to_datetime(dfts.ts.values[0])))
+    if not plot_all_data:
+        curax.plot(curcolpos_xy,curcolpos_x,'.-', label=str(pd.to_datetime(dfts.ts.values[0])))
+    else:
+        if i % 4 == 0 or i == config.io.num_col_pos:
+            curax.plot(curcolpos_xy,curcolpos_x,'.-', label=str(pd.to_datetime(dfts.ts.values[0])))
+        else:
+            curax.plot(curcolpos_xy,curcolpos_x,'.-')
     curax.set_xlabel('xy')
     return
     
     
-def plot_column_positions(df,colname,end):
+def plot_column_positions(df,colname,end, plot_all_data):
 #==============================================================================
 # 
 #     DESCRIPTION
@@ -68,9 +74,11 @@ def plot_column_positions(df,colname,end):
         
         ax_xz=nonrepeat_colors(ax_xz,len(set(df.ts.values)))
         ax_xy=nonrepeat_colors(ax_xy,len(set(df.ts.values)))
-                
-        for i in sorted(set(df.ts), reverse = False):
-            subplot_colpos(df.loc[df.ts == i], ax_xz=ax_xz, ax_xy=ax_xy)
+
+        colposTS = sorted(set(df.ts), reverse = False)
+
+        for i in range(len(set(df.ts))):
+            subplot_colpos(df.loc[df.ts == colposTS[i]], ax_xz=ax_xz, ax_xy=ax_xy, plot_all_data=plot_all_data, i=i)
 
         for tick in ax_xz.xaxis.get_minor_ticks():
             tick.label.set_rotation('vertical')
@@ -86,14 +94,12 @@ def plot_column_positions(df,colname,end):
             
         for tick in ax_xy.xaxis.get_major_ticks():
             tick.label.set_rotation('vertical')
-            tick.label.set_fontsize(10)        
-    
-        fig.tight_layout()
-        fig.subplots_adjust(top=0.9)        
-        fig.suptitle(colname+" as of "+str(end),fontsize='medium')
-        
-        plt.legend(fontsize='x-small')        
-    
+            tick.label.set_fontsize(10)
+
+        plt.tight_layout()
+        plt.subplots_adjust(top=0.945)        
+        plt.suptitle(colname+" as of "+str(end),fontsize='medium')
+
     except:        
         print colname, "ERROR in plotting column position"
     return ax_xz,ax_xy
@@ -344,7 +350,7 @@ def plot_disp_vel(df, colname, max_min_df, window, config, plotvel, disp_offset 
         for item in ([ax_xyv.yaxis.label, ax_xzv.yaxis.label]):
             item.set_fontsize(8)
         
-    dfmt = md.DateFormatter('%m-%d\n%H:%M')
+    dfmt = md.DateFormatter('%Y-%m-%d\n%H:%M')
     ax_xzd.xaxis.set_major_formatter(dfmt)
     ax_xyd.xaxis.set_major_formatter(dfmt)
         
@@ -382,7 +388,7 @@ def df_add_offset_col(df, offset, num_nodes):
     return np.round(df,4)
     
     
-def main(monitoring, window, config, plotvel=True):
+def main(monitoring, window, config, plotvel=True, plot_all_data = False):
 
     colname = monitoring.colprops.name
     num_nodes = monitoring.colprops.nos
@@ -409,9 +415,12 @@ def main(monitoring, window, config, plotvel=True):
 
 
     # plot column position
-    plot_column_positions(colposdf,colname,window.end)
+    plot_column_positions(colposdf,colname,window.end, plot_all_data)
+
+    lgd = plt.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize='x-small')
+
     plt.savefig(output_path+config.io.outputfilepath+'realtime/'+colname+'ColPos_'+str(window.end.strftime('%Y-%m-%d_%H-%M'))+'.png',
-                dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
+                dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w', bbox_extra_artists=(lgd,), bbox_inches='tight')
     
     # plot displacement and velocity
     plot_disp_vel(monitoring_vel, colname, max_min_df, window, config, plotvel)
@@ -419,6 +428,8 @@ def main(monitoring, window, config, plotvel=True):
                 dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
     
 ##########################################################
+
+start = datetime.now()
 
 while True:
     plot_all_data = raw_input('plot from start to end of data? (Y/N): ').lower()
@@ -476,11 +487,22 @@ elif plot_all_data == 'y':
 
     query = "SELECT * FROM senslopedb.%s ORDER BY timestamp LIMIT 1" %col[0].name
     start_data = q.GetDBDataFrame(query)
-    window.offsetstart = pd.to_datetime(start_data['timestamp'].values[0])
+    start_dataTS = pd.to_datetime(start_data['timestamp'].values[0])
+    start_dataTS_Year=start_dataTS.year
+    start_dataTS_month=start_dataTS.month
+    start_dataTS_day=start_dataTS.day
+    start_dataTS_hour=start_dataTS.hour
+    start_dataTS_minute=start_dataTS.minute
+    if start_dataTS_minute<30:start_dataTS_minute=0
+    else:start_dataTS_minute=30
+    window.offsetstart=datetime.combine(date(start_dataTS_Year,start_dataTS_month,start_dataTS_day),time(start_dataTS_hour,start_dataTS_minute,0))
+    
     window.numpts = int(1+config.io.roll_window_length/config.io.data_dt)
     window.start = window.offsetstart + timedelta(days=config.io.rt_window_length+((config.io.num_roll_window_ops*window.numpts-1)/48.))
     config.io.col_pos_interval = str(col_pos_interval) + 'D'
-    config.io.num_col_pos = (window.end - window.start).days/col_pos_interval + 1
+    config.io.num_col_pos = int((window.end - window.start).days/col_pos_interval + 1)
     
     monitoring = g.genproc(col[0], window, config)
-    main(monitoring, window, config, plotvel=False)
+    main(monitoring, window, config, plotvel=False, plot_all_data = True)
+    
+print 'runtime =', str(datetime.now() - start)
