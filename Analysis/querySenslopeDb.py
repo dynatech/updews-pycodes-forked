@@ -258,7 +258,7 @@ def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid
         
         toTime_query = ''
         if toTime != '':
-            toTime_query =  " AND timestamp <= '%s'" %toTime
+            toTime_query =  " AND timestamp <= '%s'" %toTime+tda(hours=0.5)
         elif toTime:
             toTime_query = ''
         

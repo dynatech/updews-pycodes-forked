@@ -3,7 +3,7 @@ import matplotlib as mpl
 mpl.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.dates as md
-plt.ioff()
+plt.ion()
 
 import os
 import pandas as pd
@@ -137,6 +137,7 @@ def plot_disp_vel(df, colname, max_min_df, window, config, disp_offset = 'mean')
 #==============================================================================
 
     num_nodes = len(set(df.id))
+    df = df.loc[(df.ts >= window.start)&(df.ts <= window.end)]
   
     #setting up zeroing and offseting parameters
     nodal_df = df.groupby('id')
@@ -380,6 +381,9 @@ def main(monitoring, window, config):
     
     if not os.path.exists(output_path+config.io.outputfilepath+'realtime/'):
         os.makedirs(output_path+config.io.outputfilepath+'realtime/')
+
+    # noise envelope
+    max_min_df, max_min_cml = err.cml_noise_profiling(monitoring_vel)
         
     # compute column position
     colposdates = pd.date_range(end=window.end, freq=config.io.col_pos_interval, periods=config.io.num_col_pos, name='ts', closed=None)
@@ -391,8 +395,6 @@ def main(monitoring, window, config):
     colpos_dfts = colpos_df.groupby('ts')
     colposdf = colpos_dfts.apply(col_pos, col_pos_end = window.end, col_pos_interval = config.io.col_pos_interval, col_pos_number = config.io.num_col_pos, num_nodes = num_nodes)
 
-    # noise envelope
-    max_min_df, max_min_cml = err.cml_noise_profiling(monitoring_vel)
 
     # plot column position
     plot_column_positions(colposdf,colname,window.end)
@@ -414,19 +416,22 @@ while True:
         print 'sensor name is not in the list'
         continue
 
-test_specific_time = raw_input('test specific time? (Y/N): ').lower()
+while True:
+    test_specific_time = raw_input('test specific time? (Y/N): ').lower()
+    if test_specific_time == 'y' or test_specific_time == 'n':
+        break
 
 while True:
     try:
         if test_specific_time == 'y':
             end = pd.to_datetime(raw_input('plot end timestamp (format: 2016-12-31 23:30): '))
             window, config = rtw.getwindow(end)
-        else:
+        elif test_specific_time == 'n':
             window, config = rtw.getwindow()
         break
     except:
         print 'invalid datetime format'
         continue
 
-monitoring = g.genproc(col[0],window.offsetstart, realtime=True)
+monitoring = g.genproc(col[0], window, config, realtime=True)
 main(monitoring, window, config)
