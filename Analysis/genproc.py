@@ -1,10 +1,8 @@
 import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
+from datetime import timedelta
 from pandas.stats.api import ols
 
-import cfgfileio as cfg
-import rtwindow as rtw
 import querySenslopeDb as q
 import filterSensorData as flt
 
@@ -21,8 +19,6 @@ def resamplenode(df, window):
     df.index = pd.to_datetime(df.index)
     df = df.sort_index(ascending = True)
     df = df.resample('30Min', base=0, how='pad')
-    df = df.fillna(method='pad')
-    df = df.fillna(method='bfill')
     df = df.reset_index(level=1).set_index('ts')
     return df    
       
@@ -83,10 +79,10 @@ def node_inst_vel(filled_smoothened, roll_window_numpts, start):
         lr_xz=ols(y=filled_smoothened.xz,x=filled_smoothened.td,window=roll_window_numpts,intercept=True)
         lr_xy=ols(y=filled_smoothened.xy,x=filled_smoothened.td,window=roll_window_numpts,intercept=True)
                 
-        filled_smoothened = filled_smoothened.loc[filled_smoothened.ts >= (start-timedelta(hours=0.5))]
-                   
-        filled_smoothened['vel_xz'] = np.round(lr_xz.beta.x.values,4)
-        filled_smoothened['vel_xy'] = np.round(lr_xy.beta.x.values,4)
+        filled_smoothened = filled_smoothened.loc[filled_smoothened.ts >= start]
+        
+        filled_smoothened['vel_xz'] = np.round(lr_xz.beta.x.values[0:len(filled_smoothened)],4)
+        filled_smoothened['vel_xy'] = np.round(lr_xy.beta.x.values[0:len(filled_smoothened)],4)
     
     except:
         print " ERROR in computing velocity"
@@ -95,21 +91,17 @@ def node_inst_vel(filled_smoothened, roll_window_numpts, start):
     
     return filled_smoothened
 
-def genproc(col, offsetstart, end=datetime.now(), realtime=False):
+def genproc(col, window, config, realtime=False):
     
-    window,config = rtw.getwindow()
+    monitoring = q.GetRawAccelData(col.name, window.offsetstart, window.end)
     
-    monitoring = q.GetRawAccelData(col.name, offsetstart)
-    
-    monitoring = monitoring.loc[(monitoring.ts >= offsetstart) & (monitoring.ts <= end)]
-     
     #identify the node ids with no data at start of monitoring window
-    NodesNoInitVal=GetNodesWithNoInitialData(monitoring,col.nos,offsetstart)
+    NodesNoInitVal=GetNodesWithNoInitialData(monitoring,col.nos,window.offsetstart)
     
     #get last good data prior to the monitoring window (LGDPM)
     lgdpm = pd.DataFrame()
     for node in NodesNoInitVal:
-        temp = q.GetSingleLGDPM(col.name, node, offsetstart.strftime("%Y-%m-%d %H:%M"))
+        temp = q.GetSingleLGDPM(col.name, node, window.offsetstart.strftime("%Y-%m-%d %H:%M"))
         lgdpm = lgdpm.append(temp,ignore_index=True)
     monitoring=monitoring.append(lgdpm)
     
@@ -128,7 +120,7 @@ def genproc(col, offsetstart, end=datetime.now(), realtime=False):
     monitoring = monitoring.append(LastGoodData)
     
     #assigns timestamps from LGD to be timestamp of offsetstart
-    monitoring.loc[monitoring.ts < offsetstart, ['ts']] = offsetstart
+    monitoring.loc[monitoring.ts < window.offsetstart, ['ts']] = window.offsetstart
     
     monitoring['xz'],monitoring['xy'] = accel_to_lin_xz_xy(col.seglen,monitoring.x.values,monitoring.y.values,monitoring.z.values)
     
@@ -149,14 +141,14 @@ def genproc(col, offsetstart, end=datetime.now(), realtime=False):
         to_smooth = config.io.rt_to_smooth
         to_fill = config.io.rt_to_fill
     
-    filled_smoothened = nodal_proc_monitoring.apply(fill_smooth, offsetstart=offsetstart, end=end, roll_window_numpts=window.numpts, to_smooth=to_smooth, to_fill=to_fill)
+    filled_smoothened = nodal_proc_monitoring.apply(fill_smooth, offsetstart=window.offsetstart, end=window.end, roll_window_numpts=window.numpts, to_smooth=to_smooth, to_fill=to_fill)
     filled_smoothened = filled_smoothened[['xz', 'xy','name']].reset_index()
     
     monitoring = filled_smoothened.set_index('ts')   
     
     filled_smoothened['td'] = filled_smoothened.ts.values - filled_smoothened.ts.values[0]
     filled_smoothened['td'] = filled_smoothened['td'].apply(lambda x: x / np.timedelta64(1,'D'))
-    #
+    
     nodal_filled_smoothened = filled_smoothened.groupby('id') 
     
     disp_vel = nodal_filled_smoothened.apply(node_inst_vel, roll_window_numpts=window.numpts, start=window.start)
