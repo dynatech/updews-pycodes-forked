@@ -17,7 +17,8 @@ import errorAnalysis as err
 
 def col_pos(colpos_dfts, col_pos_end, col_pos_interval, col_pos_number, num_nodes):
     
-    cumsum_df = colpos_dfts.loc[colpos_dfts.ts == colpos_dfts.ts.values[0]][['xz','xy']].cumsum()
+    colpos_dfts = colpos_dfts.drop_duplicates()
+    cumsum_df = colpos_dfts[['xz','xy']].cumsum()
     colpos_dfts['cs_xz'] = cumsum_df.xz.values
     colpos_dfts['cs_xy'] = cumsum_df.xy.values
     
@@ -436,35 +437,89 @@ while True:
     if plot_all_data == 'y' or plot_all_data == 'n':
         break
 
+# plots segment of data
 if plot_all_data == 'n':
+
     while True:
-        try:
-            col = q.GetSensorList(raw_input('sensor name: '))
+        monitoring_window = raw_input('plot with 3 day monitoring window? (Y/N): ').lower()
+        if monitoring_window == 'y' or monitoring_window == 'n':
             break
-        except:
-            print 'sensor name is not in the list'
-            continue
-    
-    while True:
-        test_specific_time = raw_input('test specific time? (Y/N): ').lower()
-        if test_specific_time == 'y' or test_specific_time == 'n':
-            break
-    
-    while True:
-        try:
-            if test_specific_time == 'y':
+
+    # plots with 3 day monitoring window
+    if monitoring_window == 'y':
+        while True:
+            try:
+                col = q.GetSensorList(raw_input('sensor name: '))
+                break
+            except:
+                print 'sensor name is not in the list'
+                continue
+        
+        while True:
+            test_specific_time = raw_input('test specific time? (Y/N): ').lower()
+            if test_specific_time == 'y' or test_specific_time == 'n':
+                break
+        
+        while True:
+            try:
+                if test_specific_time == 'y':
+                    end = pd.to_datetime(raw_input('plot end timestamp (format: 2016-12-31 23:30): '))
+                    window, config = rtw.getwindow(end)
+                elif test_specific_time == 'n':
+                    window, config = rtw.getwindow()
+                break
+            except:
+                print 'invalid datetime format'
+                continue
+        
+        monitoring = g.genproc(col[0], window, config, realtime=True)
+        main(monitoring, window, config)
+        
+    # plots with customizable monitoring window
+    elif monitoring_window == 'n':
+        while True:
+            try:
+                col = q.GetSensorList(raw_input('sensor name: '))
+                break
+            except:
+                print 'sensor name is not in the list'
+                continue
+            
+        while True:
+            try:
                 end = pd.to_datetime(raw_input('plot end timestamp (format: 2016-12-31 23:30): '))
                 window, config = rtw.getwindow(end)
-            elif test_specific_time == 'n':
-                window, config = rtw.getwindow()
-            break
-        except:
-            print 'invalid datetime format'
-            continue
+                break
+            except:
+                print 'invalid datetime format'
+                continue
+
+        while True:
+            try:
+                window.start = window.end - timedelta(int(raw_input('monitoring window, in days: ')))
+                break
+            except:
+                print 'invalid datetime format'
+                continue
+
+        window.numpts = int(1+config.io.roll_window_length/config.io.data_dt)
+        window.offsetstart = window.start - timedelta(days=(config.io.num_roll_window_ops*window.numpts-1)/48.)
+
+        while True:
+            try:
+                col_pos_interval = int(raw_input('interval between column position dates, in days: '))
+                break
+            except:
+                print 'enter an integer'
+                continue
+            
+        config.io.col_pos_interval = str(col_pos_interval) + 'D'
+        config.io.num_col_pos = int((window.end - window.start).days/col_pos_interval + 1)
+
+        monitoring = g.genproc(col[0], window, config)
+        main(monitoring, window, config, plotvel=False)
     
-    monitoring = g.genproc(col[0], window, config, realtime=True)
-    main(monitoring, window, config)
-    
+# plots from start to end of data
 elif plot_all_data == 'y':
     while True:
         try:
@@ -498,7 +553,7 @@ elif plot_all_data == 'y':
     window.offsetstart=datetime.combine(date(start_dataTS_Year,start_dataTS_month,start_dataTS_day),time(start_dataTS_hour,start_dataTS_minute,0))
     
     window.numpts = int(1+config.io.roll_window_length/config.io.data_dt)
-    window.start = window.offsetstart + timedelta(days=config.io.rt_window_length+((config.io.num_roll_window_ops*window.numpts-1)/48.))
+    window.start = window.offsetstart + timedelta(days=(config.io.num_roll_window_ops*window.numpts-1)/48.)
     config.io.col_pos_interval = str(col_pos_interval) + 'D'
     config.io.num_col_pos = int((window.end - window.start).days/col_pos_interval + 1)
     
