@@ -28,19 +28,16 @@ print window_now.numpts
 '''
 #    set current time as endpoint of the intervalUSA
 import cfgfileio as cfg
-import pandas as pd
 from datetime import datetime, date, time, timedelta
-import numpy as np
 
 class rtwindow:
-    def __init__(self, roll_window_numpts,offsetstart, start, end, monwin):
+    def __init__(self, roll_window_numpts,offsetstart, start, end):
         self.numpts = roll_window_numpts
         self.offsetstart = offsetstart
         self.start = start
         self.end = end
-        self.monwin = monwin
 
-def get_rt_window(rt_window_length,roll_window_size,num_roll_window_ops,endpt=datetime.now()):
+def get_rt_window(rt_window_length,roll_window_size,num_roll_window_ops,endpt):
     
     ##DESCRIPTION:
     ##returns the time interval for real-time monitoring,
@@ -70,7 +67,7 @@ def get_rt_window(rt_window_length,roll_window_size,num_roll_window_ops,endpt=da
     
     return end, start, offsetstart
 
-def set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_window_ops, endpt=datetime.now()):
+def set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_window_ops, endpt):
     
     ##DESCRIPTION:    
     ##returns number of data points per rolling window, endpoint of interval, starting point of interval, time interval for real-time monitoring, monitoring window dataframe
@@ -85,18 +82,14 @@ def set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_w
     ##roll_window_numpts, end, start, offsetstart, monwin
     
     roll_window_numpts=int(1+roll_window_length/data_dt)
-    end, start, offsetstart=get_rt_window(rt_window_length,roll_window_numpts,num_roll_window_ops, endpt=endpt)
-    monwin_time=pd.date_range(start=offsetstart, end=end, freq='30Min',name='ts', closed=None)
-    monwin=pd.DataFrame(data=np.nan*np.ones(len(monwin_time)), index=monwin_time)
-    
-    
-    return roll_window_numpts, offsetstart, start, end, monwin
+    end, start, offsetstart=get_rt_window(rt_window_length,roll_window_numpts,num_roll_window_ops, endpt)
+
+    return roll_window_numpts, offsetstart, start, end
 
 def getwindow(end=datetime.now()):
     
     s = cfg.config()
 
-    roll_window_numpts, offsetstart, start, end, monwin = set_monitoring_window(s.io.roll_window_length,s.io.data_dt,s.io.rt_window_length,s.io.num_roll_window_ops,endpt=end)
+    roll_window_numpts, offsetstart, start, end = set_monitoring_window(s.io.roll_window_length,s.io.data_dt,s.io.rt_window_length,s.io.num_roll_window_ops,endpt=end)
     
-    return rtwindow(roll_window_numpts, offsetstart, start, end, monwin),s
-#    set_monitoring window
+    return rtwindow(roll_window_numpts, offsetstart, start, end),s

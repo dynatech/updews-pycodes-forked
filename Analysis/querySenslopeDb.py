@@ -258,7 +258,8 @@ def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid
         
         toTime_query = ''
         if toTime != '':
-            toTime_query =  " AND timestamp <= '%s'" %toTime+tda(hours=0.5)
+            toTime = pd.to_datetime(toTime)+tda(hours=0.5)
+            toTime_query =  " AND timestamp <= '%s'" %toTime
         elif toTime:
             toTime_query = ''
         
