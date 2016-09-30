@@ -166,7 +166,7 @@ def check_increasing(a):
     return 0
 
 
-def compute_col_pos(xz,xy,col_pos_end, col_pos_interval, col_pos_number):
+def compute_col_pos(xz,xy,col_pos_end, col_pos_interval, col_pos_number, column_fix='bottom'):
 
     ##DESCRIPTION:
     ##returns rounded values of cumulative displacements
@@ -190,15 +190,15 @@ def compute_col_pos(xz,xy,col_pos_end, col_pos_interval, col_pos_number):
     #getting dates for column positions
     colposdates=pd.date_range(end=col_pos_end, freq=col_pos_interval,periods=col_pos_number, name='ts',closed=None)
 
-    #reversing column order
-    revcols=xz.columns.tolist()[::-1]
-    xz=xz[revcols]
-    xy=xy[revcols]
-    x=x[revcols]
     
-    
-    
-
+    if column_fix=='bottom':      
+        #reversing column order
+        revcols=xz.columns.tolist()[::-1]
+        xz=xz[revcols]
+        xy=xy[revcols]
+        x=x[revcols]
+        
+       
     #getting cumulative displacements
     cs_x=pd.DataFrame()
     cs_xz=pd.DataFrame()
@@ -210,19 +210,31 @@ def compute_col_pos(xz,xy,col_pos_end, col_pos_interval, col_pos_number):
     cs_x=cs_x.set_index(colposdates)
     cs_xz=cs_xz.set_index(colposdates)
     cs_xy=cs_xy.set_index(colposdates)
-
     
-    #returning to original column order
-    cols=cs_x.columns.tolist()[::-1]
-    cs_xz=cs_xz[cols]
-    cs_xy=cs_xy[cols]
-    cs_x=cs_x[cols]
-
-    #appending 0 values to bottom of column (last node)
-    cs_x[num_nodes+1]=0  
-    cs_xz[num_nodes+1]=0
-    cs_xy[num_nodes+1]=0
-
+    if column_fix=='bottom':     
+    
+        #returning to original column order
+        cols=cs_x.columns.tolist()[::-1]
+        cs_xz=cs_xz[cols]
+        cs_xy=cs_xy[cols]
+        cs_x=cs_x[cols]
+       
+        #appending 0 values to bottom of column (last node)
+        cs_x[num_nodes+1]=0        
+        cs_xz[num_nodes+1]=0
+        cs_xy[num_nodes+1]=0
+        cs_x=cs_x.sub(cs_x.iloc[:,-1],axis=0)
+        
+        
+    else:
+        cs_x[0]=0  
+        cs_xz[0]=0
+        cs_xy[0]=0
+        reord_cols=np.arange(0,num_nodes+1)
+        cs_xz=cs_xz[reord_cols]
+        cs_xy=cs_xy[reord_cols]
+        cs_x=-1*cs_x[reord_cols]
+        
     
     return np.round(cs_x,4), np.round(cs_xz,4), np.round(cs_xy,4)
     
@@ -368,7 +380,7 @@ def nonrepeat_colors(ax,NUM_COLORS,color='gist_rainbow'):
     return ax
     
     
-def plot_column_positions(colname,x,xz,xy):
+def plot_column_positions(colname,x,xz,xy,convert_h_to='mm'):
 #==============================================================================
 # 
 #     DESCRIPTION
@@ -380,6 +392,15 @@ def plot_column_positions(colname,x,xz,xy):
 #     xz; dataframe; horizontal linear displacements along the planes defined by xa-za
 #     xy; dataframe; horizontal linear displacements along the planes defined by xa-ya
 #==============================================================================
+
+    if convert_h_to=='mm':
+        xz=xz*1000
+        xy=xy*1000
+    elif convert_h_to=='cm':
+        xz=xz*100
+        xy=xy*100
+    else:
+        convert_h_to=='m'
 
     try:
         fig=plt.figure()
@@ -395,28 +416,29 @@ def plot_column_positions(colname,x,xz,xy):
             curax=ax_xz
             curcolpos_xz=xz[(xz.index==i)].values
             curax.plot(curcolpos_xz[0],curcolpos_x[0],'.-')
-            curax.set_xlabel('xz')
-            curax.set_ylabel('x')
+            curax.set_xlabel('horizontal displacement,\n downslope ('+convert_h_to+')')
+            curax.set_ylabel('depth, m')
             
             curax=ax_xy
             curcolpos_xy=xy[(xy.index==i)].values
             curax.plot(curcolpos_xy[0],curcolpos_x[0],'.-', label=i)
-            curax.set_xlabel('xy')
+            curax.set_xlabel('horizontal displacement,\n across slope ('+convert_h_to+')')
+            
 
         for tick in ax_xz.xaxis.get_minor_ticks():
             tick.label.set_rotation('vertical')
             tick.label.set_fontsize(10)
             
         for tick in ax_xy.xaxis.get_minor_ticks():
-            tick.label.set_rotation('vertical')
+#            tick.label.set_rotation('vertical')
             tick.label.set_fontsize(10)
        
         for tick in ax_xz.xaxis.get_major_ticks():
-            tick.label.set_rotation('vertical')
+#            tick.label.set_rotation('vertical')
             tick.label.set_fontsize(10)
             
         for tick in ax_xy.xaxis.get_major_ticks():
-            tick.label.set_rotation('vertical')
+#            tick.label.set_rotation('vertical')
             tick.label.set_fontsize(10)
             
        
@@ -898,10 +920,17 @@ for s in sensorlist:
     
     # getting current column properties
     colname,num_nodes,seg_len= s.name,s.nos,s.seglen
-    print colname, end
+    print colname, num_nodes,seg_len, end
+    
+    
 
     #user-defined list of nodes to exclude (reset and fix to vertical position) in the analysis
-    excludenodelist=[]         
+    excludenodelist=[]
+
+    #user-defined setting as to how to fix the column (top or bottom node)
+    column_fix='top'
+    if column_fix=='top':mult=-1
+    else: mult=1         
 
 
     # list of working nodes     
@@ -921,8 +950,8 @@ for s in sensorlist:
     xz_series_list,xy_series_list = create_series_list(proc_monitoring,monwin,colname,num_nodes)
     
     # create xz,xy dataframe for error analysis, and analyze noise of unsmoothed data and the effect on column position    
-    xz=create_fill_smooth_df(xz_series_list,num_nodes,monwin, roll_window_numpts,0,0)[0]
-    xy=create_fill_smooth_df(xy_series_list,num_nodes,monwin, roll_window_numpts,0,0)[0] 
+    xz=mult*create_fill_smooth_df(xz_series_list,num_nodes,monwin, roll_window_numpts,0,0)[0]
+    xy=mult*create_fill_smooth_df(xy_series_list,num_nodes,monwin, roll_window_numpts,0,0)[0] 
     xz_mx,xz_mn,xy_mx,xy_mn, xz_mxc, xz_mnc, xy_mxc,xy_mnc=err.cml_noise_profiling(xz,xy,excludenodelist)
 
     # create, fill and smooth dataframes from series lists
@@ -931,8 +960,8 @@ for s in sensorlist:
     
     # resetting and fixing excluded nodes to vertical position   
     col_mask=((xz == xz) | xz.isnull()) & ([a in excludenodelist for a in xz.columns])
-    xz=xz.mask(col_mask).fillna(0.)
-    xy=xy.mask(col_mask).fillna(0.)
+    xz=mult*xz.mask(col_mask).fillna(0.)
+    xy=mult*xy.mask(col_mask).fillna(0.)
     
        
     inc_xz=xz.apply(check_increasing)
@@ -946,7 +975,7 @@ for s in sensorlist:
     vel_xz, vel_xy = compute_node_inst_vel(xz,xy,roll_window_numpts)
 
     # computing cumulative displacements
-    cs_x, cs_xz, cs_xy=compute_col_pos(xz,xy,monwin.index[-1], col_pos_interval, col_pos_num)
+    cs_x, cs_xz, cs_xy=compute_col_pos(xz,xy,monwin.index[-1], col_pos_interval, col_pos_num,column_fix)
     
     
     # Alert generation
@@ -960,12 +989,12 @@ for s in sensorlist:
         ax=plot_column_positions(colname,cs_x,cs_xz,cs_xy)
         
         #plotting error band for column positions        
-        try:
-            xl=cs_x.mean().values               
-            ax[0].fill_betweenx(xl[::-1], xz_mxc, xz_mnc, where=xz_mxc >= xz_mnc, facecolor='0.7',linewidth=0)
-            ax[1].fill_betweenx(xl[::-1], xy_mxc, xy_mnc, where=xy_mxc >= xy_mnc, facecolor='0.7',linewidth=0)
-        except KeyboardInterrupt:
-            print 'no column position error band'
+#        try:
+#            xl=cs_x.mean().values               
+#            ax[0].fill_betweenx(xl[::-1], xz_mxc, xz_mnc, where=xz_mxc >= xz_mnc, facecolor='0.7',linewidth=0)
+#            ax[1].fill_betweenx(xl[::-1], xy_mxc, xy_mnc, where=xy_mxc >= xy_mnc, facecolor='0.7',linewidth=0)
+#        except KeyboardInterrupt:
+#            print 'no column position error band'
         plt.savefig(RTfilepath+colname+' colpos '+str(end.strftime('%Y-%m-%d %H-%M')),
                     dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
 
