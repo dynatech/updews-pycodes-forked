@@ -1,4 +1,10 @@
 #Importing relevant functions
+import matplotlib as mpl
+mpl.use('Agg')
+import matplotlib.pyplot as plt
+import matplotlib.dates as md
+plt.ioff()
+
 from datetime import datetime, date, time, timedelta
 import pandas as pd
 import numpy as np
@@ -8,8 +14,7 @@ import os
 import sys
 import platform
 from sqlalchemy import create_engine
-import matplotlib.pyplot as plt
-plt.ioff()
+
 #Include the path of "Data Analysis" folder for the python scripts searching
 path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 if not path in sys.path:

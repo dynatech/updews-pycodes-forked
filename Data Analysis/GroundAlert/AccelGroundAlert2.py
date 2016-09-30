@@ -131,7 +131,7 @@ for i in range(len(tableau20)):
 
 
 
-crack = 'B'
+crack = 'F'
 site = 'msl'
 size = 1
 num_pts = 10
@@ -676,7 +676,7 @@ ax.legend(lns,labs, loc = 'upper left',fancybox = True)
 
 ax2 = fig.add_subplot(212,sharex = ax)
 ax2.grid()
-ax2.plot(t,all_vel,'-',c = tableau20[12])
+ax2.plot(t,all_vel,'-',c = tableau20[2])
 l1 = ax2.plot(t,all_vel,'o',c = tableau20[19],label = 'Crack Velocity')
 all_time = np.arange(min(ax2.get_xlim()),max(ax2.get_xlim()),0.001)
 l2 = ax2.plot(all_time,1.8*np.ones(len(all_time)),'--',c = tableau20[6],label = 'New L3')
@@ -700,7 +700,6 @@ fig.suptitle(site.upper()+" Crack " + crack + " Displacement vs. Time with Old a
 fig5_out_path = out_path + " {} Crack {} Displacement vs Time ".format(site.upper(),crack)
 plt.savefig(fig5_out_path,facecolor='w', edgecolor='w',orientation='landscape',mode='w',bbox_inches = 'tight')
 
-    
 #tck = splrep(t,x,k=2,s=0)
 #
 #t_new = np.arange(0,max(t),0.001)
