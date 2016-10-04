@@ -1,1 +1,2 @@
-The maSYNCkaiser Client program is run using Python
+The maSYNCkaiser Client program is run using the ff languages: 
+- Python
