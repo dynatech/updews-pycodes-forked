@@ -188,7 +188,6 @@ def onethree_val_writer(one, three):
 
     try:
                 
-        #returns null if last data is more than 3.5hrs
         one = float(one.rain[-1:])
         three = float(three.rain[-1:])
 
@@ -295,13 +294,20 @@ def RainfallAlert(siterainprops, start, end, offsetstart, tsn, summary, alert, a
             summary_writer(sum_index,name,datasource,twoyrmax,halfmax,summary,alert,alert_df,one,three)
 
     except:
-        #if no data from senslope rain gauge, data is gathered from nearest senslope rain gauge from other site or noah rain gauge
-        col = list(siterainprops['RG1'].values) + list(siterainprops['RG2'].values) + list(siterainprops['RG3'].values)
-        rainfall, r = GetUnemptyOtherRGdata(col, start, end)
-        one, three = SensorPlot(name, r, end, tsn, rainfall, halfmax, twoyrmax, base, PrintPlot, RainfallPlotsPath)
-        
-        datasource = "Other Rain Gauge: %s" %r
-        summary_writer(sum_index,name,datasource,twoyrmax,halfmax,summary,alert,alert_df,one,three)
+        try:
+            #if no data from senslope rain gauge, data is gathered from nearest senslope rain gauge from other site or noah rain gauge
+            col = list(siterainprops['RG1'].values) + list(siterainprops['RG2'].values) + list(siterainprops['RG3'].values)
+            rainfall, r = GetUnemptyOtherRGdata(col, start, end)
+            one, three = SensorPlot(name, r, end, tsn, rainfall, halfmax, twoyrmax, base, PrintPlot, RainfallPlotsPath)
+            
+            datasource = "Other Rain Gauge: %s" %r
+            summary_writer(sum_index,name,datasource,twoyrmax,halfmax,summary,alert,alert_df,one,three)
+        except:
+            #if no data for all rain gauge
+            one = None
+            three = None
+            datasource="No Alert! No ASTI/SENSLOPE Data"
+            summary_writer(sum_index,name,datasource,twoyrmax,halfmax,summary,alert,alert_df,one,three)
 
 def alert_toDB(df, end):
     
