@@ -17,7 +17,7 @@ gsm_alert = cfg.get('I/O','gsmalert')
 output_file_path = output_path + cfg.get('I/O','OutputFilePath')
 
 if os.stat(output_file_path+gsm_alert).st_size != 0:
-    cmd = 'mplayer alert.wav'
+    cmd = 'mplayer alarm.wav'
     audioalert = subprocess.Popen(cmd, shell=True)
     time.sleep(5)
     os.kill(audioalert.pid, signal.SIGINT)

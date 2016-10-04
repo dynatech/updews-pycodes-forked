@@ -33,7 +33,7 @@ def replace_nin(x):
     elif x == 'Nin':
         return 'mes'
     else:
-        return x
+pa        return x
 
 def plot_cracks(which_site,zeroed=True):
     print "Plotting {} ....".format(which_site)

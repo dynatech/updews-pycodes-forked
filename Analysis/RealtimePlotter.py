@@ -246,7 +246,7 @@ def plot_disp_vel(df, colname, max_min_df, window, config, plotvel, disp_offset 
     x = window.start
     z = sorted(set(df.id))
     for i,j in zip(y,z):
-       curax.annotate(str(j),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')
+       curax.annotate(str(int(j)),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')
     
     #plotting displacement for xy
     curax=ax_xyd
@@ -259,7 +259,7 @@ def plot_disp_vel(df, colname, max_min_df, window, config, plotvel, disp_offset 
     x = window.start
     z = sorted(set(df.id))
     for i,j in zip(y,z):
-       curax.annotate(str(j),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')
+       curax.annotate(str(int(j)),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')
 
     if plotvel:
         #plotting velocity for xz
@@ -282,7 +282,7 @@ def plot_disp_vel(df, colname, max_min_df, window, config, plotvel, disp_offset 
         x = window.end - timedelta(hours=2.5)
         z = sorted(set(df.id))
         for i,j in zip(y,z):
-            curax.annotate(str(j),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')            
+            curax.annotate(str(int(j)),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')            
         curax.set_ylabel('node ID', fontsize='small')
         curax.set_title('velocity alerts\n XZ axis',fontsize='small')  
     
@@ -306,7 +306,7 @@ def plot_disp_vel(df, colname, max_min_df, window, config, plotvel, disp_offset 
         x = window.end - timedelta(hours=2.5)
         z = sorted(set(df.id))
         for i,j in zip(y,z):
-            curax.annotate(str(j),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')            
+            curax.annotate(str(int(j)),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')            
         curax.set_title('velocity alerts\n XY axis',fontsize='small')                        
         
     # rotating xlabel
@@ -418,7 +418,7 @@ def main(monitoring, window, config, plotvel=True, plot_all_data = False):
     # plot column position
     plot_column_positions(colposdf,colname,window.end, plot_all_data)
 
-    lgd = plt.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize='x-small')
+    lgd = plt.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize='medium')
 
     plt.savefig(output_path+config.io.outputfilepath+'realtime/'+colname+'ColPos_'+str(window.end.strftime('%Y-%m-%d_%H-%M'))+'.png',
                 dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w', bbox_extra_artists=(lgd,), bbox_inches='tight')
