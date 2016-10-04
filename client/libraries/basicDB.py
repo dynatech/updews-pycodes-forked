@@ -94,26 +94,6 @@ def CreateMasyncTablePermissionsTable(schema_name=None):
             """    
     cur.execute(query)
     db.close()   
-        
-def CreateAccelTable(table_name, schema_name=None):
-    db = mysqlDriver.connect(host = Hostdb, user = Userdb, passwd = Passdb)
-    cur = db.cursor()
-    #cur.execute("CREATE DATABASE IF NOT EXISTS %s" %nameDB)
-    cur.execute("USE %s" % schema_name)
-    cur.execute("CREATE TABLE IF NOT EXISTS %s(timestamp datetime, id int, xvalue int, yvalue int, zvalue int, mvalue int, PRIMARY KEY (timestamp, id))" %table_name)
-    db.close()
-
-def CreateColAlertsTable(table_name, schema_name=None):
-    db = mysqlDriver.connect(host = Hostdb, user = Userdb, passwd = Passdb)
-    cur = db.cursor()
-
-    cur.execute("USE %s"%schema_name)
-    
-    query = "DROP TABLE IF EXISTS `senslopedb`.%s;" %table_name
-    cur.execute(query)
-    
-    cur.execute("CREATE TABLE IF NOT EXISTS %s(sitecode varchar(8), timestamp datetime, id int, alerts varchar(8), PRIMARY KEY (sitecode, timestamp, id))" %table_name)
-    db.close()
 	
 #GetDBResultset(query): executes a mysql like code "query"
 #    Parameters:
@@ -166,6 +146,8 @@ def PushDBDataFrame(df,table_name, schema_name=None):
     db.close()
 
 def initMasyncTables():
+    # Create table for storing information on which schemas the user would
+    #   like to be syncronized from the server
     table = "masynckaiser_schema_targets"
     exists = DoesTableExist(Masyncdb, table)
     if not exists:
@@ -175,6 +157,9 @@ def initMasyncTables():
     else:
         print "TABLE %s: EXISTS" % (table)
  
+    # Create table for storing information on what type of synchronization
+    #   direction the user would like for the tables
+    #   Ex. Server to client only (READ), Bidirectional
     table = "masynckaiser_table_permissions"
     exists = DoesTableExist(Masyncdb, table)
     if not exists:

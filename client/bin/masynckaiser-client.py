@@ -38,7 +38,6 @@ def printit():
 
 #printit()
 # wssSendMsg()
-print "Hi"
 
 
 
