@@ -30,7 +30,7 @@ def nonrepeat_colors(ax,NUM_COLORS,color='gist_rainbow'):
     return ax
     
     
-def subplot_colpos(dfts, ax_xz, ax_xy, plot_all_data, i):
+def subplot_colpos(dfts, ax_xz, ax_xy, show_part_legend, i):
     #current column position x
     curcolpos_x = dfts.x.values
 
@@ -44,10 +44,10 @@ def subplot_colpos(dfts, ax_xz, ax_xy, plot_all_data, i):
     #current column position xy
     curax=ax_xy
     curcolpos_xy = dfts.cs_xy.values
-    if not plot_all_data:
+    if show_part_legend == False:
         curax.plot(curcolpos_xy,curcolpos_x,'.-', label=str(pd.to_datetime(dfts.ts.values[0])))
     else:
-        if i % 4 == 0 or i == config.io.num_col_pos:
+        if i % show_part_legend == 0 or i == config.io.num_col_pos:
             curax.plot(curcolpos_xy,curcolpos_x,'.-', label=str(pd.to_datetime(dfts.ts.values[0])))
         else:
             curax.plot(curcolpos_xy,curcolpos_x,'.-')
@@ -55,7 +55,7 @@ def subplot_colpos(dfts, ax_xz, ax_xy, plot_all_data, i):
     return
     
     
-def plot_column_positions(df,colname,end, plot_all_data):
+def plot_column_positions(df,colname,end, show_part_legend):
 #==============================================================================
 # 
 #     DESCRIPTION
@@ -79,7 +79,7 @@ def plot_column_positions(df,colname,end, plot_all_data):
         colposTS = sorted(set(df.ts), reverse = False)
 
         for i in range(len(set(df.ts))):
-            subplot_colpos(df.loc[df.ts == colposTS[i]], ax_xz=ax_xz, ax_xy=ax_xy, plot_all_data=plot_all_data, i=i)
+            subplot_colpos(df.loc[df.ts == colposTS[i]], ax_xz=ax_xz, ax_xy=ax_xy, show_part_legend=show_part_legend, i=i)
 
         for tick in ax_xz.xaxis.get_minor_ticks():
             tick.label.set_rotation('vertical')
@@ -389,7 +389,7 @@ def df_add_offset_col(df, offset, num_nodes):
     return np.round(df,4)
     
     
-def main(monitoring, window, config, plotvel=True, plot_all_data = False):
+def main(monitoring, window, config, plotvel=True, show_part_legend = False):
 
     colname = monitoring.colprops.name
     num_nodes = monitoring.colprops.nos
@@ -416,7 +416,7 @@ def main(monitoring, window, config, plotvel=True, plot_all_data = False):
 
 
     # plot column position
-    plot_column_positions(colposdf,colname,window.end, plot_all_data)
+    plot_column_positions(colposdf,colname,window.end, show_part_legend)
 
     lgd = plt.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize='medium')
 
@@ -516,8 +516,30 @@ if plot_all_data == 'n':
         config.io.col_pos_interval = str(col_pos_interval) + 'D'
         config.io.num_col_pos = int((window.end - window.start).days/col_pos_interval + 1)
 
+
+        while True:
+            show_all_legend = raw_input('show all legend in column position plot? (Y/N): ').lower()
+            if show_all_legend == 'y' or show_all_legend == 'n':        
+                break
+
+        if show_all_legend == 'y':
+            show_part_legend = False
+        elif show_all_legend == 'n':
+            while True:
+                try:
+                    show_part_legend = int(raw_input('every nth legend to show: '))
+                    if show_part_legend <= config.io.num_col_pos:
+                        break
+                    else:
+                        print 'integer should be less than number of column position dates to plot:', config.io.num_col_pos
+                        continue
+                except:
+                    print 'enter an integer'
+                    continue
+
+
         monitoring = g.genproc(col[0], window, config)
-        main(monitoring, window, config, plotvel=False)
+        main(monitoring, window, config, plotvel=False, show_part_legend = show_part_legend)
     
 # plots from start to end of data
 elif plot_all_data == 'y':
@@ -536,8 +558,7 @@ elif plot_all_data == 'y':
         except:
             print 'enter an integer'
             continue
-
-    
+            
     window, config = rtw.getwindow()
 
     query = "SELECT * FROM senslopedb.%s ORDER BY timestamp LIMIT 1" %col[0].name
@@ -556,8 +577,30 @@ elif plot_all_data == 'y':
     window.start = window.offsetstart + timedelta(days=(config.io.num_roll_window_ops*window.numpts-1)/48.)
     config.io.col_pos_interval = str(col_pos_interval) + 'D'
     config.io.num_col_pos = int((window.end - window.start).days/col_pos_interval + 1)
+
+
+    while True:
+        show_all_legend = raw_input('show all legend in column position plot? (Y/N): ').lower()
+        if show_all_legend == 'y' or show_all_legend == 'n':        
+            break
+
+    if show_all_legend == 'y':
+        show_part_legend = False
+    elif show_all_legend == 'n':
+        while True:
+            try:
+                show_part_legend = int(raw_input('every nth legend to show: '))
+                if show_part_legend <= config.io.num_col_pos:
+                    break
+                else:
+                    print 'integer should be less than number of column position dates to plot:', config.io.num_col_pos
+                    continue
+            except:
+                print 'enter an integer'
+                continue
+
     
     monitoring = g.genproc(col[0], window, config)
-    main(monitoring, window, config, plotvel=False, plot_all_data = True)
+    main(monitoring, window, config, plotvel=False, show_part_legend = show_part_legend)
     
 print 'runtime =', str(datetime.now() - start)
