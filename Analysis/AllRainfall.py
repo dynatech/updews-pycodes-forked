@@ -3,7 +3,7 @@ import matplotlib as mpl
 mpl.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.dates as md
-plt.ion()
+plt.ioff()
 
 import os
 from datetime import datetime, timedelta, date, time
@@ -71,6 +71,19 @@ def set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_w
 
     return roll_window_numpts, end, start, offsetstart, monwin
 
+def stitch_intervals(ranges):
+    result = []
+    cur_start = -1
+    cur_stop = -1
+    for start, stop in sorted(ranges):
+        if start != cur_stop:
+            result.append((start,stop))
+            cur_start, cur_stop = start, stop
+        else:
+            result[-1] = (cur_start,stop)
+            cur_stop = max(cur_stop,stop)
+    return result
+
 def GetResampledData(r, start, end):
     
     ##INPUT:
@@ -123,6 +136,13 @@ def GetData(r, start, end):
 
     return rainfall
 
+def shade_range(df, lst):
+    lst.append((pd.to_datetime(df['ts'].values[0]), pd.to_datetime(df['ts'].values[0]) + timedelta(hours=0.5)))
+    return lst
+
+def plot_shade(df, ax):
+    ax.vspan(pd.to_datetime(df['shaded_range'].values[0][0]), pd.to_datetime(df['shaded_range'].values[0][1]), ec = None, alpha = 0.5, color='red')
+
 def PlotData(rain_gauge_col, start, end, sub, col, insax, cumax, fig, name):
     data = GetData(rain_gauge_col['rain_gauge'].values[0], start, end)
     
@@ -134,45 +154,62 @@ def PlotData(rain_gauge_col, start, end, sub, col, insax, cumax, fig, name):
     rainfall3=pd.rolling_sum(data,144,min_periods=1)
     rainfall3=np.round(rainfall3,4)
 
-    data['1D'] = rainfall2.rain
-    data['3D'] = rainfall3.rain
+    data['24hr cumulative rainfall'] = rainfall2.rain
+    data['72hr cumulative rainfall'] = rainfall3.rain
     
     data = data.reset_index()
     data = data.set_index('ts')
     plot1 = data['rain']
-    plot2 = data['1D']
-    plot3 = data['3D']
-    plot4 = sub['maxhalf']
-    plot5 = sub['max']
+    plot2 = data['24hr cumulative rainfall']
+    plot3 = data['72hr cumulative rainfall']
+    plot4 = sub['half of 2yr max rainfall']
+    plot5 = sub['2yr max rainfall']
     
     RG_num = col.loc[col.rain_gauge == rain_gauge_col['rain_gauge'].values[0]].index[0]
     inscurax = insax[RG_num]
     cumcurax = cumax[RG_num]
     
     try:
-        if RG_num == 0:
-            inscurax.plot(plot1.index,plot1,color='#db4429', label = 'instantaneous rainfall') # instantaneous rainfall data
-            cumcurax.plot(plot2.index,plot2,color='#5ac126', label = '24hr cumulative rainfall') # 24-hr cumulative rainfall
-            cumcurax.plot(plot3.index,plot3,color='#0d90d0', label = '72hr cumulative rainfall') # 72-hr cumulative rainfall
-            cumcurax.plot(plot4.index,plot4,color="#fbb714", label = 'half of 2yr max rainfall') # half of 2-yr max rainfall
-            cumcurax.plot(plot5.index,plot5,color="#963bd6", label = '2yr max rainfall')  # 2-yr max rainfall
-            inscurax.set_ylabel(rain_gauge_col['rain_gauge'].values[0].replace('rain_noah_', 'NOAH'), fontsize='medium')
-        else:
-            inscurax.plot(plot1.index,plot1,color='#db4429') # instantaneous rainfall data
-            cumcurax.plot(plot2.index,plot2,color='#5ac126') # 24-hr cumulative rainfall
-            cumcurax.plot(plot3.index,plot3,color='#0d90d0') # 72-hr cumulative rainfall
-            cumcurax.plot(plot4.index,plot4,color="#fbb714") # half of 2-yr max rainfall
-            cumcurax.plot(plot5.index,plot5,color="#963bd6")  # 2-yr max rainfall
-            inscurax.set_ylabel(rain_gauge_col['rain_gauge'].values[0].replace('rain_noah_', 'NOAH'), fontsize='medium')
+        nan_data = data[pd.isnull(data).rain]
+        nan_data = nan_data.reset_index()
+        nan_datadf = nan_data.groupby('ts')
+        lst = []
+        nan_range = nan_datadf.apply(shade_range, lst=lst)
+        nan_range = nan_range[0]
+        nan_range = nan_range[1:len(nan_range)]
+        shaded_range = stitch_intervals(nan_range)
+#        shaded_df = pd.DataFrame({'shaded_range': stitch_intervals(nan_range)})
+#        shaded_grp = shaded_df.groupby('shaded_range')
+
+#        shaded_grp.apply(plot_shade, ax=inscurax)
+        for i in shaded_range:
+            inscurax.axvspan(i[0], i[1], alpha=0.5, color='#afeeee')
+#        inscurax.axvspan(shaded_range['shaded_range'].values[0][0], shaded_range['shaded_range'].values[0][0], alpha=0.5, color='red')
     except:
         pass
+
+    try:
+        inscurax.plot(plot1.index,plot1,color='#db4429') # instantaneous rainfall data
+        cumcurax.plot(plot2.index,plot2,color='#5ac126') # 24-hr cumulative rainfall
+        cumcurax.plot(plot3.index,plot3,color='#0d90d0') # 72-hr cumulative rainfall
+        cumcurax.plot(plot4.index,plot4,color="#fbb714") # half of 2-yr max rainfall
+        cumcurax.plot(plot5.index,plot5,color="#963bd6")  # 2-yr max rainfall
+        for tick in inscurax.xaxis.get_major_ticks():
+            tick.label.set_rotation('vertical')
+        for tick in cumcurax.xaxis.get_major_ticks():
+            tick.label.set_rotation('vertical')
+    except:
+        pass
+    
+    cumcurax.set_xlim([sub.index[0], sub.index[-1]])
+    inscurax.set_ylabel(rain_gauge_col['rain_gauge'].values[0].replace('rain_noah_', 'NOAH'), fontsize='medium')
     
     dfmt = md.DateFormatter('%m-%d')
     inscurax.xaxis.set_major_formatter(dfmt)
     cumcurax.xaxis.set_major_formatter(dfmt)
     
-    fig.subplots_adjust(top=0.93, right=0.9, left=0.08, bottom=0.08, hspace=0.23, wspace=0.13)
-    fig.suptitle(name+" as of "+str(end),fontsize='large')
+    fig.subplots_adjust(top=0.93, right=0.8, left=0.08, bottom=0.08, hspace=0.23, wspace=0.13)
+    fig.suptitle(name+" as of "+str(end),fontsize='xx-large')
 
 def SensorPlot(name, col, start, end, tsn, halfmax, twoyrmax, base, RainfallPlotsPath):
     
@@ -213,8 +250,8 @@ def SensorPlot(name, col, start, end, tsn, halfmax, twoyrmax, base, RainfallPlot
     rain_gauge_col = col.groupby('rain_gauge')
     
     sub=base
-    sub['maxhalf'] = halfmax  
-    sub['max'] = twoyrmax
+    sub['half of 2yr max rainfall'] = halfmax  
+    sub['2yr max rainfall'] = twoyrmax
     
     rain_gauge_col.apply(PlotData, start= start, end=end, sub=sub, col=col, insax=insax, cumax=cumax, fig=fig, name=name) 
     
@@ -222,6 +259,7 @@ def SensorPlot(name, col, start, end, tsn, halfmax, twoyrmax, base, RainfallPlot
     plt.savefig(RainfallPlotsPath+tsn+"_"+name, dpi=200, 
         facecolor='w', edgecolor='w',orientation='landscape',mode='w',
         bbox_extra_artists=(lgd,))#, bbox_inches='tight')
+    plt.close()
 
 def GetUnemptyOtherRGdata(col, start, end):
     
@@ -450,14 +488,16 @@ def main():
     roll_window_numpts, end, start, offsetstart, monwin = set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_window_ops)
     
     index = pd.date_range(end-timedelta(rt_window_length), periods=rt_window_length+1, freq='D')
-    columns=['maxhalf','max']
+    columns=['half of 2yr max rainfall','2yr max rainfall']
     base = pd.DataFrame(index=index, columns=columns)
     
     tsn=end.strftime("%Y-%m-%d_%H-%M-%S")
     
     #rainprops containing noah id and threshold
-    rainprops = q.GetRainProps('rain_props')
-    rainprops = rainprops.loc[rainprops.name == 'bak']
+    rainprops = q.GetRainProps('rain_props') 
+    
+#    lun_index = rainprops.loc[rainprops.name == 'lun'].index.values[0]
+#    rainprops = rainprops[int(lun_index):len(rainprops)]
     
     #empty dataframe; summary writer
     index = range(len(rainprops))
@@ -479,24 +519,24 @@ def main():
     if PrintSummaryAlert:
         summary.to_csv(RainfallPlotsPath+'SummaryOfRainfallAlertGenerationFor'+tsn+CSVFormat,sep=',',mode='w')
 
-#    #writes alert summary to db
-#    summary['timestamp'] = [str(end)]*len(summary)
-#    summary['source'] = 'rain'
-#    summary['site'] = summary['site'].map(lambda x: str(x)[:3])
-#    msl_raindf = summary.loc[summary.site == 'mes']
-#    msl_raindf.site = 'msl'
-#    msu_raindf = summary.loc[summary.site == 'mes']
-#    msu_raindf.site = 'msu'
-#    summary = summary.append(msl_raindf).append(msu_raindf)
-#    summary = summary.loc[summary.site != 'mes']
-#    summary = summary.reset_index(drop = True)
-#    summary = summary.sort('site')
-#    df_for_db = summary[['timestamp', 'site', 'source', 'alert']]
-#    df_for_db = df_for_db.dropna()
-#    
-#    #Write to senslopedb.site_level_alerts
-#    site_DBdf = df_for_db.groupby('site')
-#    site_DBdf.apply(alert_toDB, end=end)
+    #writes alert summary to db
+    summary['timestamp'] = [str(end)]*len(summary)
+    summary['source'] = 'rain'
+    summary['site'] = summary['site'].map(lambda x: str(x)[:3])
+    msl_raindf = summary.loc[summary.site == 'mes']
+    msl_raindf.site = 'msl'
+    msu_raindf = summary.loc[summary.site == 'mes']
+    msu_raindf.site = 'msu'
+    summary = summary.append(msl_raindf).append(msu_raindf)
+    summary = summary.loc[summary.site != 'mes']
+    summary = summary.reset_index(drop = True)
+    summary = summary.sort('site')
+    df_for_db = summary[['timestamp', 'site', 'source', 'alert']]
+    df_for_db = df_for_db.dropna()
+    
+    #Write to senslopedb.site_level_alerts
+    site_DBdf = df_for_db.groupby('site')
+    site_DBdf.apply(alert_toDB, end=end)
     
     print summary
     
