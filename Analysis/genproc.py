@@ -119,6 +119,8 @@ def genproc(col, window, config, realtime=False):
     
     monitoring = monitoring.append(LastGoodData)
     
+    monitoring = monitoring.loc[monitoring.id <= col.nos]
+    
     #assigns timestamps from LGD to be timestamp of offsetstart
     monitoring.loc[monitoring.ts < window.offsetstart, ['ts']] = window.offsetstart
     
