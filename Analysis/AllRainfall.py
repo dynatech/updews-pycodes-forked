@@ -159,7 +159,10 @@ def PlotData(rain_gauge_col, start, end, sub, col, insax, cumax, fig, name):
     
     data = data.reset_index()
     data = data.set_index('ts')
-    plot1 = data['rain']
+    if len(data) == len(data[pd.isnull(data).rain]):
+        plot1 = data['rain'].fillna(0)
+    else:
+        plot1 = data['rain']
     plot2 = data['24hr cumulative rainfall']
     plot3 = data['72hr cumulative rainfall']
     plot4 = sub['half of 2yr max rainfall']
@@ -189,7 +192,8 @@ def PlotData(rain_gauge_col, start, end, sub, col, insax, cumax, fig, name):
         pass
 
     try:
-        inscurax.plot(plot1.index,plot1,color='#db4429') # instantaneous rainfall data
+        width = 0.01
+        inscurax.bar(plot1.index,plot1,width,color='r') # instantaneous rainfall data
         cumcurax.plot(plot2.index,plot2,color='#5ac126') # 24-hr cumulative rainfall
         cumcurax.plot(plot3.index,plot3,color='#0d90d0') # 72-hr cumulative rainfall
         cumcurax.plot(plot4.index,plot4,color="#fbb714") # half of 2-yr max rainfall
@@ -292,23 +296,17 @@ def onethree_val_writer(rainfall):
     ##OUTPUT:
     ##one, three; float; cumulative sum for one day and three days
 
-    try:
+    #getting the rolling sum for the last24 hours
+    rainfall2=pd.rolling_sum(rainfall,48,min_periods=1)
+    rainfall2=np.round(rainfall2,4)
+    
+    #getting the rolling sum for the last 3 days
+    rainfall3=pd.rolling_sum(rainfall,144,min_periods=1)
+    rainfall3=np.round(rainfall3,4)
 
-        #getting the rolling sum for the last24 hours
-        rainfall2=pd.rolling_sum(rainfall,48,min_periods=1)
-        rainfall2=np.round(rainfall2,4)
-        
-        #getting the rolling sum for the last 3 days
-        rainfall3=pd.rolling_sum(rainfall,144,min_periods=1)
-        rainfall3=np.round(rainfall3,4)
-
-                
-        one = float(rainfall2.rain[-1:])
-        three = float(rainfall3.rain[-1:])
-
-    except:
-        one=None
-        three=None
+            
+    one = float(rainfall2.rain[-1:])
+    three = float(rainfall3.rain[-1:])
     
     return one,three
         
@@ -350,7 +348,6 @@ def summary_writer(sum_index,r,datasource,twoyrmax,halfmax,summary,alert,alert_d
             alert_df.append((r,'r1b'))
     #no data
     elif one==None or math.isnan(one):
-        datasource="No Alert! No ASTI/SENSLOPE Data"
         ralert='nd'
         advisory='---'
         alert[3].append(r)
@@ -421,7 +418,8 @@ def RainfallAlert(siterainprops, start, end, offsetstart, tsn, summary, alert, a
             summary_writer(sum_index,name,datasource,twoyrmax,halfmax,summary,alert,alert_df,rainfall)
         except:
             #if no data for all rain gauge
-            rainfall = pd.DataFrame()
+            rainfall = pd.DataFrame({'ts': [end], 'rain': [np.nan]})
+            rainfall = rainfall.set_index('ts')
             datasource="No Alert! No ASTI/SENSLOPE Data"
             summary_writer(sum_index,name,datasource,twoyrmax,halfmax,summary,alert,alert_df,rainfall)
 
@@ -494,10 +492,7 @@ def main():
     tsn=end.strftime("%Y-%m-%d_%H-%M-%S")
     
     #rainprops containing noah id and threshold
-    rainprops = q.GetRainProps('rain_props') 
-    
-#    lun_index = rainprops.loc[rainprops.name == 'lun'].index.values[0]
-#    rainprops = rainprops[int(lun_index):len(rainprops)]
+    rainprops = q.GetRainProps('rain_props')
     
     #empty dataframe; summary writer
     index = range(len(rainprops))
