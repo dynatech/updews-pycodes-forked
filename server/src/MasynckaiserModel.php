@@ -8,16 +8,16 @@ class MasynckaiserModel {
 
     public function __construct() {
         printf("Initializing %s::%s...\n", __CLASS__, __FUNCTION__);
-        
+
         //Initialize the database connection
-        $this->initDBforCB();
+        $this->initDBforMSK();
     }
 
     public function helloWorld() {
     	echo "ChatMessageModel: Hello World \n\n";
     }
 
-    public function initDBforCB() {
+    public function initDBforMSK() {
         echo "Current Working Directory: " . getcwd() . "\n";
         echo "Document Root: " . $_SERVER['DOCUMENT_ROOT'] . "\n";
 
@@ -39,30 +39,59 @@ class MasynckaiserModel {
         }
         echo "Successfully connected to database!\n";
 
-        $this->connectSenslopeDB();
+        $this->connectMSKDB();
         echo "Switched to schema: senslopedb!\n";
 
-        $this->createSMSInboxTable();
-        $this->createSMSOutboxTable();
+        $this->createMasyncSchemaTargetsTable();
+        $this->createMasyncTablePermissionsTable();
     }
 
     //Connect to senslopedb
-    public function connectSenslopeDB() {
-        //$success = $this->dbconn->mysqli_select_db("senslopedb");
-        $success = mysqli_select_db($this->dbconn, "senslopedb");
+    public function connectMSKDB() {
+        $success = mysqli_select_db($this->dbconn, "masynckaiser");
 
         if (!$success) {
-            $this->createSenslopeDB();
+            $this->createMSKDB();
         }
     }
 
-    //Create database if it does not exist yet
-    public function createSenslopeDB() {
-        $sql = "CREATE DATABASE senslopedb";
+    //Create masynckaiser database if it does not exist yet
+    public function createMSKDB() {
+        $sql = "CREATE DATABASE IF NOT EXISTS masynckaiser";
         if ($this->dbconn->query($sql) === TRUE) {
             echo "Database created successfully\n";
         } else {
-            die("Error creating database: " . $this->dbconn->error);
+            die(__FUNCTION__ . " - Error creating database: " . $this->dbconn->error);
+        }
+    }
+
+    //Create the masynckaiser_schema_targets table if it does not exist yet
+    public function createMasyncSchemaTargetsTable() {
+        $sql = "CREATE TABLE IF NOT EXISTS `masynckaiser`.`masynckaiser_schema_targets` (
+                  `schema_id` INT NOT NULL AUTO_INCREMENT,
+                  `name` VARCHAR(64) NOT NULL,
+                  `for_sync` INT NULL DEFAULT 0,
+                  PRIMARY KEY (`schema_id`))";
+
+        if ($this->dbconn->query($sql) === TRUE) {
+            echo "Table 'masynckaiser_schema_targets' exists!\n";
+        } else {
+            die(__FUNCTION__ . " - Error creating table: " . $this->dbconn->error);
+        }
+    }
+
+    //Create the masynckaiser_table_permissions table if it does not exist yet
+    public function createMasyncTablePermissionsTable() {
+        $sql = "CREATE TABLE IF NOT EXISTS `masynckaiser`.`masynckaiser_table_permissions` (
+                  `schema_id` INT NOT NULL AUTO_INCREMENT,
+                  `name` VARCHAR(64) NOT NULL,
+                  `for_sync` INT NULL DEFAULT 0,
+                  PRIMARY KEY (`schema_id`))";
+
+        if ($this->dbconn->query($sql) === TRUE) {
+            echo "Table 'masynckaiser_table_permissions' exists!\n";
+        } else {
+            die(__FUNCTION__ . " - Error creating table: " . $this->dbconn->error);
         }
     }
 
@@ -129,7 +158,7 @@ class MasynckaiserModel {
             fclose($logFile);
 
             //Try to reconnect
-            $this->initDBforCB();
+            $this->initDBforMSK();
         }
     }
 
