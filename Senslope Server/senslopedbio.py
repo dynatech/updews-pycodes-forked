@@ -30,7 +30,7 @@ def SenslopeDBConnect(instance):
             cur = db.cursor()
             return db, cur
         except MySQLdb.OperationalError:
-    	# except IndexError:
+        # except IndexError:
             print '6.',
             time.sleep(2)
             
@@ -83,21 +83,37 @@ def createTable(table_name, type, instance='local'):
 def setReadStatus(read_status,sms_id_list):
     db, cur = SenslopeDBConnect('gsm')
     
-    if len(sms_id_list) <= 0:
-        return
+    print type(sms_id_list)
 
-    query = "update %s.smsinbox set read_status = '%s' where sms_id in (%s) " % (gsmdbinstance.name, read_status, str(sms_id_list)[1:-1].replace("L",""))
+    if type(sms_id_list) is list:
+        if len(sms_id_list) == 0:
+            return
+        else:
+            where_clause = "where sms_id in (%s)" % (str(sms_id_list)[1:-1].replace("L",""))
+    elif type(sms_id_list) is long:
+        where_clause = "where sms_id = %d" % (sms_id_list)
+    else:
+        print ">> Unknown type"        
+    query = "update %s.smsinbox set read_status = '%s' %s" % (gsmdbinstance.name, read_status, where_clause)
+    
     commitToDb(query,"setReadStatus", instance='GSM')
     
 def setSendStatus(send_status,sms_id_list):
     db, cur = SenslopeDBConnect('gsm')
     
-    if len(sms_id_list) <= 0:
-        return
+    if type(sms_id_list) is list:
+        if len(sms_id_list) == 0:
+            return
+        else:
+            where_clause = "where sms_id in (%s)" % (str(sms_id_list)[1:-1].replace("L",""))
+    elif type(sms_id_list) is long:
+        where_clause = "where sms_id = %d" % (sms_id_list)
+    query = "update %s.smsinbox set read_status = '%s' %s" % (gsmdbinstance.name, read_status, where_clause)
+    print query
         
     now = dt.today().strftime("%Y-%m-%d %H:%M:%S")
 
-    query = "update %s.smsoutbox set send_status = '%s', timestamp_sent ='%s' where sms_id in (%s) " % (gsmdbinstance.name, send_status, now, str(sms_id_list)[1:-1].replace("L",""))
+    query = "update %s.smsoutbox set send_status = '%s', timestamp_sent ='%s' %s " % (gsmdbinstance.name, send_status, now, where_clause)
     commitToDb(query,"setSendStatus", instance='GSM')
     
 def getAllSmsFromDb(read_status):

@@ -369,14 +369,14 @@ def ProcessPiezometer(line,sender):
     print 'End of Process Piezometer data'
 
 def ProcessEarthquake(msg):
-    line = msg.data
+    line = msg.data.upper()
     print "Processing earthquake data"
-    print msg.data
+    print line
 
     dbio.createTable('earthquake', 'earthquake')
 
     #find date
-    if re.search("\d{1,2}\w+201[6789]",msg.data):
+    if re.search("\d{1,2}\w+201[6789]",line):
         datestr_init = re.search("\d{1,2}\w+201[6789]",msg.data).group(0)
         pattern = ["%d%B%Y","%d%b%Y"]
         datestr = None
@@ -393,8 +393,8 @@ def ProcessEarthquake(msg):
         return False
 
     #find time
-    if re.search("\d{1,2}[:\.]\d{1,2} *[AP]M",msg.data):
-        timestr = re.search("\d{1,2}[:\.]\d{1,2} *[AP]M",msg.data).group(0)
+    if re.search("\d{1,2}[:\.]\d{1,2} *[AP]M",line):
+        timestr = re.search("\d{1,2}[:\.]\d{1,2} *[AP]M",line).group(0)
         timestr = timestr.replace(" ","").replace(".",":")
         try:
             timestr = dt.strptime(timestr,"%I:%M%p").strftime("%H:%M:00")
@@ -408,64 +408,64 @@ def ProcessEarthquake(msg):
     datetimestr = datestr + ' ' + timestr
     
     #find magnitude
-    if re.search("(?<=M[SB]\=)\d+\.\d+(?= )",msg.data):
-        magstr = re.search("(?<=M[SB]\=)\d+\.\d+(?= )",msg.data).group(0)
+    if re.search("(?<=M[SB]\=)\d+\.\d+(?= )",line):
+        magstr = re.search("(?<=M[SB]\=)\d+\.\d+(?= )",line).group(0)
     else:
         print ">> No magnitude string recognized"
         magstr = 'NULL'
 
     #find depth
-    if re.search("(?<=D\=)\d+(?=K*M)",msg.data):
-        depthstr = re.search("(?<=D\=)\d+(?=K*M)",msg.data).group(0)
+    if re.search("(?<=D\=)\d+(?=K*M)",line):
+        depthstr = re.search("(?<=D\=)\d+(?=K*M)",line).group(0)
     else:
         print ">> No depth string recognized"
         depthstr = 'NULL'
 
     #find latitude
-    if re.search("\d+\.\d+(?=N)",msg.data):
-        latstr = re.search("\d+\.\d+(?=N)",msg.data).group(0)
+    if re.search("\d+\.\d+(?=N)",line):
+        latstr = re.search("\d+\.\d+(?=N)",line).group(0)
     else:
         print ">> No latitude string recognized"
         latstr = 'NULL'
 
     #find longitude
-    if re.search("\d+\.\d+(?=E)",msg.data):
-        longstr = re.search("\d+\.\d+(?=E)",msg.data).group(0)
+    if re.search("\d+\.\d+(?=E)",line):
+        longstr = re.search("\d+\.\d+(?=E)",line).group(0)
     else:
         print ">> No longitude string recognized"
         longstr = 'NULL'
 
     #find epicenter distance
-    if re.search("(?<=OR )\d+(?=KM)",msg.data):
-        diststr = re.search("(?<=OR )\d+(?=KM)",msg.data).group(0)
+    if re.search("(?<=OR )\d+(?=KM)",line):
+        diststr = re.search("(?<=OR )\d+(?=KM)",line).group(0)
     else:
         print ">> No distance string recognized"
         diststr = 'NULL'
 
     # find heading
-    if re.search("[NS]\d+[EW]",msg.data):
-        headstr = re.search("[NS]\d+[EW]",msg.data).group(0)
+    if re.search("[NS]\d+[EW]",line):
+        headstr = re.search("[NS]\d+[EW]",line).group(0)
     else:
         print ">> No heading string recognized"
         headstr = 'NULL'
 
     # find Municipality
-    if re.search("(?<=OF )[A-Z ]+(?= \()",msg.data):
-        munistr = re.search("(?<=OF )[A-Z ]+(?= \()",msg.data).group(0)
+    if re.search("(?<=OF )[A-Z ]+(?= \()",line):
+        munistr = re.search("(?<=OF )[A-Z ]+(?= \()",line).group(0)
     else:
         print ">> No municipality string recognized"
         munistr = 'NULL'
 
     # find province
-    if re.search("(?<=\()[A-Z ]+(?=\))",msg.data):
-        provistr = re.search("(?<=\()[A-Z ]+(?=\))",msg.data).group(0)
+    if re.search("(?<=\()[A-Z ]+(?=\))",line):
+        provistr = re.search("(?<=\()[A-Z ]+(?=\))",line).group(0)
     else:
         print ">> No province string recognized"
         provistr = 'NULL'
 
     # find issuer
-    if re.search("(?<=\<)[A-Z]+(?=\>)",msg.data):
-        issuerstr = re.search("(?<=\<)[A-Z]+(?=\>)",msg.data).group(0)
+    if re.search("(?<=\<)[A-Z]+(?=\>)",line):
+        issuerstr = re.search("(?<=\<)[A-Z]+(?=\>)",line).group(0)
     else:
         print ">> No issuer string recognized"
         issuerstr = 'NULL'
@@ -478,7 +478,8 @@ def ProcessEarthquake(msg):
 
     dbio.commitToDb(query, 'earthquake')
 
-    subprocess.Popen(["python",cfg.config().fileio.eqprocfile])
+    # subprocess.Popen(["python",cfg.config().fileio.eqprocfile])
+    p = subprocess.Popen("python "+cfg.config().fileio.eqprocfile, stdout=subprocess.PIPE, shell=True, stderr=subprocess.STDOUT)
 
     return True
 
@@ -720,7 +721,7 @@ def ProcessAllMessages(allmsgs,network):
             elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*.*",msg.data):
                msg.data = PreProcessColumnV1(msg.data)
                ProcessColumn(msg.data,msg.dt,msg.simnum)
-            elif re.search("EQINFO",msg.data):
+            elif re.search("EQINFO",msg.data.upper()):
                 isMsgProcSuccess = ProcessEarthquake(msg)
             elif re.search("^PSIR ",msg.data.upper()):
                 isMsgProcSuccess = qsi.ProcessServerInfoRequest(msg)
