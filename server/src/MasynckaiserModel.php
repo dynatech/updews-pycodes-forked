@@ -23,8 +23,8 @@ class MasynckaiserModel {
 
         // Parse with sections
         // $config_array = parse_ini_file(dirname(__FILE__) . "/../config/config.ini", true);
-        $config_array = parse_ini_file(getcwd() . "/config.ini");
-        print_r($config_array);
+        // $config_array = parse_ini_file(getcwd() . "/config.ini");
+        // print_r($config_array);
 
         //Create a DB Connection
         $host = "localhost";
@@ -100,6 +100,28 @@ class MasynckaiserModel {
         } else {
             die(__FUNCTION__ . " - Error creating table: " . $this->dbconn->error);
         }
+    }
+
+    //Run Any Kind of Query
+    public function runQuery($query) {
+        $escQuery = $db->escape_string($query);
+
+        // Make sure the connection is still alive, if not, try to reconnect 
+        $this->checkConnectionDB($escQuery);
+
+        $result = $this->dbconn->query($escQuery);
+        $array = $result->fetch_all(MYSQLI_ASSOC);
+
+        return $array;
+    }
+
+    //Read Queries only
+    public function readFromServer($query) {
+        //TODO: Apply regex in order to filter out malicious queries that are outside of
+        //      the "READ" functionality
+
+        $array = $this->runQuery($query);
+        print_r($array);
     }
 
     public function filterSpecialCharacters($message) {
