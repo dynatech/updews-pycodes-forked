@@ -59,7 +59,7 @@ class MasynckaiserModel {
     public function createMSKDB() {
         $sql = "CREATE DATABASE IF NOT EXISTS masynckaiser";
         if ($this->dbconn->query($sql) === TRUE) {
-            echo "Database created successfully\n";
+            echo "Database 'masynckaiser' exists!\n";
         } else {
             die(__FUNCTION__ . " - Error creating database: " . $this->dbconn->error);
         }
@@ -83,51 +83,22 @@ class MasynckaiserModel {
     //Create the masynckaiser_table_permissions table if it does not exist yet
     public function createMasyncTablePermissionsTable() {
         $sql = "CREATE TABLE IF NOT EXISTS `masynckaiser`.`masynckaiser_table_permissions` (
-                  `schema_id` INT NOT NULL AUTO_INCREMENT,
-                  `name` VARCHAR(64) NOT NULL,
-                  `for_sync` INT NULL DEFAULT 0,
-                  PRIMARY KEY (`schema_id`))";
+                  `table_id` INT NOT NULL AUTO_INCREMENT,
+                  `schema_id` INT NOT NULL,
+                  `name` VARCHAR(45) NOT NULL,
+                  `sync_direction` VARCHAR(45) NOT NULL DEFAULT 0,
+                  PRIMARY KEY (`table_id`),
+                  INDEX `schema_id_idx` (`schema_id` ASC),
+                  CONSTRAINT `schema_id`
+                    FOREIGN KEY (`schema_id`)
+                    REFERENCES `masynckaiser`.`masynckaiser_schema_targets` (`schema_id`)
+                    ON DELETE CASCADE
+                    ON UPDATE CASCADE)";
 
         if ($this->dbconn->query($sql) === TRUE) {
             echo "Table 'masynckaiser_table_permissions' exists!\n";
         } else {
             die(__FUNCTION__ . " - Error creating table: " . $this->dbconn->error);
-        }
-    }
-
-    //Create the smsinbox table if it does not exist yet
-    public function createSMSInboxTable() {
-        $sql = "CREATE TABLE IF NOT EXISTS `senslopedb`.`smsinbox` (
-                  `sms_id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
-                  `timestamp` DATETIME NULL,
-                  `sim_num` VARCHAR(20) NULL,
-                  `sms_msg` VARCHAR(1023) NULL,
-                  `read_status` VARCHAR(20) NULL,
-                  `web_flag` VARCHAR(2) NOT NULL DEFAULT 'WU',
-                  PRIMARY KEY (`sms_id`))";
-
-        if ($this->dbconn->query($sql) === TRUE) {
-            echo "Table 'smsinbox' exists!\n";
-        } else {
-            die("Error creating table 'smsinbox': " . $this->dbconn->error);
-        }
-    }
-
-    //Create the smsoutbox table if it does not exist yet
-    public function createSMSOutboxTable() {
-        $sql = "CREATE TABLE IF NOT EXISTS `senslopedb`.`smsoutbox` (
-                  `sms_id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
-                  `timestamp_written` DATETIME NULL,
-                  `timestamp_sent` DATETIME NULL,
-                  `recepients` VARCHAR(1023) NULL,
-                  `sms_msg` VARCHAR(1023) NULL,
-                  `send_status` VARCHAR(20) NOT NULL DEFAULT 'UNSENT',
-                  PRIMARY KEY (`sms_id`))";
-
-        if ($this->dbconn->query($sql) === TRUE) {
-            echo "Table 'smsoutbox' exists!\n";
-        } else {
-            die("Error creating table 'smsoutbox': " . $this->dbconn->error);
         }
     }
 
