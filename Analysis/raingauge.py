@@ -121,7 +121,7 @@ def NearRGdf(df):
     return df
 
 def main():
-    RGdf = q.GetRainProps()[['name', 'max_rain_2year', 'rain_senslope', 'rain_arq']]
+    RGdf = q.GetRainProps('rain_props')[['r_id','name', 'max_rain_2year', 'rain_senslope', 'rain_arq']]
     siteRGdf = RGdf.groupby('name')
     RG = siteRGdf.apply(NearRGdf)
     return RG
@@ -129,7 +129,7 @@ def main():
 if __name__ == "__main__":
     start = datetime.now()
     
-    updateDB()
+#    updateDB()
     main()
 
     print 'runtime =', datetime.now() - start
