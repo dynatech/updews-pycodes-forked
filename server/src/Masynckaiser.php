@@ -2,11 +2,16 @@
 namespace MyApp;
 use Ratchet\MessageComponentInterface;
 use Ratchet\ConnectionInterface;
+use MyApp\MasynckaiserModel;
 
 class Masynckaiser implements MessageComponentInterface {
     protected $clients;
 
     public function __construct() {
+        printf("Initializing %s::%s...\n", __CLASS__, __FUNCTION__);
+
+        //Load the Chat Message Model
+        $this->masynckaiserModel = new MasynckaiserModel;
         $this->clients = new \SplObjectStorage;
     }
 
