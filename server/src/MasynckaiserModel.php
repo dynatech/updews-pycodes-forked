@@ -126,12 +126,20 @@ class MasynckaiserModel {
         $this->checkConnectionDB($query);
 
         $result = $this->dbconn->query($query);
-        $results_array = array();
-        while ($row = $result->fetch_assoc()) {
-            $results_array[] = $row;
-        }
+        if (!$result) {
+            $error_string = __FUNCTION__ . " Error: " . $this->dbconn->error . "\n";
+            echo $error_string;
+            
+            return $error_string;
+        } 
+        else {
+            $results_array = array();
+            while ($row = $result->fetch_assoc()) {
+                $results_array[] = $row;
+            }
 
-        return $results_array;
+            return $results_array;
+        }
     }
 
     //Read Queries only
