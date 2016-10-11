@@ -14,7 +14,7 @@ import pandas as pd
 import numpy as np
 
 
-def cml_noise_profiling(xz,xy,excludenodelist):
+def cml_noise_profiling(xz,xy,excludenodelist,cmldisp_from):
 #==============================================================================
 #     description
 #     determines peak/s in data distribution to characterize noise, 
@@ -40,14 +40,16 @@ def cml_noise_profiling(xz,xy,excludenodelist):
     
     
     for m in xz.columns:
-        n=len(xz.columns)+1-m
-        
+        if cmldisp_from =='bottom':
+            n=len(xz.columns)+1-m
+        else:
+            n=m
+            
         if n in excludenodelist:
             continue
         else:    
         
             #processing XZ axis
-                       
             x=xz[m].values
             x=x[np.isfinite(x)]
             try:            
@@ -55,18 +57,15 @@ def cml_noise_profiling(xz,xy,excludenodelist):
                 xi=np.linspace(x.min()-2*(x.max()-x.min()),x.max()+2*(x.max()-x.min()),1000)
                 yi=kde(xi)
                 xm,ym=find_spline_maxima(xi,yi)
-                
                 #assigning maximum and minimum positions of xz            
                 try:
                     #multimodal                
                     xz_maxlist[n]=xm.max()
                     xz_minlist[n]=xm.min()
-                   
                 except:
                     #unimodal
                     xz_maxlist[n]=xm
                     xz_minlist[n]=xm
-                   
             except:
                 #no data for current node or NaN present in current node
                 try:
@@ -80,24 +79,20 @@ def cml_noise_profiling(xz,xy,excludenodelist):
             #processing XY axis
             x=xy[m].values
             x=x[np.isfinite(x)]
-            
             try:            
                 kde=gaussian_kde(x)
                 xi=np.linspace(x.min()-2*(x.max()-x.min()),x.max()+2*(x.max()-x.min()),1000)
                 yi=kde(xi)
                 xm,ym=find_spline_maxima(xi,yi)
-    
                 #assigning maximum and minimum positions of xy            
                 try:
                     #multimodal                
                     xy_maxlist[n]=xm.max()
                     xy_minlist[n]=xm.min()
-                   
                 except:
                     #unimodal
                     xy_maxlist[n]=xm
                     xy_minlist[n]=xm
-                
             except:
                 #no data for current node or NaN present in current node
                 try:
@@ -108,14 +103,16 @@ def cml_noise_profiling(xz,xy,excludenodelist):
                     xy_maxlist[n]=0
                     xy_minlist[n]=0
             
-
     xz_maxlist_cml=xz_maxlist.cumsum()
     xz_minlist_cml=xz_minlist.cumsum() 
     xy_maxlist_cml=xy_maxlist.cumsum()
-    xy_minlist_cml=xy_minlist.cumsum()       
-      
-    return  xz_maxlist[::-1], xz_minlist[::-1],xy_maxlist[::-1], xy_minlist[::-1], xz_maxlist_cml, xz_minlist_cml, xy_maxlist_cml,xy_minlist_cml 
+    xy_minlist_cml=xy_minlist.cumsum()    
     
+    if cmldisp_from=='bottom':
+        return  xz_maxlist[::-1], xz_minlist[::-1],xy_maxlist[::-1], xy_minlist[::-1], xz_maxlist_cml[::-1], xz_minlist_cml[::-1], xy_maxlist_cml[::-1],xy_minlist_cml[::-1] 
+    else:
+        return  xz_maxlist, xz_minlist,xy_maxlist, xy_minlist, xz_maxlist_cml, xz_minlist_cml, xy_maxlist_cml,xy_minlist_cml
+
 def find_spline_maxima(xi,yi,min_normpeak=0.05,min_area_k=0.05):
 #==============================================================================
 #     description
