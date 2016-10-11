@@ -49,18 +49,19 @@ class Masynckaiser implements MessageComponentInterface {
                 //      be utilized for masynckaiser
                 echo "Server to Client Data Direction\n";
 
-                // TODO: Very important! Since the direction is from server to client
-                //      only... You should reject queries with words like the ff:
-                //          - INSERT
-                //          - DELETE
-                //          - UPDATE
-                //          - DROP
-                //          - CREATE
+                if (strcasecmp($action, "READ") == 0) {
+                    echo __FUNCTION__ . ": READ \n";
 
-                if ($action == "SHOW") {
-                    # TODO: Needs schema and table information
-                }
-                elseif ($action == "SELECT") {
+                    // TODO: Very important! Since the direction is from server to client
+                    //      only... You should reject queries with words like the ff:
+                    //          - INSERT
+                    //          - DELETE
+                    //          - UPDATE
+                    //          - DROP
+                    //          - CREATE
+
+                    # TODO: Needs schema information
+                    $schema = isset($decodedText->schema) ? $decodedText->schema : "masynckaiser";
                     $query = isset($decodedText->query) ? $decodedText->query : NULL;
 
                     if ($query) {
@@ -68,11 +69,9 @@ class Masynckaiser implements MessageComponentInterface {
                         //      and table that the client wishes to see
 
                         // TODO: Execute the query request from the client
+                        $this->MSKModel->connectToSchema($schema);
                         $this->MSKModel->readFromServer($query);
                     }
-                }
-                elseif ($action == "DESC") {
-                    # TODO: Needs schema and table information
                 }
                 else {
                     echo "Unknown Action\n";
@@ -80,7 +79,7 @@ class Masynckaiser implements MessageComponentInterface {
 
             }
             elseif ($dir == CTOS) {
-                // This direction will allow a websocket client to write data on the
+                // TODO: This direction will allow a websocket client to write data on the
                 //      websocket server's database. It is critical to screen properly
                 //      the name of the client making the request.
 

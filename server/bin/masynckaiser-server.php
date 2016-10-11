@@ -12,7 +12,7 @@ use MyApp\Masynckaiser;
                 new Masynckaiser()
             )
         ),
-        5060
+        5055
     );
 
     $server->run();

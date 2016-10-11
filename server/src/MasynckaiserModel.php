@@ -46,7 +46,21 @@ class MasynckaiserModel {
         $this->createMasyncTablePermissionsTable();
     }
 
-    //Connect to senslopedb
+    //Connect to any schema
+    public function connectToSchema($schema = NULL) {
+        if ($schema) {
+            $success = mysqli_select_db($this->dbconn, $schema);
+
+            if (!$success) {
+                echo __FUNCTION__ . ": can't connect to " . $schema . "\n";
+            }
+        } 
+        else {
+            echo __FUNCTION__ . ": Warning: No schema selected\n";
+        }
+    }
+
+    //Connect to masynckaiser
     public function connectMSKDB() {
         $success = mysqli_select_db($this->dbconn, "masynckaiser");
 
@@ -104,15 +118,20 @@ class MasynckaiserModel {
 
     //Run Any Kind of Query
     public function runQuery($query) {
-        $escQuery = $db->escape_string($query);
+        $escQuery = $this->dbconn->escape_string($query);
+        echo __FUNCTION__ . " Raw Query: " . $query . "\n";
+        echo __FUNCTION__ . " Escaped Query: " . $escQuery . "\n";
 
         // Make sure the connection is still alive, if not, try to reconnect 
-        $this->checkConnectionDB($escQuery);
+        $this->checkConnectionDB($query);
 
-        $result = $this->dbconn->query($escQuery);
-        $array = $result->fetch_all(MYSQLI_ASSOC);
+        $result = $this->dbconn->query($query);
+        $results_array = array();
+        while ($row = $result->fetch_assoc()) {
+            $results_array[] = $row;
+        }
 
-        return $array;
+        return $results_array;
     }
 
     //Read Queries only
@@ -121,7 +140,8 @@ class MasynckaiserModel {
         //      the "READ" functionality
 
         $array = $this->runQuery($query);
-        print_r($array);
+        // print_r($array);
+        echo json_encode($array);
     }
 
     public function filterSpecialCharacters($message) {
