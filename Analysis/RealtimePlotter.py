@@ -93,9 +93,6 @@ def plot_column_positions(df,colname,end, show_part_legend, config):
         dfts=df.groupby('ts')
         dfts.apply(subplot_colpos, ax_xz=ax_xz, ax_xy=ax_xy, show_part_legend=show_part_legend, config=config, colposTS=colposTS)
         
-#        for i in range(len(set(df.ts))):
-#            subplot_colpos(df.loc[df.ts == colposTS[i]], ax_xz=ax_xz, ax_xy=ax_xy, show_part_legend=show_part_legend, i=i, config=config)
-
         for tick in ax_xz.xaxis.get_minor_ticks():
             tick.label.set_rotation('vertical')
             tick.label.set_fontsize(10)
@@ -416,14 +413,11 @@ def main(monitoring, window, config, plotvel_start='', plotvel_end='', plotvel=T
     seg_len = monitoring.colprops.seglen
     monitoring_vel = monitoring.vel.reset_index()[['ts', 'id', 'xz', 'xy', 'vel_xz', 'vel_xy']]
     monitoring_vel = monitoring_vel.loc[(monitoring_vel.ts >= window.start)&(monitoring_vel.ts <= window.end)]
-    
-    try:
-        output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
-    
-        if not os.path.exists(output_path+config.io.outputfilepath+'realtime/'):
-            os.makedirs(output_path+config.io.outputfilepath+'realtime/')
-    except:
-        pass
+
+    output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
+
+    if not os.path.exists(output_path+config.io.outputfilepath+'realtime/'):
+        os.makedirs(output_path+config.io.outputfilepath+'realtime/')
 
     # noise envelope
     max_min_df, max_min_cml = err.cml_noise_profiling(monitoring_vel)
@@ -691,8 +685,91 @@ def web_main(name, end=datetime.now(), start='2016-01-01 00:00:00', col_pos_inte
     config.io.num_col_pos = int((window.end - window.start).days/col_pos_interval + 1)    
     
     monitoring = g.genproc(col[0], window, config)
-    main(monitoring, window, config, plotvel=True, plotvel_end=window.end, plotvel_start=window.start)
 
+    num_nodes = monitoring.colprops.nos
+    seg_len = monitoring.colprops.seglen
+    monitoring_vel = monitoring.vel.reset_index()[['ts', 'id', 'xz', 'xy', 'vel_xz', 'vel_xy']]
+    monitoring_vel = monitoring_vel.loc[(monitoring_vel.ts >= window.start)&(monitoring_vel.ts <= window.end)]
+    
+    # noise envelope
+    max_min_df, max_min_cml = err.cml_noise_profiling(monitoring_vel)
+        
+    # compute column position
+    colposdf = compute_colpos(window, config, monitoring_vel, num_nodes, seg_len)
+    
+    colposdf_json = colposdf.to_json(orient="records", date_format="iso")
+    with open('colpos.json', 'w') as w:
+        w.write(colposdf_json)
+
+#    #############################
+#    colname = monitoring.colprops.name
+#    show_part_legend = False
+#    plot_column_positions(colposdf,colname,window.end, show_part_legend, config=config)
+#    #############################
+    
+    # displacement plot offset
+    xzd_plotoffset = plotoffset(monitoring_vel, disp_offset = 'mean')
+    
+    # defining cumulative (surface) displacement
+    cs_df = cum_surf(monitoring_vel, xzd_plotoffset, num_nodes)
+
+    csdf_json = cs_df.to_json(orient="records", date_format="iso")
+    with open('cumsurf.json', 'w') as w:
+        w.write(csdf_json)
+    
+    #creating displacement noise envelope
+    noise_df = noise_env(monitoring_vel, max_min_df, window, num_nodes, xzd_plotoffset)
+
+    noisedf_json = noise_df.to_json(orient="records", date_format="iso")
+    with open('noiseenv.json', 'w') as w:
+        w.write(noisedf_json)
+
+    #zeroing and offseting xz,xy
+    df0off = disp0off(monitoring_vel, window, xzd_plotoffset, num_nodes)
+
+    df0off_json = df0off.to_json(orient="records", date_format="iso")
+    with open('disp.json', 'w') as w:
+        w.write(df0off_json)
+
+    #velplots
+    vel = monitoring_vel.loc[(monitoring_vel.ts >= window.start) & (monitoring_vel.ts <= window.end)]
+    #vel_xz
+    vel_xz = vel[['ts', 'vel_xz', 'id']]
+    velplot_xz,L2_xz,L3_xz = vel_classify(vel_xz, config)
+    #vel_xy
+    vel_xy = vel[['ts', 'vel_xy', 'id']]
+    velplot_xy,L2_xy,L3_xy = vel_classify(vel_xy, config)
+
+#    #############################
+#    colname = monitoring.colprops.name
+#    velplot = velplot_xz, velplot_xy, L2_xz, L2_xy, L3_xz, L3_xy
+#    plotvel = True
+#    plot_disp_vel(noise_df, df0off, cs_df, colname, window, config, plotvel, xzd_plotoffset, num_nodes, velplot)
+#    #############################
+
+    velxz_json = velplot_xz.to_json(orient="records", date_format="iso")
+    with open('vel_xz.json', 'w') as w:
+        w.write(velxz_json)
+
+    velxy_json = velplot_xy.to_json(orient="records", date_format="iso")
+    with open('vel_xy.json', 'w') as w:
+        w.write(velxy_json)
+
+    L2xz_json = L2_xz.to_json(orient="records", date_format="iso")
+    with open('L2_xz.json', 'w') as w:
+        w.write(L2xz_json)
+
+    L2xy_json = L2_xy.to_json(orient="records", date_format="iso")
+    with open('L2_xy.json', 'w') as w:
+        w.write(L2xy_json)
+
+    L3xz_json = L3_xz.to_json(orient="records", date_format="iso")
+    with open('L3_xz.json', 'w') as w:
+        w.write(L3xz_json)
+
+    L3xy_json = L3_xy.to_json(orient="records", date_format="iso")
+    with open('L3_xy.json', 'w') as w:
+        w.write(L3xy_json)
 
 ##########################################################
 if __name__ == "__main__":
