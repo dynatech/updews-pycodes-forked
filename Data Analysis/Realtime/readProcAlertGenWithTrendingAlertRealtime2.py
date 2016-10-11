@@ -166,7 +166,7 @@ def check_increasing(a):
     return 0
 
 
-def compute_col_pos(xz,xy,col_pos_end, col_pos_interval, col_pos_number, column_fix='bottom'):
+def compute_col_pos(xz,xy,col_pos_end, col_pos_interval, col_pos_number, cmldisp_from='bottom'):
 
     ##DESCRIPTION:
     ##returns rounded values of cumulative displacements
@@ -185,13 +185,13 @@ def compute_col_pos(xz,xy,col_pos_end, col_pos_interval, col_pos_number, column_
     x=pd.DataFrame(data=None,index=xz.index)
     num_nodes=len(xz.columns.tolist())
     for n in np.arange(1,1+num_nodes):
-        x[n]=gf.x_from_xzxy(seg_len, xz.loc[:,n].values, xy.loc[:,n].values)
+        x[n]=gf.x_from_xzxy(seg_len, xz.loc[:,n].values/1000., xy.loc[:,n].values/1000.)
         
     #getting dates for column positions
     colposdates=pd.date_range(end=col_pos_end, freq=col_pos_interval,periods=col_pos_number, name='ts',closed=None)
 
     
-    if column_fix=='bottom':      
+    if cmldisp_from=='bottom':      
         #reversing column order
         revcols=xz.columns.tolist()[::-1]
         xz=xz[revcols]
@@ -211,19 +211,20 @@ def compute_col_pos(xz,xy,col_pos_end, col_pos_interval, col_pos_number, column_
     cs_xz=cs_xz.set_index(colposdates)
     cs_xy=cs_xy.set_index(colposdates)
     
-    if column_fix=='bottom':     
+    if cmldisp_from=='bottom':     
     
         #returning to original column order
         cols=cs_x.columns.tolist()[::-1]
         cs_xz=cs_xz[cols]
         cs_xy=cs_xy[cols]
         cs_x=cs_x[cols]
+        
        
         #appending 0 values to bottom of column (last node)
         cs_x[num_nodes+1]=0        
         cs_xz[num_nodes+1]=0
         cs_xy[num_nodes+1]=0
-        cs_x=cs_x.sub(cs_x.iloc[:,-1],axis=0)
+        cs_x=cs_x.subtract(cs_x.iloc[:,0],axis=0)
         
         
     else:
@@ -236,7 +237,7 @@ def compute_col_pos(xz,xy,col_pos_end, col_pos_interval, col_pos_number, column_
         cs_x=-1*cs_x[reord_cols]
         
     
-    return np.round(cs_x,4), np.round(cs_xz,4), np.round(cs_xy,4)
+    return np.round(cs_x,2), np.round(cs_xz,1), np.round(cs_xy,1)
     
 def compute_node_inst_vel(xz,xy,roll_window_numpts): 
 
@@ -380,7 +381,7 @@ def nonrepeat_colors(ax,NUM_COLORS,color='gist_rainbow'):
     return ax
     
     
-def plot_column_positions(colname,x,xz,xy,convert_h_to='mm'):
+def plot_column_positions(colname,x,xz,xy):
 #==============================================================================
 # 
 #     DESCRIPTION
@@ -393,15 +394,7 @@ def plot_column_positions(colname,x,xz,xy,convert_h_to='mm'):
 #     xy; dataframe; horizontal linear displacements along the planes defined by xa-ya
 #==============================================================================
 
-    if convert_h_to=='mm':
-        xz=xz*1000
-        xy=xy*1000
-    elif convert_h_to=='cm':
-        xz=xz*100
-        xy=xy*100
-    else:
-        convert_h_to=='m'
-
+  
     try:
         fig=plt.figure()
         ax_xz=fig.add_subplot(121)
@@ -416,13 +409,13 @@ def plot_column_positions(colname,x,xz,xy,convert_h_to='mm'):
             curax=ax_xz
             curcolpos_xz=xz[(xz.index==i)].values
             curax.plot(curcolpos_xz[0],curcolpos_x[0],'.-')
-            curax.set_xlabel('horizontal displacement,\n downslope ('+convert_h_to+')')
+            curax.set_xlabel('horizontal displacement,\n downslope (mm)')
             curax.set_ylabel('depth, m')
             
             curax=ax_xy
             curcolpos_xy=xy[(xy.index==i)].values
             curax.plot(curcolpos_xy[0],curcolpos_x[0],'.-', label=i)
-            curax.set_xlabel('horizontal displacement,\n across slope ('+convert_h_to+')')
+            curax.set_xlabel('horizontal displacement,\n across slope (mm)')
             
 
         for tick in ax_xz.xaxis.get_minor_ticks():
@@ -464,8 +457,8 @@ def vel_classify(vel):
         L3mask=(vel.abs()>T_velL3) 
         
         L2=velplot[L2mask]
-        L3=velplot[L3mask]
-                
+        L3=velplot[L3mask]                
+        
         return velplot,L2,L3
     except:
         print "ERROR computing velocity classification ###################################"
@@ -473,7 +466,7 @@ def vel_classify(vel):
     
 def plot_disp_vel(colname, xz,xy,xz_vel,xy_vel,excludenodelist,xz_tr,xy_tr,
                   xz_mx=0,xz_mn=0,xy_mx=0,xy_mn=0, 
-                  disp_offset='mean',disp_zero=True):
+                  cmldisp_from='bottom',disp_offset='mean',disp_zero=True):
 #==============================================================================
 # 
 #     DESCRIPTION:
@@ -486,6 +479,25 @@ def plot_disp_vel(colname, xz,xy,xz_vel,xy_vel,excludenodelist,xz_tr,xy_tr,
 #     xy_vel; array of floats; velocity along the planes defined by xa-ya
 #==============================================================================
 
+#     slicing noise arrays based on cmldisp_from
+    if cmldisp_from=='top':
+        xz_mx=xz_mx[1:]
+        xz_mn=xz_mn[1:]
+        xy_mx=xy_mx[1:]
+        xy_mn=xy_mn[1:]
+    else:
+        xz_mx=xz_mx[:-1]
+        xz_mn=xz_mn[:-1]
+        xy_mx=xy_mx[:-1]
+        xy_mn=xy_mn[:-1]
+    
+    print cmldisp_from 
+    for q in xz.columns:
+        print q, xz[q].max(),xz_mx[q-1], xz[q].min(),xz_mn[q-1]
+        
+        
+    
+   
    
   
     #setting up zeroing and offseting parameters
@@ -502,7 +514,7 @@ def plot_disp_vel(colname, xz,xy,xz_vel,xy_vel,excludenodelist,xz_tr,xy_tr,
     else:
         xzd_plotoffset=0
         
-    # defining cumulative (surface) displacement    
+    # defining cumulative displacement at cmldisp_from    
     cs_xz=xz.sum(axis=1)   
     cs_xy=xy.sum(axis=1)
     cs_xz=cs_xz-cs_xz.values[0]+xzd_plotoffset*(len(xz.columns))
@@ -512,45 +524,48 @@ def plot_disp_vel(colname, xz,xy,xz_vel,xy_vel,excludenodelist,xz_tr,xy_tr,
     #creating noise envelope
 #    check if xz_mx, xz_mn, xy_mx, xy_mn are all arrays
     try:
+        #check if xz_mx...are all arrays        
         len(xz_mx)
         len(xz_mn)
         len(xy_mx)
         len(xy_mn)
     except:
-        xz_mx=np.ones(len(xz.columns)+1)*np.nan
-        xz_mn=np.ones(len(xz.columns)+1)*np.nan
-        xy_mx=np.ones(len(xz.columns)+1)*np.nan
-        xy_mn=np.ones(len(xz.columns)+1)*np.nan
+        #defining variables as array of NaN's        
+        xz_mx=np.ones(len(xz.columns))*np.nan
+        xz_mn=np.ones(len(xz.columns))*np.nan
+        xy_mx=np.ones(len(xz.columns))*np.nan
+        xy_mn=np.ones(len(xz.columns))*np.nan
         
     try:
+        #checking if xz_mx==xz_mn (unimodal)
         print np.where(xz_mx==xz_mn).all()
-        xz_mx=np.ones(len(xz.columns)+1)*np.nan
-        xz_mn=np.ones(len(xz.columns)+1)*np.nan
+        xz_mx=np.ones(len(xz.columns))*np.nan
+        xz_mn=np.ones(len(xz.columns))*np.nan
         print xz_mx
         
     except:
         if disp_zero:
             xz_first_row=xz.loc[(xz.index==xz.index[0])].values.squeeze()
-            xz_mx0=np.subtract(xz_mx[:-1],xz_first_row)
-            xz_mn0=np.subtract(xz_mn[:-1],xz_first_row)
+            xz_mx0=np.subtract(xz_mx,xz_first_row)
+            xz_mn0=np.subtract(xz_mn,xz_first_row)
         else:
-            xz_mx0=xz_mx[:-1]
-            xz_mn0=xz_mn[:-1]
+            xz_mx0=xz_mx
+            xz_mn0=xz_mn
 
     try:
         print np.where(xy_mx==xy_mn).all()
-        xy_mx=np.ones(len(xz.columns)+1)*np.nan
-        xy_mn=np.ones(len(xz.columns)+1)*np.nan
+        xy_mx=np.ones(len(xz.columns))*np.nan
+        xy_mn=np.ones(len(xz.columns))*np.nan
         print xy_mx
         
     except:
         if disp_zero:
             xy_first_row=xy.loc[(xy.index==xy.index[0])].values.squeeze()
-            xy_mx0=np.subtract(xy_mx[:-1],xy_first_row)
-            xy_mn0=np.subtract(xy_mn[:-1],xy_first_row)
+            xy_mx0=np.subtract(xy_mx,xy_first_row)
+            xy_mn0=np.subtract(xy_mn,xy_first_row)
         else:
-            xy_mx0=xy_mx[:-1]
-            xy_mn0=xy_mn[:-1]
+            xy_mx0=xy_mx
+            xy_mn0=xy_mn
     
     xz_u=pd.DataFrame(index=xz.index)
     xz_l=pd.DataFrame(index=xz.index)
@@ -588,6 +603,10 @@ def plot_disp_vel(colname, xz,xy,xz_vel,xy_vel,excludenodelist,xz_tr,xy_tr,
     else:
         xz=df_add_offset_col(xz,xzd_plotoffset)
         xy=df_add_offset_col(xy,xzd_plotoffset)
+        
+    print cmldisp_from 
+    for q in xz.columns:
+        print q, xz[q].max(),xz_u[q].values[0], xz[q].min(),xz_l[q].values[0]
     
     try:
         fig=plt.figure()
@@ -620,8 +639,8 @@ def plot_disp_vel(colname, xz,xy,xz_vel,xy_vel,excludenodelist,xz_tr,xy_tr,
         xz.plot(ax=curax,legend=False)
         xz_u.plot(ax=curax,ls=':',legend=False)
         xz_l.plot(ax=curax,ls=':',legend=False)
-        curax.set_title('3-day displacement\n XZ axis',fontsize='small')
-        curax.set_ylabel('displacement scale, m', fontsize='small')
+        curax.set_title('displacement\n XZ axis',fontsize='small')
+        curax.set_ylabel('displacement scale, mm', fontsize='small')
         y = xz.iloc[0].values
         x = xz.index[0]
         z = xz.columns
@@ -644,7 +663,7 @@ def plot_disp_vel(colname, xz,xy,xz_vel,xy_vel,excludenodelist,xz_tr,xy_tr,
         xy.plot(ax=curax,legend=False)
         xy_u.plot(ax=curax,ls=':',legend=False)
         xy_l.plot(ax=curax,ls=':',legend=False)
-        curax.set_title('3-day displacement\n XY axis',fontsize='small')
+        curax.set_title('displacement\n XY axis',fontsize='small')
         y = xy.iloc[0].values
         x = xy.index[0]
         z = xy.columns
@@ -928,9 +947,12 @@ for s in sensorlist:
     excludenodelist=[]
 
     #user-defined setting as to how to fix the column (top or bottom node)
-    column_fix='top'
-    if column_fix=='top':mult=-1
-    else: mult=1         
+    cmldisp_from='bottom'
+    if cmldisp_from=='top':mult=-1
+    else: mult=1
+
+    #user-defined setting for plot units
+    convert_h_to='mm'         
 
 
     # list of working nodes     
@@ -950,18 +972,28 @@ for s in sensorlist:
     xz_series_list,xy_series_list = create_series_list(proc_monitoring,monwin,colname,num_nodes)
     
     # create xz,xy dataframe for error analysis, and analyze noise of unsmoothed data and the effect on column position    
-    xz=mult*create_fill_smooth_df(xz_series_list,num_nodes,monwin, roll_window_numpts,0,0)[0]
-    xy=mult*create_fill_smooth_df(xy_series_list,num_nodes,monwin, roll_window_numpts,0,0)[0] 
-    xz_mx,xz_mn,xy_mx,xy_mn, xz_mxc, xz_mnc, xy_mxc,xy_mnc=err.cml_noise_profiling(xz,xy,excludenodelist)
+    xz=1000.*mult*create_fill_smooth_df(xz_series_list,num_nodes,monwin, roll_window_numpts,0,0)[0]
+    xy=1000.*mult*create_fill_smooth_df(xy_series_list,num_nodes,monwin, roll_window_numpts,0,0)[0] 
+    xz_mx,xz_mn,xy_mx,xy_mn, xz_mxc, xz_mnc, xy_mxc,xy_mnc=err.cml_noise_profiling(xz,xy,excludenodelist,cmldisp_from)
 
     # create, fill and smooth dataframes from series lists
     xz,hasRawValue=create_fill_smooth_df(xz_series_list,num_nodes,monwin, roll_window_numpts,to_fill,to_smooth)
     xy=create_fill_smooth_df(xy_series_list,num_nodes,monwin, roll_window_numpts,to_fill,to_smooth)[0]
-    
+    #        plt.savefig(RTfilepath+colname+' colpos '+str(end.strftime('%Y-%m-%d %H-%M')),
+#                    dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
+#
+#
+##
+#    #12. Plotting displacement and velocity
+#    if PrintDispVel:
+#        plot_disp_vel(colname, xz,xy, vel_xz, vel_xy,excludenodelist,inc_xz,inc_xy,xz_mx,xz_mn,xy_mx,xy_mn,cmldisp_from)
+#        plt.savefig(RTfilepath+colname+' disp_vel '+str(end.strftime('%Y-%m-%d %H-%M')),
+#                    dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
+#
     # resetting and fixing excluded nodes to vertical position   
     col_mask=((xz == xz) | xz.isnull()) & ([a in excludenodelist for a in xz.columns])
-    xz=mult*xz.mask(col_mask).fillna(0.)
-    xy=mult*xy.mask(col_mask).fillna(0.)
+    xz=1000.*mult*xz.mask(col_mask).fillna(0.)
+    xy=1000.*mult*xy.mask(col_mask).fillna(0.)
     
        
     inc_xz=xz.apply(check_increasing)
@@ -970,16 +1002,15 @@ for s in sensorlist:
     print inc_xz[inc_xz>0]    
     print inc_xy[inc_xy>0]
     
-#    continue
     # computing instantaneous velocity
-    vel_xz, vel_xy = compute_node_inst_vel(xz,xy,roll_window_numpts)
+    vel_xz, vel_xy = compute_node_inst_vel(xz/1000.,xy/1000.,roll_window_numpts)
 
     # computing cumulative displacements
-    cs_x, cs_xz, cs_xy=compute_col_pos(xz,xy,monwin.index[-1], col_pos_interval, col_pos_num,column_fix)
+    cs_x, cs_xz, cs_xy=compute_col_pos(xz,xy,monwin.index[-1], col_pos_interval, col_pos_num,cmldisp_from)
     
     
     # Alert generation
-    alert_out=alert_generation(colname,xz,xy,vel_xz,vel_xy,num_nodes, T_disp, T_velL2, T_velL3, k_ac_ax,
+    alert_out=alert_generation(colname,xz/1000.,xy/1000.,vel_xz,vel_xy,num_nodes, T_disp, T_velL2, T_velL3, k_ac_ax,
                                num_nodes_to_check,end,proc_file_path,CSVFormat)
     
     print '\n',alert_out,'\n'
@@ -989,20 +1020,21 @@ for s in sensorlist:
         ax=plot_column_positions(colname,cs_x,cs_xz,cs_xy)
         
         #plotting error band for column positions        
-#        try:
-#            xl=cs_x.mean().values               
-#            ax[0].fill_betweenx(xl[::-1], xz_mxc, xz_mnc, where=xz_mxc >= xz_mnc, facecolor='0.7',linewidth=0)
-#            ax[1].fill_betweenx(xl[::-1], xy_mxc, xy_mnc, where=xy_mxc >= xy_mnc, facecolor='0.7',linewidth=0)
-#        except KeyboardInterrupt:
-#            print 'no column position error band'
+        try:
+            
+            xl=cs_x.mean().values
+            ax[0].fill_betweenx(xl, xz_mxc, xz_mnc, where=xz_mxc >= xz_mnc, facecolor='0.7',linewidth=0)
+            ax[1].fill_betweenx(xl, xy_mxc, xy_mnc, where=xy_mxc >= xy_mnc, facecolor='0.7',linewidth=0)
+        except KeyboardInterrupt:
+            print 'no column position error band'
         plt.savefig(RTfilepath+colname+' colpos '+str(end.strftime('%Y-%m-%d %H-%M')),
                     dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
 
 
-#
+
     #12. Plotting displacement and velocity
     if PrintDispVel:
-        plot_disp_vel(colname, xz,xy, vel_xz, vel_xy,excludenodelist,inc_xz,inc_xy,xz_mx,xz_mn,xy_mx,xy_mn)
+        plot_disp_vel(colname, xz,xy, vel_xz, vel_xy,excludenodelist,inc_xz,inc_xy,xz_mx,xz_mn,xy_mx,xy_mn,cmldisp_from)
         plt.savefig(RTfilepath+colname+' disp_vel '+str(end.strftime('%Y-%m-%d %H-%M')),
                     dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
 
