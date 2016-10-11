@@ -27,8 +27,9 @@ def col_pos(colpos_dfts, col_pos_end, col_pos_interval, col_pos_number, num_node
 def compute_colpos(window, config, monitoring_vel, num_nodes, seg_len):   
     colposdates = pd.date_range(end=window.end, freq=config.io.col_pos_interval, periods=config.io.num_col_pos, name='ts', closed=None)
     colpos_df = pd.DataFrame({'ts': colposdates, 'id': [num_nodes+1]*len(colposdates), 'xz': [0]*len(colposdates), 'xy': [0]*len(colposdates)})
-    for colpos_ts in colposdates:
-        colpos_df = colpos_df.append(monitoring_vel.loc[monitoring_vel.ts == colpos_ts, ['ts', 'id', 'xz', 'xy']])
+    mask = monitoring_vel['ts'].isin(colposdates)
+    colpos_dfs = monitoring_vel[mask][['ts', 'id', 'xz', 'xy']]
+    colpos_df = colpos_df.append(colpos_dfs)
     colpos_df['x'] = colpos_df['id'].apply(lambda x: (num_nodes + 1 - x) * seg_len)
     colpos_df = colpos_df.sort('id', ascending = False)
     colpos_dfts = colpos_df.groupby('ts')
@@ -420,7 +421,8 @@ def main(monitoring, window, config, plotvel_start='', plotvel_end='', plotvel=T
         os.makedirs(output_path+config.io.outputfilepath+'realtime/')
 
     # noise envelope
-    max_min_df, max_min_cml = err.cml_noise_profiling(monitoring_vel)
+    max_min_df = monitoring.max_min_df
+    max_min_cml = monitoring.max_min_cml
         
     # compute column position
     colposdf = compute_colpos(window, config, monitoring_vel, num_nodes, seg_len)
@@ -692,8 +694,9 @@ def web_main(name, end=datetime.now(), start='2016-01-01 00:00:00', col_pos_inte
     monitoring_vel = monitoring_vel.loc[(monitoring_vel.ts >= window.start)&(monitoring_vel.ts <= window.end)]
     
     # noise envelope
-    max_min_df, max_min_cml = err.cml_noise_profiling(monitoring_vel)
-        
+    max_min_df = monitoring.max_min_df
+    max_min_cml = monitoring.max_min_cml
+    
     # compute column position
     colposdf = compute_colpos(window, config, monitoring_vel, num_nodes, seg_len)
     
