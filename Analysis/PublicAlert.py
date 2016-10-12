@@ -341,9 +341,9 @@ def SitePublicAlert(PublicAlert, window):
                         else:
                             internal_alert = 'A2-s0'
                         if 'l' in list_ground_alerts:
-                            internal_alert = 'A2-g'
+                            internal_alert += 'g'
                         else:
-                            internal_alert = 'A2-g0'
+                            internal_alert += 'g0'
                         internal_alert += other_alerts
 
                     
@@ -391,9 +391,9 @@ def SitePublicAlert(PublicAlert, window):
                             else:
                                 internal_alert = 'A2-s0'
                             if 'l' in list_ground_alerts:
-                                internal_alert = 'A2-g'
+                                internal_alert += 'g'
                             else:
-                                internal_alert = 'A2-g0'
+                                internal_alert += 'g0'
                             internal_alert += other_alerts
                         public_alert = 'A2'
                         
