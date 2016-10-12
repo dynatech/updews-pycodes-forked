@@ -25,6 +25,7 @@ from websocket import create_connection
 # del path   
 
 import basicDB as bdb
+import masynckaiserServerRequests as masyncSR
 
 ###############################################################################
 # GSM Functionalities
@@ -422,13 +423,19 @@ def connRecvReconn(host, port):
 
     ws.close()
 
-#Send data and receive response from server
+#Test Send data and receive response from server
 def testSendRecv(host, port):
     url = "ws://%s:%s/" % (host, port)
     
     print "Connecting to Websocket Server..."
     ws = create_connection(url)
-    jsonText = """{"dir":0,"action":"read","query":"show tables","schema":"senslopedb"}"""
+    
+    jsonText = masyncSR.showSchemas()
+    ws.send(jsonText)
+    result = ws.recv()
+    print "Received '%s'" % result
+    
+    jsonText = masyncSR.showTables("senslopedb")
     ws.send(jsonText)
     result = ws.recv()
     print "Received '%s'" % result
