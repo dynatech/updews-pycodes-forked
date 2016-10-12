@@ -271,7 +271,7 @@ def sendDataToDEWS(msg, port=None):
     # host = "www.dewslandslide.com"
     
     if port == None:
-        port = 5060
+        port = 5055
     
     success = sendDataToWSS(host, port, msg)
     return success
@@ -302,7 +302,7 @@ def sendAckSentGSMtoDEWS(ts_written, ts_sent, recipient, port=None):
 
 # Send smsinbox messages to the Web Socket Server
 # This is mostly used for contingency purposes only
-def sendBatchReceivedGSMtoDEWS(host="www.dewslandslide.com", port=5060, limit=20):
+def sendBatchReceivedGSMtoDEWS(host="www.dewslandslide.com", port=5055, limit=20):
     #Load smsinbox messages with web_flag = 'W' and read_status = 'READ-SUCCESS'
     allmsgs = getAllSMSinbox('W','READ-SUCCESS',limit)
 
@@ -349,7 +349,7 @@ def sendBatchReceivedGSMtoDEWS(host="www.dewslandslide.com", port=5060, limit=20
 
 # Send Acknowledgement for ALL outbox sms with send_status "SEND"
 #   to DEWS Web Socket Server
-def sendAllAckSentGSMtoDEWS(host="www.dewslandslide.com", port=5060, limit=20):
+def sendAllAckSentGSMtoDEWS(host="www.dewslandslide.com", port=5055, limit=20):
     #Load all sms messages with "SENT" status
     allmsgs = getAllSMSoutbox('SENT',limit)
 
@@ -399,6 +399,9 @@ def connRecvReconn(host, port):
     url = "ws://%s:%s/" % (host, port)
     delay = 5
 
+    # TODO: We need to do multithreading or multiprocessing on this part in
+    #   order to run "sending" and "receiving" asynchronously
+
     while True:
         try:
             print "Receiving..."
@@ -407,7 +410,6 @@ def connRecvReconn(host, port):
             # print "Received '%s'" % result
             delay = 5
         except Exception, e:
-            # connectWS()
             try:
                 print "Connecting to Websocket Server..."
                 ws = create_connection(url)
@@ -418,6 +420,19 @@ def connRecvReconn(host, port):
                 if delay < 10:
                     delay += 1
 
+    ws.close()
+
+#Send data and receive response from server
+def testSendRecv(host, port):
+    url = "ws://%s:%s/" % (host, port)
+    
+    print "Connecting to Websocket Server..."
+    ws = create_connection(url)
+    jsonText = """{"dir":0,"action":"read","query":"show tables","schema":"senslopedb"}"""
+    ws.send(jsonText)
+    result = ws.recv()
+    print "Received '%s'" % result
+    
     ws.close()
 
 def parseRecvMsg(payload):

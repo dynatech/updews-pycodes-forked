@@ -16,8 +16,8 @@ if not path in sys.path:
     sys.path.insert(1,path)
 del path   
 
-#import masynckaiserWSSLib as masync
-import basicDB as bdb
+import masynckaiserWSSLib as masync
+#import basicDB as bdb
 
 def wssSendMsg(msgid = 1, number = "09980619501"):
 	threading.Timer(1.0, wssSendMsg).start()
@@ -38,7 +38,10 @@ def printit():
 
 #printit()
 # wssSendMsg()
-
+host = "sandbox"
+port = 5055
+#masync.connRecvReconn(host, port)
+masync.testSendRecv(host, port)
 
 
 
