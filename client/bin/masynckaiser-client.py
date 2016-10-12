@@ -40,8 +40,10 @@ def printit():
 # wssSendMsg()
 host = "sandbox"
 port = 5055
+schema = "senslopedb"
+table = "smsoutbox"
 #masync.connRecvReconn(host, port)
-masync.testSendRecv(host, port)
+masync.testSendRecv(host, port, schema, table)
 
 
 

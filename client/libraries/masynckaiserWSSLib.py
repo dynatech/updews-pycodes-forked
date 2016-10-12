@@ -26,6 +26,7 @@ from websocket import create_connection
 
 import basicDB as bdb
 import masynckaiserServerRequests as masyncSR
+import common
 
 ###############################################################################
 # GSM Functionalities
@@ -424,21 +425,29 @@ def connRecvReconn(host, port):
     ws.close()
 
 #Test Send data and receive response from server
-def testSendRecv(host, port):
+def testSendRecv(host, port, schema=None, table=None):
     url = "ws://%s:%s/" % (host, port)
     
     print "Connecting to Websocket Server..."
     ws = create_connection(url)
     
-    jsonText = masyncSR.showSchemas()
-    ws.send(jsonText)
-    result = ws.recv()
-    print "Received '%s'" % result
+    requestMsg = masyncSR.showSchemas()
+    if requestMsg:    
+        ws.send(requestMsg)
+        result = ws.recv()
+        print "%s: Received '%s'" % (common.whoami(), result)
     
-    jsonText = masyncSR.showTables("senslopedb")
-    ws.send(jsonText)
-    result = ws.recv()
-    print "Received '%s'" % result
+    requestMsg = masyncSR.showTables(schema)
+    if requestMsg:    
+        ws.send(requestMsg)
+        result = ws.recv()
+        print "%s: Received '%s'" % (common.whoami(), result)
+    
+    requestMsg = masyncSR.getTableConstructionCommand(schema, table)
+    if requestMsg:    
+        ws.send(requestMsg)
+        result = ws.recv()
+        print "%s: Received '%s'" % (common.whoami(), result)
     
     ws.close()
 
