@@ -111,11 +111,16 @@ def NearRGdf(df):
             d = Distance(df['rain_arq'].values[0])
         except:
             d = Distance(df['rain_senslope'].values[0])
+
+    d['d'] = np.round(d['d'], 2)
     
     df['RG1'] = d['dev_id'].values[0]
+    df['d_RG1'] = d['d'].values[0] 
     df['RG2'] = d['dev_id'].values[1]
+    df['d_RG2'] = d['d'].values[1]
     df['RG3'] = d['dev_id'].values[2]
-
+    df['d_RG3'] = d['d'].values[2]
+    
     to_MySQL(df, 'rain_props')
 
     return df
@@ -129,7 +134,7 @@ def main():
 if __name__ == "__main__":
     start = datetime.now()
     
-#    updateDB()
+    updateDB()
     main()
 
     print 'runtime =', datetime.now() - start
