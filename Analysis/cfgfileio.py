@@ -79,3 +79,6 @@ class config:
 		self.io.num_col_pos = cfg.getint("I/O","num_col_pos")
 		self.io.to_fill = cfg.getint("I/O","to_fill")
 		self.io.to_smooth = cfg.getint("I/O","to_smooth")
+  
+		self.io.rt_to_fill = cfg.getint("I/O","rt_to_fill")
+		self.io.rt_to_smooth = cfg.getint("I/O","rt_to_smooth")
