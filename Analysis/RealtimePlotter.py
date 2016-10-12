@@ -13,7 +13,6 @@ from datetime import date, time, datetime, timedelta
 import rtwindow as rtw
 import querySenslopeDb as q
 import genproc as g
-import errorAnalysis as err
 
 def col_pos(colpos_dfts, col_pos_end, col_pos_interval, col_pos_number, num_nodes):
     
@@ -118,25 +117,24 @@ def plot_column_positions(df,colname,end, show_part_legend, config):
         print colname, "ERROR in plotting column position"
     return ax_xz,ax_xy
 
-def vel_plot(df, velplot):
-    velplot[df.id.values[0]] = df.id.values[0]
+def vel_plot(df, velplot, num_nodes):
+    velplot[df.id.values[0]] = num_nodes - df.id.values[0] + 1
     return velplot
 
-def vel_classify(df, config):
+def vel_classify(df, config, num_nodes):
     vel=pd.DataFrame(index=sorted(set(df.ts)))
     nodal_df = df.groupby('id')
-    velplot = nodal_df.apply(vel_plot, velplot=vel)
+    velplot = nodal_df.apply(vel_plot, velplot=vel, num_nodes=num_nodes)
     velplot = velplot.reset_index().loc[velplot.reset_index().id == len(set(df.id))][['level_1'] + range(1, len(set(df.id))+1)].rename(columns = {'level_1': 'ts'}).set_index('ts')
     df = df.set_index(['ts', 'id'])
-    try:
-        L2mask = (df.abs()>config.io.t_vell2)&(df.abs()<=config.io.t_vell3)        
-        L3mask = (df.abs()>config.io.t_vell3)
-        L2mask = L2mask.reset_index().replace(False, np.nan)
-        L3mask = L3mask.reset_index().replace(False, np.nan)
-        return velplot,L2mask,L3mask
-    except:
-        print "ERROR computing velocity classification"
-        return 
+
+    L2mask = (df.abs()>config.io.t_vell2)&(df.abs()<=config.io.t_vell3)
+    L3mask = (df.abs()>config.io.t_vell3)
+    L2mask = L2mask.reset_index().replace(False, np.nan)
+    L3mask = L3mask.reset_index().replace(False, np.nan)
+    L2mask = L2mask.dropna()[['ts', 'id']]
+    L3mask = L3mask.dropna()[['ts', 'id']]
+    return velplot,L2mask,L3mask
     
 def noise_envelope(df, tsdf):
     df['ts'] = tsdf
@@ -229,159 +227,159 @@ def plot_disp_vel(noise_df, df0off, cs_df, colname, window, config, plotvel, xzd
     
     nodal_df0off = df0off.groupby('id')
     
-#    try:
-    fig=plt.figure()
-    
-    if plotvel:
-        #creating subplots        
-        ax_xzd=fig.add_subplot(141)
-        ax_xyd=fig.add_subplot(142,sharex=ax_xzd,sharey=ax_xzd)
+    try:
+        fig=plt.figure()
         
-        ax_xzv=fig.add_subplot(143)
-        ax_xzv.invert_yaxis()
-        ax_xyv=fig.add_subplot(144,sharex=ax_xzv,sharey=ax_xzv)
-    else:
-        #creating subplots        
-        ax_xzd=fig.add_subplot(121)
-        ax_xyd=fig.add_subplot(122,sharex=ax_xzd,sharey=ax_xzd)            
+        if plotvel:
+            #creating subplots        
+            ax_xzd=fig.add_subplot(141)
+            ax_xyd=fig.add_subplot(142,sharex=ax_xzd,sharey=ax_xzd)
+            
+            ax_xzv=fig.add_subplot(143)
+            ax_xzv.invert_yaxis()
+            ax_xyv=fig.add_subplot(144,sharex=ax_xzv,sharey=ax_xzv)
+        else:
+            #creating subplots        
+            ax_xzd=fig.add_subplot(121)
+            ax_xyd=fig.add_subplot(122,sharex=ax_xzd,sharey=ax_xzd)            
+        
+        #plotting cumulative (surface) displacments
+        ax_xzd.plot(cs_df.index, cs_df['xz'].values,color='0.4',linewidth=0.5)
+        ax_xyd.plot(cs_df.index, cs_df['xy'].values,color='0.4',linewidth=0.5)
+        ax_xzd.fill_between(cs_df.index,cs_df['xz'].values,xzd_plotoffset*(num_nodes),color='0.8')
+        ax_xyd.fill_between(cs_df.index,cs_df['xy'].values,xzd_plotoffset*(num_nodes),color='0.8')       
+       
+        #assigning non-repeating colors to subplots axis
+        ax_xzd=nonrepeat_colors(ax_xzd,num_nodes)
+        ax_xyd=nonrepeat_colors(ax_xyd,num_nodes)
+        if plotvel:
+            ax_xzv=nonrepeat_colors(ax_xzv,num_nodes)
+            ax_xyv=nonrepeat_colors(ax_xyv,num_nodes)
     
-    #plotting cumulative (surface) displacments
-    ax_xzd.plot(cs_df.index, cs_df['xz'].values,color='0.4',linewidth=0.5)
-    ax_xyd.plot(cs_df.index, cs_df['xy'].values,color='0.4',linewidth=0.5)
-    ax_xzd.fill_between(cs_df.index,cs_df['xz'].values,xzd_plotoffset*(num_nodes),color='0.8')
-    ax_xyd.fill_between(cs_df.index,cs_df['xy'].values,xzd_plotoffset*(num_nodes),color='0.8')       
-   
-    #assigning non-repeating colors to subplots axis
-    ax_xzd=nonrepeat_colors(ax_xzd,num_nodes)
-    ax_xyd=nonrepeat_colors(ax_xyd,num_nodes)
-    if plotvel:
-        ax_xzv=nonrepeat_colors(ax_xzv,num_nodes)
-        ax_xyv=nonrepeat_colors(ax_xyv,num_nodes)
-
-    #plotting displacement for xz
-    curax=ax_xzd
-    plt.sca(curax)
-    nodal_df0off['xz'].apply(plt.plot)
-    nodal_noise_df['xz_maxlist'].apply(plt.plot, ls=':')
-    nodal_noise_df['xz_minlist'].apply(plt.plot, ls=':')
-    curax.set_title('displacement\n XZ axis',fontsize='small')
-    curax.set_ylabel('displacement scale, m', fontsize='small')
-    y = df0off.loc[df0off.index == window.start].sort_values('id')['xz'].values
-    x = window.start
-    z = range(1, num_nodes+1)
-    for i,j in zip(y,z):
-       curax.annotate(str(int(j)),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')
-    
-    #plotting displacement for xy
-    curax=ax_xyd
-    plt.sca(curax)
-    nodal_df0off['xy'].apply(plt.plot)
-    nodal_noise_df['xy_maxlist'].apply(plt.plot, ls=':')
-    nodal_noise_df['xy_minlist'].apply(plt.plot, ls=':')
-    curax.set_title('displacement\n XY axis',fontsize='small')
-    y = df0off.loc[df0off.index == window.start].sort_values('id')['xy'].values
-    x = window.start
-    z = range(1, num_nodes+1)
-    for i,j in zip(y,z):
-       curax.annotate(str(int(j)),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')
-
-    if plotvel:
-        #plotting velocity for xz
-        curax=ax_xzv
+        #plotting displacement for xz
+        curax=ax_xzd
         plt.sca(curax)
-        vel_xz.plot(ax=curax,marker='.',legend=False)
-
-        L2_xz = L2_xz.sort_values('ts', ascending = True).set_index('ts')
-        nodal_L2_xz = L2_xz.groupby('id')
-        nodal_L2_xz['vel_xz'].apply(plt.plot,marker='^',ms=8,mfc='y',lw=0,)
-
-        L3_xz = L3_xz.sort_values('ts', ascending = True).set_index('ts')
-        nodal_L3_xz = L3_xz.groupby('id')
-        nodal_L3_xz['vel_xz'].apply(plt.plot,marker='^',ms=10,mfc='r',lw=0,)
-        
-        y = range(1, num_nodes+1)
-        x = (vel_xz.index)[1]
+        nodal_df0off['xz'].apply(plt.plot)
+        nodal_noise_df['xz_maxlist'].apply(plt.plot, ls=':')
+        nodal_noise_df['xz_minlist'].apply(plt.plot, ls=':')
+        curax.set_title('displacement\n XZ axis',fontsize='small')
+        curax.set_ylabel('displacement scale, m', fontsize='small')
+        y = df0off.loc[df0off.index == window.start].sort_values('id')['xz'].values
+        x = window.start
         z = range(1, num_nodes+1)
         for i,j in zip(y,z):
-            curax.annotate(str(int(j)),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')            
-        curax.set_ylabel('node ID', fontsize='small')
-        curax.set_title('velocity alerts\n XZ axis',fontsize='small')  
-    
-        #plotting velocity for xy        
-        curax=ax_xyv
-        plt.sca(curax)   
-        vel_xy.plot(ax=curax,marker='.',legend=False)
+           curax.annotate(str(int(j)),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')
         
-        L2_xy = L2_xy.sort_values('ts', ascending = True).set_index('ts')
-        nodal_L2 = L2_xy.groupby('id')
-        nodal_L2['vel_xy'].apply(plt.plot,marker='^',ms=8,mfc='y',lw=0,)
-
-        L3_xy = L3_xy.sort_values('ts', ascending = True).set_index('ts')
-        nodal_L3 = L3_xy.groupby('id')
-        nodal_L3['vel_xy'].apply(plt.plot,marker='^',ms=10,mfc='r',lw=0,)
-               
-        y = range(1, num_nodes+1)
-        x = (vel_xy.index)[1]
+        #plotting displacement for xy
+        curax=ax_xyd
+        plt.sca(curax)
+        nodal_df0off['xy'].apply(plt.plot)
+        nodal_noise_df['xy_maxlist'].apply(plt.plot, ls=':')
+        nodal_noise_df['xy_minlist'].apply(plt.plot, ls=':')
+        curax.set_title('displacement\n XY axis',fontsize='small')
+        y = df0off.loc[df0off.index == window.start].sort_values('id')['xy'].values
+        x = window.start
         z = range(1, num_nodes+1)
         for i,j in zip(y,z):
-            curax.annotate(str(int(j)),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')            
-        curax.set_title('velocity alerts\n XY axis',fontsize='small')                        
-        
-    # rotating xlabel
+           curax.annotate(str(int(j)),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')
     
-    for tick in ax_xzd.xaxis.get_minor_ticks():
-        tick.label.set_rotation('vertical')
-        tick.label.set_fontsize(6)
-        
-    for tick in ax_xyd.xaxis.get_minor_ticks():
-        tick.label.set_rotation('vertical')
-        tick.label.set_fontsize(6)
+        if plotvel:
+            #plotting velocity for xz
+            curax=ax_xzv
     
-    for tick in ax_xzd.xaxis.get_major_ticks():
-        tick.label.set_rotation('vertical')
-        tick.label.set_fontsize(6)
-        
-    for tick in ax_xyd.xaxis.get_major_ticks():
-        tick.label.set_rotation('vertical')
-        tick.label.set_fontsize(6)
-
-    if plotvel:
-        for tick in ax_xzv.xaxis.get_major_ticks():
-            tick.label.set_rotation('vertical')
-            tick.label.set_fontsize(6)
+            vel_xz.plot(ax=curax,marker='.',legend=False)
     
-        for tick in ax_xyv.xaxis.get_major_ticks():
+            L2_xz = L2_xz.sort_values('ts', ascending = True).set_index('ts')
+            nodal_L2_xz = L2_xz.groupby('id')
+            nodal_L2_xz.apply(lambda x: x['id'].plot(marker='^',ms=8,mfc='y',lw=0,ax = curax))
+    
+            L3_xz = L3_xz.sort_values('ts', ascending = True).set_index('ts')
+            nodal_L3_xz = L3_xz.groupby('id')
+            nodal_L3_xz.apply(lambda x: x['id'].plot(marker='^',ms=10,mfc='r',lw=0,ax = curax))
+            
+            y = sorted(range(1, num_nodes+1), reverse = True)
+            x = (vel_xz.index)[1]
+            z = sorted(range(1, num_nodes+1), reverse = True)
+            for i,j in zip(y,z):
+                curax.annotate(str(int(j)),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')            
+            curax.set_ylabel('node ID', fontsize='small')
+            curax.set_title('velocity alerts\n XZ axis',fontsize='small')  
+        
+            #plotting velocity for xy        
+            curax=ax_xyv
+    
+            vel_xy.plot(ax=curax,marker='.',legend=False)
+            
+            L2_xy = L2_xy.sort_values('ts', ascending = True).set_index('ts')
+            nodal_L2_xy = L2_xy.groupby('id')
+            nodal_L2_xy.apply(lambda x: x['id'].plot(marker='^',ms=8,mfc='y',lw=0,ax = curax))
+    
+            L3_xy = L3_xy.sort_values('ts', ascending = True).set_index('ts')
+            nodal_L3_xy = L3_xy.groupby('id')
+            nodal_L3_xy.apply(lambda x: x['id'].plot(marker='^',ms=10,mfc='r',lw=0,ax = curax))
+                   
+            y = range(1, num_nodes+1)
+            x = (vel_xy.index)[1]
+            z = range(1, num_nodes+1)
+            for i,j in zip(y,z):
+                curax.annotate(str(int(j)),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')            
+            curax.set_title('velocity alerts\n XY axis',fontsize='small')                        
+            
+        # rotating xlabel
+        
+        for tick in ax_xzd.xaxis.get_minor_ticks():
             tick.label.set_rotation('vertical')
             tick.label.set_fontsize(6)
             
-        for tick in ax_xzv.xaxis.get_minor_ticks():
+        for tick in ax_xyd.xaxis.get_minor_ticks():
             tick.label.set_rotation('vertical')
             tick.label.set_fontsize(6)
-    
-        for tick in ax_xyv.xaxis.get_minor_ticks():
+        
+        for tick in ax_xzd.xaxis.get_major_ticks():
             tick.label.set_rotation('vertical')
             tick.label.set_fontsize(6)
             
-    for item in ([ax_xzd.xaxis.label, ax_xyd.xaxis.label]):
-        item.set_fontsize(8)
-
-    if plotvel:
-        for item in ([ax_xyv.yaxis.label, ax_xzv.yaxis.label]):
+        for tick in ax_xyd.xaxis.get_major_ticks():
+            tick.label.set_rotation('vertical')
+            tick.label.set_fontsize(6)
+    
+        if plotvel:
+            for tick in ax_xzv.xaxis.get_major_ticks():
+                tick.label.set_rotation('vertical')
+                tick.label.set_fontsize(6)
+        
+            for tick in ax_xyv.xaxis.get_major_ticks():
+                tick.label.set_rotation('vertical')
+                tick.label.set_fontsize(6)
+                
+            for tick in ax_xzv.xaxis.get_minor_ticks():
+                tick.label.set_rotation('vertical')
+                tick.label.set_fontsize(6)
+        
+            for tick in ax_xyv.xaxis.get_minor_ticks():
+                tick.label.set_rotation('vertical')
+                tick.label.set_fontsize(6)
+                
+        for item in ([ax_xzd.xaxis.label, ax_xyd.xaxis.label]):
             item.set_fontsize(8)
-        
-    dfmt = md.DateFormatter('%Y-%m-%d\n%H:%M')
-    ax_xzd.xaxis.set_major_formatter(dfmt)
-    ax_xyd.xaxis.set_major_formatter(dfmt)
-
-    fig.tight_layout()
     
-    fig.subplots_adjust(top=0.85)        
-    fig.suptitle(colname+" as of "+str(window.end),fontsize='medium')
-    line=mpl.lines.Line2D((0.5,0.5),(0.1,0.8))
-    fig.lines=line,
+        if plotvel:
+            for item in ([ax_xyv.yaxis.label, ax_xzv.yaxis.label]):
+                item.set_fontsize(8)
+            
+        dfmt = md.DateFormatter('%Y-%m-%d\n%H:%M')
+        ax_xzd.xaxis.set_major_formatter(dfmt)
+        ax_xyd.xaxis.set_major_formatter(dfmt)
+    
+        fig.tight_layout()
         
-#    except:      
-#        print colname, "ERROR in plotting displacements and velocities"
+        fig.subplots_adjust(top=0.85)        
+        fig.suptitle(colname+" as of "+str(window.end),fontsize='medium')
+        line=mpl.lines.Line2D((0.5,0.5),(0.1,0.8))
+        fig.lines=line,
+    
+    except:      
+        print colname, "ERROR in plotting displacements and velocities"
     return
 
 
@@ -452,10 +450,10 @@ def main(monitoring, window, config, plotvel_start='', plotvel_end='', plotvel=T
         vel = monitoring_vel.loc[(monitoring_vel.ts >= plotvel_start) & (monitoring_vel.ts <= plotvel_end)]
         #vel_xz
         vel_xz = vel[['ts', 'vel_xz', 'id']]
-        velplot_xz,L2_xz,L3_xz = vel_classify(vel_xz, config)
+        velplot_xz,L2_xz,L3_xz = vel_classify(vel_xz, config, num_nodes)
         #vel_xy
         vel_xy = vel[['ts', 'vel_xy', 'id']]
-        velplot_xy,L2_xy,L3_xy = vel_classify(vel_xy, config)
+        velplot_xy,L2_xy,L3_xy = vel_classify(vel_xy, config, num_nodes)
         
         velplot = velplot_xz, velplot_xy, L2_xz, L2_xy, L3_xz, L3_xy
     else:
