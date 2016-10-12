@@ -89,10 +89,15 @@ def WriteRawSmsToDb(msglist,sensor_nums):
             web_flag = 'W'
             print m.data[:20]
             if cfg.config().mode.script_mode == 'gsmserver':
-                dsll.sendReceivedGSMtoDEWS(str(m.dt.replace("/","-")), m.simnum, m.data)
+                ret = dsll.sendReceivedGSMtoDEWS(str(m.dt.replace("/","-")), m.simnum, m.data)
+
+                #if the SMS Message was sent successfully to the web socket server then,
+                #   change web_flag to 'WS' which means "Websocket Server Sent"
+                if ret == 0:
+                    web_flag = 'WSS'
         else:
             web_flag = 'S'
-        query += "('%s','%s','%s','UNREAD','%c')," % (str(m.dt.replace("/","-")),str(m.simnum),str(m.data.replace("'","\"")),web_flag)
+        query += "('%s','%s','%s','UNREAD','%s')," % (str(m.dt.replace("/","-")),str(m.simnum),str(m.data.replace("'","\"")),web_flag)
         # query += "('" + str(m.dt.replace("/","-")) + "','" + str(m.simnum) + "','"
         # query += str(m.data.replace("'","\"")) + "','UNREAD'),"
     
@@ -192,7 +197,6 @@ def SendMessagesFromDb(network,limit=10):
             try:
                 num_prefix = re.match("^((0)|(63))9\d\d",num).group()
             except:
-                print '>> Unable to send sim number in this gsm module'
                 continue
             # check if recepient number in allowed prefixed list    
             if num_prefix in allowed_prefixes:
