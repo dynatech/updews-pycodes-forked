@@ -194,10 +194,10 @@ def PlotData(rain_gauge_col, start, end, sub, col, insax, cumax, fig, name):
     try:
         width = 0.01
         inscurax.bar(plot1.index,plot1,width,color='r') # instantaneous rainfall data
-        cumcurax.plot(plot2.index,plot2,color='#5ac126') # 24-hr cumulative rainfall
-        cumcurax.plot(plot3.index,plot3,color='#0d90d0') # 72-hr cumulative rainfall
-        cumcurax.plot(plot4.index,plot4,color="#fbb714") # half of 2-yr max rainfall
-        cumcurax.plot(plot5.index,plot5,color="#963bd6")  # 2-yr max rainfall
+        cumcurax.plot(plot2.index,plot2,color='b') # 24-hr cumulative rainfall
+        cumcurax.plot(plot3.index,plot3,color='r') # 72-hr cumulative rainfall #pink e377c2
+        cumcurax.plot(plot4.index,plot4,color='b',linestyle='--') # half of 2-yr max rainfall
+        cumcurax.plot(plot5.index,plot5,color='r',linestyle='--')  # 2-yr max rainfall
         for tick in inscurax.xaxis.get_major_ticks():
             tick.label.set_rotation('vertical')
         for tick in cumcurax.xaxis.get_major_ticks():
@@ -206,7 +206,9 @@ def PlotData(rain_gauge_col, start, end, sub, col, insax, cumax, fig, name):
         pass
     
     cumcurax.set_xlim([sub.index[0], sub.index[-1]])
-    inscurax.set_ylabel(rain_gauge_col['rain_gauge'].values[0].replace('rain_noah_', 'NOAH'), fontsize='medium')
+    ylabel = rain_gauge_col['rain_gauge'].values[0].replace('rain_noah_', 'NOAH') + ' (' + str(rain_gauge_col['d'].values[0]) + 'km)'
+    ylabel = ylabel.replace(' (km)', '')
+    inscurax.set_ylabel(ylabel, fontsize='medium')
     
     dfmt = md.DateFormatter('%m-%d')
     inscurax.xaxis.set_major_formatter(dfmt)
@@ -383,9 +385,14 @@ def RainfallAlert(siterainprops, start, end, offsetstart, tsn, summary, alert, a
     RG3 = siterainprops['RG3'].values[0]
         
     if PrintPlot:
+        d_RG1 = siterainprops['d_RG1'].values[0]
+        d_RG2 = siterainprops['d_RG2'].values[0]
+        d_RG3 = siterainprops['d_RG3'].values[0]
         col = [rain_arq, rain_senslope, RG1, RG2, RG3]
-        col = filter(None, col)
-        col = pd.DataFrame({'rain_gauge': col})
+        d = ['', '', d_RG1, d_RG2, d_RG3]
+        col = pd.DataFrame({'rain_gauge': col, 'd': d})
+        col = col.dropna()
+        col.index = range(len(col))
         SensorPlot(name, col, start, end, tsn, halfmax, twoyrmax, base, RainfallPlotsPath)
     
     try:

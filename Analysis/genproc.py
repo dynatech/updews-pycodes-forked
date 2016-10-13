@@ -5,12 +5,15 @@ from pandas.stats.api import ols
 
 import querySenslopeDb as q
 import filterSensorData as flt
+import errorAnalysis as err
 
 class procdata:
-    def __init__ (self, colprops, disp, vel):
+    def __init__ (self, colprops, disp, vel, max_min_df, max_min_cml):
         self.colprops = colprops
         self.vel = vel
         self.disp = disp
+        self.max_min_df = max_min_df
+        self.max_min_cml = max_min_cml
         
 def resamplenode(df, window):
     blank_df = pd.DataFrame({'ts': [window.end,window.offsetstart], 'id': [df['id'].values[0]]*2, 'name': [df['name'].values[0]]*2}).set_index('ts')
@@ -130,6 +133,12 @@ def genproc(col, window, config, realtime=False):
     monitoring = monitoring.drop_duplicates(['ts', 'id'])
     monitoring = monitoring.set_index('ts')
     monitoring = monitoring[['name','id','xz','xy']]
+
+    column_fix = 'bottom'
+    if column_fix == 'top':
+        monitoring[['xz','xy']] = monitoring[['xz','xy']].apply(lambda x: -x)
+    
+    max_min_df, max_min_cml = err.cml_noise_profiling(monitoring)
     
     #resamples xz and xy values per node using forward fill
     monitoring = monitoring.groupby('id').apply(resamplenode, window = window).reset_index(level=1).set_index('ts')
@@ -159,4 +168,4 @@ def genproc(col, window, config, realtime=False):
     disp_vel = disp_vel.set_index('ts')
     disp_vel = disp_vel.sort_values('id', ascending=True)
     
-    return procdata(col,monitoring.sort(),disp_vel.sort())
+    return procdata(col,monitoring.sort(),disp_vel.sort(),max_min_df,max_min_cml)
