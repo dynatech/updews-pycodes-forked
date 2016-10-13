@@ -116,6 +116,11 @@ def uptoDB_gndmeas_alerts(df,df2):
     df3 = df3[df3.timestamp_y.isnull()]
     df3 = df3[['timestamp_x','site','alert','cracks_x']]
     df3.columns = ['timestamp','site','alert','cracks']
+    
+    #Delete possible duplicates or nd alert    
+    df3_group = df3.groupby(['site','timestamp'])
+    df3_group.apply(del_data)
+    
     df3 = df3.set_index('timestamp')
     
     engine=create_engine('mysql://root:senslope@192.168.1.102:3306/senslopedb')
@@ -435,8 +440,19 @@ def FixMesData(df):
     
     return df
 
+def del_data(df):
+    #INPUT: Data frame of site and timestamp by groupby
+    #Deletes the row at gndmeas_alerts table of [site] at time [end]            
+    db, cur = SenslopeDBConnect(Namedb)
+    query = "DELETE FROM senslopedb.gndmeas_alerts WHERE timestamp = '{}' AND site = '{}'".format(pd.to_datetime(str(df.timestamp.values[0])),str(df.site.values[0]))
+    cur.execute(query)
+    db.commit()
+    db.close()
+
 def GenerateGroundDataAlert(site=None,end=None):
-        
+    if site == None and end == None:
+        site, end = sys.argv[1].lower(),sys.argv[2].lower()    
+    
     start_time = datetime.now()
     #Monitoring output directory
     path2 = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -464,8 +480,8 @@ def GenerateGroundDataAlert(site=None,end=None):
             os.makedirs(path)
     
     #Set the monitoring window
-    if end == None:
-        roll_window_numpts, end, start, offsetstart, monwin = set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_window_ops)
+#    if end == None:
+#        roll_window_numpts, end, start, offsetstart, monwin = set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_window_ops)
     
 #    Use this so set the end time    
 #    end = datetime(2016,8,12,11,30)
