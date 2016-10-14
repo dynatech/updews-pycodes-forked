@@ -17,6 +17,7 @@ import os
 import sys
 import platform
 from sqlalchemy import create_engine
+import json
 
 #Include the path of "Data Analysis" folder for the python scripts searching
 path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -116,6 +117,11 @@ def uptoDB_gndmeas_alerts(df,df2):
     df3 = df3[df3.timestamp_y.isnull()]
     df3 = df3[['timestamp_x','site','alert','cracks_x']]
     df3.columns = ['timestamp','site','alert','cracks']
+    
+    #Delete possible duplicates or nd alert    
+    df3_group = df3.groupby(['site','timestamp'])
+    df3_group.apply(del_data)
+    
     df3 = df3.set_index('timestamp')
     
     engine=create_engine('mysql://root:senslope@192.168.1.102:3306/senslopedb')
@@ -332,7 +338,7 @@ def check_trending(df,out_folder,plot = False):
     _,var = moving_average(cur_x)
     sp = UnivariateSpline(cur_t,cur_x,w=1/np.sqrt(var))
     
-    t_n = np.linspace(cur_t[0],cur_t[-1],1000)
+    t_n = np.linspace(cur_t[0],cur_t[-1],100)
     x_n = sp(t_n)
     v_n = sp.derivative(n=1)(t_n)
     a_n = sp.derivative(n=2)(t_n)
@@ -462,7 +468,44 @@ def FixMesData(df):
     
     return df
 
+def del_data(df):
+    #INPUT: Data frame of site and timestamp by groupby
+    #Deletes the row at gndmeas_alerts table of [site] at time [end]            
+    db, cur = SenslopeDBConnect(Namedb)
+    query = "DELETE FROM senslopedb.gndmeas_alerts WHERE timestamp = '{}' AND site = '{}'".format(pd.to_datetime(str(df.timestamp.values[0])),str(df.site.values[0]))
+    cur.execute(query)
+    db.commit()
+    db.close()
+
+def GroundDataTrendingPlotJSON(site,crack,end):
+    df = get_latest_ground_df(site,end)
+    df['site_id'] = map(lambda x: x.lower(),df['site_id'])
+    df['crack_id'] = map(lambda x: x.title(),df['crack_id'])
+    end = pd.to_datetime(end)    
+    
+    df = df[df.crack_id == crack]
+    
+    cur_t = (df.timestamp.values - df.timestamp.values[0])/np.timedelta64(1,'D')
+    cur_x = df.meas.values
+    
+    ##### Interpolate the last 10 data points
+    _,var = moving_average(cur_x)
+    sp = UnivariateSpline(cur_t,cur_x,w=1/np.sqrt(var))
+    
+    t_n = np.linspace(cur_t[0],cur_t[-1],1000)
+    x_n = sp(t_n)
+    v_n = sp.derivative(n=1)(t_n)
+    a_n = sp.derivative(n=2)(t_n)
+    
+    v_s = abs(sp.derivative(n=1)(cur_t))
+    a_s = abs(sp.derivative(n=2)(cur_t))
+    to_json = {'av' : {'v':list(v_s),'a':list(a_s)},'dvt':{'gnd':{'t':list(cur_t),'x':list(cur_x)},'interp':{'t':list(t_n),'x':list(x_n)}}}
+    print json.dumps(to_json)
+
+
 def GenerateGroundDataAlert(site=None,end=None):
+    if site == None and end == None:
+        site, end = sys.argv[1].lower(),sys.argv[2].lower()
         
     start_time = datetime.now()
     #Monitoring output directory
@@ -491,8 +534,8 @@ def GenerateGroundDataAlert(site=None,end=None):
             os.makedirs(path)
     
     #Set the monitoring window
-    if end == None:
-        roll_window_numpts, end, start, offsetstart, monwin = set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_window_ops)
+#    if end == None:
+#        roll_window_numpts, end, start, offsetstart, monwin = set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_window_ops)
     
 #    Use this so set the end time    
 #    end = datetime(2016,8,12,11,30)

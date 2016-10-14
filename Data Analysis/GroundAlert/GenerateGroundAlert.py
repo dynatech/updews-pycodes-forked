@@ -8,4 +8,6 @@ Created on Thu Mar 31 18:16:53 2016
 from GroundDataAlertLib import *
 
 #Call the GenerateGroundDataAlert() function
-GenerateGroundDataAlert()
+#GenerateGroundDataAlert()
+if __name__ == "__main__":
+    GenerateGroundDataAlert()
