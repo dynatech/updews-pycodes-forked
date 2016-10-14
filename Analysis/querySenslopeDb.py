@@ -365,9 +365,6 @@ def GetRawRainData(siteid = "", fromTime = "", toTime=""):
     if not siteid:
         raise ValueError('no site id entered')
     
-    if printtostdout:
-        PrintOut('Querying database ...')
-    
     oldsite = []
     newsite = []
     rainlist = GetRainList()

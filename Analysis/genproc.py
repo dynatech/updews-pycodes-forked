@@ -133,10 +133,6 @@ def genproc(col, window, config, realtime=False):
     monitoring = monitoring.drop_duplicates(['ts', 'id'])
     monitoring = monitoring.set_index('ts')
     monitoring = monitoring[['name','id','xz','xy']]
-
-    column_fix = 'bottom'
-    if column_fix == 'top':
-        monitoring[['xz','xy']] = monitoring[['xz','xy']].apply(lambda x: -x)
     
     max_min_df, max_min_cml = err.cml_noise_profiling(monitoring)
     
