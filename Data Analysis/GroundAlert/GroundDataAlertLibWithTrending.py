@@ -338,7 +338,7 @@ def check_trending(df,out_folder,plot = False):
     _,var = moving_average(cur_x)
     sp = UnivariateSpline(cur_t,cur_x,w=1/np.sqrt(var))
     
-    t_n = np.linspace(cur_t[0],cur_t[-1],1000)
+    t_n = np.linspace(cur_t[0],cur_t[-1],100)
     x_n = sp(t_n)
     v_n = sp.derivative(n=1)(t_n)
     a_n = sp.derivative(n=2)(t_n)

@@ -159,7 +159,7 @@ def SitePublicAlert(PublicAlert, window):
     elif 'r1' in site_alert.alert.values or 'e1' in site_alert.alert.values or 'd1' in site_alert.alert.values \
             or 'l2' in site_alert.alert.values or 'l3' in site_alert.alert.values \
             or 'L2' in site_alert.alert.values  or 'L3' in site_alert.alert.values:
-        start_monitor = window.end
+        start_monitor = RoundTime(window.end) - timedelta(hours=4)
         if 'l3' in site_alert.alert.values or 'L3' in site_alert.alert.values:
             print 'Public Alert- A3'
         if 'l2' in site_alert.alert.values or 'L2' in site_alert.alert.values:
