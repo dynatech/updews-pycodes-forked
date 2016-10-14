@@ -8,6 +8,8 @@ use MyApp\MasynckaiserModel;
 define("STOC", 0);
 //Data direction: Client to Server
 define("CTOS", 1);
+//Data direction: Broadcast
+define("BROADCAST", 2);
 
 class Masynckaiser implements MessageComponentInterface {
     protected $clients;
@@ -70,7 +72,13 @@ class Masynckaiser implements MessageComponentInterface {
 
                         // TODO: Execute the query request from the client
                         $this->MSKModel->connectToSchema($schema);
-                        $this->MSKModel->readFromServer($query);
+                        $output = $this->MSKModel->readFromServer($query);
+
+                        // Debug print only
+                        echo json_encode($output);
+
+                        // Send the database output to the client
+                        $from->send(json_encode($output));
                     }
                 }
                 else {
@@ -86,6 +94,17 @@ class Masynckaiser implements MessageComponentInterface {
                 // Note: This functionality won't be available to the quick
                 //      prototype version.
                 echo "Client to Server Data Direction\n";
+            }
+            elseif ($dir == BROADCAST) {
+                echo "Broadcast Message...\n";
+
+                //broadcast JSON message from GSM to all connected clients
+                foreach ($this->clients as $client) {
+                    if ($from !== $client) {
+                        // The sender is not the receiver, send to each client connected
+                        $client->send($msg);
+                    }
+                }
             }
             else {
                 echo __FUNCTION__ . ": Unknown data direction\n";

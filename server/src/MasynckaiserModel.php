@@ -149,7 +149,7 @@ class MasynckaiserModel {
 
         $array = $this->runQuery($query);
         // print_r($array);
-        echo json_encode($array);
+        return json_encode($array);
     }
 
     public function filterSpecialCharacters($message) {
