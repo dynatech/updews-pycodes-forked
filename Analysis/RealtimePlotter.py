@@ -23,14 +23,26 @@ def col_pos(colpos_dfts, col_pos_end, col_pos_interval, col_pos_number, num_node
     
     return np.round(colpos_dfts, 4)
 
-def compute_colpos(window, config, monitoring_vel, num_nodes, seg_len):   
+def compute_colpos(window, config, monitoring_vel, num_nodes, seg_len):
+    column_fix = config.io.column_fix
     colposdates = pd.date_range(end=window.end, freq=config.io.col_pos_interval, periods=config.io.num_col_pos, name='ts', closed=None)
-    colpos_df = pd.DataFrame({'ts': colposdates, 'id': [num_nodes+1]*len(colposdates), 'xz': [0]*len(colposdates), 'xy': [0]*len(colposdates)})
+
+    if column_fix == 'top':
+        colpos_df = pd.DataFrame({'ts': colposdates, 'id': [0]*len(colposdates), 'xz': [0]*len(colposdates), 'xy': [0]*len(colposdates)})
+    else:
+        colpos_df = pd.DataFrame({'ts': colposdates, 'id': [num_nodes+1]*len(colposdates), 'xz': [0]*len(colposdates), 'xy': [0]*len(colposdates)})
+
     mask = monitoring_vel['ts'].isin(colposdates)
     colpos_dfs = monitoring_vel[mask][['ts', 'id', 'xz', 'xy']]
     colpos_df = colpos_df.append(colpos_dfs)
     colpos_df['x'] = colpos_df['id'].apply(lambda x: (num_nodes + 1 - x) * seg_len)
-    colpos_df = colpos_df.sort('id', ascending = False)
+    
+    if column_fix == 'top':
+        colpos_df[['xz','xy']] = colpos_df[['xz','xy']].apply(lambda x: -x)
+        colpos_df = colpos_df.sort('id', ascending = True)
+    else:
+        colpos_df = colpos_df.sort('id', ascending = False)
+    
     colpos_dfts = colpos_df.groupby('ts')
     colposdf = colpos_dfts.apply(col_pos, col_pos_end = window.end, col_pos_interval = config.io.col_pos_interval, col_pos_number = config.io.num_col_pos, num_nodes = num_nodes)
     return colposdf
@@ -229,60 +241,83 @@ def plot_disp_vel(noise_df, df0off, cs_df, colname, window, config, plotvel, xzd
     
     try:
         fig=plt.figure()
+
+        try:
+            if plotvel:
+                #creating subplots        
+                ax_xzd=fig.add_subplot(141)
+                ax_xyd=fig.add_subplot(142,sharex=ax_xzd,sharey=ax_xzd)
+                
+                ax_xzv=fig.add_subplot(143)
+                ax_xzv.invert_yaxis()
+                ax_xyv=fig.add_subplot(144,sharex=ax_xzv,sharey=ax_xzv)
+            else:
+                #creating subplots        
+                ax_xzd=fig.add_subplot(121)
+                ax_xyd=fig.add_subplot(122,sharex=ax_xzd,sharey=ax_xzd)
+        except:
+            if plotvel:
+                #creating subplots                      
+                ax_xzv=fig.add_subplot(121)
+                ax_xzv.invert_yaxis()
+                ax_xyv=fig.add_subplot(122,sharex=ax_xzv,sharey=ax_xzv)
         
-        if plotvel:
-            #creating subplots        
-            ax_xzd=fig.add_subplot(141)
-            ax_xyd=fig.add_subplot(142,sharex=ax_xzd,sharey=ax_xzd)
+        try:
+            #plotting cumulative (surface) displacments
+            ax_xzd.plot(cs_df.index, cs_df['xz'].values,color='0.4',linewidth=0.5)
+            ax_xyd.plot(cs_df.index, cs_df['xy'].values,color='0.4',linewidth=0.5)
+            ax_xzd.fill_between(cs_df.index,cs_df['xz'].values,xzd_plotoffset*(num_nodes),color='0.8')
+            ax_xyd.fill_between(cs_df.index,cs_df['xy'].values,xzd_plotoffset*(num_nodes),color='0.8')
+        except:
+            print 'Error in plotting cumulative surfacce displacement'
             
-            ax_xzv=fig.add_subplot(143)
-            ax_xzv.invert_yaxis()
-            ax_xyv=fig.add_subplot(144,sharex=ax_xzv,sharey=ax_xzv)
-        else:
-            #creating subplots        
-            ax_xzd=fig.add_subplot(121)
-            ax_xyd=fig.add_subplot(122,sharex=ax_xzd,sharey=ax_xzd)            
+        try:
+            #assigning non-repeating colors to subplots axis
+            ax_xzd=nonrepeat_colors(ax_xzd,num_nodes)
+            ax_xyd=nonrepeat_colors(ax_xyd,num_nodes)
+        except:
+            print 'Error in assigning non-repeating colors in displacement'
         
-        #plotting cumulative (surface) displacments
-        ax_xzd.plot(cs_df.index, cs_df['xz'].values,color='0.4',linewidth=0.5)
-        ax_xyd.plot(cs_df.index, cs_df['xy'].values,color='0.4',linewidth=0.5)
-        ax_xzd.fill_between(cs_df.index,cs_df['xz'].values,xzd_plotoffset*(num_nodes),color='0.8')
-        ax_xyd.fill_between(cs_df.index,cs_df['xy'].values,xzd_plotoffset*(num_nodes),color='0.8')       
-       
-        #assigning non-repeating colors to subplots axis
-        ax_xzd=nonrepeat_colors(ax_xzd,num_nodes)
-        ax_xyd=nonrepeat_colors(ax_xyd,num_nodes)
         if plotvel:
             ax_xzv=nonrepeat_colors(ax_xzv,num_nodes)
             ax_xyv=nonrepeat_colors(ax_xyv,num_nodes)
     
-        #plotting displacement for xz
-        curax=ax_xzd
-        plt.sca(curax)
-        nodal_df0off['xz'].apply(plt.plot)
-        nodal_noise_df['xz_maxlist'].apply(plt.plot, ls=':')
-        nodal_noise_df['xz_minlist'].apply(plt.plot, ls=':')
-        curax.set_title('displacement\n XZ axis',fontsize='small')
-        curax.set_ylabel('displacement scale, m', fontsize='small')
-        y = df0off.loc[df0off.index == window.start].sort_values('id')['xz'].values
-        x = window.start
-        z = range(1, num_nodes+1)
-        for i,j in zip(y,z):
-           curax.annotate(str(int(j)),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')
-        
-        #plotting displacement for xy
-        curax=ax_xyd
-        plt.sca(curax)
-        nodal_df0off['xy'].apply(plt.plot)
-        nodal_noise_df['xy_maxlist'].apply(plt.plot, ls=':')
-        nodal_noise_df['xy_minlist'].apply(plt.plot, ls=':')
-        curax.set_title('displacement\n XY axis',fontsize='small')
-        y = df0off.loc[df0off.index == window.start].sort_values('id')['xy'].values
-        x = window.start
-        z = range(1, num_nodes+1)
-        for i,j in zip(y,z):
-           curax.annotate(str(int(j)),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')
-    
+        try:
+            #plotting displacement for xz
+            curax=ax_xzd
+            plt.sca(curax)
+            nodal_df0off['xz'].apply(plt.plot)
+            try:
+                nodal_noise_df['xz_maxlist'].apply(plt.plot, ls=':')
+                nodal_noise_df['xz_minlist'].apply(plt.plot, ls=':')
+            except:
+                print 'Error in plotting noise envelope'
+            curax.set_title('displacement\n XZ axis',fontsize='small')
+            curax.set_ylabel('displacement scale, m', fontsize='small')
+            y = df0off.loc[df0off.index == window.start].sort_values('id')['xz'].values
+            x = window.start
+            z = range(1, num_nodes+1)
+            for i,j in zip(y,z):
+               curax.annotate(str(int(j)),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')
+            
+            #plotting displacement for xy
+            curax=ax_xyd
+            plt.sca(curax)
+            nodal_df0off['xy'].apply(plt.plot)
+            try:
+                nodal_noise_df['xy_maxlist'].apply(plt.plot, ls=':')
+                nodal_noise_df['xy_minlist'].apply(plt.plot, ls=':')
+            except:
+                print 'Error in plotting noise envelope'
+            curax.set_title('displacement\n XY axis',fontsize='small')
+            y = df0off.loc[df0off.index == window.start].sort_values('id')['xy'].values
+            x = window.start
+            z = range(1, num_nodes+1)
+            for i,j in zip(y,z):
+               curax.annotate(str(int(j)),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')    
+        except:
+            print 'Error in plotting displacement'
+               
         if plotvel:
             #plotting velocity for xz
             curax=ax_xzv
@@ -327,21 +362,24 @@ def plot_disp_vel(noise_df, df0off, cs_df, colname, window, config, plotvel, xzd
             
         # rotating xlabel
         
-        for tick in ax_xzd.xaxis.get_minor_ticks():
-            tick.label.set_rotation('vertical')
-            tick.label.set_fontsize(6)
+        try:
+            for tick in ax_xzd.xaxis.get_minor_ticks():
+                tick.label.set_rotation('vertical')
+                tick.label.set_fontsize(6)
+                
+            for tick in ax_xyd.xaxis.get_minor_ticks():
+                tick.label.set_rotation('vertical')
+                tick.label.set_fontsize(6)
             
-        for tick in ax_xyd.xaxis.get_minor_ticks():
-            tick.label.set_rotation('vertical')
-            tick.label.set_fontsize(6)
-        
-        for tick in ax_xzd.xaxis.get_major_ticks():
-            tick.label.set_rotation('vertical')
-            tick.label.set_fontsize(6)
-            
-        for tick in ax_xyd.xaxis.get_major_ticks():
-            tick.label.set_rotation('vertical')
-            tick.label.set_fontsize(6)
+            for tick in ax_xzd.xaxis.get_major_ticks():
+                tick.label.set_rotation('vertical')
+                tick.label.set_fontsize(6)
+                
+            for tick in ax_xyd.xaxis.get_major_ticks():
+                tick.label.set_rotation('vertical')
+                tick.label.set_fontsize(6)
+        except:
+            print 'Error in rotating x-label for disp subplots'
     
         if plotvel:
             for tick in ax_xzv.xaxis.get_major_ticks():
@@ -359,17 +397,23 @@ def plot_disp_vel(noise_df, df0off, cs_df, colname, window, config, plotvel, xzd
             for tick in ax_xyv.xaxis.get_minor_ticks():
                 tick.label.set_rotation('vertical')
                 tick.label.set_fontsize(6)
-                
-        for item in ([ax_xzd.xaxis.label, ax_xyd.xaxis.label]):
-            item.set_fontsize(8)
+        
+        try:
+            for item in ([ax_xzd.xaxis.label, ax_xyd.xaxis.label]):
+                item.set_fontsize(8)
+        except:
+            print 'Error in setting font size of x-label in disp subplots'
     
         if plotvel:
             for item in ([ax_xyv.yaxis.label, ax_xzv.yaxis.label]):
                 item.set_fontsize(8)
-            
-        dfmt = md.DateFormatter('%Y-%m-%d\n%H:%M')
-        ax_xzd.xaxis.set_major_formatter(dfmt)
-        ax_xyd.xaxis.set_major_formatter(dfmt)
+        
+        try:
+            dfmt = md.DateFormatter('%Y-%m-%d\n%H:%M')
+            ax_xzd.xaxis.set_major_formatter(dfmt)
+            ax_xyd.xaxis.set_major_formatter(dfmt)
+        except:
+            print 'Error in setting date format of x-label in disp subplots'
     
         fig.tight_layout()
         
@@ -420,7 +464,7 @@ def main(monitoring, window, config, plotvel_start='', plotvel_end='', plotvel=T
 
     # noise envelope
     max_min_df = monitoring.max_min_df
-    max_min_cml = monitoring.max_min_cml
+#    max_min_cml = monitoring.max_min_cml
         
     # compute column position
     colposdf = compute_colpos(window, config, monitoring_vel, num_nodes, seg_len)
@@ -451,6 +495,7 @@ def main(monitoring, window, config, plotvel_start='', plotvel_end='', plotvel=T
         #vel_xz
         vel_xz = vel[['ts', 'vel_xz', 'id']]
         velplot_xz,L2_xz,L3_xz = vel_classify(vel_xz, config, num_nodes)
+        
         #vel_xy
         vel_xy = vel[['ts', 'vel_xy', 'id']]
         velplot_xy,L2_xy,L3_xy = vel_classify(vel_xy, config, num_nodes)
@@ -652,125 +697,6 @@ def mon_main():
 
         monitoring = g.genproc(col[0], window, config)
         main(monitoring, window, config, plotvel=False, show_part_legend = show_part_legend)
-
-def web_main(name, end=datetime.now(), start='2016-01-01 00:00:00', col_pos_interval=1):
-    col = q.GetSensorList(name)
-    
-    #end
-    window, config = rtw.getwindow(end)
-    end = pd.to_datetime(end)
-    end_year=end.year
-    end_month=end.month
-    end_day=end.day
-    end_hour=end.hour
-    end_minute=end.minute
-    if end_minute<30:end_minute=0
-    else:end_minute=30
-    window.end=datetime.combine(date(end_year,end_month,end_day),time(end_hour,end_minute,0))
-    #start
-    start = pd.to_datetime(start)
-    start_year=start.year
-    start_month=start.month
-    start_day=start.day
-    start_hour=start.hour
-    start_minute=start.minute
-    if start_minute<30:start_minute=0
-    else:start_minute=30
-    window.start=datetime.combine(date(start_year,start_month,start_day),time(start_hour,start_minute,0))
-    #offsetstart
-    window.offsetstart = window.start - timedelta(days=(config.io.num_roll_window_ops*window.numpts-1)/48.)
-
-    #colpos interval
-    config.io.col_pos_interval = str(col_pos_interval) + 'D'
-    config.io.num_col_pos = int((window.end - window.start).days/col_pos_interval + 1)    
-    
-    monitoring = g.genproc(col[0], window, config)
-
-    num_nodes = monitoring.colprops.nos
-    seg_len = monitoring.colprops.seglen
-    monitoring_vel = monitoring.vel.reset_index()[['ts', 'id', 'xz', 'xy', 'vel_xz', 'vel_xy']]
-    monitoring_vel = monitoring_vel.loc[(monitoring_vel.ts >= window.start)&(monitoring_vel.ts <= window.end)]
-    
-    # noise envelope
-    max_min_df = monitoring.max_min_df
-    max_min_cml = monitoring.max_min_cml
-    
-    # compute column position
-    colposdf = compute_colpos(window, config, monitoring_vel, num_nodes, seg_len)
-    
-    colposdf_json = colposdf.to_json(orient="records", date_format="iso")
-    with open('colpos.json', 'w') as w:
-        w.write(colposdf_json)
-
-#    #############################
-#    colname = monitoring.colprops.name
-#    show_part_legend = False
-#    plot_column_positions(colposdf,colname,window.end, show_part_legend, config=config)
-#    #############################
-    
-    # displacement plot offset
-    xzd_plotoffset = plotoffset(monitoring_vel, disp_offset = 'mean')
-    
-    # defining cumulative (surface) displacement
-    cs_df = cum_surf(monitoring_vel, xzd_plotoffset, num_nodes)
-
-    csdf_json = cs_df.to_json(orient="records", date_format="iso")
-    with open('cumsurf.json', 'w') as w:
-        w.write(csdf_json)
-    
-    #creating displacement noise envelope
-    noise_df = noise_env(monitoring_vel, max_min_df, window, num_nodes, xzd_plotoffset)
-
-    noisedf_json = noise_df.to_json(orient="records", date_format="iso")
-    with open('noiseenv.json', 'w') as w:
-        w.write(noisedf_json)
-
-    #zeroing and offseting xz,xy
-    df0off = disp0off(monitoring_vel, window, xzd_plotoffset, num_nodes)
-
-    df0off_json = df0off.to_json(orient="records", date_format="iso")
-    with open('disp.json', 'w') as w:
-        w.write(df0off_json)
-
-    #velplots
-    vel = monitoring_vel.loc[(monitoring_vel.ts >= window.start) & (monitoring_vel.ts <= window.end)]
-    #vel_xz
-    vel_xz = vel[['ts', 'vel_xz', 'id']]
-    velplot_xz,L2_xz,L3_xz = vel_classify(vel_xz, config)
-    #vel_xy
-    vel_xy = vel[['ts', 'vel_xy', 'id']]
-    velplot_xy,L2_xy,L3_xy = vel_classify(vel_xy, config)
-
-#    #############################
-#    colname = monitoring.colprops.name
-#    velplot = velplot_xz, velplot_xy, L2_xz, L2_xy, L3_xz, L3_xy
-#    plotvel = True
-#    plot_disp_vel(noise_df, df0off, cs_df, colname, window, config, plotvel, xzd_plotoffset, num_nodes, velplot)
-#    #############################
-
-    velxz_json = velplot_xz.to_json(orient="records", date_format="iso")
-    with open('vel_xz.json', 'w') as w:
-        w.write(velxz_json)
-
-    velxy_json = velplot_xy.to_json(orient="records", date_format="iso")
-    with open('vel_xy.json', 'w') as w:
-        w.write(velxy_json)
-
-    L2xz_json = L2_xz.to_json(orient="records", date_format="iso")
-    with open('L2_xz.json', 'w') as w:
-        w.write(L2xz_json)
-
-    L2xy_json = L2_xy.to_json(orient="records", date_format="iso")
-    with open('L2_xy.json', 'w') as w:
-        w.write(L2xy_json)
-
-    L3xz_json = L3_xz.to_json(orient="records", date_format="iso")
-    with open('L3_xz.json', 'w') as w:
-        w.write(L3xz_json)
-
-    L3xy_json = L3_xy.to_json(orient="records", date_format="iso")
-    with open('L3_xy.json', 'w') as w:
-        w.write(L3xy_json)
 
 ##########################################################
 if __name__ == "__main__":
