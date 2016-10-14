@@ -487,19 +487,21 @@ def GroundDataTrendingPlotJSON(site,crack,end):
     
     cur_t = (df.timestamp.values - df.timestamp.values[0])/np.timedelta64(1,'D')
     cur_x = df.meas.values
+    cur_ts = df.timestamp.values
     
     ##### Interpolate the last 10 data points
     _,var = moving_average(cur_x)
     sp = UnivariateSpline(cur_t,cur_x,w=1/np.sqrt(var))
     
-    t_n = np.linspace(cur_t[0],cur_t[-1],1000)
+    t_n = np.linspace(cur_t[0],cur_t[-1],20)
+    ts_n = pd.to_datetime(cur_ts[0]) + np.array(map(lambda x: timedelta(days = x), t_n))
     x_n = sp(t_n)
-    v_n = sp.derivative(n=1)(t_n)
-    a_n = sp.derivative(n=2)(t_n)
-    
     v_s = abs(sp.derivative(n=1)(cur_t))
     a_s = abs(sp.derivative(n=2)(cur_t))
-    to_json = {'av' : {'v':list(v_s),'a':list(a_s)},'dvt':{'gnd':{'t':list(cur_t),'x':list(cur_x)},'interp':{'t':list(t_n),'x':list(x_n)}}}
+    
+    ts_n = map(lambda x: x.strftime('%Y-%m-%d %H:%M:%S'), ts_n)
+    cur_ts = map(lambda x: pd.to_datetime(x).strftime('%Y-%m-%d %H:%M:%S'), cur_ts)
+    to_json = {'av' : {'v':list(v_s),'a':list(a_s)},'dvt':{'gnd':{'ts':list(cur_ts),'surfdisp':list(cur_x)},'interp':{'ts':list(ts_n),'surfdisp':list(x_n)}}}
     print json.dumps(to_json)
 
 
