@@ -167,6 +167,14 @@ def SitePublicAlert(PublicAlert, window):
         if 'r1' in site_alert.alert.values or 'e1' in site_alert.alert.values or 'd1' in site_alert.alert.values:
             print 'Public Alert- A1'
 
+    try:
+        new_ground_alert = validity_site_alert.loc[validity_site_alert.source == 'ground'].sort('timestamp', ascending=False)
+        if validity_site_alert.loc[validity_site_alert.source == 'public']['alert'].values[0] == 'A0' and new_ground_alert['alert'].values[0] in ['l2', 'l3']:
+            alertTS = pd.to_datetime(new_ground_alert['timestamp'].values[0])
+            start_monitor = alertTS
+    except:
+        pass
+
     retriggerTS = []
     # LLMC ground/sensor alert within the non-A0 public alert
     try:
@@ -213,8 +221,13 @@ def SitePublicAlert(PublicAlert, window):
     except:
         rain_alert = 'nd'
 
+    try:
+        SG_PAlert = SG_PAlert
+    except:
+        SG_PAlert = site_alert
+
     #Public Alert A3
-    if 'L3' in site_alert.alert.values or 'l3' in site_alert.alert.values or 'A3' in validity_site_alert.alert.values:
+    if 'L3' in SG_PAlert.alert.values or 'l3' in SG_PAlert.alert.values or 'A3' in validity_site_alert.alert.values:
         validity_RED = validity_site_alert.loc[(validity_site_alert.alert == 'r1')|(validity_site_alert.alert == 'e1')|(validity_site_alert.alert == 'd1')].updateTS.values
         validity_L = validity_site_alert.loc[(validity_site_alert.alert == 'L3')|(validity_site_alert.alert == 'l3')|(validity_site_alert.alert == 'L2')|(validity_site_alert.alert == 'l2')].updateTS.values
         validity_A = site_alert.loc[(site_alert.alert == 'A3')].timestamp.values
@@ -317,7 +330,7 @@ def SitePublicAlert(PublicAlert, window):
                 internal_alert = internal_alert.replace('G', 'g')
 
     #Public Alert A2
-    elif 'L2' in site_alert.alert.values or 'l2' in site_alert.alert.values or 'A2' in validity_site_alert.alert.values:
+    elif 'L2' in SG_PAlert.alert.values or 'l2' in SG_PAlert.alert.values or 'A2' in validity_site_alert.alert.values:
         validity_RED = validity_site_alert.loc[(validity_site_alert.alert == 'r1')|(validity_site_alert.alert == 'e1')|(validity_site_alert.alert == 'd1')].updateTS.values
         validity_L = validity_site_alert.loc[(validity_site_alert.alert == 'L2')|(validity_site_alert.alert == 'l2')].updateTS.values
         validity_A = site_alert.loc[(site_alert.alert == 'A2')].timestamp.values
@@ -566,6 +579,10 @@ def SitePublicAlert(PublicAlert, window):
     alert_toDB(InternalAlert, 'site_level_alert', window, 'internal')
     
     SitePublicAlert = PublicAlert.loc[PublicAlert.site == site][['timestamp', 'site', 'source', 'alert', 'updateTS']]
+    try:
+        SitePublicAlert['timestamp'] = alertTS
+    except:
+        pass
     try:    
         alert_toDB(SitePublicAlert, 'site_level_alert', window, 'public')
     except:
