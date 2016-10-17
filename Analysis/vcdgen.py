@@ -171,7 +171,7 @@ def displacement(colname, endTS='', startTS=''):
 
     #zeroing and offseting xz,xy
     df0off = plotter.disp0off(monitoring_vel, window, xzd_plotoffset, num_nodes)
-    df0off = df0off[0:3]
+
     df0off_json = df0off.reset_index()[['ts', 'id', 'xz', 'xy']].to_json(orient="records", date_format="iso")
 
 #    #############################
@@ -183,7 +183,7 @@ def displacement(colname, endTS='', startTS=''):
 
     return df0off_json
 
-def vcd_gen(colname, endTS='', startTS='', day_interval=1):
+def vcdgen(colname, endTS='', startTS='', day_interval=1):
     col = q.GetSensorList(colname)
     
     #end
@@ -279,5 +279,5 @@ def vcd_gen(colname, endTS='', startTS='', day_interval=1):
 #    
 #if __name__ == '__main__':
 #    start = datetime.now()
-#    vcd = vcd_gen('magta')
+#    vcd=vcdgen('magta')
 #    print "runtime =", str(datetime.now() - start)
