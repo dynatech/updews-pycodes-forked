@@ -133,13 +133,15 @@ def vel_plot(df, velplot, num_nodes):
     velplot[df.id.values[0]] = num_nodes - df.id.values[0] + 1
     return velplot
 
-def vel_classify(df, config, num_nodes):
-    vel=pd.DataFrame(index=sorted(set(df.ts)))
-    nodal_df = df.groupby('id')
-    velplot = nodal_df.apply(vel_plot, velplot=vel, num_nodes=num_nodes)
-    velplot = velplot.reset_index().loc[velplot.reset_index().id == len(set(df.id))][['level_1'] + range(1, len(set(df.id))+1)].rename(columns = {'level_1': 'ts'}).set_index('ts')
+def vel_classify(df, config, num_nodes, linearvel=True):
+    if linearvel:
+        vel=pd.DataFrame(index=sorted(set(df.ts)))
+        nodal_df = df.groupby('id')
+        velplot = nodal_df.apply(vel_plot, velplot=vel, num_nodes=num_nodes)
+        velplot = velplot.reset_index().loc[velplot.reset_index().id == len(set(df.id))][['level_1'] + range(1, len(set(df.id))+1)].rename(columns = {'level_1': 'ts'}).set_index('ts')
+    else:
+        velplot = ''
     df = df.set_index(['ts', 'id'])
-
     L2mask = (df.abs()>config.io.t_vell2)&(df.abs()<=config.io.t_vell3)
     L3mask = (df.abs()>config.io.t_vell3)
     L2mask = L2mask.reset_index().replace(False, np.nan)

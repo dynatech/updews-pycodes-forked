@@ -21,8 +21,8 @@ def colpos(colname, endTS='', startTS='', day_interval=1):
         end_minute=end.minute
         if end_minute<30:end_minute=0
         else:end_minute=30
-        window.end=datetime.combine(date(end_year,end_month,end_day),time(end_hour,end_minute,0))
-        window, config = rtw.getwindow()
+        end=datetime.combine(date(end_year,end_month,end_day),time(end_hour,end_minute,0))
+        window, config = rtw.getwindow(end)
 
     if startTS != '':
         #start
@@ -52,7 +52,7 @@ def colpos(colname, endTS='', startTS='', day_interval=1):
     # compute column position
     colposdf = plotter.compute_colpos(window, config, monitoring_vel, num_nodes, seg_len)
 
-    colposdf_json = colposdf.to_json(orient="records", date_format="iso")
+    colposdf_json = colposdf[['ts', 'id', 'xz', 'xy', 'x']].to_json(orient="records", date_format="iso")
 
 #    #############################
 #    show_part_legend = False
@@ -78,8 +78,8 @@ def velocity(colname, endTS='', startTS=''):
         end_minute=end.minute
         if end_minute<30:end_minute=0
         else:end_minute=30
-        window.end=datetime.combine(date(end_year,end_month,end_day),time(end_hour,end_minute,0))
-        window, config = rtw.getwindow()
+        end=datetime.combine(date(end_year,end_month,end_day),time(end_hour,end_minute,0))
+        window, config = rtw.getwindow(end)
 
     if startTS != '':
         #start
@@ -109,7 +109,7 @@ def velocity(colname, endTS='', startTS=''):
     #vel_xy
     vel_xy = vel[['ts', 'vel_xy', 'id']]
     velplot_xy,L2_xy,L3_xy = plotter.vel_classify(vel_xy, config, num_nodes)
-    
+
 #    #############################
 #    velplot = velplot_xz, velplot_xy, L2_xz, L2_xy, L3_xz, L3_xy
 #    plotvel = True
@@ -117,8 +117,16 @@ def velocity(colname, endTS='', startTS=''):
 #    xzd_plotoffset = 0
 #    plotter.plot_disp_vel(empty, empty, empty, colname, window, config, plotvel, xzd_plotoffset, num_nodes, velplot)
 #    #############################
+    
+    L2 = L2_xz.append(L2_xy)
+    L3 = L3_xz.append(L3_xy)
+    
+    L2_json = L2.to_json(orient="records", date_format="iso")
+    L3_json = L3.to_json(orient="records", date_format="iso")
+    velocity = dict({'L2': L2_json, 'L3': L3_json})
+    velocity = '[' + str(velocity).replace('\'', '').replace('L2', '"L2"').replace('L3', '"L3"') + ']'
 
-    return velplot_xz, velplot_xy, L2_xz, L2_xy, L3_xz, L3_xy
+    return velocity
 
 def displacement(colname, endTS='', startTS=''):
     col = q.GetSensorList(colname)
@@ -135,8 +143,8 @@ def displacement(colname, endTS='', startTS=''):
         end_minute=end.minute
         if end_minute<30:end_minute=0
         else:end_minute=30
-        window.end=datetime.combine(date(end_year,end_month,end_day),time(end_hour,end_minute,0))
-        window, config = rtw.getwindow()
+        end=datetime.combine(date(end_year,end_month,end_day),time(end_hour,end_minute,0))
+        window, config = rtw.getwindow(end)
 
     if startTS != '':
         #start
@@ -163,8 +171,8 @@ def displacement(colname, endTS='', startTS=''):
 
     #zeroing and offseting xz,xy
     df0off = plotter.disp0off(monitoring_vel, window, xzd_plotoffset, num_nodes)
-    
-    df0off_json = df0off.to_json(orient="records", date_format="iso")
+    df0off = df0off[0:3]
+    df0off_json = df0off.reset_index()[['ts', 'id', 'xz', 'xy']].to_json(orient="records", date_format="iso")
 
 #    #############################
 #    velplot = ''
@@ -190,8 +198,8 @@ def vcd_gen(colname, endTS='', startTS='', day_interval=1):
         end_minute=end.minute
         if end_minute<30:end_minute=0
         else:end_minute=30
-        window.end=datetime.combine(date(end_year,end_month,end_day),time(end_hour,end_minute,0))
-        window, config = rtw.getwindow()
+        end=datetime.combine(date(end_year,end_month,end_day),time(end_hour,end_minute,0))
+        window, config = rtw.getwindow(end)
 
     if startTS != '':
         #start
@@ -221,7 +229,7 @@ def vcd_gen(colname, endTS='', startTS='', day_interval=1):
     # compute column position
     colposdf = plotter.compute_colpos(window, config, monitoring_vel, num_nodes, seg_len)
 
-    colposdf_json = colposdf.to_json(orient="records", date_format="iso")
+    colposdf_json = colposdf[['ts', 'id', 'xz', 'xy', 'x']].to_json(orient="records", date_format="iso")
 
 #    #############################
 #    show_part_legend = False
@@ -234,7 +242,7 @@ def vcd_gen(colname, endTS='', startTS='', day_interval=1):
     #zeroing and offseting xz,xy
     df0off = plotter.disp0off(monitoring_vel, window, xzd_plotoffset, num_nodes)
 
-    df0off_json = df0off.to_json(orient="records", date_format="iso")
+    df0off_json = df0off.reset_index()[['ts', 'id', 'xz', 'xy']].to_json(orient="records", date_format="iso")
 
 
     #velplots
@@ -244,9 +252,15 @@ def vcd_gen(colname, endTS='', startTS='', day_interval=1):
     velplot_xz,L2_xz,L3_xz = plotter.vel_classify(vel_xz, config, num_nodes)
     #vel_xy
     vel_xy = vel[['ts', 'vel_xy', 'id']]
-    vel_time = datetime.now()
     velplot_xy,L2_xy,L3_xy = plotter.vel_classify(vel_xy, config, num_nodes)
-    print 'vel_time =', datetime.now() - vel_time
+    
+    L2 = L2_xz.append(L2_xy)
+    L3 = L3_xz.append(L3_xy)
+    
+    L2_json = L2.to_json(orient="records", date_format="iso")
+    L3_json = L3.to_json(orient="records", date_format="iso")
+    velocity = dict({'L2': L2_json, 'L3': L3_json})
+    velocity = '[' + str(velocity).replace('\'', '').replace('L2', '"L2"').replace('L3', '"L3"') + ']'
 
 #    #############################
 #    velplot = velplot_xz, velplot_xy, L2_xz, L2_xy, L3_xz, L3_xy
@@ -255,4 +269,15 @@ def vcd_gen(colname, endTS='', startTS='', day_interval=1):
 #    plotter.plot_disp_vel(empty, df0off, empty, colname, window, config, plotvel, xzd_plotoffset, num_nodes, velplot)
 #    #############################
 
-    return velplot_xz, velplot_xy, L2_xz, L2_xy, L3_xz, L3_xy, df0off_json, colposdf_json
+    vcd = dict({'v': velocity, 'c': colposdf_json, 'd': df0off_json})
+    
+    vcd = '[' + str(vcd).replace('\'', '').replace('v:', '"v":').replace('c:', '"c":').replace('d:', '"d":') + ']'
+
+    return vcd
+    
+################################
+#    
+#if __name__ == '__main__':
+#    start = datetime.now()
+#    vcd = vcd_gen('magta')
+#    print "runtime =", str(datetime.now() - start)
