@@ -1,6 +1,7 @@
 import re, sys
 from datetime import datetime as dt
 import cfgfileio as cfg
+import subprocess
 
 def getTimeFromSms(text):
   # timetxt = ""
@@ -130,7 +131,7 @@ def getGndMeas(text):
     print observer_name
   except AttributeError:
     raise ValueError(c.reply.failobven)
-    
+  
   gnd_records = ""
   for m in meas:
     try:
@@ -150,6 +151,12 @@ def getGndMeas(text):
     gnd_records = gnd_records + "('"+date_str+" "+time_str+"','"+sms_list[0]+"','"+sms_list[1]+"','"+observer_name+"','"+crid+"','"+str(cm)+"','"+wrecord+"'),"
     
   gnd_records = gnd_records[:-1]
+
+  site_code = sms_list[1].lower()  
+  ts = date_str+" "+time_str
+  command = """~/anaconda2/bin/python %s %s "%s" > ~/scriptlogs/gndalert.txt 2>&1 && ~/anaconda2/bin/python %s %s "%s" && ~/anaconda2/bin/python %s %s "%s" """ % (c.fileio.gndalert1, site_code, ts, c.fileio.gndalert2, site_code, ts, c.fileio.gndalert3, site_code, ts) 
+
+  p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, stderr=subprocess.STDOUT)
   
   return gnd_records
   

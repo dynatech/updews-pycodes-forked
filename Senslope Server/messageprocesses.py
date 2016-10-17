@@ -801,7 +801,7 @@ def RecordGroundMeasurements(gnd_meas):
     # dbio.createTable("gndmeas","gndmeas")
     
     query = "INSERT INTO gndmeas (timestamp, meas_type, site_id, observer_name, crack_id, meas, weather) VALUES " + gnd_meas
-    query += "ON DUPLICATE KEY UPDATE meas = values(meas)"
+    query += "ON DUPLICATE KEY UPDATE meas = values(meas), observer_name = values(observer_name), weather = values(weather);"
     
     # print query
     

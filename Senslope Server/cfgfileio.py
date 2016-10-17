@@ -77,6 +77,9 @@ class config:
 		self.fileio.alertgenscript = cfg.get("FileIO","alertgenscript")
 		self.fileio.alertanalysisscript = cfg.get("FileIO","alertanalysisscript")
 		self.fileio.websocketdir = cfg.get("FileIO","websocketdir")
+		self.fileio.gndalert1 = cfg.get("FileIO","gndalert1")
+		self.fileio.gndalert2 = cfg.get("FileIO","gndalert2")
+		self.fileio.gndalert3 = cfg.get("FileIO","gndalert3")
 		
 		
 		self.simprefix = Container()
