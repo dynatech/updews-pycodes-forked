@@ -124,7 +124,11 @@ def sendMsg(msg, number):
     # under development
     # return
 
-    pdulist = smssubmit(number,msg).to_pdu()
+    try:
+        pdulist = smssubmit(number,msg).to_pdu()
+    except:
+        print "Error in pdu conversion. Skipping message sending"
+        return -1
 
     # print "pdulen", len(pdulist)
 
