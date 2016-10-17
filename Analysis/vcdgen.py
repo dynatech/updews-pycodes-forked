@@ -6,7 +6,7 @@ import querySenslopeDb as q
 import genproc as g
 import RealtimePlotter as plotter
 
-def colpos(colname, endTS='', startTS='', day_interval=1):
+def colpos(colname, endTS='', startTS='', day_interval=1, fixpoint='bottom'):
     col = q.GetSensorList(colname)
     
     #end
@@ -50,9 +50,9 @@ def colpos(colname, endTS='', startTS='', day_interval=1):
     monitoring_vel = monitoring_vel.loc[(monitoring_vel.ts >= window.start)&(monitoring_vel.ts <= window.end)]
 
     # compute column position
-    colposdf = plotter.compute_colpos(window, config, monitoring_vel, num_nodes, seg_len)
-
-    colposdf_json = colposdf[['ts', 'id', 'xz', 'xy', 'x']].to_json(orient="records", date_format="iso")
+    colposdf = plotter.compute_colpos(window, config, monitoring_vel, num_nodes, seg_len, fixpoint=fixpoint)
+    colposdf = colposdf.rename(columns = {'cs_xz': 'downslope', 'cs_xy': 'latslope', 'x': 'depth'})
+    colposdf_json = colposdf[['ts', 'id', 'downslope', 'latslope', 'depth']].to_json(orient="records", date_format="iso")
 
 #    #############################
 #    show_part_legend = False
@@ -105,10 +105,10 @@ def velocity(colname, endTS='', startTS=''):
     vel = monitoring_vel.loc[(monitoring_vel.ts >= window.start) & (monitoring_vel.ts <= window.end)]
     #vel_xz
     vel_xz = vel[['ts', 'vel_xz', 'id']]
-    velplot_xz,L2_xz,L3_xz = plotter.vel_classify(vel_xz, config, num_nodes)
+    velplot_xz,L2_xz,L3_xz = plotter.vel_classify(vel_xz, config, num_nodes, linearvel=False)
     #vel_xy
     vel_xy = vel[['ts', 'vel_xy', 'id']]
-    velplot_xy,L2_xy,L3_xy = plotter.vel_classify(vel_xy, config, num_nodes)
+    velplot_xy,L2_xy,L3_xy = plotter.vel_classify(vel_xy, config, num_nodes, linearvel=False)
 
 #    #############################
 #    velplot = velplot_xz, velplot_xy, L2_xz, L2_xy, L3_xz, L3_xy
@@ -128,7 +128,7 @@ def velocity(colname, endTS='', startTS=''):
 
     return velocity
 
-def displacement(colname, endTS='', startTS=''):
+def displacement(colname, endTS='', startTS='', fixpoint='bottom'):
     col = q.GetSensorList(colname)
     
     #end
@@ -170,9 +170,9 @@ def displacement(colname, endTS='', startTS=''):
     xzd_plotoffset = 0
 
     #zeroing and offseting xz,xy
-    df0off = plotter.disp0off(monitoring_vel, window, xzd_plotoffset, num_nodes)
-
-    df0off_json = df0off.reset_index()[['ts', 'id', 'xz', 'xy']].to_json(orient="records", date_format="iso")
+    df0off = plotter.disp0off(monitoring_vel, window, config, xzd_plotoffset, num_nodes, fixpoint=fixpoint)
+    df0off = df0off.rename(columns = {'xz': 'downslope', 'xy': 'latslope'})
+    df0off_json = df0off.reset_index()[['ts', 'id', 'downslope', 'latslope']].to_json(orient="records", date_format="iso")
 
 #    #############################
 #    velplot = ''
@@ -183,7 +183,7 @@ def displacement(colname, endTS='', startTS=''):
 
     return df0off_json
 
-def vcdgen(colname, endTS='', startTS='', day_interval=1):
+def vcdgen(colname, endTS='', startTS='', day_interval=1, fixpoint='bottom'):
     col = q.GetSensorList(colname)
     
     #end
@@ -227,9 +227,9 @@ def vcdgen(colname, endTS='', startTS='', day_interval=1):
     monitoring_vel = monitoring_vel.loc[(monitoring_vel.ts >= window.start)&(monitoring_vel.ts <= window.end)]
     
     # compute column position
-    colposdf = plotter.compute_colpos(window, config, monitoring_vel, num_nodes, seg_len)
-
-    colposdf_json = colposdf[['ts', 'id', 'xz', 'xy', 'x']].to_json(orient="records", date_format="iso")
+    colposdf = plotter.compute_colpos(window, config, monitoring_vel, num_nodes, seg_len, fixpoint=fixpoint)
+    colposdf = colposdf.rename(columns = {'cs_xz': 'downslope', 'cs_xy': 'latslope', 'x': 'depth'})
+    colposdf_json = colposdf[['ts', 'id', 'downslope', 'latslope', 'depth']].to_json(orient="records", date_format="iso")
 
 #    #############################
 #    show_part_legend = False
@@ -240,19 +240,18 @@ def vcdgen(colname, endTS='', startTS='', day_interval=1):
     xzd_plotoffset = 0
 
     #zeroing and offseting xz,xy
-    df0off = plotter.disp0off(monitoring_vel, window, xzd_plotoffset, num_nodes)
-
-    df0off_json = df0off.reset_index()[['ts', 'id', 'xz', 'xy']].to_json(orient="records", date_format="iso")
-
+    df0off = plotter.disp0off(monitoring_vel, window, config, xzd_plotoffset, num_nodes, fixpoint=fixpoint)
+    df0off = df0off.rename(columns = {'xz': 'downslope', 'xy': 'latslope'})
+    df0off_json = df0off.reset_index()[['ts', 'id', 'downslope', 'latslope']].to_json(orient="records", date_format="iso")
 
     #velplots
     vel = monitoring_vel.loc[(monitoring_vel.ts >= window.end - timedelta(hours=3)) & (monitoring_vel.ts <= window.end)]
     #vel_xz
     vel_xz = vel[['ts', 'vel_xz', 'id']]
-    velplot_xz,L2_xz,L3_xz = plotter.vel_classify(vel_xz, config, num_nodes)
+    velplot_xz,L2_xz,L3_xz = plotter.vel_classify(vel_xz, config, num_nodes, linearvel=False)
     #vel_xy
     vel_xy = vel[['ts', 'vel_xy', 'id']]
-    velplot_xy,L2_xy,L3_xy = plotter.vel_classify(vel_xy, config, num_nodes)
+    velplot_xy,L2_xy,L3_xy = plotter.vel_classify(vel_xy, config, num_nodes, linearvel=False)
     
     L2 = L2_xz.append(L2_xy)
     L3 = L3_xz.append(L3_xy)
@@ -275,9 +274,9 @@ def vcdgen(colname, endTS='', startTS='', day_interval=1):
 
     return vcd
     
-################################
+######################################
 #    
 #if __name__ == '__main__':
 #    start = datetime.now()
-#    vcd=vcdgen('magta')
+#    vcd=vcdgen('magta', endTS='2016-10-12 12:00')
 #    print "runtime =", str(datetime.now() - start)

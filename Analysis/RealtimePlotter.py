@@ -14,37 +14,55 @@ import rtwindow as rtw
 import querySenslopeDb as q
 import genproc as g
 
-def col_pos(colpos_dfts, col_pos_end, col_pos_interval, col_pos_number, num_nodes):
+def col_pos(colpos_dfts):
     
     colpos_dfts = colpos_dfts.drop_duplicates()
     cumsum_df = colpos_dfts[['xz','xy']].cumsum()
     colpos_dfts['cs_xz'] = cumsum_df.xz.values
     colpos_dfts['cs_xy'] = cumsum_df.xy.values
-    
     return np.round(colpos_dfts, 4)
 
-def compute_colpos(window, config, monitoring_vel, num_nodes, seg_len):
-    column_fix = config.io.column_fix
+def compute_depth(colpos_dfts):
+    print colpos_dfts
+
+    colpos_dfts = colpos_dfts.drop_duplicates()
+    cumsum_df = colpos_dfts[['x']].cumsum()
+    colpos_dfts['x'] = cumsum_df.x.values
+    return np.round(colpos_dfts, 4)
+
+def compute_colpos(window, config, monitoring_vel, num_nodes, seg_len, fixpoint=''):
+    if fixpoint == '':
+        column_fix = config.io.column_fix
+    else:
+        column_fix = fixpoint
     colposdates = pd.date_range(end=window.end, freq=config.io.col_pos_interval, periods=config.io.num_col_pos, name='ts', closed=None)
 
-    if column_fix == 'top':
-        colpos_df = pd.DataFrame({'ts': colposdates, 'id': [0]*len(colposdates), 'xz': [0]*len(colposdates), 'xy': [0]*len(colposdates)})
-    else:
-        colpos_df = pd.DataFrame({'ts': colposdates, 'id': [num_nodes+1]*len(colposdates), 'xz': [0]*len(colposdates), 'xy': [0]*len(colposdates)})
-
     mask = monitoring_vel['ts'].isin(colposdates)
-    colpos_dfs = monitoring_vel[mask][['ts', 'id', 'xz', 'xy']]
-    colpos_df = colpos_df.append(colpos_dfs)
-    colpos_df['x'] = colpos_df['id'].apply(lambda x: (num_nodes + 1 - x) * seg_len)
+    colpos_df = monitoring_vel[mask][['ts', 'id', 'xz', 'xy']]
+    colpos_df['x'] = np.sqrt(seg_len**2 + np.power(colpos_df['xz'], 2) + np.power(colpos_df['xy'], 2))
+    colpos_df['x'] = colpos_df['x'].fillna(seg_len)
+    
+    if column_fix == 'top':
+        colpos_df0 = pd.DataFrame({'ts': colposdates, 'id': [0]*len(colposdates), 'xz': [0]*len(colposdates), 'xy': [0]*len(colposdates), 'x': [0]*len(colposdates)})
+    elif column_fix == 'bottom':
+        colpos_df0 = pd.DataFrame({'ts': colposdates, 'id': [num_nodes+1]*len(colposdates), 'xz': [0]*len(colposdates), 'xy': [0]*len(colposdates), 'x': [seg_len]*len(colposdates)})
+    
+    colpos_df = colpos_df.append(colpos_df0, ignore_index = True)
     
     if column_fix == 'top':
         colpos_df[['xz','xy']] = colpos_df[['xz','xy']].apply(lambda x: -x)
         colpos_df = colpos_df.sort('id', ascending = True)
-    else:
+    elif column_fix == 'bottom':
         colpos_df = colpos_df.sort('id', ascending = False)
     
     colpos_dfts = colpos_df.groupby('ts')
-    colposdf = colpos_dfts.apply(col_pos, col_pos_end = window.end, col_pos_interval = config.io.col_pos_interval, col_pos_number = config.io.num_col_pos, num_nodes = num_nodes)
+    colposdf = colpos_dfts.apply(col_pos)
+    
+    colposdf = colposdf.sort('id', ascending = True)
+    colpos_dfts = colposdf.groupby('ts')
+    colposdf = colpos_dfts.apply(compute_depth)
+    
+    colposdf['x'] = colposdf['x'].apply(lambda x: -x)
     return colposdf
 
 def nonrepeat_colors(ax,NUM_COLORS,color='gist_rainbow'):
@@ -61,14 +79,14 @@ def subplot_colpos(dfts, ax_xz, ax_xy, show_part_legend, config, colposTS):
 
     #current column position xz
     curax = ax_xz
-    curcolpos_xz = dfts.cs_xz.values
+    curcolpos_xz = dfts['cs_xz'].apply(lambda x: x*1000).values
     curax.plot(curcolpos_xz,curcolpos_x,'.-')
-    curax.set_xlabel('xz')
-    curax.set_ylabel('x')
+    curax.set_xlabel('horizontal displacement, \n downslope(mm)')
+    curax.set_ylabel('depth, m')
     
     #current column position xy
     curax=ax_xy
-    curcolpos_xy = dfts.cs_xy.values
+    curcolpos_xy = dfts['cs_xy'].apply(lambda x: x*1000).values
     if show_part_legend == False:
         curax.plot(curcolpos_xy,curcolpos_x,'.-', label=str(pd.to_datetime(dfts.ts.values[0])))
     else:
@@ -76,7 +94,7 @@ def subplot_colpos(dfts, ax_xz, ax_xy, show_part_legend, config, colposTS):
             curax.plot(curcolpos_xy,curcolpos_x,'.-', label=str(pd.to_datetime(dfts.ts.values[0])))
         else:
             curax.plot(curcolpos_xy,curcolpos_x,'.-')
-    curax.set_xlabel('xy')
+    curax.set_xlabel('horizontal displacement, \n across slope(mm)')
     
     
 def plot_column_positions(df,colname,end, show_part_legend, config):
@@ -97,8 +115,8 @@ def plot_column_positions(df,colname,end, show_part_legend, config):
         ax_xz=fig.add_subplot(121)
         ax_xy=fig.add_subplot(122,sharex=ax_xz,sharey=ax_xz)
         
-        ax_xz=nonrepeat_colors(ax_xz,len(set(df.ts.values)))
-        ax_xy=nonrepeat_colors(ax_xy,len(set(df.ts.values)))
+        ax_xz=nonrepeat_colors(ax_xz,len(set(df.ts.values)),color='plasma')
+        ax_xy=nonrepeat_colors(ax_xy,len(set(df.ts.values)),color='plasma')
 
         colposTS = pd.DataFrame({'ts': list(set(df.ts)), 'index': range(len(set(df.ts)))})
         
@@ -121,8 +139,7 @@ def plot_column_positions(df,colname,end, show_part_legend, config):
             tick.label.set_rotation('vertical')
             tick.label.set_fontsize(10)
 
-        plt.tight_layout()
-        plt.subplots_adjust(top=0.945)        
+        plt.subplots_adjust(top=0.92, bottom=0.15, left=0.05, right=0.73)        
         plt.suptitle(colname+" as of "+str(end),fontsize='medium')
 
     except:        
@@ -205,7 +222,14 @@ def noise_env(df, max_min_df, window, num_nodes, xzd_plotoffset):
 
     return noise_df
 
-def disp0off(df, window, xzd_plotoffset, num_nodes):
+def disp0off(df, window, config, xzd_plotoffset, num_nodes, fixpoint=''):
+    if fixpoint == '':
+        column_fix = config.io.column_fix
+    else:
+        column_fix = fixpoint
+    if column_fix == 'top':
+        df['xz'] = df['xz'].apply(lambda x: -x)
+        df['xy'] = df['xy'].apply(lambda x: -x)
     nodal_df = df.groupby('id')
     df0 = nodal_df.apply(df_zero_initial_row, window = window)
     nodal_df0 = df0.groupby('id')
@@ -271,7 +295,7 @@ def plot_disp_vel(noise_df, df0off, cs_df, colname, window, config, plotvel, xzd
             ax_xzd.fill_between(cs_df.index,cs_df['xz'].values,xzd_plotoffset*(num_nodes),color='0.8')
             ax_xyd.fill_between(cs_df.index,cs_df['xy'].values,xzd_plotoffset*(num_nodes),color='0.8')
         except:
-            print 'Error in plotting cumulative surfacce displacement'
+            print 'Error in plotting cumulative surface displacement'
             
         try:
             #assigning non-repeating colors to subplots axis
@@ -451,7 +475,7 @@ def df_add_offset_col(df, offset, num_nodes):
     return np.round(df,4)
     
     
-def main(monitoring, window, config, plotvel_start='', plotvel_end='', plotvel=True, show_part_legend = False):
+def main(monitoring, window, config, plotvel_start='', plotvel_end='', plotvel=True, show_part_legend = False, realtime=True):
 
     colname = monitoring.colprops.name
     num_nodes = monitoring.colprops.nos
@@ -474,10 +498,13 @@ def main(monitoring, window, config, plotvel_start='', plotvel_end='', plotvel=T
     # plot column position
     plot_column_positions(colposdf,colname,window.end, show_part_legend, config=config)
 
-    lgd = plt.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize='medium')
+    lgd = plt.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize='small')
 
-    plt.savefig(output_path+config.io.outputfilepath+'realtime/'+colname+'ColPos_'+str(window.end.strftime('%Y-%m-%d_%H-%M'))+'.png',
-                dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w', bbox_extra_artists=(lgd,), bbox_inches='tight')
+    if realtime:
+        config.io.outputfilepath = config.io.outputfilepath+'realtime/'
+    
+    plt.savefig(output_path+config.io.outputfilepath+colname+'ColPos_'+str(window.end.strftime('%Y-%m-%d_%H-%M'))+'.png',
+                dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w', bbox_extra_artists=(lgd,))
     
     # displacement plot offset
     xzd_plotoffset = plotoffset(monitoring_vel, disp_offset = 'mean')
@@ -489,7 +516,7 @@ def main(monitoring, window, config, plotvel_start='', plotvel_end='', plotvel=T
     noise_df = noise_env(monitoring_vel, max_min_df, window, num_nodes, xzd_plotoffset)
     
     #zeroing and offseting xz,xy
-    df0off = disp0off(monitoring_vel, window, xzd_plotoffset, num_nodes)
+    df0off = disp0off(monitoring_vel, window, config, xzd_plotoffset, num_nodes)
     
     if plotvel:
         #velplots
@@ -508,7 +535,7 @@ def main(monitoring, window, config, plotvel_start='', plotvel_end='', plotvel=T
     
     # plot displacement and velocity
     plot_disp_vel(noise_df, df0off, cs_df, colname, window, config, plotvel, xzd_plotoffset, num_nodes, velplot)
-    plt.savefig(output_path+config.io.outputfilepath+'realtime/'+colname+'_DispVel_'+str(window.end.strftime('%Y-%m-%d_%H-%M'))+'.png',
+    plt.savefig(output_path+config.io.outputfilepath+colname+'_DispVel_'+str(window.end.strftime('%Y-%m-%d_%H-%M'))+'.png',
                 dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
 
 def mon_main():
