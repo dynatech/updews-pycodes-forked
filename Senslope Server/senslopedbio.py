@@ -108,7 +108,7 @@ def setSendStatus(send_status,sms_id_list):
             where_clause = "where sms_id in (%s)" % (str(sms_id_list)[1:-1].replace("L",""))
     elif type(sms_id_list) is long:
         where_clause = "where sms_id = %d" % (sms_id_list)
-    query = "update %s.smsinbox set read_status = '%s' %s" % (gsmdbinstance.name, read_status, where_clause)
+    query = "update %s.smsoutbox set send_status = '%s' %s" % (gsmdbinstance.name, send_status, where_clause)
     print query
         
     now = dt.today().strftime("%Y-%m-%d %H:%M:%S")
