@@ -9,7 +9,7 @@ import querySenslopeDb as q
 import genproc as g
 import AlertAnalysis as A
 
-import Plotter
+import RealtimePlotter as plotter
 
 def RoundTime(date_time):
     # rounds time to 4/8/12 AM/PM
@@ -346,9 +346,9 @@ def main(name=''):
     if public_alert.alert.values[0] != 'A0' or RoundTime(pd.to_datetime(public_alert.timestamp.values[0])) == RoundTime(window.end):
         plot_time = ['07:30:00', '19:30:00']
         if str(window.end.time()) in plot_time:
-            Plotter.main(monitoring, window, config)
+            plotter.main(monitoring, window, config, plotvel_start=window.end-timedelta(hours=3), plotvel_end=window.end)
     elif RoundTime(pd.to_datetime(public_alert.timestamp.values[0])) == RoundTime(window.end):
-        Plotter.main(monitoring, window, config)
+        plotter.main(monitoring, window, config, plotvel_start=window.end-timedelta(hours=3), plotvel_end=window.end)
 
 #######################
 
