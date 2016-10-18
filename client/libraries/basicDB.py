@@ -22,6 +22,7 @@ elif curOS == "Linux":
 # Needs config file: server-config.txt
 
 def connectDB(nameDB=None):
+    ctr = 0
     while True:
         try:
             if nameDB == None:
@@ -32,6 +33,9 @@ def connectDB(nameDB=None):
             return db, cur
         except mysqlDriver.OperationalError:
             print '.',
+            ctr = ctr + 1
+            if ctr > 10:
+                return None, None
 
 def PrintOut(line):
     if printtostdout:
@@ -63,6 +67,10 @@ def DoesTableExist(schema_name, table_name):
     else:
         db.close()
         return False
+        
+def CreateSchema(schema_name):
+    query = "CREATE DATABASE IF NOT EXISTS %s" % (schema_name)
+    ExecuteQuery(query)
         
 def CreateMasyncSchemaTargetsTable(schema_name=None):
     db, cur = connectDB(schema_name)

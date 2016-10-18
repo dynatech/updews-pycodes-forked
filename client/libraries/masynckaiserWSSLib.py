@@ -435,11 +435,27 @@ def syncStartUp(host, port):
     for schema in schemas:
         print schema
         
+        #Create schema if it is non-existent
+        if not bdb.DoesDatabaseSchemaExist(schema):
+            print """%s: %s is NON EXISTENT! Creating Schema (%s)...""" % (common.whoami(), schema, schema)
+            bdb.CreateSchema(schema)
+            pass
+        
         tables = getTableList(ws, schema)  
-        for table in tables:
-            print table, 
+        tablesExisting = []
+        tablesNonExistent = []
+#        for table in tables:
+#            print table, 
+#            if bdb.DoesTableExist(schema, table):
+#                tablesExisting.append(table)
+#            else:
+#                tablesNonExistent.append(table)
             
-        print "\n\n"
+#        print "\nExisting: "
+#        print tablesExisting
+#        print "\nNon-existent: "
+#        print tablesNonExistent
+#        print "\n\n"
         
         #TODO: Get all table names per available schema
     
