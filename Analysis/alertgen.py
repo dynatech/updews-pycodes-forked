@@ -343,7 +343,7 @@ def main(name=''):
 
     query = "SELECT * FROM senslopedb.site_level_alert WHERE site = '%s' and source = 'public' ORDER BY updateTS DESC LIMIT 1" %monitoring.colprops.name[0:3]
     public_alert = q.GetDBDataFrame(query)
-    if public_alert.alert.values[0] != 'A0' or RoundTime(pd.to_datetime(public_alert.timestamp.values[0])) == RoundTime(window.end):
+    if public_alert.alert.values[0] != 'A0':
         plot_time = ['07:30:00', '19:30:00']
         if str(window.end.time()) in plot_time:
             plotter.main(monitoring, window, config, plotvel_start=window.end-timedelta(hours=3), plotvel_end=window.end, realtime=False)
