@@ -9,6 +9,7 @@ import os
 import pandas as pd
 import numpy as np
 from datetime import date, time, datetime, timedelta
+from scipy.stats import spearmanr
 
 import rtwindow as rtw
 import querySenslopeDb as q
@@ -245,7 +246,21 @@ def disp0off(df, window, config, xzd_plotoffset, num_nodes, fixpoint=''):
 
     return df0off
 
-def plot_disp_vel(noise_df, df0off, cs_df, colname, window, config, plotvel, xzd_plotoffset, num_nodes, velplot):
+def check_increasing(df, inc_df):
+    sum_index = inc_df.loc[inc_df.id == df['id'].values[0]].index[0]
+    sp, pval = spearmanr(range(len(df)), df['xz'].values)
+    if sp > 0.5:
+        inc_xz = int(10 * (round(abs(sp), 1) - 0.5))
+    else:
+        inc_xz = 0
+    sp, pval = spearmanr(range(len(df)), df['xy'].values)
+    if sp > 0.5:
+        inc_xy = int(10 * (round(abs(sp), 1) - 0.5))
+    else:
+        inc_xy = 0
+    inc_df.loc[sum_index] = [df['id'].values[0], inc_xz, inc_xy]
+
+def plot_disp_vel(noise_df, df0off, cs_df, colname, window, config, plotvel, xzd_plotoffset, num_nodes, velplot, plot_inc, inc_df=''):
 #==============================================================================
 # 
 #     DESCRIPTION:
@@ -327,9 +342,22 @@ def plot_disp_vel(noise_df, df0off, cs_df, colname, window, config, plotvel, xzd
             y = df0off.loc[df0off.index == window.start].sort_values('id')['xz'].values
             x = window.start
             z = range(1, num_nodes+1)
-            for i,j in zip(y,z):
-               curax.annotate(str(int(j)),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')
-            
+            if not plot_inc:
+                for i,j in zip(y,z):
+                   curax.annotate(str(int(j)),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')
+            else:
+                for i,j in zip(y,z):
+                   if inc_df.loc[inc_df.id == j]['inc_xz'].values[0]>3:
+                       curax.annotate(str(int(j))+'++++',xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'large')
+                   elif inc_df.loc[inc_df.id == j]['inc_xz'].values[0]>2:
+                       curax.annotate(str(int(j))+'+++',xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'large')
+                   elif inc_df.loc[inc_df.id == j]['inc_xz'].values[0]>1:
+                       curax.annotate(str(int(j))+'++',xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'medium')
+                   elif inc_df.loc[inc_df.id == j]['inc_xz'].values[0]>0:
+                       curax.annotate(str(int(j))+'+',xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'medium')
+                   else:
+                       curax.annotate(str(int(j)),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')
+
             #plotting displacement for xy
             curax=ax_xyd
             plt.sca(curax)
@@ -343,8 +371,21 @@ def plot_disp_vel(noise_df, df0off, cs_df, colname, window, config, plotvel, xzd
             y = df0off.loc[df0off.index == window.start].sort_values('id')['xy'].values
             x = window.start
             z = range(1, num_nodes+1)
-            for i,j in zip(y,z):
-               curax.annotate(str(int(j)),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')    
+            if not plot_inc:
+                for i,j in zip(y,z):
+                   curax.annotate(str(int(j)),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')
+            else:
+                for i,j in zip(y,z):
+                   if inc_df.loc[inc_df.id == j]['inc_xy'].values[0]>3:
+                       curax.annotate(str(int(j))+'++++',xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'large')
+                   elif inc_df.loc[inc_df.id == j]['inc_xy'].values[0]>2:
+                       curax.annotate(str(int(j))+'+++',xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'large')
+                   elif inc_df.loc[inc_df.id == j]['inc_xy'].values[0]>1:
+                       curax.annotate(str(int(j))+'++',xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'medium')
+                   elif inc_df.loc[inc_df.id == j]['inc_xy'].values[0]>0:
+                       curax.annotate(str(int(j))+'+',xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'medium')
+                   else:
+                       curax.annotate(str(int(j)),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')
         except:
             print 'Error in plotting displacement'
                
@@ -479,7 +520,7 @@ def df_add_offset_col(df, offset, num_nodes):
     return np.round(df,4)
     
     
-def main(monitoring, window, config, plotvel_start='', plotvel_end='', plotvel=True, show_part_legend = False, realtime=True):
+def main(monitoring, window, config, plotvel_start='', plotvel_end='', plotvel=True, show_part_legend = False, realtime=True, plot_inc=True):
 
     colname = monitoring.colprops.name
     num_nodes = monitoring.colprops.nos
@@ -510,6 +551,12 @@ def main(monitoring, window, config, plotvel_start='', plotvel_end='', plotvel=T
     plt.savefig(output_path+config.io.outputfilepath+colname+'ColPos_'+str(window.end.strftime('%Y-%m-%d_%H-%M'))+'.png',
                 dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w', bbox_extra_artists=(lgd,))
     
+    check_inc_df = monitoring_vel.sort('ts')
+    inc_df = pd.DataFrame({'id': range(1, num_nodes+1), 'inc_xz': [np.nan]*num_nodes, 'inc_xy': [np.nan]*num_nodes})
+    inc_df = inc_df[['id', 'inc_xz', 'inc_xy']]
+    nodal_monitoring_vel = check_inc_df.groupby('id')
+    nodal_monitoring_vel.apply(check_increasing, inc_df=inc_df)
+    
     # displacement plot offset
     xzd_plotoffset = plotoffset(monitoring_vel, disp_offset = 'mean')
     
@@ -538,7 +585,7 @@ def main(monitoring, window, config, plotvel_start='', plotvel_end='', plotvel=T
         velplot = ''
     
     # plot displacement and velocity
-    plot_disp_vel(noise_df, df0off, cs_df, colname, window, config, plotvel, xzd_plotoffset, num_nodes, velplot)
+    plot_disp_vel(noise_df, df0off, cs_df, colname, window, config, plotvel, xzd_plotoffset, num_nodes, velplot, plot_inc, inc_df=inc_df)
     plt.savefig(output_path+config.io.outputfilepath+colname+'_DispVel_'+str(window.end.strftime('%Y-%m-%d_%H-%M'))+'.png',
                 dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
 
@@ -584,7 +631,7 @@ def mon_main():
                     continue
             
             monitoring = g.genproc(col[0], window, config, realtime=True)
-            main(monitoring, window, config, plotvel_start=window.end-timedelta(hours=3), plotvel_end=window.end)
+            main(monitoring, window, config, plotvel_start=window.end-timedelta(hours=3), plotvel_end=window.end)#, plot_inc=False)
             
         # plots with customizable monitoring window
         elif monitoring_window == 'n':
@@ -658,7 +705,7 @@ def mon_main():
                 plotvel = False
     
             monitoring = g.genproc(col[0], window, config)
-            main(monitoring, window, config, plotvel=plotvel, show_part_legend = show_part_legend, plotvel_end=window.end, plotvel_start=window.start)
+            main(monitoring, window, config, plotvel=plotvel, show_part_legend = show_part_legend, plotvel_end=window.end, plotvel_start=window.start, plot_inc=False)
         
     # plots from start to end of data
     elif plot_all_data == 'y':
@@ -729,7 +776,7 @@ def mon_main():
             plotvel = False
 
         monitoring = g.genproc(col[0], window, config)
-        main(monitoring, window, config, plotvel=False, show_part_legend = show_part_legend)
+        main(monitoring, window, config, plotvel=False, show_part_legend = show_part_legend, plot_inc=False)
 
 ##########################################################
 if __name__ == "__main__":
