@@ -9,6 +9,7 @@ Created on Mon Oct 03 17:44:15 2016
 import socket
 import os
 import sys
+import thread
 import time
 import json
 import simplejson
@@ -397,32 +398,59 @@ def sendAllAckSentGSMtoDEWS(host="www.dewslandslide.com", port=5055, limit=20):
 
 #Connect to WebSocket Server and attempt to reconnect when disconnected
 #Receive and process messages as well
-def connRecvReconn(host, port):
+def syncRealTime(host, port):
     url = "ws://%s:%s/" % (host, port)
     delay = 5
 
-    # TODO: We need to do multithreading or multiprocessing on this part in
-    #   order to run "sending" and "receiving" asynchronously
+    print "%s: Starting Real Time Sync" % (common.whoami())
 
     while True:
         try:
-            print "Receiving..."
             result = ws.recv()
-            parseRecvMsg(result)
-            # print "Received '%s'" % result
+#            parseRecvMsg(result)
+            print "%s: Received '%s'" % (common.whoami(), result)
             delay = 5
         except Exception, e:
             try:
-                print "Connecting to Websocket Server..."
+                print "%s: Connecting to Websocket Server (%s)..." % (common.whoami(), url)
                 ws = create_connection(url)
-            except Exception, e:
-                print "Disconnected! will attempt reconnection in %s seconds..." % (delay)
+            except Exception:
+                print "%s: Disconnected! will attempt reconnection in %s seconds..." % (common.whoami(), delay)
                 time.sleep(delay)
 
                 if delay < 10:
                     delay += 1
 
     ws.close()
+
+#Synchronize all allowed schemas, tables and data at the time of activation
+def syncStartUp(host, port):
+    url = "ws://%s:%s/" % (host, port)
+    
+    print "%s: Starting Start Up Sync" % (common.whoami())
+    ws = create_connection(url)
+
+    #Get names of all schemas
+    schemas = getSchemaList(ws)
+    for schema in schemas:
+        print schema
+        
+        tables = getTableList(ws, schema)  
+        for table in tables:
+            print table, 
+            
+        print "\n\n"
+        
+        #TODO: Get all table names per available schema
+    
+            #TODO: Request SQL command for generating missing tables on local
+            #   database of client
+    
+    ws.close()
+    
+    #Temporary: to be removed
+#    return result
+
 
 #Test Send data and receive response from server
 def testSendRecv(host, port, schema=None, table=None):
@@ -451,6 +479,56 @@ def testSendRecv(host, port, schema=None, table=None):
     
     ws.close()
 
+#Get the schema list from the Websocket Server
+def getSchemaList(ws=None):
+    if not ws:
+        print "%s ERROR: No ws value passed" % (common.whoami())
+        return None
+    
+    requestMsg = masyncSR.showSchemas()
+    if requestMsg:    
+        ws.send(requestMsg)
+        result = ws.recv()
+#        print "%s: Received '%s'" % (common.whoami(), result)
+        schemaList = parseBasicList(result)
+        
+        return schemaList
+    else:
+        print "%s ERROR: No request message passed" % (common.whoami())
+        return None
+
+#Get the tables list from the Websocket Server
+def getTableList(ws=None, schema=None):
+    if not ws or not schema:
+        print "%s ERROR: No ws value passed" % (common.whoami())
+        return None
+    
+    requestMsg = masyncSR.showTables(schema)
+    if requestMsg:    
+        ws.send(requestMsg)
+        result = ws.recv()
+#        print "%s: Received '%s\n\n'" % (common.whoami(), result)
+        tableList = parseBasicList(result)
+        
+        return tableList
+    else:
+        print "%s ERROR: No request message passed" % (common.whoami())
+        return None
+
+#Parse the json message and return as an array
+def parseBasicList(payload):
+    msg = format(payload.decode('utf8'))
+    parsed_json = json.loads(json.loads(msg))
+    
+    schemaList = []
+    for json_dict in parsed_json:
+        for key,value in json_dict.iteritems():
+#            print("key: {} | value: {}".format(key, value))
+            schemaList.append(value)
+            
+    return schemaList
+    
+    
 def parseRecvMsg(payload):
     msg = format(payload.decode('utf8'))
     print("Text message received: %s" % msg)

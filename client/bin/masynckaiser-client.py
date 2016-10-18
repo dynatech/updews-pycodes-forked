@@ -9,6 +9,8 @@ from datetime import datetime
 import threading
 import os
 import sys
+import time
+import json
 
 #include the path of "libraries" folder for the python scripts searching
 path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../libraries'))
@@ -36,23 +38,35 @@ def printit():
 	threading.Timer(1.0, printit).start()
 	print "Hello, World!"
 
-#printit()
-# wssSendMsg()
+def main():
+    #printit()
+    # wssSendMsg()
+    host = "sandbox"
+    port = 5055
+    schema = "senslopedb"
+    table = "smsoutbox"
+    
+    masync.syncStartUp(host, port)
+#    masync.syncRealTime(host, port)
+#    masync.testSendRecv(host, port, schema, table)
+#    masync.threadedSendRecv(host, port, schema, table)
+
+#main()
+
 host = "sandbox"
 port = 5055
 schema = "senslopedb"
 table = "smsoutbox"
-#masync.connRecvReconn(host, port)
-masync.testSendRecv(host, port, schema, table)
 
+output = masync.syncStartUp(host, port)
 
+#msg = format(schemas.decode('utf8'))
+#parsed_json = json.loads(json.loads(msg))
 
-
-
-
-
-
-
-
+#schemaList = []
+#for json_dict in parsed_json:
+#    for key,value in json_dict.iteritems():
+#        print("key: {} | value: {}".format(key, value))
+#        schemaList.append(value)
 
 
