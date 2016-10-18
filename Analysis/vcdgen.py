@@ -52,6 +52,7 @@ def colpos(colname, endTS='', startTS='', day_interval=1, fixpoint='bottom'):
     # compute column position
     colposdf = plotter.compute_colpos(window, config, monitoring_vel, num_nodes, seg_len, fixpoint=fixpoint)
     colposdf = colposdf.rename(columns = {'cs_xz': 'downslope', 'cs_xy': 'latslope', 'x': 'depth'})
+#    colposdf = colposdf[0:3]
     colposdf_json = colposdf[['ts', 'id', 'downslope', 'latslope', 'depth']].to_json(orient="records", date_format="iso")
 
 #    #############################
@@ -121,6 +122,9 @@ def velocity(colname, endTS='', startTS=''):
     L2 = L2_xz.append(L2_xy)
     L3 = L3_xz.append(L3_xy)
     
+#    L2 = L2[0:3]
+#    L3 = L3[0:3]
+    
     L2_json = L2.to_json(orient="records", date_format="iso")
     L3_json = L3.to_json(orient="records", date_format="iso")
     velocity = dict({'L2': L2_json, 'L3': L3_json})
@@ -172,6 +176,7 @@ def displacement(colname, endTS='', startTS='', fixpoint='bottom'):
     #zeroing and offseting xz,xy
     df0off = plotter.disp0off(monitoring_vel, window, config, xzd_plotoffset, num_nodes, fixpoint=fixpoint)
     df0off = df0off.rename(columns = {'xz': 'downslope', 'xy': 'latslope'})
+#    df0off = df0off[0:3]
     df0off_json = df0off.reset_index()[['ts', 'id', 'downslope', 'latslope']].to_json(orient="records", date_format="iso")
 
 #    #############################
@@ -229,6 +234,7 @@ def vcdgen(colname, endTS='', startTS='', day_interval=1, fixpoint='bottom'):
     # compute column position
     colposdf = plotter.compute_colpos(window, config, monitoring_vel, num_nodes, seg_len, fixpoint=fixpoint)
     colposdf = colposdf.rename(columns = {'cs_xz': 'downslope', 'cs_xy': 'latslope', 'x': 'depth'})
+#    colposdf = colposdf[0:3]
     colposdf_json = colposdf[['ts', 'id', 'downslope', 'latslope', 'depth']].to_json(orient="records", date_format="iso")
 
 #    #############################
@@ -242,6 +248,7 @@ def vcdgen(colname, endTS='', startTS='', day_interval=1, fixpoint='bottom'):
     #zeroing and offseting xz,xy
     df0off = plotter.disp0off(monitoring_vel, window, config, xzd_plotoffset, num_nodes, fixpoint=fixpoint)
     df0off = df0off.rename(columns = {'xz': 'downslope', 'xy': 'latslope'})
+#    df0off = df0off[0:3]
     df0off_json = df0off.reset_index()[['ts', 'id', 'downslope', 'latslope']].to_json(orient="records", date_format="iso")
 
     #velplots
@@ -255,7 +262,10 @@ def vcdgen(colname, endTS='', startTS='', day_interval=1, fixpoint='bottom'):
     
     L2 = L2_xz.append(L2_xy)
     L3 = L3_xz.append(L3_xy)
-    
+
+#    L2 = L2[0:3]
+#    L3 = L3[0:3]
+
     L2_json = L2.to_json(orient="records", date_format="iso")
     L3_json = L3.to_json(orient="records", date_format="iso")
     velocity = dict({'L2': L2_json, 'L3': L3_json})

@@ -14,8 +14,7 @@ import rtwindow as rtw
 import querySenslopeDb as q
 import genproc as g
 
-def col_pos(colpos_dfts):
-    
+def col_pos(colpos_dfts):  
     colpos_dfts = colpos_dfts.drop_duplicates()
     cumsum_df = colpos_dfts[['xz','xy']].cumsum()
     colpos_dfts['cs_xz'] = cumsum_df.xz.values
@@ -23,10 +22,9 @@ def col_pos(colpos_dfts):
     return np.round(colpos_dfts, 4)
 
 def compute_depth(colpos_dfts):
-    print colpos_dfts
-
     colpos_dfts = colpos_dfts.drop_duplicates()
     cumsum_df = colpos_dfts[['x']].cumsum()
+    cumsum_df['x'] = cumsum_df['x'] - min(cumsum_df.x)
     colpos_dfts['x'] = cumsum_df.x.values
     return np.round(colpos_dfts, 4)
 
@@ -61,13 +59,13 @@ def compute_colpos(window, config, monitoring_vel, num_nodes, seg_len, fixpoint=
     colposdf = colposdf.sort('id', ascending = True)
     colpos_dfts = colposdf.groupby('ts')
     colposdf = colpos_dfts.apply(compute_depth)
-    
     colposdf['x'] = colposdf['x'].apply(lambda x: -x)
+    
     return colposdf
 
 def nonrepeat_colors(ax,NUM_COLORS,color='gist_rainbow'):
     cm = plt.get_cmap(color)
-    ax.set_color_cycle([cm(1.*(NUM_COLORS-i-1)/NUM_COLORS) for i in range(NUM_COLORS)])
+    ax.set_color_cycle([cm(1.*(NUM_COLORS-i-1)/NUM_COLORS) for i in range(NUM_COLORS)[::-1]])
     return ax
     
     
@@ -110,40 +108,40 @@ def plot_column_positions(df,colname,end, show_part_legend, config):
 #     xy; dataframe; horizontal linear displacements along the planes defined by xa-ya
 #==============================================================================
 
-    try:
-        fig=plt.figure()
-        ax_xz=fig.add_subplot(121)
-        ax_xy=fig.add_subplot(122,sharex=ax_xz,sharey=ax_xz)
-        
-        ax_xz=nonrepeat_colors(ax_xz,len(set(df.ts.values)),color='plasma')
-        ax_xy=nonrepeat_colors(ax_xy,len(set(df.ts.values)),color='plasma')
+#    try:
+    fig=plt.figure()
+    ax_xz=fig.add_subplot(121)
+    ax_xy=fig.add_subplot(122,sharex=ax_xz,sharey=ax_xz)
+    
+    ax_xz=nonrepeat_colors(ax_xz,len(set(df.ts.values)),color='plasma')
+    ax_xy=nonrepeat_colors(ax_xy,len(set(df.ts.values)),color='plasma')
 
-        colposTS = pd.DataFrame({'ts': list(set(df.ts)), 'index': range(len(set(df.ts)))})
+    colposTS = pd.DataFrame({'ts': list(set(df.ts)), 'index': range(len(set(df.ts)))})
+    
+    dfts = df.groupby('ts')
+    dfts.apply(subplot_colpos, ax_xz=ax_xz, ax_xy=ax_xy, show_part_legend=show_part_legend, config=config, colposTS=colposTS)
+    
+    for tick in ax_xz.xaxis.get_minor_ticks():
+        tick.label.set_rotation('vertical')
+        tick.label.set_fontsize(10)
         
-        dfts=df.groupby('ts')
-        dfts.apply(subplot_colpos, ax_xz=ax_xz, ax_xy=ax_xy, show_part_legend=show_part_legend, config=config, colposTS=colposTS)
+    for tick in ax_xy.xaxis.get_minor_ticks():
+        tick.label.set_rotation('vertical')
+        tick.label.set_fontsize(10)
+   
+    for tick in ax_xz.xaxis.get_major_ticks():
+        tick.label.set_rotation('vertical')
+        tick.label.set_fontsize(10)
         
-        for tick in ax_xz.xaxis.get_minor_ticks():
-            tick.label.set_rotation('vertical')
-            tick.label.set_fontsize(10)
-            
-        for tick in ax_xy.xaxis.get_minor_ticks():
-            tick.label.set_rotation('vertical')
-            tick.label.set_fontsize(10)
-       
-        for tick in ax_xz.xaxis.get_major_ticks():
-            tick.label.set_rotation('vertical')
-            tick.label.set_fontsize(10)
-            
-        for tick in ax_xy.xaxis.get_major_ticks():
-            tick.label.set_rotation('vertical')
-            tick.label.set_fontsize(10)
+    for tick in ax_xy.xaxis.get_major_ticks():
+        tick.label.set_rotation('vertical')
+        tick.label.set_fontsize(10)
 
-        plt.subplots_adjust(top=0.92, bottom=0.15, left=0.05, right=0.73)        
-        plt.suptitle(colname+" as of "+str(end),fontsize='medium')
+    plt.subplots_adjust(top=0.92, bottom=0.15, left=0.05, right=0.73)        
+    plt.suptitle(colname+" as of "+str(end),fontsize='medium')
 
-    except:        
-        print colname, "ERROR in plotting column position"
+#    except:        
+#        print colname, "ERROR in plotting column position"
     return ax_xz,ax_xy
 
 def vel_plot(df, velplot, num_nodes):
