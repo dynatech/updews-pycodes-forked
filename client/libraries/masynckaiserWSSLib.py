@@ -433,42 +433,53 @@ def syncStartUp(host, port):
     #Get names of all schemas
     schemas = getSchemaList(ws)
     for schema in schemas:
+        print schema            
         
-        #TEMPORARY: remove after testing
-        if schema == "phpmyadmin":        
-            print schema            
-            
-            #Create schema if it is non-existent
-            if not bdb.DoesDatabaseSchemaExist(schema):
-                print "%s: Creating Schema (%s)..." % (common.whoami(), schema)
-                bdb.CreateSchema(schema)
-            
-            #Get names of all tables in a schema
-            tables = getTableList(ws, schema)  
-            tablesExisting = []
-            tablesNonExistent = []
-            for table in tables:
-    #            print table, 
-                if bdb.DoesTableExist(schema, table):
-                    tablesExisting.append(table)
-                else:
-                    tablesNonExistent.append(table)
-                    #Get table creation command from websocket server
-                    tableCreationCommand = getTableCreationCommand(ws, schema, table)
-                    #Create Table
-                    print "%s: Creating Table (%s)..." % (common.whoami(), table)                    
-                    bdb.ExecuteQuery(tableCreationCommand, schema)
+        #Create schema if it is non-existent
+        if not bdb.DoesDatabaseSchemaExist(schema):
+            print "%s: Creating Schema (%s)..." % (common.whoami(), schema)
+            bdb.CreateSchema(schema)
+        
+        #Get all table names per available schema
+        tables = getTableList(ws, schema)  
+        tablesExisting = []
+        tablesNonExistent = []
+        
+        for table in tables:
+            if bdb.DoesTableExist(schema, table):
+                tablesExisting.append(table)
+            else:
+                tablesNonExistent.append(table)
+                #Request SQL command for generating missing tables on local
+                #   database of client
+                tableCreationCommand = getTableCreationCommand(ws, schema, table)
+                #Create Table
+                print "%s: Creating Table (%s)..." % (common.whoami(), table)                    
+                bdb.ExecuteQuery(tableCreationCommand, schema)
                 
-            print "\nExisting: "
-            print tablesExisting
-            print "\nNon-existent: "
-            print tablesNonExistent
-            print "\n\n"
-        
-        #TODO: Get all table names per available schema
-    
-            #TODO: Request SQL command for generating missing tables on local
-            #   database of client
+            #TEMPORARY: To be deleted after test
+            if table == "smsinbox":
+                primaryKeys = bdb.GetTablePrimaryKey(schema, table)
+                for pk in primaryKeys:
+                    print "%s: %s" % (pk[0], pk[4])
+            
+            #TEMPORARY: To be deleted after test
+            if table == "smsoutbox":
+                primaryKeys = bdb.GetTablePrimaryKey(schema, table)
+                for pk in primaryKeys:
+                    print "%s: %s" % (pk[0], pk[4])
+                
+            #TEMPORARY: To be deleted after test
+            if table == "magta":
+                primaryKeys = bdb.GetTablePrimaryKey(schema, table)
+                for pk in primaryKeys:
+                    print "%s: %s" % (pk[0], pk[4])
+            
+#        print "\nExisting: "
+#        print tablesExisting
+#        print "\nNon-existent: "
+#        print tablesNonExistent
+#        print "\n\n"
     
     ws.close()
     

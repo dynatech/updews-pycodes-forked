@@ -68,6 +68,10 @@ def DoesTableExist(schema_name, table_name):
         db.close()
         return False
         
+def GetTablePrimaryKey(schema_name, table_name):
+    query = """SHOW INDEX FROM %s""" % (table_name)
+    return GetDBResultset(query, schema_name)
+        
 def CreateSchema(schema_name):
     query = "CREATE DATABASE IF NOT EXISTS %s" % (schema_name)
     ExecuteQuery(query)
