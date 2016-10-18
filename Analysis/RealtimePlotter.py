@@ -96,7 +96,7 @@ def subplot_colpos(dfts, ax_xz, ax_xy, show_part_legend, config, colposTS):
     curax.set_xlabel('horizontal displacement, \n across slope(mm)')
     
     
-def plot_column_positions(df,colname,end, show_part_legend, config):
+def plot_column_positions(df,colname,end, show_part_legend, config, num_nodes=0, max_min_cml=''):
 #==============================================================================
 # 
 #     DESCRIPTION
@@ -121,7 +121,14 @@ def plot_column_positions(df,colname,end, show_part_legend, config):
         
         dfts = df.groupby('ts')
         dfts.apply(subplot_colpos, ax_xz=ax_xz, ax_xy=ax_xy, show_part_legend=show_part_legend, config=config, colposTS=colposTS)
-        
+    
+        try:
+            xl = df.loc[(df.ts == end)&(df.id <= num_nodes)&(df.id >= 1)]['x'].values
+            ax_xz.fill_betweenx(xl, max_min_cml['xz_maxlist'].values, max_min_cml['xz_minlist'].values, where=max_min_cml['xz_maxlist'].values >= max_min_cml['xz_minlist'].values, facecolor='0.7',linewidth=0)
+            ax_xy.fill_betweenx(xl, max_min_cml['xy_maxlist'].values, max_min_cml['xy_minlist'].values, where=max_min_cml['xy_maxlist'].values >= max_min_cml['xy_minlist'].values, facecolor='0.7',linewidth=0)
+        except:
+            print 'error in plotting noise env'
+    
         for tick in ax_xz.xaxis.get_minor_ticks():
             tick.label.set_rotation('vertical')
             tick.label.set_fontsize(10)
@@ -535,14 +542,17 @@ def main(monitoring, window, config, plotvel_start='', plotvel_end='', plotvel=T
 
     # noise envelope
     max_min_df = monitoring.max_min_df
-#    max_min_cml = monitoring.max_min_cml
+    max_min_cml = monitoring.max_min_cml
+    
+    if config.io.column_fix == 'top':
+        max_min_cml = -max_min_cml
         
     # compute column position
     colposdf = compute_colpos(window, config, monitoring_vel, num_nodes, seg_len)
 
     # plot column position
-    plot_column_positions(colposdf,colname,window.end, show_part_legend, config=config)
-
+    plot_column_positions(colposdf,colname,window.end, show_part_legend, config, num_nodes=num_nodes, max_min_cml=max_min_cml)
+    
     lgd = plt.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize='small')
 
     if realtime:
