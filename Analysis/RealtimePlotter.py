@@ -108,40 +108,42 @@ def plot_column_positions(df,colname,end, show_part_legend, config):
 #     xy; dataframe; horizontal linear displacements along the planes defined by xa-ya
 #==============================================================================
 
-#    try:
-    fig=plt.figure()
-    ax_xz=fig.add_subplot(121)
-    ax_xy=fig.add_subplot(122,sharex=ax_xz,sharey=ax_xz)
+    try:
+        fig=plt.figure()
+        ax_xz=fig.add_subplot(121)
+        ax_xy=fig.add_subplot(122,sharex=ax_xz,sharey=ax_xz)
     
-    ax_xz=nonrepeat_colors(ax_xz,len(set(df.ts.values)),color='plasma')
-    ax_xy=nonrepeat_colors(ax_xy,len(set(df.ts.values)),color='plasma')
-
-    colposTS = pd.DataFrame({'ts': list(set(df.ts)), 'index': range(len(set(df.ts)))})
+        ax_xz=nonrepeat_colors(ax_xz,len(set(df.ts.values)),color='plasma')
+        ax_xy=nonrepeat_colors(ax_xy,len(set(df.ts.values)),color='plasma')
     
-    dfts = df.groupby('ts')
-    dfts.apply(subplot_colpos, ax_xz=ax_xz, ax_xy=ax_xy, show_part_legend=show_part_legend, config=config, colposTS=colposTS)
-    
-    for tick in ax_xz.xaxis.get_minor_ticks():
-        tick.label.set_rotation('vertical')
-        tick.label.set_fontsize(10)
+        colposTS = pd.DataFrame({'ts': list(set(df.ts)), 'index': range(len(set(df.ts)))})
         
-    for tick in ax_xy.xaxis.get_minor_ticks():
-        tick.label.set_rotation('vertical')
-        tick.label.set_fontsize(10)
-   
-    for tick in ax_xz.xaxis.get_major_ticks():
-        tick.label.set_rotation('vertical')
-        tick.label.set_fontsize(10)
+        dfts = df.groupby('ts')
+        dfts.apply(subplot_colpos, ax_xz=ax_xz, ax_xy=ax_xy, show_part_legend=show_part_legend, config=config, colposTS=colposTS)
         
-    for tick in ax_xy.xaxis.get_major_ticks():
-        tick.label.set_rotation('vertical')
-        tick.label.set_fontsize(10)
+        for tick in ax_xz.xaxis.get_minor_ticks():
+            tick.label.set_rotation('vertical')
+            tick.label.set_fontsize(10)
+            
+        for tick in ax_xy.xaxis.get_minor_ticks():
+            tick.label.set_rotation('vertical')
+            tick.label.set_fontsize(10)
+       
+        for tick in ax_xz.xaxis.get_major_ticks():
+            tick.label.set_rotation('vertical')
+            tick.label.set_fontsize(10)
+            
+        for tick in ax_xy.xaxis.get_major_ticks():
+            tick.label.set_rotation('vertical')
+            tick.label.set_fontsize(10)
+    
+        plt.subplots_adjust(top=0.92, bottom=0.15, left=0.05, right=0.73)        
+        plt.suptitle(colname+" as of "+str(end),fontsize='medium')
+        ax_xz.grid(True)
+        ax_xy.grid(True)
 
-    plt.subplots_adjust(top=0.92, bottom=0.15, left=0.05, right=0.73)        
-    plt.suptitle(colname+" as of "+str(end),fontsize='medium')
-
-#    except:        
-#        print colname, "ERROR in plotting column position"
+    except:        
+        print colname, "ERROR in plotting column position"
     return ax_xz,ax_xy
 
 def vel_plot(df, velplot, num_nodes):
@@ -271,6 +273,8 @@ def plot_disp_vel(noise_df, df0off, cs_df, colname, window, config, plotvel, xzd
                 #creating subplots        
                 ax_xzd=fig.add_subplot(141)
                 ax_xyd=fig.add_subplot(142,sharex=ax_xzd,sharey=ax_xzd)
+                ax_xzd.grid(True)
+                ax_xyd.grid(True)
                 
                 ax_xzv=fig.add_subplot(143)
                 ax_xzv.invert_yaxis()
@@ -279,6 +283,8 @@ def plot_disp_vel(noise_df, df0off, cs_df, colname, window, config, plotvel, xzd
                 #creating subplots        
                 ax_xzd=fig.add_subplot(121)
                 ax_xyd=fig.add_subplot(122,sharex=ax_xzd,sharey=ax_xzd)
+                ax_xzd.grid(True)
+                ax_xyd.grid(True)
         except:
             if plotvel:
                 #creating subplots                      
