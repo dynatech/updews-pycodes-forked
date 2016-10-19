@@ -452,28 +452,22 @@ def syncStartUp(host, port):
                 tablesNonExistent.append(table)
                 #Request SQL command for generating missing tables on local
                 #   database of client
-                tableCreationCommand = getTableCreationCommand(ws, schema, table)
+                tableCreationCommand = getTableCreationCmd(ws, schema, table)
                 #Create Table
                 print "%s: Creating Table (%s)..." % (common.whoami(), table)                    
                 bdb.ExecuteQuery(tableCreationCommand, schema)
                 
             #TEMPORARY: To be deleted after test
             if table == "smsinbox":
-                primaryKeys = bdb.GetTablePrimaryKey(schema, table)
-                for pk in primaryKeys:
-                    print "%s: %s" % (pk[0], pk[4])
+                latestPKval = getLatestPKValue(schema, table)
             
             #TEMPORARY: To be deleted after test
             if table == "smsoutbox":
-                primaryKeys = bdb.GetTablePrimaryKey(schema, table)
-                for pk in primaryKeys:
-                    print "%s: %s" % (pk[0], pk[4])
+                latestPKval = getLatestPKValue(schema, table)
                 
             #TEMPORARY: To be deleted after test
             if table == "magta":
-                primaryKeys = bdb.GetTablePrimaryKey(schema, table)
-                for pk in primaryKeys:
-                    print "%s: %s" % (pk[0], pk[4])
+                latestPKval = getLatestPKValue(schema, table)
             
 #        print "\nExisting: "
 #        print tablesExisting
@@ -551,7 +545,7 @@ def getTableList(ws=None, schema=None):
         return None
 
 #Get the table creation command from the Websocket Server
-def getTableCreationCommand(ws=None, schema=None, table=None):
+def getTableCreationCmd(ws=None, schema=None, table=None):
     if not ws or not schema or not table:
         print "%s ERROR: No ws|schema|table value passed" % (common.whoami())
         return None
@@ -567,6 +561,38 @@ def getTableCreationCommand(ws=None, schema=None, table=None):
     else:
         print "%s ERROR: No request message passed" % (common.whoami())
         return None
+
+#Get the latest value of Primary Key/s of the client's database
+def getLatestPKValue(schema, table):
+    primaryKeys = bdb.GetTablePKs(schema, table)
+    numPKs = len(primaryKeys)    
+    print "\n%s %s: Number of Primary Keys: %s" % (common.whoami(), table, numPKs)
+    
+    print "%s:" % (table),
+    PKs = []
+    for pk in primaryKeys:
+        print "%s" % (pk[4]), 
+        PKs.append(pk[4])
+    
+    if numPKs == 1:
+        query = """
+                SELECT %s 
+                FROM %s 
+                ORDER BY %s DESC 
+                LIMIT 1""" % (primaryKeys[0][4], table, primaryKeys[0][4])
+        print "\n%s: %s" % (table, query)
+        pkLatestValues = bdb.GetDBResultset(query, schema)
+        
+        #Construct json string
+        jsonPKandValstring = '{"%s":%s}' % (PKs[0], pkLatestValues[0][0])
+        jsonPKandVal = json.loads(jsonPKandValstring)
+        print jsonPKandVal
+        return jsonPKandVal
+                
+    elif numPKs > 1:
+        #TODO: There is a different procedure for tables with multiple PKs
+        print "\n%s: %s Number of Primary Keys: %s (TODO)" % (common.whoami(), table, numPKs)
+        return -1
 
 #Parse the json message and return as an array
 def parseBasicList(payload):

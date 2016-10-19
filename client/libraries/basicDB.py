@@ -68,7 +68,8 @@ def DoesTableExist(schema_name, table_name):
         db.close()
         return False
         
-def GetTablePrimaryKey(schema_name, table_name):
+# Get table Primary Key/s
+def GetTablePKs(schema_name, table_name):
     query = """SHOW INDEX FROM %s""" % (table_name)
     return GetDBResultset(query, schema_name)
         
