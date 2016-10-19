@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta, time
+from datetime import datetime, timedelta, time, date
 from sqlalchemy import create_engine
 import sys
 
@@ -125,6 +125,16 @@ def SitePublicAlert(PublicAlert, window):
         new_ground_alert = validity_site_alert.loc[validity_site_alert.source == 'ground'].sort('timestamp', ascending=False)
         if validity_site_alert.loc[validity_site_alert.source == 'public']['alert'].values[0] == 'A0' and new_ground_alert['alert'].values[0] in ['l2', 'l3']:
             alertTS = pd.to_datetime(new_ground_alert['timestamp'].values[0])
+            
+            alertTS_year=alertTS.year
+            alertTS_month=alertTS.month
+            alertTS_day=alertTS.day
+            alertTS_hour=alertTS.hour
+            alertTS_minute=alertTS.minute
+            if alertTS_minute<30:alertTS_minute=0
+            else:alertTS_minute=30
+            alertTS=datetime.combine(date(alertTS_year,alertTS_month,alertTS_day),time(alertTS_hour,alertTS_minute,0))
+
             start_monitor = alertTS
     except:
         pass
