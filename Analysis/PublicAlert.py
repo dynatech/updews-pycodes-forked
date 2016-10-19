@@ -129,7 +129,6 @@ def SitePublicAlert(PublicAlert, window):
     except:
         pass
 
-    retriggerTS = []
     # positive alerts within the non-A0 public alert
     try:
 
@@ -153,7 +152,7 @@ def SitePublicAlert(PublicAlert, window):
         PAlert = q.GetDBDataFrame(query)
         
         SG_alert = PAlert.loc[(PAlert.source == 'sensor')|(PAlert.source == 'ground')]
-        RED_alert = validity_site_alert.loc[(validity_site_alert.source == 'rain')|(validity_site_alert.source == 'eq')|(validity_site_alert.source == 'on demand')]
+        RED_alert = PAlert.loc[(PAlert.source == 'rain')|(PAlert.source == 'eq')|(PAlert.source == 'on demand')]
         other_alerts = ''
         if 'r1' in RED_alert.alert.values:
             other_alerts += 'R'
@@ -162,6 +161,7 @@ def SitePublicAlert(PublicAlert, window):
         if 'd1' in RED_alert.alert.values:
             other_alerts += 'D'
         #last L2/L3 retriggger
+        retriggerTS = []
         for i in ['l2', 'l3', 'L2', 'L3']:
             try:
                 retriggerTS += [i + '_' + str(pd.to_datetime(max(SG_alert.loc[SG_alert.alert == i].updateTS.values)))]
@@ -175,8 +175,21 @@ def SitePublicAlert(PublicAlert, window):
                 continue
         retriggerTS = ';'.join(retriggerTS)
         
+        source = []
+        if 'L2' in SG_alert.alert or 'L3' in SG_alert.alert:
+            source += ['sensor']
+        if 'l2' in SG_alert.alert or 'l3' in SG_alert.alert:
+            source += ['ground']
+        if 'R' in other_alerts:
+            source += ['rain']
+        if 'E' in other_alerts:
+            source += ['eq']
+        if 'D' in other_alerts:
+            source += ['on demand']
+
     except:
         retriggerTS = ''
+        source = ''
         print 'Public Alert- A0'
     
     # latest column alert within 3hrs
@@ -543,6 +556,9 @@ def SitePublicAlert(PublicAlert, window):
             internal_alert = 'ND'
      
     alert_index = PublicAlert.loc[PublicAlert.site == site].index[0]
+    alert_source = ','.join(source)
+    if rain_alert == 'nd' and 'R' in internal_alert:
+        internal_alert = internal_alert.replace('R', 'R0')
     
     nonND_alert = site_alert.loc[(site_alert.source != 'public')&(site_alert.alert != 'nd')&(site_alert.alert != 'ND')].dropna()
     if len(nonND_alert) != 0:
