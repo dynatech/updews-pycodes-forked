@@ -186,9 +186,9 @@ def SitePublicAlert(PublicAlert, window):
         retriggerTS = ';'.join(retriggerTS)
         
         source = []
-        if 'L2' in SG_alert.alert or 'L3' in SG_alert.alert:
+        if 'L2' in SG_alert['alert'].values or 'L3' in SG_alert['alert'].values:
             source += ['sensor']
-        if 'l2' in SG_alert.alert or 'l3' in SG_alert.alert:
+        if 'l2' in SG_alert['alert'].values or 'l3' in SG_alert['alert'].values:
             source += ['ground']
         if 'R' in other_alerts:
             source += ['rain']
@@ -196,7 +196,6 @@ def SitePublicAlert(PublicAlert, window):
             source += ['eq']
         if 'D' in other_alerts:
             source += ['on demand']
-
     except:
         retriggerTS = ''
         source = ''
@@ -592,28 +591,25 @@ def SitePublicAlert(PublicAlert, window):
     except:
         print 'duplicate'
     
-    GSMAlert = PublicAlert.loc[PublicAlert.site == site][['site', 'alert', 'palert_source']]
     public_CurrAlert = SitePublicAlert.alert.values[0]
-    
-    #node_level_alert
-    if alert_source == 'sensor' or alert_source == 'both ground and sensor':
-        query = "SELECT * FROM senslopedb.node_level_alert WHERE site LIKE '%s' AND timestamp >= '%s' ORDER BY timestamp DESC" %(sensor_site,start_monitor)
-        allnode_alertDF = q.GetDBDataFrame(query)
-        column_name = set(allnode_alertDF.site.values)
-        colnode_source = ''
-        for i in column_name:
-            node_alertDF = allnode_alertDF.loc[allnode_alertDF.site == i]
-            node_alert = list(set(node_alertDF.id.values))
-            node_alert = str(node_alert)[1:len(str(node_alert))-1].replace(' ', '')
-            colnode_source += str(i) + ':' + node_alert + ' '
-        GSMAlert['palert_source'] = [GSMAlert.palert_source.values[0] + '(' + colnode_source + ')']
-    
-    if public_CurrAlert != 'A0':
-        if len(validity_A) == 0:
-            GSMAlert.to_csv('GSMAlert.txt', header = False, index = None, sep = ':', mode = 'a')
-        else:
-            if public_PrevAlert != public_CurrAlert:
-                GSMAlert.to_csv('GSMAlert.txt', header = False, index = None, sep = ':', mode = 'a')
+        
+    if public_CurrAlert != 'A0' and (len(validity_A) == 0 or public_PrevAlert != public_CurrAlert):
+        GSMAlert = PublicAlert.loc[PublicAlert.site == site][['site', 'alert', 'palert_source']]            
+
+        #node_level_alert
+        if 'sensor' in alert_source:
+            query = "SELECT * FROM senslopedb.node_level_alert WHERE site LIKE '%s' AND timestamp >= '%s' ORDER BY timestamp DESC" %(sensor_site,start_monitor)
+            allnode_alertDF = q.GetDBDataFrame(query)
+            column_name = set(allnode_alertDF.site.values)
+            colnode_source = ''
+            for i in column_name:
+                node_alertDF = allnode_alertDF.loc[allnode_alertDF.site == i]
+                node_alert = list(set(node_alertDF.id.values))
+                node_alert = str(node_alert)[1:len(str(node_alert))-1].replace(' ', '')
+                colnode_source += str(i) + ':' + node_alert + ' '
+            GSMAlert['palert_source'] = [GSMAlert.palert_source.values[0] + '(' + colnode_source + ')']
+            
+        GSMAlert.to_csv('GSMAlert.txt', header = False, index = None, sep = ':', mode = 'a')
 
     return PublicAlert
 
@@ -668,4 +664,6 @@ def main():
 ################################################################################
 
 if __name__ == "__main__":
+    start_time = datetime.now()
     main()
+    print 'runtime =', datetime.now() - start_time
