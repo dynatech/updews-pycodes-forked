@@ -94,7 +94,7 @@ def node_inst_vel(filled_smoothened, roll_window_numpts, start):
     
     return filled_smoothened
 
-def genproc(col, window, config, realtime=False):
+def genproc(col, window, config, fixpoint, realtime=False):
     
     monitoring = q.GetRawAccelData(col.name, window.offsetstart, window.end)
     
@@ -134,7 +134,7 @@ def genproc(col, window, config, realtime=False):
     monitoring = monitoring.set_index('ts')
     monitoring = monitoring[['name','id','xz','xy']]
     
-    max_min_df, max_min_cml = err.cml_noise_profiling(monitoring)
+    max_min_df, max_min_cml = err.cml_noise_profiling(monitoring, config, fixpoint)
     
     #resamples xz and xy values per node using forward fill
     monitoring = monitoring.groupby('id').apply(resamplenode, window = window).reset_index(level=1).set_index('ts')

@@ -69,7 +69,7 @@ def same_bounds(df):
         df['xy_minlist'] = np.nan
     return df
 
-def cml_noise_profiling(df):
+def cml_noise_profiling(df, config, fixpoint):
 #==============================================================================
 #     description
 #     determines peak/s in data distribution to characterize noise, 
@@ -86,22 +86,32 @@ def cml_noise_profiling(df):
 #==============================================================================
     
     num_nodes = len(set(df.id))
-    
+    df2 = df
+
+    if fixpoint == 'top':
+        df2[['xz', 'xy']] = df2[['xz', 'xy']].apply(lambda x: -x)
+        
+
     #initializing maximum and minimum positions of xz and xy
     mx_mn_df = pd.DataFrame({'xz_maxlist': [0]*num_nodes, 'xz_minlist': [0]*num_nodes, 'xy_maxlist': [0]*num_nodes, 'xy_minlist': [0]*num_nodes}, index = set(df.id))
     mx_mn_df = mx_mn_df[['xz_maxlist', 'xz_minlist', 'xy_maxlist', 'xy_minlist']]
      
-    nodal_df = df.groupby('id')
+    nodal_df = df2.groupby('id')
     max_min_df = nodal_df.apply(max_min, num_nodes = num_nodes, mx_mn_df = mx_mn_df)
     max_min_df = max_min_df.reset_index().loc[max_min_df.reset_index().id == num_nodes][['level_1', 'xz_maxlist', 'xz_minlist', 'xy_maxlist', 'xy_minlist']].rename(columns = {'level_1': 'id'}).set_index('id')
-    for_cml = max_min_df.sort_index(ascending = False)
+    if fixpoint == 'top':
+        for_cml = max_min_df.sort_index(ascending = True)
+    else:
+        for_cml = max_min_df.sort_index(ascending = False)
     max_min_cml = for_cml.cumsum()
+    if fixpoint == 'top':
+        max_min_cml = max_min_cml.sort_index(ascending = False)
             
     max_min_df = max_min_df.reset_index()
     nodal_max_min = max_min_df.groupby('id')
     max_min_df = nodal_max_min.apply(same_bounds)
     max_min_df = max_min_df.set_index('id')
-    
+
     return  max_min_df, max_min_cml
     
 def find_spline_maxima(xi,yi,min_normpeak=0.05,min_area_k=0.05):

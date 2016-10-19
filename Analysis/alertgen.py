@@ -304,7 +304,7 @@ def main(name=''):
     
     window,config = rtw.getwindow()    
     col = q.GetSensorList(name)
-    monitoring = g.genproc(col[0], window, config)
+    monitoring = g.genproc(col[0], window, config, config.io.column_fix)
     lgd = q.GetLastGoodDataFromDb(monitoring.colprops.name)
     
     

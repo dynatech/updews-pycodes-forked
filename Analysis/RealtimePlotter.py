@@ -49,7 +49,6 @@ def compute_colpos(window, config, monitoring_vel, num_nodes, seg_len, fixpoint=
     colpos_df = colpos_df.append(colpos_df0, ignore_index = True)
     
     if column_fix == 'top':
-        colpos_df[['xz','xy']] = colpos_df[['xz','xy']].apply(lambda x: -x)
         colpos_df = colpos_df.sort('id', ascending = True)
     elif column_fix == 'bottom':
         colpos_df = colpos_df.sort('id', ascending = False)
@@ -89,7 +88,7 @@ def subplot_colpos(dfts, ax_xz, ax_xy, show_part_legend, config, colposTS):
     if show_part_legend == False:
         curax.plot(curcolpos_xy,curcolpos_x,'.-', label=str(pd.to_datetime(dfts.ts.values[0])))
     else:
-        if i % show_part_legend == 0 or i == config.io.num_col_pos:
+        if i % show_part_legend == 0 or i == config.io.num_col_pos - 1:
             curax.plot(curcolpos_xy,curcolpos_x,'.-', label=str(pd.to_datetime(dfts.ts.values[0])))
         else:
             curax.plot(curcolpos_xy,curcolpos_x,'.-')
@@ -117,17 +116,18 @@ def plot_column_positions(df,colname,end, show_part_legend, config, num_nodes=0,
         ax_xz=nonrepeat_colors(ax_xz,len(set(df.ts.values)),color='plasma')
         ax_xy=nonrepeat_colors(ax_xy,len(set(df.ts.values)),color='plasma')
     
-        colposTS = pd.DataFrame({'ts': list(set(df.ts)), 'index': range(len(set(df.ts)))})
+        colposTS = pd.DataFrame({'ts': sorted(set(df.ts)), 'index': range(len(set(df.ts)))})
         
         dfts = df.groupby('ts')
         dfts.apply(subplot_colpos, ax_xz=ax_xz, ax_xy=ax_xy, show_part_legend=show_part_legend, config=config, colposTS=colposTS)
     
-        try:
-            xl = df.loc[(df.ts == end)&(df.id <= num_nodes)&(df.id >= 1)]['x'].values
-            ax_xz.fill_betweenx(xl, max_min_cml['xz_maxlist'].values, max_min_cml['xz_minlist'].values, where=max_min_cml['xz_maxlist'].values >= max_min_cml['xz_minlist'].values, facecolor='0.7',linewidth=0)
-            ax_xy.fill_betweenx(xl, max_min_cml['xy_maxlist'].values, max_min_cml['xy_minlist'].values, where=max_min_cml['xy_maxlist'].values >= max_min_cml['xy_minlist'].values, facecolor='0.7',linewidth=0)
-        except:
-            print 'error in plotting noise env'
+#        try:
+#            max_min_cml = max_min_cml.apply(lambda x: x*1000)
+#            xl = df.loc[(df.ts == end)&(df.id <= num_nodes)&(df.id >= 1)]['x'].values[::-1]
+#            ax_xz.fill_betweenx(xl, max_min_cml['xz_maxlist'].values, max_min_cml['xz_minlist'].values, where=max_min_cml['xz_maxlist'].values >= max_min_cml['xz_minlist'].values, facecolor='0.7',linewidth=0)
+#            ax_xy.fill_betweenx(xl, max_min_cml['xy_maxlist'].values, max_min_cml['xy_minlist'].values, where=max_min_cml['xy_maxlist'].values >= max_min_cml['xy_minlist'].values, facecolor='0.7',linewidth=0)
+#        except:
+#            print 'error in plotting noise env'
     
         for tick in ax_xz.xaxis.get_minor_ticks():
             tick.label.set_rotation('vertical')
@@ -146,7 +146,7 @@ def plot_column_positions(df,colname,end, show_part_legend, config, num_nodes=0,
             tick.label.set_fontsize(10)
     
         plt.subplots_adjust(top=0.92, bottom=0.15, left=0.05, right=0.73)        
-        plt.suptitle(colname+" as of "+str(end),fontsize='medium')
+        plt.suptitle(colname,fontsize='medium')
         ax_xz.grid(True)
         ax_xy.grid(True)
 
@@ -287,221 +287,221 @@ def plot_disp_vel(noise_df, df0off, cs_df, colname, window, config, plotvel, xzd
     
     nodal_df0off = df0off.groupby('id')
     
+#    try:
+    fig=plt.figure()
+
     try:
-        fig=plt.figure()
-
-        try:
-            if plotvel:
-                #creating subplots        
-                ax_xzd=fig.add_subplot(141)
-                ax_xyd=fig.add_subplot(142,sharex=ax_xzd,sharey=ax_xzd)
-                ax_xzd.grid(True)
-                ax_xyd.grid(True)
-                
-                ax_xzv=fig.add_subplot(143)
-                ax_xzv.invert_yaxis()
-                ax_xyv=fig.add_subplot(144,sharex=ax_xzv,sharey=ax_xzv)
-            else:
-                #creating subplots        
-                ax_xzd=fig.add_subplot(121)
-                ax_xyd=fig.add_subplot(122,sharex=ax_xzd,sharey=ax_xzd)
-                ax_xzd.grid(True)
-                ax_xyd.grid(True)
-        except:
-            if plotvel:
-                #creating subplots                      
-                ax_xzv=fig.add_subplot(121)
-                ax_xzv.invert_yaxis()
-                ax_xyv=fig.add_subplot(122,sharex=ax_xzv,sharey=ax_xzv)
-        
-        try:
-            #plotting cumulative (surface) displacments
-            ax_xzd.plot(cs_df.index, cs_df['xz'].values,color='0.4',linewidth=0.5)
-            ax_xyd.plot(cs_df.index, cs_df['xy'].values,color='0.4',linewidth=0.5)
-            ax_xzd.fill_between(cs_df.index,cs_df['xz'].values,xzd_plotoffset*(num_nodes),color='0.8')
-            ax_xyd.fill_between(cs_df.index,cs_df['xy'].values,xzd_plotoffset*(num_nodes),color='0.8')
-        except:
-            print 'Error in plotting cumulative surface displacement'
-            
-        try:
-            #assigning non-repeating colors to subplots axis
-            ax_xzd=nonrepeat_colors(ax_xzd,num_nodes)
-            ax_xyd=nonrepeat_colors(ax_xyd,num_nodes)
-        except:
-            print 'Error in assigning non-repeating colors in displacement'
-        
         if plotvel:
-            ax_xzv=nonrepeat_colors(ax_xzv,num_nodes)
-            ax_xyv=nonrepeat_colors(ax_xyv,num_nodes)
+            #creating subplots        
+            ax_xzd=fig.add_subplot(141)
+            ax_xyd=fig.add_subplot(142,sharex=ax_xzd,sharey=ax_xzd)
+            ax_xzd.grid(True)
+            ax_xyd.grid(True)
+            
+            ax_xzv=fig.add_subplot(143)
+            ax_xzv.invert_yaxis()
+            ax_xyv=fig.add_subplot(144,sharex=ax_xzv,sharey=ax_xzv)
+        else:
+            #creating subplots        
+            ax_xzd=fig.add_subplot(121)
+            ax_xyd=fig.add_subplot(122,sharex=ax_xzd,sharey=ax_xzd)
+            ax_xzd.grid(True)
+            ax_xyd.grid(True)
+    except:
+        if plotvel:
+            #creating subplots                      
+            ax_xzv=fig.add_subplot(121)
+            ax_xzv.invert_yaxis()
+            ax_xyv=fig.add_subplot(122,sharex=ax_xzv,sharey=ax_xzv)
     
-        try:
-            #plotting displacement for xz
-            curax=ax_xzd
-            plt.sca(curax)
-            nodal_df0off['xz'].apply(plt.plot)
-            try:
-                nodal_noise_df['xz_maxlist'].apply(plt.plot, ls=':')
-                nodal_noise_df['xz_minlist'].apply(plt.plot, ls=':')
-            except:
-                print 'Error in plotting noise envelope'
-            curax.set_title('displacement\n XZ axis',fontsize='small')
-            curax.set_ylabel('displacement scale, m', fontsize='small')
-            y = df0off.loc[df0off.index == window.start].sort_values('id')['xz'].values
-            x = window.start
-            z = range(1, num_nodes+1)
-            if not plot_inc:
-                for i,j in zip(y,z):
-                   curax.annotate(str(int(j)),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')
-            else:
-                for i,j in zip(y,z):
-                   if inc_df.loc[inc_df.id == j]['inc_xz'].values[0]>3:
-                       curax.annotate(str(int(j))+'++++',xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'large')
-                   elif inc_df.loc[inc_df.id == j]['inc_xz'].values[0]>2:
-                       curax.annotate(str(int(j))+'+++',xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'large')
-                   elif inc_df.loc[inc_df.id == j]['inc_xz'].values[0]>1:
-                       curax.annotate(str(int(j))+'++',xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'medium')
-                   elif inc_df.loc[inc_df.id == j]['inc_xz'].values[0]>0:
-                       curax.annotate(str(int(j))+'+',xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'medium')
-                   else:
-                       curax.annotate(str(int(j)),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')
+    try:
+        #plotting cumulative (surface) displacments
+        ax_xzd.plot(cs_df.index, cs_df['xz'].values,color='0.4',linewidth=0.5)
+        ax_xyd.plot(cs_df.index, cs_df['xy'].values,color='0.4',linewidth=0.5)
+        ax_xzd.fill_between(cs_df.index,cs_df['xz'].values,xzd_plotoffset*(num_nodes),color='0.8')
+        ax_xyd.fill_between(cs_df.index,cs_df['xy'].values,xzd_plotoffset*(num_nodes),color='0.8')
+    except:
+        print 'Error in plotting cumulative surface displacement'
+        
+    try:
+        #assigning non-repeating colors to subplots axis
+        ax_xzd=nonrepeat_colors(ax_xzd,num_nodes)
+        ax_xyd=nonrepeat_colors(ax_xyd,num_nodes)
+    except:
+        print 'Error in assigning non-repeating colors in displacement'
+    
+    if plotvel:
+        ax_xzv=nonrepeat_colors(ax_xzv,num_nodes)
+        ax_xyv=nonrepeat_colors(ax_xyv,num_nodes)
 
-            #plotting displacement for xy
-            curax=ax_xyd
-            plt.sca(curax)
-            nodal_df0off['xy'].apply(plt.plot)
-            try:
-                nodal_noise_df['xy_maxlist'].apply(plt.plot, ls=':')
-                nodal_noise_df['xy_minlist'].apply(plt.plot, ls=':')
-            except:
-                print 'Error in plotting noise envelope'
-            curax.set_title('displacement\n XY axis',fontsize='small')
-            y = df0off.loc[df0off.index == window.start].sort_values('id')['xy'].values
-            x = window.start
-            z = range(1, num_nodes+1)
-            if not plot_inc:
-                for i,j in zip(y,z):
-                   curax.annotate(str(int(j)),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')
-            else:
-                for i,j in zip(y,z):
-                   if inc_df.loc[inc_df.id == j]['inc_xy'].values[0]>3:
-                       curax.annotate(str(int(j))+'++++',xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'large')
-                   elif inc_df.loc[inc_df.id == j]['inc_xy'].values[0]>2:
-                       curax.annotate(str(int(j))+'+++',xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'large')
-                   elif inc_df.loc[inc_df.id == j]['inc_xy'].values[0]>1:
-                       curax.annotate(str(int(j))+'++',xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'medium')
-                   elif inc_df.loc[inc_df.id == j]['inc_xy'].values[0]>0:
-                       curax.annotate(str(int(j))+'+',xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'medium')
-                   else:
-                       curax.annotate(str(int(j)),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')
+    try:
+        #plotting displacement for xz
+        curax=ax_xzd
+        plt.sca(curax)
+        nodal_df0off['xz'].apply(plt.plot)
+        try:
+            nodal_noise_df['xz_maxlist'].apply(plt.plot, ls=':')
+            nodal_noise_df['xz_minlist'].apply(plt.plot, ls=':')
         except:
-            print 'Error in plotting displacement'
+            print 'Error in plotting noise envelope'
+        curax.set_title('displacement\n downslope',fontsize='small')
+        curax.set_ylabel('displacement scale, m', fontsize='small')
+        y = df0off.loc[df0off.index == window.start].sort_values('id')['xz'].values
+        x = window.start
+        z = range(1, num_nodes+1)
+        if not plot_inc:
+            for i,j in zip(y,z):
+               curax.annotate(str(int(j)),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')
+        else:
+            for i,j in zip(y,z):
+               if inc_df.loc[inc_df.id == j]['inc_xz'].values[0]>3:
+                   curax.annotate(str(int(j))+'++++',xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'large')
+               elif inc_df.loc[inc_df.id == j]['inc_xz'].values[0]>2:
+                   curax.annotate(str(int(j))+'+++',xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'large')
+               elif inc_df.loc[inc_df.id == j]['inc_xz'].values[0]>1:
+                   curax.annotate(str(int(j))+'++',xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'medium')
+               elif inc_df.loc[inc_df.id == j]['inc_xz'].values[0]>0:
+                   curax.annotate(str(int(j))+'+',xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'medium')
+               else:
+                   curax.annotate(str(int(j)),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')
+
+        #plotting displacement for xy
+        curax=ax_xyd
+        plt.sca(curax)
+        nodal_df0off['xy'].apply(plt.plot)
+        try:
+            nodal_noise_df['xy_maxlist'].apply(plt.plot, ls=':')
+            nodal_noise_df['xy_minlist'].apply(plt.plot, ls=':')
+        except:
+            print 'Error in plotting noise envelope'
+        curax.set_title('displacement\n across slope',fontsize='small')
+        y = df0off.loc[df0off.index == window.start].sort_values('id')['xy'].values
+        x = window.start
+        z = range(1, num_nodes+1)
+        if not plot_inc:
+            for i,j in zip(y,z):
+               curax.annotate(str(int(j)),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')
+        else:
+            for i,j in zip(y,z):
+               if inc_df.loc[inc_df.id == j]['inc_xy'].values[0]>3:
+                   curax.annotate(str(int(j))+'++++',xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'large')
+               elif inc_df.loc[inc_df.id == j]['inc_xy'].values[0]>2:
+                   curax.annotate(str(int(j))+'+++',xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'large')
+               elif inc_df.loc[inc_df.id == j]['inc_xy'].values[0]>1:
+                   curax.annotate(str(int(j))+'++',xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'medium')
+               elif inc_df.loc[inc_df.id == j]['inc_xy'].values[0]>0:
+                   curax.annotate(str(int(j))+'+',xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'medium')
+               else:
+                   curax.annotate(str(int(j)),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')
+    except:
+        print 'Error in plotting displacement'
+           
+    if plotvel:
+        #plotting velocity for xz
+        curax=ax_xzv
+
+        vel_xz.plot(ax=curax,marker='.',legend=False)
+
+        L2_xz = L2_xz.sort_values('ts', ascending = True).set_index('ts')
+        nodal_L2_xz = L2_xz.groupby('id')
+        nodal_L2_xz.apply(lambda x: x['id'].plot(marker='^',ms=8,mfc='y',lw=0,ax = curax))
+
+        L3_xz = L3_xz.sort_values('ts', ascending = True).set_index('ts')
+        nodal_L3_xz = L3_xz.groupby('id')
+        nodal_L3_xz.apply(lambda x: x['id'].plot(marker='^',ms=10,mfc='r',lw=0,ax = curax))
+        
+        y = sorted(range(1, num_nodes+1), reverse = True)
+        x = (vel_xz.index)[1]
+        z = sorted(range(1, num_nodes+1), reverse = True)
+        for i,j in zip(y,z):
+            curax.annotate(str(int(j)),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')            
+        curax.set_ylabel('node ID', fontsize='small')
+        curax.set_title('velocity alerts\n downslope',fontsize='small')  
+    
+        #plotting velocity for xy        
+        curax=ax_xyv
+
+        vel_xy.plot(ax=curax,marker='.',legend=False)
+        
+        L2_xy = L2_xy.sort_values('ts', ascending = True).set_index('ts')
+        nodal_L2_xy = L2_xy.groupby('id')
+        nodal_L2_xy.apply(lambda x: x['id'].plot(marker='^',ms=8,mfc='y',lw=0,ax = curax))
+
+        L3_xy = L3_xy.sort_values('ts', ascending = True).set_index('ts')
+        nodal_L3_xy = L3_xy.groupby('id')
+        nodal_L3_xy.apply(lambda x: x['id'].plot(marker='^',ms=10,mfc='r',lw=0,ax = curax))
                
-        if plotvel:
-            #plotting velocity for xz
-            curax=ax_xzv
+        y = range(1, num_nodes+1)
+        x = (vel_xy.index)[1]
+        z = range(1, num_nodes+1)
+        for i,j in zip(y,z):
+            curax.annotate(str(int(j)),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')            
+        curax.set_title('velocity alerts\n across slope',fontsize='small')                        
+        
+    # rotating xlabel
     
-            vel_xz.plot(ax=curax,marker='.',legend=False)
-    
-            L2_xz = L2_xz.sort_values('ts', ascending = True).set_index('ts')
-            nodal_L2_xz = L2_xz.groupby('id')
-            nodal_L2_xz.apply(lambda x: x['id'].plot(marker='^',ms=8,mfc='y',lw=0,ax = curax))
-    
-            L3_xz = L3_xz.sort_values('ts', ascending = True).set_index('ts')
-            nodal_L3_xz = L3_xz.groupby('id')
-            nodal_L3_xz.apply(lambda x: x['id'].plot(marker='^',ms=10,mfc='r',lw=0,ax = curax))
+    try:
+        for tick in ax_xzd.xaxis.get_minor_ticks():
+            tick.label.set_rotation('vertical')
+            tick.label.set_fontsize(6)
             
-            y = sorted(range(1, num_nodes+1), reverse = True)
-            x = (vel_xz.index)[1]
-            z = sorted(range(1, num_nodes+1), reverse = True)
-            for i,j in zip(y,z):
-                curax.annotate(str(int(j)),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')            
-            curax.set_ylabel('node ID', fontsize='small')
-            curax.set_title('velocity alerts\n XZ axis',fontsize='small')  
+        for tick in ax_xyd.xaxis.get_minor_ticks():
+            tick.label.set_rotation('vertical')
+            tick.label.set_fontsize(6)
         
-            #plotting velocity for xy        
-            curax=ax_xyv
-    
-            vel_xy.plot(ax=curax,marker='.',legend=False)
+        for tick in ax_xzd.xaxis.get_major_ticks():
+            tick.label.set_rotation('vertical')
+            tick.label.set_fontsize(6)
             
-            L2_xy = L2_xy.sort_values('ts', ascending = True).set_index('ts')
-            nodal_L2_xy = L2_xy.groupby('id')
-            nodal_L2_xy.apply(lambda x: x['id'].plot(marker='^',ms=8,mfc='y',lw=0,ax = curax))
+        for tick in ax_xyd.xaxis.get_major_ticks():
+            tick.label.set_rotation('vertical')
+            tick.label.set_fontsize(6)
+    except:
+        print 'Error in rotating x-label for disp subplots'
+
+    if plotvel:
+        for tick in ax_xzv.xaxis.get_major_ticks():
+            tick.label.set_rotation('vertical')
+            tick.label.set_fontsize(6)
     
-            L3_xy = L3_xy.sort_values('ts', ascending = True).set_index('ts')
-            nodal_L3_xy = L3_xy.groupby('id')
-            nodal_L3_xy.apply(lambda x: x['id'].plot(marker='^',ms=10,mfc='r',lw=0,ax = curax))
-                   
-            y = range(1, num_nodes+1)
-            x = (vel_xy.index)[1]
-            z = range(1, num_nodes+1)
-            for i,j in zip(y,z):
-                curax.annotate(str(int(j)),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')            
-            curax.set_title('velocity alerts\n XY axis',fontsize='small')                        
+        for tick in ax_xyv.xaxis.get_major_ticks():
+            tick.label.set_rotation('vertical')
+            tick.label.set_fontsize(6)
             
-        # rotating xlabel
-        
-        try:
-            for tick in ax_xzd.xaxis.get_minor_ticks():
-                tick.label.set_rotation('vertical')
-                tick.label.set_fontsize(6)
-                
-            for tick in ax_xyd.xaxis.get_minor_ticks():
-                tick.label.set_rotation('vertical')
-                tick.label.set_fontsize(6)
-            
-            for tick in ax_xzd.xaxis.get_major_ticks():
-                tick.label.set_rotation('vertical')
-                tick.label.set_fontsize(6)
-                
-            for tick in ax_xyd.xaxis.get_major_ticks():
-                tick.label.set_rotation('vertical')
-                tick.label.set_fontsize(6)
-        except:
-            print 'Error in rotating x-label for disp subplots'
+        for tick in ax_xzv.xaxis.get_minor_ticks():
+            tick.label.set_rotation('vertical')
+            tick.label.set_fontsize(6)
     
-        if plotvel:
-            for tick in ax_xzv.xaxis.get_major_ticks():
-                tick.label.set_rotation('vertical')
-                tick.label.set_fontsize(6)
-        
-            for tick in ax_xyv.xaxis.get_major_ticks():
-                tick.label.set_rotation('vertical')
-                tick.label.set_fontsize(6)
-                
-            for tick in ax_xzv.xaxis.get_minor_ticks():
-                tick.label.set_rotation('vertical')
-                tick.label.set_fontsize(6)
-        
-            for tick in ax_xyv.xaxis.get_minor_ticks():
-                tick.label.set_rotation('vertical')
-                tick.label.set_fontsize(6)
-        
-        try:
-            for item in ([ax_xzd.xaxis.label, ax_xyd.xaxis.label]):
-                item.set_fontsize(8)
-        except:
-            print 'Error in setting font size of x-label in disp subplots'
+        for tick in ax_xyv.xaxis.get_minor_ticks():
+            tick.label.set_rotation('vertical')
+            tick.label.set_fontsize(6)
     
-        if plotvel:
-            for item in ([ax_xyv.yaxis.label, ax_xzv.yaxis.label]):
-                item.set_fontsize(8)
-        
-        try:
-            dfmt = md.DateFormatter('%Y-%m-%d\n%H:%M')
-            ax_xzd.xaxis.set_major_formatter(dfmt)
-            ax_xyd.xaxis.set_major_formatter(dfmt)
-        except:
-            print 'Error in setting date format of x-label in disp subplots'
+    try:
+        for item in ([ax_xzd.xaxis.label, ax_xyd.xaxis.label]):
+            item.set_fontsize(8)
+    except:
+        print 'Error in setting font size of x-label in disp subplots'
+
+    if plotvel:
+        for item in ([ax_xyv.yaxis.label, ax_xzv.yaxis.label]):
+            item.set_fontsize(8)
     
-        fig.tight_layout()
-        
-        fig.subplots_adjust(top=0.85)        
-        fig.suptitle(colname+" as of "+str(window.end),fontsize='medium')
-        line=mpl.lines.Line2D((0.5,0.5),(0.1,0.8))
-        fig.lines=line,
+    try:
+        dfmt = md.DateFormatter('%Y-%m-%d\n%H:%M')
+        ax_xzd.xaxis.set_major_formatter(dfmt)
+        ax_xyd.xaxis.set_major_formatter(dfmt)
+    except:
+        print 'Error in setting date format of x-label in disp subplots'
+
+    fig.tight_layout()
     
-    except:      
-        print colname, "ERROR in plotting displacements and velocities"
+    fig.subplots_adjust(top=0.85)        
+    fig.suptitle(colname,fontsize='medium')
+    line=mpl.lines.Line2D((0.5,0.5),(0.1,0.8))
+    fig.lines=line,
+    
+#    except:      
+#        print colname, "ERROR in plotting displacements and velocities"
     return
 
 
@@ -543,10 +543,7 @@ def main(monitoring, window, config, plotvel_start='', plotvel_end='', plotvel=T
     # noise envelope
     max_min_df = monitoring.max_min_df
     max_min_cml = monitoring.max_min_cml
-    
-    if config.io.column_fix == 'top':
-        max_min_cml = -max_min_cml
-        
+            
     # compute column position
     colposdf = compute_colpos(window, config, monitoring_vel, num_nodes, seg_len)
 
@@ -640,7 +637,7 @@ def mon_main():
                     print 'invalid datetime format'
                     continue
             
-            monitoring = g.genproc(col[0], window, config, realtime=True)
+            monitoring = g.genproc(col[0], window, config, config.io.column_fix, realtime=True)
             main(monitoring, window, config, plotvel_start=window.end-timedelta(hours=3), plotvel_end=window.end)#, plot_inc=False)
             
         # plots with customizable monitoring window
@@ -714,7 +711,7 @@ def mon_main():
             else:
                 plotvel = False
     
-            monitoring = g.genproc(col[0], window, config)
+            monitoring = g.genproc(col[0], window, config, config.io.column_fix)
             main(monitoring, window, config, plotvel=plotvel, show_part_legend = show_part_legend, plotvel_end=window.end, plotvel_start=window.start, plot_inc=False)
         
     # plots from start to end of data
@@ -785,7 +782,7 @@ def mon_main():
         else:
             plotvel = False
 
-        monitoring = g.genproc(col[0], window, config)
+        monitoring = g.genproc(col[0], window, config, config.io.column_fix)
         main(monitoring, window, config, plotvel=False, show_part_legend = show_part_legend, plot_inc=False)
 
 ##########################################################
