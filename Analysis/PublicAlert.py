@@ -229,8 +229,8 @@ def SitePublicAlert(PublicAlert, window):
 
     #Public Alert A3
     if 'L3' in SG_alert.alert.values or 'l3' in SG_alert.alert.values or 'A3' in validity_site_alert.alert.values:
-        validity_RED = validity_site_alert.loc[(validity_site_alert.alert == 'r1')|(validity_site_alert.alert == 'e1')|(validity_site_alert.alert == 'd1')].updateTS.values
-        validity_L = validity_site_alert.loc[(validity_site_alert.alert == 'L3')|(validity_site_alert.alert == 'l3')|(validity_site_alert.alert == 'L2')|(validity_site_alert.alert == 'l2')].updateTS.values
+        validity_RED = RED_alert.loc[(RED_alert.alert == 'r1')|(RED_alert.alert == 'e1')|(RED_alert.alert == 'd1')].updateTS.values
+        validity_L = SG_alert.loc[(SG_alert.alert == 'L3')|(SG_alert.alert == 'l3')|(SG_alert.alert == 'L2')|(SG_alert.alert == 'l2')].updateTS.values
         validity_A = site_alert.loc[(site_alert.alert == 'A3')].timestamp.values
         validity = RoundTime(pd.to_datetime(str(max(list(validity_L) + list(validity_A) + list(validity_RED))))) + timedelta(2)
         
@@ -332,8 +332,8 @@ def SitePublicAlert(PublicAlert, window):
 
     #Public Alert A2
     elif 'L2' in SG_alert.alert.values or 'l2' in SG_alert.alert.values or 'A2' in validity_site_alert.alert.values:
-        validity_RED = validity_site_alert.loc[(validity_site_alert.alert == 'r1')|(validity_site_alert.alert == 'e1')|(validity_site_alert.alert == 'd1')].updateTS.values
-        validity_L = validity_site_alert.loc[(validity_site_alert.alert == 'L2')|(validity_site_alert.alert == 'l2')].updateTS.values
+        validity_RED = RED_alert.loc[(RED_alert.alert == 'r1')|(RED_alert.alert == 'e1')|(RED_alert.alert == 'd1')].updateTS.values
+        validity_L = SG_alert.loc[(SG_alert.alert == 'L2')|(SG_alert.alert == 'l2')].updateTS.values
         validity_A = site_alert.loc[(site_alert.alert == 'A2')].timestamp.values
         validity = RoundTime(pd.to_datetime(str(max(list(validity_L) + list(validity_A) + list(validity_RED))))) + timedelta(1)
         
@@ -450,7 +450,7 @@ def SitePublicAlert(PublicAlert, window):
                     # within 3 days of 4hr-extension
                     if RoundTime(window.end) - validity < timedelta(3):
                         validity = RoundTime(window.end)
-                        internal_alert = 'ND-g0' + other_alerts
+                        internal_alert = 'A2-g0' + other_alerts
                         public_alert = 'A2'
                         
                     else:
@@ -461,7 +461,7 @@ def SitePublicAlert(PublicAlert, window):
 
     #Public ALert A1
     elif 'r1' in site_alert.alert.values or 'e1' in site_alert.alert.values or 'd1' in site_alert.alert.values or 'A1' in validity_site_alert.alert.values:
-        validity_RED = validity_site_alert.loc[(validity_site_alert.alert == 'r1')|(validity_site_alert.alert == 'e1')|(validity_site_alert.alert == 'd1')].updateTS.values
+        validity_RED = RED_alert.loc[(RED_alert.alert == 'r1')|(RED_alert.alert == 'e1')|(RED_alert.alert == 'd1')].updateTS.values
         validity_A = site_alert.loc[(site_alert.alert == 'A1')].timestamp.values
         validity = RoundTime(pd.to_datetime(str(max(list(validity_RED) + list(validity_A))))) + timedelta(1)
         
