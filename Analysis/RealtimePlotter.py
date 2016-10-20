@@ -734,7 +734,7 @@ def mon_main():
                 
         window, config = rtw.getwindow()
     
-        query = "SELECT * FROM senslopedb.%s ORDER BY timestamp LIMIT 1" %col[0].name
+        query = "SELECT * FROM senslopedb.%s where timestamp > '2010-01-01 00:00' ORDER BY timestamp LIMIT 1" %col[0].name
         start_data = q.GetDBDataFrame(query)
         start_dataTS = pd.to_datetime(start_data['timestamp'].values[0])
         start_dataTS_Year=start_dataTS.year
