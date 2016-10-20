@@ -22,7 +22,7 @@ def resamplenode(df, window):
     df.index = pd.to_datetime(df.index)
     df = df.sort_index(ascending = True)
     df = df.resample('30Min', base=0, how='pad')
-    df = df.reset_index(level=1).set_index('ts')
+    df = df.reset_index(level=1)
     return df    
       
 def GetNodesWithNoInitialData(df,num_nodes,offsetstart):
@@ -30,6 +30,12 @@ def GetNodesWithNoInitialData(df,num_nodes,offsetstart):
     with_init_val=df[df.ts<offsetstart+timedelta(hours=0.5)]['id'].values
     no_init_val=allnodes[np.in1d(allnodes, with_init_val, invert=True)]
     return no_init_val
+
+def GetNodesWithNoData(df, num_nodes):
+    allnodes = np.arange(1,num_nodes+1)
+    withval = sorted(set(df.id))
+    noval = allnodes[np.in1d(allnodes, withval, invert=True)]
+    return noval
 
 def accel_to_lin_xz_xy(seg_len,xa,ya,za):
 
@@ -120,8 +126,6 @@ def genproc(col, window, config, fixpoint, realtime=False):
         
     if len(LastGoodData)<col.nos: print col.name, " Missing nodes in LastGoodData"
     
-    monitoring = monitoring.append(LastGoodData)
-    
     monitoring = monitoring.loc[monitoring.id <= col.nos]
     
     #assigns timestamps from LGD to be timestamp of offsetstart
@@ -134,7 +138,12 @@ def genproc(col, window, config, fixpoint, realtime=False):
     monitoring = monitoring.set_index('ts')
     monitoring = monitoring[['name','id','xz','xy']]
     
-    max_min_df, max_min_cml = err.cml_noise_profiling(monitoring, config, fixpoint)
+    max_min_df, max_min_cml = err.cml_noise_profiling(monitoring, config, fixpoint, col.nos)
+    
+    nodes_noval = GetNodesWithNoData(monitoring, col.nos)
+    nodes_nodata = pd.DataFrame({'name': [0]*len(nodes_noval), 'id': nodes_noval, 'xy': [np.nan]*len(nodes_noval), 'xz': [np.nan]*len(nodes_noval), 'ts': [window.offsetstart]*len(nodes_noval)})
+    nodes_nodata = nodes_nodata.set_index('ts')
+    monitoring = monitoring.append(nodes_nodata)
     
     #resamples xz and xy values per node using forward fill
     monitoring = monitoring.groupby('id').apply(resamplenode, window = window).reset_index(level=1).set_index('ts')
