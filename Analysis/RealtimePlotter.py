@@ -660,12 +660,17 @@ def mon_main():
                     continue
     
             while True:
+                start = raw_input('monitoring window (in days) or datetime (format: 2016-12-31 23:30): ')
                 try:
-                    window.start = window.end - timedelta(int(raw_input('monitoring window, in days: ')))
+                    window.start = window.end - timedelta(int(start))
                     break
                 except:
-                    print 'invalid datetime format'
-                    continue
+                    try:
+                        window.start = pd.to_datetime(start)
+                        break
+                    except:
+                        print 'datetime format or integer only'
+                        continue
     
             window.offsetstart = window.start - timedelta(days=(config.io.num_roll_window_ops*window.numpts-1)/48.)
     
@@ -731,12 +736,16 @@ def mon_main():
             except:
                 print 'enter an integer'
                 continue
-                
-        window, config = rtw.getwindow()
-    
-        query = "SELECT * FROM senslopedb.%s where timestamp > '2010-01-01 00:00' ORDER BY timestamp LIMIT 1" %col[0].name
-        start_data = q.GetDBDataFrame(query)
-        start_dataTS = pd.to_datetime(start_data['timestamp'].values[0])
+                    
+        query = "(SELECT * FROM senslopedb.%s where timestamp > '2010-01-01 00:00' ORDER BY timestamp LIMIT 1)" %col[0].name
+        query += " UNION ALL"
+        query += " (SELECT * FROM senslopedb.%s ORDER BY timestamp DESC LIMIT 1)" %col[0].name
+        start_end = q.GetDBDataFrame(query)
+        
+        end = pd.to_datetime(start_end['timestamp'].values[1])
+        window, config = rtw.getwindow(end)
+        
+        start_dataTS = pd.to_datetime(start_end['timestamp'].values[0])
         start_dataTS_Year=start_dataTS.year
         start_dataTS_month=start_dataTS.month
         start_dataTS_day=start_dataTS.day
