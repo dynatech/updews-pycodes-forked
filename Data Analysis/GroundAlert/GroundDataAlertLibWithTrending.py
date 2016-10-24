@@ -477,7 +477,9 @@ def del_data(df):
     db.commit()
     db.close()
 
-def GroundDataTrendingPlotJSON(site,crack,end):
+def GroundDataTrendingPlotJSON(site,crack,end = None):
+    if end == None:
+        end = datetime.now()
     df = get_latest_ground_df(site,end)
     df['site_id'] = map(lambda x: x.lower(),df['site_id'])
     df['crack_id'] = map(lambda x: x.title(),df['crack_id'])
@@ -491,7 +493,11 @@ def GroundDataTrendingPlotJSON(site,crack,end):
     
     ##### Interpolate the last 10 data points
     _,var = moving_average(cur_x)
-    sp = UnivariateSpline(cur_t,cur_x,w=1/np.sqrt(var))
+    w = 1/np.sqrt(var)
+    if 0 in var:
+        w = None
+    
+    sp = UnivariateSpline(cur_t,cur_x,w=w)
     
     t_n = np.linspace(cur_t[0],cur_t[-1],20)
     ts_n = pd.to_datetime(cur_ts[0]) + np.array(map(lambda x: timedelta(days = x), t_n))
