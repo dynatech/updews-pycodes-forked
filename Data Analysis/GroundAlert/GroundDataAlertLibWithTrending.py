@@ -485,7 +485,7 @@ def GroundDataTrendingPlotJSON(site,crack,end = None):
     df['crack_id'] = map(lambda x: x.title(),df['crack_id'])
     end = pd.to_datetime(end)    
     
-    df = df[df.crack_id == crack]
+    df = df[df.crack_id == crack.title()]
     
     cur_t = (df.timestamp.values - df.timestamp.values[0])/np.timedelta64(1,'D')
     cur_x = df.meas.values
@@ -496,15 +496,23 @@ def GroundDataTrendingPlotJSON(site,crack,end = None):
     w = 1/np.sqrt(var)
     if 0 in var:
         w = None
-    
-    sp = UnivariateSpline(cur_t,cur_x,w=w)
+
     
     t_n = np.linspace(cur_t[0],cur_t[-1],20)
     ts_n = pd.to_datetime(cur_ts[0]) + np.array(map(lambda x: timedelta(days = x), t_n))
-    x_n = sp(t_n)
-    v_s = abs(sp.derivative(n=1)(cur_t))
-    a_s = abs(sp.derivative(n=2)(cur_t))
-    
+    try:
+        sp = UnivariateSpline(cur_t,cur_x,w=w)
+        x_n = sp(t_n)
+        v_s = abs(sp.derivative(n=1)(cur_t))
+        a_s = abs(sp.derivative(n=2)(cur_t))
+    except:
+        print "Interpolation Error for site {} crack {} at timestamp ".format(site,crack,end)
+        t_n = np.linspace(cur_t[0],cur_t[-1],len(cur_t))
+        ts_n = pd.to_datetime(cur_ts[0]) + np.array(map(lambda x: timedelta(days = x), t_n))
+        x_n = cur_x
+        v_s = np.zeros(len(x_n))
+        a_s = np.zeros(len(x_n))
+        
     ts_n = map(lambda x: x.strftime('%Y-%m-%d %H:%M:%S'), ts_n)
     cur_ts = map(lambda x: pd.to_datetime(x).strftime('%Y-%m-%d %H:%M:%S'), cur_ts)
     to_json = {'av' : {'v':list(v_s),'a':list(a_s)},'dvt':{'gnd':{'ts':list(cur_ts),'surfdisp':list(cur_x)},'interp':{'ts':list(ts_n),'surfdisp':list(x_n)}}}
