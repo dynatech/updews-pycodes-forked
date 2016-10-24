@@ -21,12 +21,14 @@ import querySenslopeDb as qs
 #import Velocity, Column Position and Displacement Generator Library
 import vcdgen as vcd
 
-#vcd.displacement("mamb")
-
 fdate = "2016-05-01 00:00:00"
 #tdate = time.strftime("%Y-%m-%d %H:%M")
 tdate = "2016-06-09 15:00:00"
 fixpoints = ['top', 'bottom', 'TOP', 'BOTTOM', 'Top', 'Bottom','']
+
+# Works for "magta" but not for many other sites
+#c = vcd.displacement("mamb", endTS=tdate)
+#c = vcd.displacement('magta', endTS=tdate)
 
 try:
     #Get list of sensors
