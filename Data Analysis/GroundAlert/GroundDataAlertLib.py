@@ -121,7 +121,7 @@ def uptoDB_gndmeas_alerts(df,df2):
 
     
     
-    engine=create_engine('mysql://{}:{}@{}/{}'.format(Userdb,Passdb,Hostdb,Namedb))
+    engine=create_engine('mysql://'+Userdb+':'+Passdb+'@'+Hostdb+':3306/'+Namedb)
     df3.to_sql(name = 'gndmeas_alerts', con = engine, if_exists = 'append', schema = Namedb, index = True)
 
 
