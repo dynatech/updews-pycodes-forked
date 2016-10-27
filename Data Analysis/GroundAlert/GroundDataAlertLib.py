@@ -121,7 +121,7 @@ def uptoDB_gndmeas_alerts(df,df2):
 
     
     
-    engine=create_engine('mysql://root:senslope@192.168.1.102:3306/senslopedb')
+    engine=create_engine('mysql://{}:{}@{}/{}'.format(Userdb,Passdb,Hostdb,Namedb))
     df3.to_sql(name = 'gndmeas_alerts', con = engine, if_exists = 'append', schema = Namedb, index = True)
 
 
