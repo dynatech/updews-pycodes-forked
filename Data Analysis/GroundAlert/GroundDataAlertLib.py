@@ -118,7 +118,8 @@ def uptoDB_gndmeas_alerts(df,df2):
     df3_group.apply(del_data)
     
     df3 = df3.set_index('timestamp')
-
+    print "Inserting dataframe to database:\n"    
+    print df3
     
     
     engine=create_engine('mysql://'+Userdb+':'+Passdb+'@'+Hostdb+':3306/'+Namedb)
