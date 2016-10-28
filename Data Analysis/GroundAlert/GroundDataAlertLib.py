@@ -202,7 +202,7 @@ def crack_eval(df,end):
                         crack_alert = 'l2'
                     else:
                         crack_alert = 'l0'
-                elif time_delta >= 0.75.:
+                elif time_delta >= 0.75:
                     if abs_disp >= 10:
                         crack_alert = 'l3'
                     elif abs_disp >= 0.5:
