@@ -279,29 +279,15 @@ def getPersonnelofGroup(groupname):
 # if __name__ == "__main__":
 # 	main()
 def ServerMessaging(msg):
-	parser = argparse.ArgumentParser(description="Send server messaging\n SENDGM [-options]")
-	parser.add_argument("-g", "--group", help="name of group")
-	parser.add_argument("-s", "--sender", help="sender name")
-	parser.add_argument("-m", "--message", help="message to send", action="store_true")
+	print msg.data
 
-	
-	args_msg = re.search("(?<=SENDGM ).+-m(?=(\w| ))",msg.data,re.IGNORECASE).group(0).lower()
-	# args_msg = re.search("SENDGM .+-m(?=(\w| ))",msg.data).group(0).lower()
-	
+	sender = getNameofStaff(msg.simnum)
 
-	try:
-		print args_msg
-		args = parser.parse_args(args_msg.split(" "))
-	except KeyboardInterrupt:
-		print '>> Error in parsing'
-		# error_msg = StringIO.StringIO()
-		error = parser.format_help().replace("processmessagesfromdb.py","PSRI")
-		# error = error_msg.get
-		print error
-		server.WriteOutboxMessageToDb(error,msg.simnum,'skipped')
-		return True
+	group_tags = msg.data.split(" ")[1]
 
-	person_list = getPersonnelofGroup(args.group.strip())
+	messagetosend = msg.data.split(" ",2)[2]
+
+	person_list = getPersonnelofGroup(group_tags)
 
 	# print str(person_list)
 
@@ -311,13 +297,8 @@ def ServerMessaging(msg):
 
 	personnel_number_list = getNumbersFromList('('+str(person_list)[1:-1]+')')
 
-	if args.message:
-		print msg.data
-		messagetosend = re.search("(?<=-m).+(?=(-|$))",msg.data).group(0).strip()
-		# messagetosend = re.search("(?<=-m).+",msg.data).group(0).strip()
-		messagetosend = "From: %s\n%s" % (args.sender.strip(),messagetosend)
-	else:
-		print ">> Message argument not defined" 
+	messagetosend = "From: %s\nTo: %s\n%s" % (sender,group_tags,messagetosend)
+
 
 	for pnl in personnel_number_list:
 		server.WriteOutboxMessageToDb(messagetosend,pnl[1])
@@ -373,7 +354,7 @@ def test():
     # msg = "-t -clabb -n10"
     # msg = gsmio.sms("1","09176023735","PSIR -T -CLABB -N 10","")
     # msg = gsmio.sms("1","09176023735","SENDGM -GCOMMUNITY -M \"This is a test message GM message from GSM server. Please ignore for now.\"","")
-    msg = gsmio.sms("1","09176023735","Sendgm -gvalidation,maintenance -sEarl -m Test GM. Puro all caps kasi kanina. ","")    
+    msg = gsmio.sms("1","09176023735","Sendgm senslope,dynaslope Syntax for sending GM\r\n Sendgm <grouptags> <message>","")    
     ServerMessaging(msg)
 
 if __name__ == "__main__":

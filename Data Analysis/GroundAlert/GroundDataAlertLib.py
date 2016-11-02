@@ -118,10 +118,11 @@ def uptoDB_gndmeas_alerts(df,df2):
     df3_group.apply(del_data)
     
     df3 = df3.set_index('timestamp')
-
+    print "Inserting dataframe to database:\n"    
+    print df3
     
     
-    engine=create_engine('mysql://root:senslope@192.168.1.102:3306/senslopedb')
+    engine=create_engine('mysql://'+Userdb+':'+Passdb+'@'+Hostdb+':3306/'+Namedb)
     df3.to_sql(name = 'gndmeas_alerts', con = engine, if_exists = 'append', schema = Namedb, index = True)
 
 
@@ -191,7 +192,7 @@ def crack_eval(df,end):
                         if abs_disp >= (time_delta/7.)*75:
                             crack_alert = 'l3'
                         elif abs_disp >= (time_delta/7.)*3:
-                            crack_alert = 'l3'
+                            crack_alert = 'l2'
                         else:
                             crack_alert = 'l0'
                 elif time_delta >= 2.75:
@@ -301,11 +302,9 @@ def alert_toDB(df,end):
             db.commit()
             db.close()
         elif df2.alert.values[0] == df.alert.values[0]:
-            db, cur = SenslopeDBConnect(Namedb)
-            query = "UPDATE senslopedb.%s SET updateTS='%s' WHERE site = '%s' and source = 'ground' and alert = '%s' and timestamp = '%s'" %('site_level_alert', pd.to_datetime(str(end)), df2.site.values[0], df2.alert.values[0], pd.to_datetime(str(df2.timestamp.values[0])))
-            cur.execute(query)
-            db.commit()
-            db.close()
+            engine = create_engine('mysql://'+Userdb+':'+Passdb+'@'+Hostdb+':3306/'+Namedb)
+            df['updateTS'] = end
+            df.to_sql(name = 'site_level_alert', con = engine, if_exists = 'append', schema = Namedb, index = False)
     except:
         print "Cannot write to db {}".format(df.site.values[0])
 

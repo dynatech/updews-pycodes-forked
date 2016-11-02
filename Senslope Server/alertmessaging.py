@@ -45,7 +45,7 @@ def sendAlertMessage():
         return
 
     message = 'Alert ID %d:\n%s\n' % (alertmsg[0][0],alertmsg[0][1])
-    message += 'Text ACK<space><alert id><space><remarks> to acknowledge.'
+    message += 'Text "ACK <alert id> <valid/invalid> <remarks> to acknowledge"'
 
     # send to alert staff
     contacts = getAlertStaffNumbers()
@@ -72,6 +72,8 @@ def processAckToAlert(msg):
     # check to see if message from chatter box
     try:
         name = qsi.getNameofStaff(msg.simnum)
+        if re.search("server",name.lower()):
+            name = re.search("(?>=-).+(?= from)").group(0)
     except:
         try:
             chat_footer = re.search("-[A-Za-z ]+ from .+$",msg.data).group(0)
@@ -83,17 +85,25 @@ def processAckToAlert(msg):
             return True
 
     try:
-        remarks = re.search("(?<=\d ).+(?=$)",msg.data).group(0)
+        remarks = re.search("(?<=\d ).+(?=($|\r|\n))",msg.data).group(0)
     except:
         errmsg = "Please put in your remarks."
         server.WriteOutboxMessageToDb(errmsg,msg.simnum)
         return True
 
-    query = "update smsalerts set ack = '%s', ts_ack = '%s', remarks = '%s' where alert_id = %s" % (name,msg.dt,remarks,alert_id)
+    try:
+        alert_status = re.search("(in)*valid",remarks).group(0)
+        remarks = remarks.replace(alert_status,"").strip()
+    except:
+        errmsg = "Please put in the alert status validity. i.e (VALID, INVALID)"
+        server.WriteOutboxMessageToDb(errmsg,msg.simnum)
+        return True
+
+    query = "update smsalerts set ack = '%s', ts_ack = '%s', remarks = '%s', alertstat = '%s' where alert_id = %s" % (name,msg.dt,remarks,alert_status, alert_id)
     dbio.commitToDb(query,processAckToAlert)
 
     contacts = getAlertStaffNumbers()
-    message = "Alert ID %s ACK by %s on %s\nActions done: %s" % (alert_id,name,msg.dt,remarks)
+    message = "Alert ID %s ACK by %s on %s\nStatus: %s\nRemarks: %s" % (alert_id,name,msg.dt,alert_status,remarks)
     
     tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
     for item in contacts:

@@ -124,7 +124,7 @@ def uptoDB_gndmeas_alerts(df,df2):
     
     df3 = df3.set_index('timestamp')
     
-    engine=create_engine('mysql://root:senslope@192.168.1.102:3306/senslopedb')
+    engine=create_engine('mysql://'+Userdb+':'+Passdb+'@'+Hostdb+':3306/'+Namedb)
     df3.to_sql(name = 'gndmeas_alerts_with_trending', con = engine, if_exists = 'append', schema = Namedb, index = True)
 
 
@@ -192,7 +192,7 @@ def crack_eval(df,out_folder,end):
                         if abs_disp >= (time_delta/7.)*75:
                             crack_alert = 'l3'
                         elif abs_disp >= (time_delta/7.)*3:
-                            crack_alert = 'l3'
+                            crack_alert = 'l2'
                         else:
                             crack_alert = 'l0'
                 elif time_delta >= 2.75:
@@ -421,12 +421,21 @@ def check_trending(df,out_folder,plot = False):
         ax2.grid()
         ax2.plot(cur_t,cur_x,'.',c = tableau20[0],label = 'Data')
         ax2.plot(t_n,x_n,c = tableau20[12],label = 'Interpolation')
+        cur_range = max(list(cur_x) + list(x_n)) - min(list(cur_x) + list(x_n))
+        ylim_max = max(list(cur_x) + list(x_n)) + cur_range*0.05
+        ylim_min = min(list(cur_x) + list(x_n)) - cur_range*0.05
+        ax2.set_ylim([ylim_min,ylim_max])
         ax2.legend(loc = 'upper left',fancybox = True, framealpha = 0.5)
         ax2.set_ylabel('disp (meters)')
         
         ax3 = fig.add_subplot(224, sharex = ax2)
         ax3.grid()
         ax3.plot(t_n,v_n, color = tableau20[4],label = 'Velocity')
+        l3_vel, l2_vel = velocity_alert_values(cur_t[-2]-cur_t[-1])
+        ylim_values = ax3.get_ylim()
+        ax3.plot(ax3.get_xlim(),[l3_vel,l3_vel],'--',lw = 2., color = tableau20[2],label = 'L3 Velocity')
+        ax3.plot(ax3.get_xlim(),[l2_vel,l2_vel],'--',lw = 2., color = tableau20[16],label = 'L2 Velocity')
+        ax3.set_ylim(ylim_values)
         ax3.set_ylabel('velocity (cm/day)')
         ax3.set_xlabel('time (days)')
         ax3.legend(loc = 'upper left',fancybox = True, framealpha = 0.5)
@@ -477,13 +486,15 @@ def del_data(df):
     db.commit()
     db.close()
 
-def GroundDataTrendingPlotJSON(site,crack,end):
+def GroundDataTrendingPlotJSON(site,crack,end = None):
+    if end == None:
+        end = datetime.now()
     df = get_latest_ground_df(site,end)
     df['site_id'] = map(lambda x: x.lower(),df['site_id'])
     df['crack_id'] = map(lambda x: x.title(),df['crack_id'])
     end = pd.to_datetime(end)    
     
-    df = df[df.crack_id == crack]
+    df = df[df.crack_id == crack.title()]
     
     cur_t = (df.timestamp.values - df.timestamp.values[0])/np.timedelta64(1,'D')
     cur_x = df.meas.values
@@ -491,18 +502,47 @@ def GroundDataTrendingPlotJSON(site,crack,end):
     
     ##### Interpolate the last 10 data points
     _,var = moving_average(cur_x)
-    sp = UnivariateSpline(cur_t,cur_x,w=1/np.sqrt(var))
+    w = 1/np.sqrt(var)
+    if 0 in var:
+        w = None
+
     
     t_n = np.linspace(cur_t[0],cur_t[-1],20)
     ts_n = pd.to_datetime(cur_ts[0]) + np.array(map(lambda x: timedelta(days = x), t_n))
-    x_n = sp(t_n)
-    v_s = abs(sp.derivative(n=1)(cur_t))
-    a_s = abs(sp.derivative(n=2)(cur_t))
-    
+    try:
+        sp = UnivariateSpline(cur_t,cur_x,w=w)
+        x_n = sp(t_n)
+        v_s = abs(sp.derivative(n=1)(cur_t))
+        a_s = abs(sp.derivative(n=2)(cur_t))
+    except:
+        print "Interpolation Error for site {} crack {} at timestamp ".format(site,crack,end)
+        t_n = np.linspace(cur_t[0],cur_t[-1],len(cur_t))
+        ts_n = pd.to_datetime(cur_ts[0]) + np.array(map(lambda x: timedelta(days = x), t_n))
+        x_n = cur_x
+        v_s = np.zeros(len(x_n))
+        a_s = np.zeros(len(x_n))
+        
     ts_n = map(lambda x: x.strftime('%Y-%m-%d %H:%M:%S'), ts_n)
     cur_ts = map(lambda x: pd.to_datetime(x).strftime('%Y-%m-%d %H:%M:%S'), cur_ts)
     to_json = {'av' : {'v':list(v_s),'a':list(a_s)},'dvt':{'gnd':{'ts':list(cur_ts),'surfdisp':list(cur_x)},'interp':{'ts':list(ts_n),'surfdisp':list(x_n)}}}
     print json.dumps(to_json)
+
+def velocity_alert_values(time_delta):
+    #INPUT: Time delta interval between measurements
+    #OUTPUT: Corresponding l2, and l3 velocities in cm/day
+    if time_delta >= 7.:
+        l3_vel = 75./7.
+        l2_vel = 3./7.
+    elif time_delta >= 3.:
+        l3_vel = 30./3.
+        l2_vel = 1.5/3.
+    elif time_delta >= 1.:
+        l3_vel = 10.
+        l2_vel = 0.5
+    else:
+        l3_vel = 5.
+        l2_vel = 0.5
+    return l3_vel, l2_vel
 
 
 def GenerateGroundDataAlert(site=None,end=None):
