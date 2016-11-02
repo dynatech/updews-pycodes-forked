@@ -302,11 +302,9 @@ def alert_toDB(df,end):
             db.commit()
             db.close()
         elif df2.alert.values[0] == df.alert.values[0]:
-            db, cur = SenslopeDBConnect(Namedb)
-            query = "UPDATE senslopedb.%s SET updateTS='%s' WHERE site = '%s' and source = 'ground' and alert = '%s' and timestamp = '%s'" %('site_level_alert', pd.to_datetime(str(end)), df2.site.values[0], df2.alert.values[0], pd.to_datetime(str(df2.timestamp.values[0])))
-            cur.execute(query)
-            db.commit()
-            db.close()
+            engine = create_engine('mysql://'+Userdb+':'+Passdb+'@'+Hostdb+':3306/'+Namedb)
+            df['updateTS'] = end
+            df.to_sql(name = 'site_level_alert', con = engine, if_exists = 'append', schema = Namedb, index = False)
     except:
         print "Cannot write to db {}".format(df.site.values[0])
 
