@@ -59,8 +59,6 @@ def max_min(df, num_nodes, mx_mn_df):
         except:
             mx_mn_df.loc[df_index] = [0, 0, 0, 0]
 
-    print mx_mn_df
-
     return mx_mn_df
 
 def same_bounds(df):
