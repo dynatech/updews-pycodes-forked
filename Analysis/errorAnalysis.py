@@ -20,28 +20,24 @@ def max_min(df, num_nodes, mx_mn_df):
 
     df_index = mx_mn_df.loc[mx_mn_df.index == m].index[0]
     
-    #processing XZ axis
-    z = df.xz.values
-    z = z[np.isfinite(z)]
-    
-    #processing XY axis
-    y = df.xy.values
-    y = y[np.isfinite(y)]
-
-    
     try:
-        # for XZ axis
+        #processing XZ axis
+        z = df.xz.values
+        z = z[np.isfinite(z)]
+            
         kde = gaussian_kde(z)
         xi_z = np.linspace(z.min()-2*(z.max()-z.min()),z.max()+2*(z.max()-z.min()),1000)
         yi_z = kde(xi_z)
         xm_z, ym_z = find_spline_maxima(xi_z,yi_z)
+
+        #processing XY axis
+        y = df.xy.values
+        y = y[np.isfinite(y)]
         
-        # for XY axis
         kde = gaussian_kde(y)
         xi_y = np.linspace(y.min()-2*(y.max()-y.min()),y.max()+2*(y.max()-y.min()),1000)
         yi_y = kde(xi_y)
         xm_y, ym_y = find_spline_maxima(xi_y,yi_y)
-
     
         #assigning maximum and minimum positions of xz and xy            
         try:
