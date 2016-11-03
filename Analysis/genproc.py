@@ -137,14 +137,14 @@ def genproc(col, window, config, fixpoint, realtime=False):
     monitoring = monitoring.drop_duplicates(['ts', 'id'])
     monitoring = monitoring.set_index('ts')
     monitoring = monitoring[['name','id','xz','xy']]
-    
-    max_min_df, max_min_cml = err.cml_noise_profiling(monitoring, config, fixpoint, col.nos)
-    
+
     nodes_noval = GetNodesWithNoData(monitoring, col.nos)
     nodes_nodata = pd.DataFrame({'name': [0]*len(nodes_noval), 'id': nodes_noval, 'xy': [np.nan]*len(nodes_noval), 'xz': [np.nan]*len(nodes_noval), 'ts': [window.offsetstart]*len(nodes_noval)})
     nodes_nodata = nodes_nodata.set_index('ts')
     monitoring = monitoring.append(nodes_nodata)
     
+    max_min_df, max_min_cml = err.cml_noise_profiling(monitoring, config, fixpoint, col.nos)
+        
     #resamples xz and xy values per node using forward fill
     monitoring = monitoring.groupby('id').apply(resamplenode, window = window).reset_index(level=1).set_index('ts')
     

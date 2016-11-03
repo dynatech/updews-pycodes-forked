@@ -145,7 +145,7 @@ def plot_column_positions(df,colname,end, show_part_legend, config, num_nodes=0,
             tick.label.set_rotation('vertical')
             tick.label.set_fontsize(10)
     
-        plt.subplots_adjust(top=0.92, bottom=0.15, left=0.05, right=0.73)        
+        plt.subplots_adjust(top=0.92, bottom=0.15, left=0.10, right=0.73)        
         plt.suptitle(colname,fontsize='medium')
         ax_xz.grid(True)
         ax_xy.grid(True)
