@@ -251,7 +251,7 @@ def getmode(li):
 
 def alert_toDB(df, table_name, window):
     
-    query = "SELECT timestamp, site, source, alert FROM senslopedb.%s WHERE site = '%s' ORDER BY timestamp DESC LIMIT 1" %(table_name, df.site.values[0])
+    query = "SELECT * FROM senslopedb.%s WHERE site = '%s' and timestamp <= '%s' AND updateTS >= '%s' ORDER BY timestamp DESC LIMIT 1" %(table_name, df.site.values[0], window.end, window.end-timedelta(hours=0.5))
     
     df2 = q.GetDBDataFrame(query)
     
@@ -269,9 +269,9 @@ def alert_toDB(df, table_name, window):
 def write_site_alert(site, window):
     if site != 'messb' and site != 'mesta':
         site = site[0:3] + '%'
-        query = "SELECT * FROM ( SELECT * FROM senslopedb.column_level_alert WHERE site LIKE '%s' AND updateTS >= '%s' ORDER BY timestamp DESC) AS sub GROUP BY site" %(site, window.end)
+        query = "SELECT * FROM ( SELECT * FROM senslopedb.column_level_alert WHERE site LIKE '%s' and timestamp <= '%s' AND updateTS >= '%s' ORDER BY timestamp DESC) AS sub GROUP BY site" %(site, window.end, window.end-timedelta(hours=0.5))
     else:
-        query = "SELECT * FROM ( SELECT * FROM senslopedb.column_level_alert WHERE site = '%s' AND updateTS >= '%s' ORDER BY timestamp DESC) AS sub GROUP BY site" %(site, window.end)
+        query = "SELECT * FROM ( SELECT * FROM senslopedb.column_level_alert WHERE site = '%s' and timestamp <= '%s' AND updateTS >= '%s' ORDER BY timestamp DESC) AS sub GROUP BY site" %(site, window.end, window.end-timedelta(hours=0.5))
         
     df = q.GetDBDataFrame(query)
 
@@ -341,7 +341,13 @@ def main(name=''):
 
 #######################
 
-    query = "SELECT * FROM senslopedb.site_level_alert WHERE site = '%s' and source = 'public' ORDER BY updateTS DESC LIMIT 1" %monitoring.colprops.name[0:3]
+    if monitoring.colprops.name == 'mesta':
+        colname = 'msu'
+    elif monitoring.colprops.name == 'messb':
+        colname = 'msl'
+    else:
+        colname = monitoring.colprops.name[0:3]
+    query = "SELECT * FROM senslopedb.site_level_alert WHERE site = '%s' and source = 'public' and timestamp <= '%s' and updateTS >= '%s' ORDER BY updateTS DESC LIMIT 1" %(colname, window.end, window.end-timedelta(hours=0.5))
     public_alert = q.GetDBDataFrame(query)
     if public_alert.alert.values[0] != 'A0':
         plot_time = ['07:30:00', '19:30:00']

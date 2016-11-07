@@ -609,7 +609,15 @@ def SitePublicAlert(PublicAlert, window):
                 colnode_source += str(i) + ':' + node_alert + ' '
             GSMAlert['palert_source'] = [GSMAlert.palert_source.values[0] + '(' + colnode_source + ')']
             
+        with open('GSMAlert.txt', 'w') as w:
+            w.write('As of ' + str(datetime.now())[:16] + '\n')
         GSMAlert.to_csv('GSMAlert.txt', header = False, index = None, sep = ':', mode = 'a')
+
+        # write text file to db
+        writeAlertToDb('GSMAlert.txt')
+        
+        with open('GSMAlert.txt', 'w') as w:
+            w.write()
 
     return PublicAlert
 
@@ -624,11 +632,9 @@ def writeAlertToDb(alertfile):
     server.writeAlertToDb(alerttxt)
     
 def main():
-    start = datetime.now()
-    
     with open('GSMAlert.txt', 'w') as w:
-        w.write('')
-    
+        w.write()
+        
     window,config = rtw.getwindow()
     
     PublicAlert = pd.DataFrame({'timestamp': [window.end]*len(q.GetRainProps()), 'site': q.GetRainProps().name.values, 'source': ['public']*len(q.GetRainProps()), 'alert': [np.nan]*len(q.GetRainProps()), 'updateTS': [window.end]*len(q.GetRainProps()), 'palert_source': [np.nan]*len(q.GetRainProps()), 'internal_alert': [np.nan]*len(q.GetRainProps()), 'validity': [np.nan]*len(q.GetRainProps()), 'sensor_alert': [np.nan]*len(q.GetRainProps()), 'rain_alert': [np.nan]*len(q.GetRainProps()), 'retriggerTS': [np.nan]*len(q.GetRainProps())})
@@ -638,7 +644,7 @@ def main():
     PublicAlert = Site_Public_Alert.apply(SitePublicAlert, window=window)
     PublicAlert = PublicAlert[['timestamp', 'site', 'alert', 'palert_source', 'internal_alert', 'validity', 'sensor_alert', 'rain_alert', 'retriggerTS']]
     PublicAlert = PublicAlert.rename(columns = {'palert_source': 'source'})
-    PublicAlert = PublicAlert.sort('site')
+    PublicAlert = PublicAlert.sort_values(['alert', 'site'], ascending = [False, True])
     print PublicAlert
     
     PublicAlert.to_csv('PublicAlert.txt', header=True, index=None, sep='\t', mode='w')
@@ -647,18 +653,7 @@ def main():
     dfjson = dfjson.replace('T', ' ').replace('.000Z', '').replace('retrigger S','retriggerTS')
     with open('PublicAlert.json', 'w') as w:
         w.write(dfjson)
-            
-    GSMAlert = pd.read_csv('GSMAlert.txt', sep = ':', header = None, names = ['site', 'alert', 'source'])
-    if len(GSMAlert) != 0:
-        with open('GSMAlert.txt', 'w') as w:
-            w.write('As of ' + str(datetime.now())[:16] + '\n')
-        GSMAlert.to_csv('GSMAlert.txt', header = False, index = None, sep = ':', mode = 'a')
-
-        # write text file to db
-#        writeAlertToDb('GSMAlert.txt')
-    
-    print "run time =", datetime.now() - start
-    
+                
     return PublicAlert
 
 ################################################################################

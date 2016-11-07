@@ -17,51 +17,43 @@ import numpy as np
 def max_min(df, num_nodes, mx_mn_df):
 
     m = df.id.values[0]
+
+    df_index = mx_mn_df.loc[mx_mn_df.index == m].index[0]
     
     try:
-        df_index = mx_mn_df.loc[mx_mn_df.index == m].index[0]
-        
         #processing XZ axis
         z = df.xz.values
         z = z[np.isfinite(z)]
-        
+            
+        kde = gaussian_kde(z)
+        xi_z = np.linspace(z.min()-2*(z.max()-z.min()),z.max()+2*(z.max()-z.min()),1000)
+        yi_z = kde(xi_z)
+        xm_z, ym_z = find_spline_maxima(xi_z,yi_z)
+
         #processing XY axis
         y = df.xy.values
         y = y[np.isfinite(y)]
-    
         
+        kde = gaussian_kde(y)
+        xi_y = np.linspace(y.min()-2*(y.max()-y.min()),y.max()+2*(y.max()-y.min()),1000)
+        yi_y = kde(xi_y)
+        xm_y, ym_y = find_spline_maxima(xi_y,yi_y)
+    
+        #assigning maximum and minimum positions of xz and xy            
         try:
-            # for XZ axis
-            kde = gaussian_kde(z)
-            xi_z = np.linspace(z.min()-2*(z.max()-z.min()),z.max()+2*(z.max()-z.min()),1000)
-            yi_z = kde(xi_z)
-            xm_z, ym_z = find_spline_maxima(xi_z,yi_z)
-            
-            # for XY axis
-            kde = gaussian_kde(y)
-            xi_y = np.linspace(y.min()-2*(y.max()-y.min()),y.max()+2*(y.max()-y.min()),1000)
-            yi_y = kde(xi_y)
-            xm_y, ym_y = find_spline_maxima(xi_y,yi_y)
-    
-        
-            #assigning maximum and minimum positions of xz and xy            
-            try:
-                #multimodal
-                mx_mn_df.loc[df_index] = [xm_z.max(), xm_z.min(), xm_y.max(), xm_y.min()]
-    
-            except:
-                #unimodal
-                mx_mn_df.loc[df_index] = [xm_z, xm_z, xm_y, xm_y]
-               
+            #multimodal
+            mx_mn_df.loc[df_index] = [xm_z.max(), xm_z.min(), xm_y.max(), xm_y.min()]
+
         except:
-            #no data for current node or NaN present in current node
-            try:
-                mx_mn_df.loc[df_index] = [z[0], z[0], y[0], y[0]]
-            except:
-                mx_mn_df.loc[df_index] = [0, 0, 0, 0]
-                
+            #unimodal
+            mx_mn_df.loc[df_index] = [xm_z, xm_z, xm_y, xm_y]
+           
     except:
-        print 'No data for node', m
+        #no data for current node or NaN present in current node
+        try:
+            mx_mn_df.loc[df_index] = [z[0], z[0], y[0], y[0]]
+        except:
+            mx_mn_df.loc[df_index] = [0, 0, 0, 0]
 
     return mx_mn_df
 
@@ -99,15 +91,15 @@ def cml_noise_profiling(df, config, fixpoint, num_nodes):
     #initializing maximum and minimum positions of xz and xy
     mx_mn_df = pd.DataFrame({'xz_maxlist': [0]*num_nodes, 'xz_minlist': [0]*num_nodes, 'xy_maxlist': [0]*num_nodes, 'xy_minlist': [0]*num_nodes}, index = range(1, num_nodes+1))
     mx_mn_df = mx_mn_df[['xz_maxlist', 'xz_minlist', 'xy_maxlist', 'xy_minlist']]
-     
     nodal_df = df2.groupby('id')
     max_min_df = nodal_df.apply(max_min, num_nodes = num_nodes, mx_mn_df = mx_mn_df)
-    max_min_df = max_min_df.reset_index().loc[max_min_df.reset_index().id == num_nodes][['level_1', 'xz_maxlist', 'xz_minlist', 'xy_maxlist', 'xy_minlist']].rename(columns = {'level_1': 'id'}).set_index('id')
+    max_min_df = max_min_df.reset_index().loc[max_min_df.reset_index().id == 1][['level_1', 'xz_maxlist', 'xz_minlist', 'xy_maxlist', 'xy_minlist']].rename(columns = {'level_1': 'id'}).set_index('id')
+    
     if fixpoint == 'top':
         for_cml = max_min_df.sort_index(ascending = True)
     else:
         for_cml = max_min_df.sort_index(ascending = False)
-    max_min_cml = for_cml.cumsum()
+    max_min_cml = for_cml.cumsum()    
     if fixpoint == 'top':
         max_min_cml = max_min_cml.sort_index(ascending = False)
             
