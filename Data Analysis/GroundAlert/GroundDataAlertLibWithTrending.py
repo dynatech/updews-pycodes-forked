@@ -533,13 +533,11 @@ def GroundDataTrendingPlotJSON(site,crack,end = None):
         v_t = np.linspace(min(v_s),max(v_s),num = 20)
         unc = t_crit*np.sqrt(1/(n-2)*sum_res_square*(1/n + (np.log(v_t) - v_log_mean)**2/var_v_log))
         
-        a_l = slope * np.log(v_t) + intercept
-        a_lu = a_l + unc
-        a_ld = a_l - unc
+        a_t = slope * np.log(v_t) + intercept
+        a_tu = a_t + unc
+        a_td = a_t - unc
         
-        a_t = np.e**a_l
-        a_tu = np.e**a_lu
-        a_td = np.e**a_ld
+                
         
     except:
         print "Interpolation Error for site {} crack {} at timestamp ".format(site,crack,end)
@@ -555,7 +553,7 @@ def GroundDataTrendingPlotJSON(site,crack,end = None):
         
     ts_n = map(lambda x: mytime.mktime(x.timetuple())*1000, ts_n)
     cur_ts = map(lambda x: mytime.mktime(x.timetuple())*1000, cur_ts)
-    to_json = {'av' : {'v':list(v_s),'a':list(a_s),'v_threshold':list(v_t),'a_threshold_line':list(a_t),'a_threshold_up':list(a_tu),'a_threshold_down':list(a_td)},'dvt':{'gnd':{'ts':list(cur_ts),'surfdisp':list(cur_x)},'interp':{'ts':list(ts_n),'surfdisp':list(x_n)}}}
+    to_json = {'av' : {'v':list(np.log(v_s)),'a':list(np.log(a_s)),'v_threshold':list(v_t),'a_threshold_line':list(a_t),'a_threshold_up':list(a_tu),'a_threshold_down':list(a_td)},'dvt':{'gnd':{'ts':list(cur_ts),'surfdisp':list(cur_x)},'interp':{'ts':list(ts_n),'surfdisp':list(x_n)}}}
     print json.dumps(to_json)
 
 def velocity_alert_values(time_delta):
