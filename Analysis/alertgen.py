@@ -341,7 +341,13 @@ def main(name=''):
 
 #######################
 
-    query = "SELECT * FROM senslopedb.site_level_alert WHERE site = '%s' and source = 'public' and timestamp <= '%s' and updateTS >= '%s' ORDER BY updateTS DESC LIMIT 1" %(monitoring.colprops.name[0:3], window.end, window.end)
+    if monitoring.colprops.name == 'mesta':
+        colname = 'msu'
+    elif monitoring.colprops.name == 'messb':
+        colname = 'msl'
+    else:
+        colname = monitoring.colprops.name[0:3]
+    query = "SELECT * FROM senslopedb.site_level_alert WHERE site = '%s' and source = 'public' and timestamp <= '%s' and updateTS >= '%s' ORDER BY updateTS DESC LIMIT 1" %(colname, window.end, window.end)
     public_alert = q.GetDBDataFrame(query)
     if public_alert.alert.values[0] != 'A0':
         plot_time = ['07:30:00', '19:30:00']
