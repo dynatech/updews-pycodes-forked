@@ -8,7 +8,7 @@ plt.ion()
 import os
 import pandas as pd
 import numpy as np
-from datetime import date, time, datetime, timedelta
+from datetime import timedelta
 
 import rtwindow as rtw
 import querySenslopeDb as q
@@ -489,8 +489,8 @@ for i in range(len(tableau20)):
 
 ##########################################################
 ###INPUTS
-colname = 'imusc'
-node = 7
+colname = 'imuta'
+node = 25
 axis = 'xz'
 k = 3 #degree of spline
 c = 1 #factor of error
@@ -498,7 +498,7 @@ c = 1 #factor of error
 #Step 1: Get dataframe for xz and xy using RealTimePlotter Code
 col = q.GetSensorList(colname)
 
-start = '2016-08-13 12:00:00'
+start = '2016-08-12 12:00:00'
 end = '2016-08-21 12:00:00'
 
 
@@ -629,8 +629,8 @@ for i in np.arange(window.numpts,len(t)+1):
     l1 = ax1.plot(v_theo,a_theo,c = tableau20[0],label = 'Fukuzono (1985)')
     ax1.plot(v_theo,a_theo_up,'--',c = tableau20[0])
     ax1.plot(v_theo,a_theo_down,'--', c = tableau20[0])
-    ax1.plot(cur_v,cur_a,c = tableau20[10])
-    ax1.plot(cur_v,cur_a,'o',c = tableau20[4],label = 'Data')
+    ax1.plot(cur_v[-10:],cur_a[-10:],c = tableau20[10])
+    ax1.plot(cur_v[-10:],cur_a[-10:],'o',c = tableau20[4],label = 'Data')
     
     ax1.set_xlabel('Velocity (cm/day)')
     ax1.set_ylabel('Acceleration (cm/day$^2$)')
@@ -699,5 +699,3 @@ ax.set_title(colname.upper() + " Crack " + str(node) + " Velocity vs. Accelerati
 fig3_out_path = out_path + " " + colname + " " + str(node) + " velocity vs acceleration" +" {} {}".format(str(k),str(c).replace('.',''))
 plt.savefig(fig3_out_path,facecolor='w', edgecolor='w',orientation='landscape',mode='w',bbox_inches='tight')
 
-
-    
