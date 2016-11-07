@@ -636,7 +636,7 @@ def main():
     PublicAlert = Site_Public_Alert.apply(SitePublicAlert, window=window)
     PublicAlert = PublicAlert[['timestamp', 'site', 'alert', 'palert_source', 'internal_alert', 'validity', 'sensor_alert', 'rain_alert', 'retriggerTS']]
     PublicAlert = PublicAlert.rename(columns = {'palert_source': 'source'})
-    PublicAlert = PublicAlert.sort('site')
+    PublicAlert = PublicAlert.sort_values(['alert', 'site'], ascending = [False, True])
     print PublicAlert
     
     PublicAlert.to_csv('PublicAlert.txt', header=True, index=None, sep='\t', mode='w')
