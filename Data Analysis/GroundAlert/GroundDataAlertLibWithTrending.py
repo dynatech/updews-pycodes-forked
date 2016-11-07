@@ -551,7 +551,7 @@ def GroundDataTrendingPlotJSON(site,crack,end = None):
         a_t = np.zeros(20)
         
     ts_n = map(lambda x: mytime.mktime(x.timetuple())*1000, ts_n)
-    cur_ts = map(lambda x: pd.to_datetime(x).strftime('%Y-%m-%d %H:%M:%S'), cur_ts)
+    cur_ts = map(lambda x: mytime.mktime(x.timetuple())*1000, ts_n)
     to_json = {'av' : {'v':list(v_s),'a':list(a_s),'v_threshold':list(v_t),'a_threshold_line':list(a_t),'a_threshold_up':list(a_tu),'a_threshold_down':list(a_td)},'dvt':{'gnd':{'ts':list(cur_ts),'surfdisp':list(cur_x)},'interp':{'ts':list(ts_n),'surfdisp':list(x_n)}}}
     print json.dumps(to_json)
 
