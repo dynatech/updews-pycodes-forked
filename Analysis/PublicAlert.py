@@ -617,7 +617,7 @@ def SitePublicAlert(PublicAlert, window):
         writeAlertToDb('GSMAlert.txt')
         
         with open('GSMAlert.txt', 'w') as w:
-            w.write()
+            w.write('')
 
     return PublicAlert
 
@@ -630,10 +630,10 @@ def writeAlertToDb(alertfile):
     import senslopeServer as server
 
     server.writeAlertToDb(alerttxt)
-    
+
 def main():
     with open('GSMAlert.txt', 'w') as w:
-        w.write()
+        w.write('')
         
     window,config = rtw.getwindow()
     

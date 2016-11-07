@@ -27,7 +27,7 @@ print window_now.numpts
 
 '''
 #    set current time as endpoint of the intervalUSA
-import cfgfileio as cfg
+import configfileio as cfg
 from datetime import datetime, date, time, timedelta
 
 class rtwindow:
