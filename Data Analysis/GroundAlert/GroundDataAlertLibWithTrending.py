@@ -553,8 +553,9 @@ def GroundDataTrendingPlotJSON(site,crack,end = None):
         
     ts_n = map(lambda x: mytime.mktime(x.timetuple())*1000, ts_n)
     cur_ts = map(lambda x: mytime.mktime(x.timetuple())*1000, cur_ts)
-    to_json = {'av' : {'v':list(np.log(v_s)),'a':list(np.log(a_s)),'v_threshold':list(v_t),'a_threshold_line':list(a_t),'a_threshold_up':list(a_tu),'a_threshold_down':list(a_td)},'dvt':{'gnd':{'ts':list(cur_ts),'surfdisp':list(cur_x)},'interp':{'ts':list(ts_n),'surfdisp':list(x_n)}}}
+    to_json = {'av' : {'v':list(np.log(v_s)),'a':list(np.log(a_s)),'v_threshold':list(np.log(v_t)),'a_threshold_line':list(a_t),'a_threshold_up':list(a_tu),'a_threshold_down':list(a_td)},'dvt':{'gnd':{'ts':list(cur_ts),'surfdisp':list(cur_x)},'interp':{'ts':list(ts_n),'surfdisp':list(x_n)}}}
     print json.dumps(to_json)
+    
 
 def velocity_alert_values(time_delta):
     #INPUT: Time delta interval between measurements
