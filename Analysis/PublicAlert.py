@@ -624,8 +624,6 @@ def writeAlertToDb(alertfile):
     server.writeAlertToDb(alerttxt)
     
 def main():
-    start = datetime.now()
-    
     with open('GSMAlert.txt', 'w') as w:
         w.write('')
     
@@ -655,9 +653,7 @@ def main():
         GSMAlert.to_csv('GSMAlert.txt', header = False, index = None, sep = ':', mode = 'a')
 
         # write text file to db
-#        writeAlertToDb('GSMAlert.txt')
-    
-    print "run time =", datetime.now() - start
+        writeAlertToDb('GSMAlert.txt')
     
     return PublicAlert
 
