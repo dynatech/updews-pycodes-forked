@@ -6,6 +6,7 @@ import matplotlib.dates as md
 plt.ioff()
 
 from datetime import datetime, date, time, timedelta
+import time as mytime
 import pandas as pd
 import numpy as np
 import ConfigParser
@@ -434,7 +435,9 @@ def check_trending(df,out_folder,plot = False):
         l3_vel, l2_vel = velocity_alert_values(cur_t[-2]-cur_t[-1])
         ylim_values = ax3.get_ylim()
         ax3.plot(ax3.get_xlim(),[l3_vel,l3_vel],'--',lw = 2., color = tableau20[2],label = 'L3 Velocity')
+        ax3.plot(ax3.get_xlim(),[-l3_vel,-l3_vel],'--',lw = 2., color = tableau20[2])
         ax3.plot(ax3.get_xlim(),[l2_vel,l2_vel],'--',lw = 2., color = tableau20[16],label = 'L2 Velocity')
+        ax3.plot(ax3.get_xlim(),[-l2_vel,-l2_vel],'--',lw = 2., color = tableau20[16])
         ax3.set_ylim(ylim_values)
         ax3.set_ylabel('velocity (cm/day)')
         ax3.set_xlabel('time (days)')
@@ -487,6 +490,17 @@ def del_data(df):
     db.close()
 
 def GroundDataTrendingPlotJSON(site,crack,end = None):
+    
+    ##### Federico et al. constants######    
+    slope = 1.49905955613175
+    intercept = -3.00263765777028
+    t_crit = 4.53047399738543
+    var_v_log = 215.515369339559
+    v_log_mean = 2.232839766
+    sum_res_square = 49.8880017417971
+    n = 30.    
+    ####################################
+    
     if end == None:
         end = datetime.now()
     df = get_latest_ground_df(site,end)
@@ -514,6 +528,18 @@ def GroundDataTrendingPlotJSON(site,crack,end = None):
         x_n = sp(t_n)
         v_s = abs(sp.derivative(n=1)(cur_t))
         a_s = abs(sp.derivative(n=2)(cur_t))
+        
+        v_t = np.linspace(min(v_s),max(v_s),num = 20)
+        unc = t_crit*np.sqrt(1/(n-2)*sum_res_square*(1/n + (np.log(v_t) - v_log_mean)**2/var_v_log))
+        
+        a_l = slope * np.log(v_t) + intercept
+        a_lu = a_l + unc
+        a_ld = a_l - unc
+        
+        a_t = np.e**a_l
+        a_tu = np.e**a_lu
+        a_td = np.e**a_ld
+        
     except:
         print "Interpolation Error for site {} crack {} at timestamp ".format(site,crack,end)
         t_n = np.linspace(cur_t[0],cur_t[-1],len(cur_t))
@@ -521,10 +547,12 @@ def GroundDataTrendingPlotJSON(site,crack,end = None):
         x_n = cur_x
         v_s = np.zeros(len(x_n))
         a_s = np.zeros(len(x_n))
+        v_t = np.zeros(20)
+        a_t = np.zeros(20)
         
-    ts_n = map(lambda x: x.strftime('%Y-%m-%d %H:%M:%S'), ts_n)
+    ts_n = map(lambda x: mytime.mktime(x.timetuple())*1000, ts_n)
     cur_ts = map(lambda x: pd.to_datetime(x).strftime('%Y-%m-%d %H:%M:%S'), cur_ts)
-    to_json = {'av' : {'v':list(v_s),'a':list(a_s)},'dvt':{'gnd':{'ts':list(cur_ts),'surfdisp':list(cur_x)},'interp':{'ts':list(ts_n),'surfdisp':list(x_n)}}}
+    to_json = {'av' : {'v':list(v_s),'a':list(a_s),'v_threshold':list(v_t),'a_threshold_line':list(a_t),'a_threshold_up':list(a_tu),'a_threshold_down':list(a_td)},'dvt':{'gnd':{'ts':list(cur_ts),'surfdisp':list(cur_x)},'interp':{'ts':list(ts_n),'surfdisp':list(x_n)}}}
     print json.dumps(to_json)
 
 def velocity_alert_values(time_delta):
