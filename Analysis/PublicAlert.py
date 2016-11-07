@@ -629,6 +629,9 @@ def writeAlertToDb(alertfile):
     server.writeAlertToDb(alerttxt)
     
 def main():
+    with open('GSMAlert.txt', 'w') as w:
+        w.write()
+        
     window,config = rtw.getwindow()
     
     PublicAlert = pd.DataFrame({'timestamp': [window.end]*len(q.GetRainProps()), 'site': q.GetRainProps().name.values, 'source': ['public']*len(q.GetRainProps()), 'alert': [np.nan]*len(q.GetRainProps()), 'updateTS': [window.end]*len(q.GetRainProps()), 'palert_source': [np.nan]*len(q.GetRainProps()), 'internal_alert': [np.nan]*len(q.GetRainProps()), 'validity': [np.nan]*len(q.GetRainProps()), 'sensor_alert': [np.nan]*len(q.GetRainProps()), 'rain_alert': [np.nan]*len(q.GetRainProps()), 'retriggerTS': [np.nan]*len(q.GetRainProps())})
