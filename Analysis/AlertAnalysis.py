@@ -5,7 +5,6 @@ from pandas.stats.api import ols
 from sqlalchemy import create_engine
 import sys
 
-import cfgfileio as cfg
 import rtwindow as rtw
 import querySenslopeDb as q
 import genproc as g
