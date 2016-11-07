@@ -615,6 +615,9 @@ def SitePublicAlert(PublicAlert, window):
 
         # write text file to db
         writeAlertToDb('GSMAlert.txt')
+        
+        with open('GSMAlert.txt', 'w') as w:
+            w.write()
 
     return PublicAlert
 
