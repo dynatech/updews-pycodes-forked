@@ -41,50 +41,64 @@ columns = ['nagsa','baysb','agbsb','mcasb',
            'barsc','mngsa','carsb','gaasa',
            'gaasb','hinsa','hinsb','talsa' ]
 
-
+column = "laysa"
 fdate='2013-01-1'
 tdate='2016-08-1'
 #for a in range(1,17,1):
 
 
-def heatmap(column,fdate,tdate ):
-	df_merge = pd.DataFrame()
-	days = 30
-	query = "select num_nodes from senslopedb.site_column_props where name = '%s'" %column
-	node = qs.GetDBDataFrame(query)
-	for node_num in range (1,int(node.num_nodes[0])):
-		df = CSR.getsomscaldata(column,node_num,fdate,tdate)
-	#    df=pd.read_csv('C:/Users/JosephRyan/Desktop/SENSLOPE/FILTERS/tester/output/'+ str(columns[a])+'_CAL.csv')
-	#	print df
-		df = df.reset_index()
-		df.ts=pd.to_datetime(df.ts)
-	#df.drop('ts', axis=1, inplace=True)
-		df.index=df.ts
-		df.drop('ts', axis=1, inplace=True)
-	#pd.to_datetime(df.index)
-	#df=df[((df<5000) == True) & ((df>2000)==True)]
-		df=df[((df<1300) == True) & ((df>0)==True)]
-		dfrs =pd.rolling_mean(df.resample('1D'), window=3, min_periods=1)   #mean for one day (dataframe)
-		dfrs.rename(columns={'mval1':node_num}, inplace=True)
-		
-	#wmean=pd.ewma(df,span=48,min_periods=1)
-	#ncols=range(1,int(nodecount[6])+1)
-	#wmean.columns=[str(x) for x in ncols]
-	#n=len(wmean)
-	#dfp=wmean[n-48:n].transpose()
+#def heatmap(column,fdate,tdate ):
+df_merge = pd.DataFrame()
+
+
+days = 30
+query = "select num_nodes from senslopedb.site_column_props where name = '%s'" %column
+node = qs.GetDBDataFrame(query)
+for node_num in range (1,int(node.num_nodes[0])):
+	df = CSR.getsomscaldata(column,node_num,fdate,tdate)
+#    df=pd.read_csv('C:/Users/JosephRyan/Desktop/SENSLOPE/FILTERS/tester/output/'+ str(columns[a])+'_CAL.csv')
+#	print df
+	df = df.reset_index()
+	df.ts=pd.to_datetime(df.ts)
+#df.drop('ts', axis=1, inplace=True)
+	df.index=df.ts                         
+	df.drop('ts', axis=1, inplace=True)    
+#pd.to_datetime(df.index)
+#df=df[((df<5000) == True) & ((df>2000)==True)]
+	df=df[((df<1300) == True) & ((df>0)==True)]  
+	dfrs =pd.rolling_mean(df.resample('1D'), window=3, min_periods=1)   #mean for one day (dataframe)
+	dfrs.rename(columns={'mval1':node_num}, inplace=True)
 	
-	#number of days
-	#ploooooots
-		n=len(dfrs)-1
+#wmean=pd.ewma(df,span=48,min_periods=1)
+#ncols=range(1,int(nodecount[6])+1)
+#wmean.columns=[str(x) for x in ncols]
+#n=len(wmean)
+#dfp=wmean[n-48:n].transpose()
+
+#number of days
+#ploooooots
+	n=len(dfrs)-1
+
+	dfp=dfrs[n-days:n]
+	dfp = dfp.reset_index()
+	dfpr = dfp.transpose()
+#	
+
+
+#	df_merge = pd.concat([dfp, df_merge],axis = node_num)
 	
-		dfp=dfrs[n-days:n]
-	
-	#	df_merge = pd.concat([dfp, df_merge],axis = node_num)
-	#	dfp = dfp.reset_index()
-		df_merge = pd.concat([df_merge, dfp], axis = 1)
-		
-#	print df_merge
-	return df_merge
+#	dfpj = dfp.to_json(orient='records')
+
+	df_merge = pd.concat([df_merge, dfpr], axis = 0)
+
+#	df_merge = df_merge + dfpj
+
+
+
+dfjson = df_merge.to_json(orient='records')
+#
+print dfjson
+#return df_merge
 		
 
 
