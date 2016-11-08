@@ -251,7 +251,7 @@ def getmode(li):
 
 def alert_toDB(df, table_name, window):
     
-    query = "SELECT * FROM senslopedb.%s WHERE site = '%s' and timestamp <= '%s' AND updateTS >= '%s' ORDER BY timestamp DESC LIMIT 1" %(table_name, df.site.values[0], window.end, window.end-timedelta(hours=0.5))
+    query = "SELECT * FROM senslopedb.%s WHERE site = '%s' and timestamp <= '%s' AND updateTS >= '%s' ORDER BY timestamp DESC LIMIT 1" %(table_name, df.site.values[0], window.end, window.end-timedelta(hours=1))
     
     df2 = q.GetDBDataFrame(query)
     
