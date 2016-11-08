@@ -46,7 +46,7 @@ def main(ts=datetime.now()):
     with open('PublicAlert.txt', 'w') as w:
         w.write('INVALID ALERTS:\n')
     alertdf.to_csv('PublicAlert.txt', sep=':', header=False, index=False, mode='a')
-    with open('PublicAlert.txt', 'w') as w:
+    with open('PublicAlert.txt', 'a') as w:
         w.write('\n')
     allpub.to_csv('PublicAlert.txt', sep='\t', header=True, index=False, mode='a')
 
