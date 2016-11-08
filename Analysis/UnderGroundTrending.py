@@ -490,7 +490,7 @@ for i in range(len(tableau20)):
 ##########################################################
 ###INPUTS
 colname = 'magta'
-node = 9
+node = 10
 axis = 'xz'
 k = 3 #degree of spline
 c = 1 #factor of error
