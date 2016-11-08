@@ -22,16 +22,19 @@ def removeinvpub(df):
     db.close()
 
 def main(ts=datetime.now()):
-    query = "SELECT * FROM smsalerts where ts_set >= '%s'" %(pd.to_datetime(ts) - timedelta(hours=0.5))
+    query = "SELECT * FROM smsalerts where ts_set >= '%s' and alertstat = 'invalid'" %(pd.to_datetime(ts) - timedelta(hours=0.5))
+    query += " and alertmsg not like '%sensor%' and alertmsg not like '%A1%'"
     df = q.GetDBDataFrame(query)
-    df = df.loc[df.alertstat == 'invalid']
     
     dfid = df.groupby('alert_id')
     alertdf = dfid.apply(invalert)
     alertdf = alertdf.reset_index(drop=True)
-    
-    sitealertdf = alertdf.groupby('site')
-    sitealertdf.apply(removeinvpub)
+
+    try:    
+        sitealertdf = alertdf.groupby('site')
+        sitealertdf.apply(removeinvpub)
+    except:
+        print 'No invalid alert'
 
 if __name__ == '__main__':
     start = datetime.now()
