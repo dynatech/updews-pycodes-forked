@@ -5,7 +5,7 @@ import querySenslopeDb as q
 
 def invalert(df):
     inv_alert = df['alertmsg'].values[0].split('\n')
-    ts = inv_alert[0].replace('As of ','')
+    ts = pd.to_datetime(inv_alert[0].replace('As of ',''))
     site = inv_alert[1][0:3]
     alert = inv_alert[1][4:6]
     source = inv_alert[1][7:len(inv_alert[1])]
@@ -22,19 +22,33 @@ def removeinvpub(df):
     db.close()
 
 def main(ts=datetime.now()):
-    query = "SELECT * FROM smsalerts where ts_set >= '%s' and alertstat = 'invalid'" %(pd.to_datetime(ts) - timedelta(hours=0.5))
-    query += " and alertmsg not like '%sensor%' and alertmsg not like '%A1%'"
+    query = "SELECT * FROM smsalerts where ts_set >= '%s' and alertstat = 'invalid'" %(pd.to_datetime(ts) - timedelta(3))
     df = q.GetDBDataFrame(query)
     
     dfid = df.groupby('alert_id')
     alertdf = dfid.apply(invalert)
     alertdf = alertdf.reset_index(drop=True)
+    
+    invalertdf = alertdf.loc[alertdf.ts >= ts - timedelta(hours=0.5)]
+    invalertdf = invalertdf[~(invalertdf.source.str.contains('sensor'))]
+    invalertdf = invalertdf.loc[invalertdf.alert == 'A1']
 
     try:    
-        sitealertdf = alertdf.groupby('site')
+        sitealertdf = invalertdf.groupby('site')
         sitealertdf.apply(removeinvpub)
     except:
         print 'No invalid alert'
+
+    allpub = pd.read_csv('PublicAlert.txt', sep = '\t')
+    withalert = allpub.loc[allpub.alert != 'A0'].site
+    alertdf = alertdf[alertdf.site.isin(withalert)][['alert', 'site']]
+    
+    with open('PublicAlert.txt', 'w') as w:
+        w.write('INVALID ALERTS:\n')
+    alertdf.to_csv('PublicAlert.txt', sep=':', header=False, index=False, mode='a')
+    with open('PublicAlert.txt', 'w') as w:
+        w.write('\n')
+    allpub.to_csv('PublicAlert.txt', sep='\t', header=True, index=False, mode='a')
 
 if __name__ == '__main__':
     start = datetime.now()
