@@ -569,9 +569,23 @@ def GroundDataTrendingPlotJSON(site,crack,end = None):
         a_tu = np.zeros(20)
         a_td = np.zeros(20)
         
+    #logarithmic axes
+    v_s = np.log(v_s)
+    v_s = v_s[~np.logical_or(np.isnan(v_s),np.isinf(v_s))]
+    
+    a_s = np.log(a_s)
+    a_s = a_s[~np.logical_or(np.isnan(a_s),np.isinf(a_s))]
+    a_t = a_t[~np.logical_or(np.isnan(a_t),np.isinf(a_t))]
+    a_tu = a_tu[~np.logical_or(np.isnan(a_tu),np.isinf(a_tu))]
+    a_td = a_td[~np.logical_or(np.isnan(a_td),np.isinf(a_td))]
+    v_t = np.log(v_t)
+    v_t = v_t[~np.logical_or(np.isnan(v_t),np.isinf(v_t))]
+    
+    
+    
     ts_n = map(lambda x: mytime.mktime(x.timetuple())*1000, ts_n)
     cur_ts = map(lambda x: mytime.mktime(x.timetuple())*1000, cur_ts)
-    to_json = {'av' : {'v':list(np.log(v_s)),'a':list(np.log(a_s)),'v_threshold':list(np.log(v_t)),'a_threshold_line':list(a_t),'a_threshold_up':list(a_tu),'a_threshold_down':list(a_td)},'dvt':{'gnd':{'ts':list(cur_ts),'surfdisp':list(cur_x)},'interp':{'ts':list(ts_n),'surfdisp':list(x_n)}}}
+    to_json = {'av' : {'v':list(v_s),'a':list(a_s),'v_threshold':list(v_t),'a_threshold_line':list(a_t),'a_threshold_up':list(a_tu),'a_threshold_down':list(a_td)},'dvt':{'gnd':{'ts':list(cur_ts),'surfdisp':list(cur_x)},'interp':{'ts':list(ts_n),'surfdisp':list(x_n)}}}
     print json.dumps(to_json)
     
 
