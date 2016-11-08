@@ -548,8 +548,6 @@ def GroundDataTrendingPlotJSON(site,crack,end = None):
         v_s = abs(sp.derivative(n=1)(cur_t))
         a_s = abs(sp.derivative(n=2)(cur_t))
         
-        v_s = v_s[~v_s.isnan()]
-        a_s = a_s[~a_s.isnan()]
         v_t = np.linspace(min(v_s),max(v_s),num = 20)
         unc = t_crit*np.sqrt(1/(n-2)*sum_res_square*(1/n + (np.log(v_t) - v_log_mean)**2/var_v_log))
         
@@ -560,21 +558,21 @@ def GroundDataTrendingPlotJSON(site,crack,end = None):
                 
         
     except:
+        print "Interpolation Error for site {} crack {} at timestamp ".format(site,crack,end)
         t_n = np.linspace(cur_t[0],cur_t[-1],len(cur_t))
         ts_n = pd.to_datetime(cur_ts[0]) + np.array(map(lambda x: timedelta(days = x), t_n))
         x_n = cur_x
-        v_s = np.ones(len(x_n))
-        a_s = np.ones(len(x_n))
-        v_t = np.ones(20)
-        a_t = np.ones(20)
-        a_tu = np.ones(20)
-        a_td = np.ones(20)
+        v_s = np.zeros(len(x_n))
+        a_s = np.zeros(len(x_n))
+        v_t = np.zeros(20)
+        a_t = np.zeros(20)
+        a_tu = np.zeros(20)
+        a_td = np.zeros(20)
         
     ts_n = map(lambda x: mytime.mktime(x.timetuple())*1000, ts_n)
     cur_ts = map(lambda x: mytime.mktime(x.timetuple())*1000, cur_ts)
     to_json = {'av' : {'v':list(np.log(v_s)),'a':list(np.log(a_s)),'v_threshold':list(np.log(v_t)),'a_threshold_line':list(a_t),'a_threshold_up':list(a_tu),'a_threshold_down':list(a_td)},'dvt':{'gnd':{'ts':list(cur_ts),'surfdisp':list(cur_x)},'interp':{'ts':list(ts_n),'surfdisp':list(x_n)}}}
     print json.dumps(to_json)
-
     
 
 def velocity_alert_values(time_delta):
