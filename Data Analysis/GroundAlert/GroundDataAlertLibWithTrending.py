@@ -513,6 +513,7 @@ def GroundDataTrendingPlotJSON(site,crack,end = None):
     cur_t = (df.timestamp.values - df.timestamp.values[0])/np.timedelta64(1,'D')
     cur_x = df.meas.values
     cur_ts = df.timestamp.values
+    cur_ts = pd.to_datetime(cur_ts)
     
     ##### Interpolate the last 10 data points
     _,var = moving_average(cur_x)
@@ -532,13 +533,11 @@ def GroundDataTrendingPlotJSON(site,crack,end = None):
         v_t = np.linspace(min(v_s),max(v_s),num = 20)
         unc = t_crit*np.sqrt(1/(n-2)*sum_res_square*(1/n + (np.log(v_t) - v_log_mean)**2/var_v_log))
         
-        a_l = slope * np.log(v_t) + intercept
-        a_lu = a_l + unc
-        a_ld = a_l - unc
+        a_t = slope * np.log(v_t) + intercept
+        a_tu = a_t + unc
+        a_td = a_t - unc
         
-        a_t = np.e**a_l
-        a_tu = np.e**a_lu
-        a_td = np.e**a_ld
+                
         
     except:
         print "Interpolation Error for site {} crack {} at timestamp ".format(site,crack,end)
@@ -549,11 +548,14 @@ def GroundDataTrendingPlotJSON(site,crack,end = None):
         a_s = np.zeros(len(x_n))
         v_t = np.zeros(20)
         a_t = np.zeros(20)
+        a_tu = np.zeros(20)
+        a_td = np.zeros(20)
         
     ts_n = map(lambda x: mytime.mktime(x.timetuple())*1000, ts_n)
-    cur_ts = map(lambda x: mytime.mktime(x.timetuple())*1000, ts_n)
-    to_json = {'av' : {'v':list(v_s),'a':list(a_s),'v_threshold':list(v_t),'a_threshold_line':list(a_t),'a_threshold_up':list(a_tu),'a_threshold_down':list(a_td)},'dvt':{'gnd':{'ts':list(cur_ts),'surfdisp':list(cur_x)},'interp':{'ts':list(ts_n),'surfdisp':list(x_n)}}}
+    cur_ts = map(lambda x: mytime.mktime(x.timetuple())*1000, cur_ts)
+    to_json = {'av' : {'v':list(np.log(v_s)),'a':list(np.log(a_s)),'v_threshold':list(np.log(v_t)),'a_threshold_line':list(a_t),'a_threshold_up':list(a_tu),'a_threshold_down':list(a_td)},'dvt':{'gnd':{'ts':list(cur_ts),'surfdisp':list(cur_x)},'interp':{'ts':list(ts_n),'surfdisp':list(x_n)}}}
     print json.dumps(to_json)
+    
 
 def velocity_alert_values(time_delta):
     #INPUT: Time delta interval between measurements
