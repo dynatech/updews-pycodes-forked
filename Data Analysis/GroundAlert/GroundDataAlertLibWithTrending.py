@@ -560,7 +560,6 @@ def GroundDataTrendingPlotJSON(site,crack,end = None):
                 
         
     except:
-        print "Interpolation Error for site {} crack {} at timestamp ".format(site,crack,end)
         t_n = np.linspace(cur_t[0],cur_t[-1],len(cur_t))
         ts_n = pd.to_datetime(cur_ts[0]) + np.array(map(lambda x: timedelta(days = x), t_n))
         x_n = cur_x
