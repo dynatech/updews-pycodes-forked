@@ -3,7 +3,6 @@ import numpy as np
 from datetime import datetime, timedelta, time, date
 from sqlalchemy import create_engine
 import sys
-import json
 
 import rtwindow as rtw
 import querySenslopeDb as q
@@ -650,18 +649,10 @@ def main():
     
     PublicAlert.to_csv('PublicAlert.txt', header=True, index=None, sep='\t', mode='w')
     
-    PublicAlert['timestamp'] = PublicAlert['timestamp'].apply(lambda x: str(x))
-    PublicAlert['validity'] = PublicAlert['validity'].apply(lambda x: str(x))
-    try:
-        InvAlert = pd.read_csv('InvalidAlert.txt', sep = ':')
-    except:
-        InvAlert = pd.DataFrame({'site': [], 'alert': [], 'ts': []})
-    to_json = {'alerts': {'timestamp': list(PublicAlert.timestamp), 'site': list(PublicAlert.site), 'alert': list(PublicAlert.alert), 'source': list(PublicAlert.source), 'internal_alert': list(PublicAlert.internal_alert), 'validity': list(PublicAlert.validity), 'sensor_alert': list(PublicAlert.sensor_alert), 'rain_alert': list(PublicAlert.rain_alert), 'retriggerTS': list(PublicAlert.retriggerTS)}, \
-        'invalid': {'site': list(InvAlert.site), 'alert': list(InvAlert.alert), 'ts': list(InvAlert.ts)}}
-    public_json = json.dumps(to_json)
-    
+    dfjson = PublicAlert.to_json(orient="records", date_format="iso")
+    dfjson = dfjson.replace('T', ' ').replace('.000Z', '').replace('retrigger S','retriggerTS')
     with open('PublicAlert.json', 'w') as w:
-        w.write(public_json)
+        w.write(dfjson)
                 
     return PublicAlert
 
