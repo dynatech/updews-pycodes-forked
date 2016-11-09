@@ -43,6 +43,7 @@ def main(ts=datetime.now()):
     withalert = allpub.loc[allpub.alert != 'A0'].site
     alertdf = alertdf[alertdf.site.isin(withalert)][['alert', 'site']]
     
+
     alertdf.to_csv('InvalidAlert.txt', sep=':', header=False, index=False, mode='w')
 
 if __name__ == '__main__':
