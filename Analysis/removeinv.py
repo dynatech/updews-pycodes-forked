@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 from datetime import datetime, timedelta
 
 import querySenslopeDb as q
@@ -10,6 +11,8 @@ def invalert(df):
     alert = inv_alert[1][4:6]
     source = inv_alert[1][7:len(inv_alert[1])]
     alertdf = pd.DataFrame({'ts': [ts], 'site': [site], 'alert': [alert], 'source': [source]})
+    if len(alertdf) == 0:
+        alertdf = pd.DataFrame({'ts': [], 'site': [], 'alert': [], 'source': []})
     return alertdf
 
 def removeinvpub(df):
@@ -41,10 +44,9 @@ def main(ts=datetime.now()):
 
     allpub = pd.read_csv('PublicAlert.txt', sep = '\t')
     withalert = allpub.loc[allpub.alert != 'A0'].site
-    alertdf = alertdf[alertdf.site.isin(withalert)][['alert', 'site']]
+    alertdf = alertdf[alertdf.site.isin(withalert)][['site', 'alert', 'ts']]
     
-
-    alertdf.to_csv('InvalidAlert.txt', sep=':', header=False, index=False, mode='w')
+    alertdf.to_csv('InvalidAlert.txt', sep=':', header=True, index=False, mode='w')
 
 if __name__ == '__main__':
     start = datetime.now()
