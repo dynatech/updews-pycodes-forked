@@ -38,9 +38,9 @@ try:
     
     for column in columns:
         print """Current Sensor Column: %s, End Date: %s, Start Date: %s""" % (column, tdate, fdate)
-        disp = vcd.displacement(column, tdate, fdate)
-        colpos = vcd.colpos(column, tdate, fdate, 1)
-        print colpos        
+        colpos = vcd.colpos(colname=column, endTS=tdate, startTS='', day_interval=1, fixpoint='bottom')
+        print colpos
+        print "\n"
         
 except IndexError:
     print '>> Error in writing extracting database data to files..'

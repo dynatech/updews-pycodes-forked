@@ -27,7 +27,7 @@ tdate = "2016-06-09 15:00:00"
 fixpoints = ['top', 'bottom', 'TOP', 'BOTTOM', 'Top', 'Bottom','']
 
 # Works for "magta" but not for many other sites
-#c = vcd.displacement("mamb", endTS=tdate)
+#c = vcd.displacement("mamb", endTS=tdate, startTS=fdate)
 #c = vcd.displacement('magta', endTS=tdate)
 
 try:
@@ -40,8 +40,9 @@ try:
     
     for column in columns:
         print """Current Sensor Column: %s, End Date: %s, Start Date: %s""" % (column, tdate, fdate)
-        disp = vcd.displacement(column, tdate, fdate)
-        print disp        
+        disp = vcd.displacement(column, endTS=tdate)
+        print disp
+        print "\n"
         
 except IndexError:
     print '>> Error in writing extracting database data to files..'
