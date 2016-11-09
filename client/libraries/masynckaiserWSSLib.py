@@ -459,15 +459,28 @@ def syncStartUp(host, port):
                 
             #TEMPORARY: To be deleted after test
             if table == "smsinbox":
-                latestPKval = getLatestPKValue(schema, table)
-            
-            #TEMPORARY: To be deleted after test
-            if table == "smsoutbox":
-                latestPKval = getLatestPKValue(schema, table)
+                #Get the Data Update from Web Socket Server
+                dataUpdate = getDataUpdateList(ws, schema, table, 10)
+                return dataUpdate
+                # print "%s: Data for Update: %s" % (common.whoami(), dataUpdate)
                 
             #TEMPORARY: To be deleted after test
-            if table == "magta":
-                latestPKval = getLatestPKValue(schema, table)
+#            if table == "smsoutbox":
+#                latestPKval = getLatestPKValue(schema, table) 
+#                
+#                for key,value in latestPKval.iteritems():
+#                    print("key: {} | value: {}".format(key, value))
+#                    schemaList.append(value)
+                
+            #TEMPORARY: To be deleted after test
+#            if table == "rain_noah_107":
+#                latestPKval = getLatestPKValue(schema, table)
+#                updateCmd = masyncSR.getDataUpdateCommand(schema, table, latestPKval)
+                
+            #TEMPORARY: To be deleted after test
+#            if table == "magta":
+#                latestPKval = getLatestPKValue(schema, table)
+#                masyncSR.getDataUpdateCommand(schema, table, latestPKval)
             
 #        print "\nExisting: "
 #        print tablesExisting
@@ -562,6 +575,26 @@ def getTableCreationCmd(ws=None, schema=None, table=None):
         print "%s ERROR: No request message passed" % (common.whoami())
         return None
 
+#Get the Data Update from the Websocket Server
+def getDataUpdateList(ws=None, schema=None, table=None, limit=10):
+    if not ws or not schema or not table:
+        print "%s ERROR: No ws|updateCmd value passed" % (common.whoami())
+        return None
+
+    latestPKval = getLatestPKValue(schema, table)
+    updateCmd = masyncSR.getDataUpdateCommand(schema, table, latestPKval, limit)
+    if updateCmd:    
+        ws.send(updateCmd)
+        result = ws.recv()
+        # print "%s: Received '%s\n\n'" % (common.whoami(), result)
+        dataUpdate = parseBasicList(result)
+        
+        # Return data update
+        return dataUpdate
+    else:
+        print "%s ERROR: No request message passed" % (common.whoami())
+        return None
+
 #Get the latest value of Primary Key/s of the client's database
 def getLatestPKValue(schema, table):
     primaryKeys = bdb.GetTablePKs(schema, table)
@@ -580,11 +613,11 @@ def getLatestPKValue(schema, table):
                 FROM %s 
                 ORDER BY %s DESC 
                 LIMIT 1""" % (primaryKeys[0][4], table, primaryKeys[0][4])
-        print "\n%s: %s" % (table, query)
+#        print "\n%s: %s" % (table, query)
         pkLatestValues = bdb.GetDBResultset(query, schema)
         
         #Construct json string
-        jsonPKandValstring = '{"%s":%s}' % (PKs[0], pkLatestValues[0][0])
+        jsonPKandValstring = '{"%s":"%s"}' % (PKs[0], pkLatestValues[0][0])
         jsonPKandVal = json.loads(jsonPKandValstring)
         print jsonPKandVal
         return jsonPKandVal

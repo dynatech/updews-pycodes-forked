@@ -41,3 +41,59 @@ def showPrimaryKey(schema, table):
                   "query":"SHOW INDEX FROM %s",
                   "schema":"%s"}""" % (table, schema)
     return request
+    
+#Compose the message for requesting data for updating a database table
+#   PKeysValsJson is a json string of 
+#TODO: Make this resilient to Multi Primary Key Tables
+def getDataUpdateCommand(schema, table, PKeysValsJson, limit = 1000):
+    if (not schema) or (not table):
+        msgError = "%s ERROR: No schema or table selected" % (common.whoami())
+        print msgError
+        return None
+        
+    #TODO: Error message if PKeysValsJson is None or not a JSON
+        
+    keys = []
+    values = []
+    for key,value in PKeysValsJson.iteritems():
+        print("key: {} | value: {}".format(key, value))
+        keys.append(key)
+        values.append(value)
+        
+    query = """
+            SELECT * 
+            FROM %s 
+            WHERE %s >= '%s' 
+            ORDER BY %s asc 
+            LIMIT %s
+            """ % (table, keys[0], values[0], keys[0], limit)
+            
+#    print "%s Query: %s" % (common.whoami(), query)
+
+    request = """{"dir":0,"action":"read",
+                  "query":"%s",
+                  "schema":"%s"}""" % (query, schema)
+
+#    print "%s Request: %s" % (common.whoami(), request)
+    return request
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
