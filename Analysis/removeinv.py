@@ -16,10 +16,14 @@ def invalert(df):
     return alertdf
 
 def removeinvpub(df):
-    ts = pd.to_datetime(df.ts[0])
+    ts = pd.to_datetime(df['ts'].values[0])
     db, cur = q.SenslopeDBConnect(q.Namedb)
-    query = "DELETE FROM site_level_alert where site = '%s' and source = 'public' and alert = '%s' and timestamp <= '%s' \
-            and updateTS >= '%s'" %(df.site[0], df.alert[0], ts+timedelta(hours=0.5), ts-timedelta(hours=0.5))
+    query = "DELETE FROM site_level_alert where site = '%s' and source = 'public' and alert = '%s'" %(df['site'].values[0], df['alert'].values[0])
+    query += " and timestamp <= '%s' and updateTS >= '%s'" %(ts+timedelta(hours=0.5), ts-timedelta(hours=0.5))
+    cur.execute(query)
+    db.commit()
+    query = "DELETE FROM site_level_alert where site = '%s' and source = 'internal' and alert like '%s'" %(df['site'].values[0], df['alert'].values[0] + '%')
+    query += " and timestamp <= '%s' and updateTS >= '%s'" %(ts+timedelta(hours=0.5), ts-timedelta(hours=0.5))
     cur.execute(query)
     db.commit()
     db.close()
@@ -32,9 +36,9 @@ def main(ts=datetime.now()):
     alertdf = dfid.apply(invalert)
     alertdf = alertdf.reset_index(drop=True)
     
-    invalertdf = alertdf.loc[alertdf.ts >= ts - timedelta(hours=0.5)]
+    invalertdf = alertdf.loc[alertdf.ts >= ts - timedelta(hours=3)]
     invalertdf = invalertdf[~(invalertdf.source.str.contains('sensor'))]
-    invalertdf = invalertdf.loc[invalertdf.alert == 'A1']
+    invalertdf = invalertdf.loc[invalertdf.alert != 'A1']
 
     try:    
         sitealertdf = invalertdf.groupby('site')
