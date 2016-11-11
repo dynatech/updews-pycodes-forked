@@ -461,7 +461,7 @@ def syncStartUp(host, port):
             #TEMPORARY: To be deleted after test
             if table == "smsinbox":
                 #Get the Data Update from Web Socket Server
-                dataUpdate = masyncGD.getDataUpdateList(ws, schema, table, 10)
+                dataUpdate = masyncGD.getDataUpdateList(ws, schema, table, 10, True)
                 return dataUpdate
                 # print "%s: Data for Update: %s" % (common.whoami(), dataUpdate)
                 

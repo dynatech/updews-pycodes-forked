@@ -70,7 +70,7 @@ def getTableCreationCmd(ws=None, schema=None, table=None):
         return None
 
 #Get the Data Update from the Websocket Server
-def getDataUpdateList(ws=None, schema=None, table=None, limit=10):
+def getDataUpdateList(ws=None, schema=None, table=None, limit=10, withKey=True):
     if not ws or not schema or not table:
         print "%s ERROR: No ws|updateCmd value passed" % (common.whoami())
         return None
@@ -81,7 +81,7 @@ def getDataUpdateList(ws=None, schema=None, table=None, limit=10):
         ws.send(updateCmd)
         result = ws.recv()
         # print "%s: Received '%s\n\n'" % (common.whoami(), result)
-        dataUpdate = parseBasicList(result)
+        dataUpdate = parseBasicList(result, withKey)
         
         # Return data update
         return dataUpdate
@@ -122,17 +122,20 @@ def getLatestPKValue(schema, table):
         return -1
 
 #Parse the json message and return as an array
-def parseBasicList(payload):
+def parseBasicList(payload, withKey=False):
     msg = format(payload.decode('utf8'))
     parsed_json = json.loads(json.loads(msg))
     
-    schemaList = []
-    for json_dict in parsed_json:
-        for key,value in json_dict.iteritems():
-#            print("key: {} | value: {}".format(key, value))
-            schemaList.append(value)
-            
-    return schemaList
+    if withKey:
+        return parsed_json
+    else:
+        schemaList = []
+        for json_dict in parsed_json:
+            for key,value in json_dict.iteritems():
+    #            print("key: {} | value: {}".format(key, value))
+                schemaList.append(value)
+                
+        return schemaList
 
 def parseTableCreationCommand(payload):
     msg = format(payload.decode('utf8'))
