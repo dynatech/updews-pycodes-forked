@@ -657,9 +657,9 @@ def main():
     invdf['ts'] = invdf['ts'].apply(lambda x: str(x))
     inv_json = invdf.to_json(orient="records")
 
-    df_json = dict({'alert': public_json, 'invalid': inv_json})
+    df_json = dict({'alerts': public_json, 'invalids': inv_json})
     
-    df_json = '[' + str(df_json).replace("\\\'", '').replace('\'', '').replace('alert:', '"alert":').replace('invalid:', '"invalid":') + ']'
+    df_json = '[' + str(df_json).replace("\\\'", '').replace('\'', '').replace('alerts:', '"alerts":').replace('invalids:', '"invalids":') + ']'
 
     with open('PublicAlert.json', 'w') as w:
         w.write(df_json)

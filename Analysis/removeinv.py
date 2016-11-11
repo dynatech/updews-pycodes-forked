@@ -9,9 +9,11 @@ def invalert(df):
     site = inv_alert[1][0:3]
     alert = inv_alert[1][4:6]
     source = inv_alert[1][7:len(inv_alert[1])]
-    alertdf = pd.DataFrame({'ts': [ts], 'site': [site], 'alert': [alert], 'source': [source]})
+    iomp = df['ack'].values[0]
+    remarks = df['remarks'].values[0]
+    alertdf = pd.DataFrame({'timestamp': [ts], 'site': [site], 'alert': [alert], 'source': [source], 'iomp': [iomp], 'remarks': [remarks]})
     if len(alertdf) == 0:
-        alertdf = pd.DataFrame({'ts': [], 'site': [], 'alert': [], 'source': []})
+        alertdf = pd.DataFrame({'timestamp': [], 'site': [], 'alert': [], 'source': [], 'iomp': [], 'remarks': []})
     return alertdf
 
 def removeinvpub(df):
@@ -28,14 +30,14 @@ def removeinvpub(df):
     db.close()
 
 def main(ts=datetime.now()):
-    query = "SELECT * FROM smsalerts where ts_set >= '%s' and alertstat = 'invalid'" %(pd.to_datetime(ts) - timedelta(3))
+    query = "SELECT * FROM smsalerts where ts_set >= '%s' and alertstat = 'invalid'" %(pd.to_datetime(ts) - timedelta(5))
     df = q.GetDBDataFrame(query)
     
     dfid = df.groupby('alert_id')
     alertdf = dfid.apply(invalert)
     alertdf = alertdf.reset_index(drop=True)
-    
-    invalertdf = alertdf.loc[alertdf.ts >= ts - timedelta(hours=3)]
+
+    invalertdf = alertdf.loc[alertdf.timestamp >= ts - timedelta(hours=3)]
     invalertdf = invalertdf[~(invalertdf.source.str.contains('sensor'))]
     invalertdf = invalertdf.loc[invalertdf.alert != 'A1']
 
@@ -43,12 +45,11 @@ def main(ts=datetime.now()):
         sitealertdf = invalertdf.groupby('site')
         sitealertdf.apply(removeinvpub)
     except:
-        print 'No invalid alert'
+        print 'No new invalid alert'
 
     allpub = pd.read_csv('PublicAlert.txt', sep = '\t')
     withalert = allpub.loc[allpub.alert != 'A0'].site
-    alertdf = alertdf[alertdf.site.isin(withalert)][['site', 'alert', 'ts']]
-    
+    alertdf = alertdf[alertdf.site.isin(withalert)][['site', 'alert', 'timestamp', 'iomp', 'remarks']]
     alertdf.to_csv('InvalidAlert.txt', sep=':', header=True, index=False, mode='w')
 
 if __name__ == '__main__':
