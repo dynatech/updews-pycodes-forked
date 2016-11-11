@@ -360,7 +360,7 @@ def summary_writer(sum_index,r,datasource,twoyrmax,halfmax,summary,alert,alert_d
         advisory='---'
         alert[0].append(r)
         alert_df.append((r,'r0'))
-    summary.loc[sum_index]=[r,one,three,datasource,ralert,advisory]
+    summary.loc[sum_index]=[r,one,round(halfmax,2),three,round(twoyrmax,2),datasource,ralert,advisory]
 
 def RainfallAlert(siterainprops, start, end, offsetstart, tsn, summary, alert, alert_df, base, PrintPlot, RainfallPlotsPath):
 
@@ -503,7 +503,7 @@ def main():
     
     #empty dataframe; summary writer
     index = range(len(rainprops))
-    columns=['site','1D','3D','DataSource','alert','advisory']
+    columns=['site','1D cml','half of 2yr max','3D cml','2yr max','DataSource','alert','advisory']
     summary = pd.DataFrame(index=index, columns=columns)
     
     #alert summary container, r0 sites at alert[0], r1a sites at alert[1], r1b sites at alert[2],  nd sites at alert[3]
