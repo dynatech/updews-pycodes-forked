@@ -3,6 +3,7 @@ import ConfigParser
 from datetime import datetime as dtm
 from datetime import timedelta as tda
 import re
+import json
 import pandas.io.sql as psql
 import pandas as pd
 import numpy as np
@@ -120,9 +121,10 @@ def GetDBResultset(query, schema_name=None):
     try:
         db, cur = connectDB(schema_name)
         a = cur.execute(query)
+        db.commit()
         db.close()
     except:
-        PrintOut("Exception detected")
+        PrintOut("ERROR: Exception detected")
 
     if a:
         return cur.fetchall()
@@ -134,6 +136,70 @@ def GetDBResultset(query, schema_name=None):
 def ExecuteQuery(query, schema_name=None):
     GetDBResultset(query, schema_name)
         
+#Insert JSON Data directly to the database
+#This function will do the parsing and query creation before inserting it to
+#   the database
+def PushDBjson(jsonData, table_name, schema_name=None, limit=100, insType="insert"):
+    if insType == "replace":
+        queryHeader = "REPLACE INTO %s " % (table_name)
+    elif insType == "ignore":
+        queryHeader = "INSERT IGNORE %s " % (table_name)
+    else:
+        queryHeader = "INSERT INTO %s " % (table_name)
+
+    queryKeys = " ("
+    queryValues = " VALUES "
+
+    # Compose Query Keys
+    for json_dict in jsonData:
+        numElements = len(json_dict)
+        ctr = 0
+        for key,value in json_dict.iteritems():
+            queryKeys = queryKeys + key
+            ctr = ctr + 1
+
+            if ctr < numElements:
+                queryKeys = queryKeys + ","
+
+        queryKeys = queryKeys + ")"
+        break
+
+    # Parse JSON data 
+    #TODO: (limited by "limit" variable)
+    numRows = len(jsonData)
+    ctrRow = 0
+    for json_dict in jsonData:
+        numElements = len(json_dict)
+        ctr = 0
+        queryValues = queryValues + "("
+        for key,value in json_dict.iteritems():
+            # print("key: {} | value: {}".format(key, value))
+
+            try:
+                # Make sure to escape special characters
+                esc_value = json.dumps(value)
+                queryValues = queryValues + esc_value
+            except TypeError:
+                queryValues = queryValues + "null"
+
+            ctr = ctr + 1
+            if ctr < numElements:
+                queryValues = queryValues + ","
+            else:
+                queryValues = queryValues + ")"
+
+        ctrRow = ctrRow + 1
+        if ctrRow < numRows:
+            queryValues = queryValues + ","
+
+    #Compose data insertion query
+    query = queryHeader + queryKeys + queryValues
+    print "query: %s" % (query)
+
+    #TODO: Execute the query
+    ExecuteQuery(query, schema_name)
+
+
 #GetDBDataFrame(query): queries a specific sensor data table and returns it as
 #    a python dataframe format
 #    Parameters:
@@ -149,12 +215,28 @@ def GetDBDataFrame(query, schema_name=None):
         db.close()
         return df
     except KeyboardInterrupt:
-        PrintOut("Exception detected in accessing database")
+        PrintOut("ERROR: Exception detected in accessing database")
         
 #Push a dataframe object into a table
-def PushDBDataFrame(df,table_name, schema_name=None):     
+def PushDBDataFrame(df, table_name, schema_name=None):     
     db, cur = connectDB(schema_name)
-    df.to_sql(con=db, name=table_name, if_exists='append', flavor='mysql')
+    # df.to_sql(con=db, name=table_name, if_exists='append', flavor='mysql')
+    df.to_sql(con=db, name=table_name, if_exists='append', flavor=None)
+    db.commit()
+    db.close()
+
+#Push a dataframe object into a table with Guard against duplicate entries
+def PushDBDataFrameDupGuard(df, table_name, schema_name=None):
+    db, cur = connectDB(schema_name)
+    # df.to_sql(con=db, name=table_name, if_exists='append', flavor='mysql')
+
+    for i in range(len(df)):
+        try:
+            df.iloc[i:i+1].to_sql(con=db, name=table_name, if_exists='append', flavor='mysql')
+        except IntegrityError:
+            # or any other action
+            pass        
+
     db.commit()
     db.close()
 

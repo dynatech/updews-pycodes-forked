@@ -464,6 +464,9 @@ def syncStartUp(host, port):
                 dataUpdate = masyncGD.getDataUpdateList(ws, schema, table, 10, True)
                 return dataUpdate
                 # print "%s: Data for Update: %s" % (common.whoami(), dataUpdate)
+
+                #TODO: Push new data to Client's Database Table
+                
                 
             #TEMPORARY: To be deleted after test
 #            if table == "smsoutbox":
