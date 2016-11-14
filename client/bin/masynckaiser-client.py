@@ -11,6 +11,7 @@ import os
 import sys
 import time
 import json
+import pandas as pd
 
 #include the path of "libraries" folder for the python scripts searching
 path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../libraries'))
@@ -19,7 +20,7 @@ if not path in sys.path:
 del path   
 
 import masynckaiserWSSLib as masync
-#import basicDB as bdb
+import basicDB as bdb
 
 def wssSendMsg(msgid = 1, number = "09980619501"):
 	threading.Timer(1.0, wssSendMsg).start()
@@ -59,6 +60,7 @@ schema = "senslopedb"
 table = "smsoutbox"
 
 output = masync.syncStartUp(host, port)
+bdb.PushDBjson(jsonData=output, table_name='smsinbox', schema_name='senslopedb', insType='ignore')
 
 #msg = format(schemas.decode('utf8'))
 #parsed_json = json.loads(json.loads(msg))
