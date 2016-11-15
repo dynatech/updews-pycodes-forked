@@ -111,7 +111,11 @@ def getLatestPKValue(schema, table):
         pkLatestValues = bdb.GetDBResultset(query, schema)
         
         #Construct json string
-        jsonPKandValstring = '{"%s":"%s"}' % (PKs[0], pkLatestValues[0][0])
+        try:
+            jsonPKandValstring = '{"%s":"%s"}' % (PKs[0], pkLatestValues[0][0])
+        except IndexError:
+            jsonPKandValstring = '{"%s":null}' % (PKs[0])
+
         jsonPKandVal = json.loads(jsonPKandValstring)
         print jsonPKandVal
         return jsonPKandVal
