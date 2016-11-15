@@ -29,8 +29,13 @@ def removeinvpub(df):
     db.commit()
     db.close()
 
+def invsensor(df):
+    if 'sensor' in df['source'].values[0]:
+        df['remarks'] = df['remarks'].apply(lambda x: x + ' [invalid sensor retrigger until ' + str(pd.to_datetime(df['timestamp'].values[0]) + timedelta(hours=7)) + ']')
+    return df
+
 def main(ts=datetime.now()):
-    query = "SELECT * FROM smsalerts where ts_set >= '%s' and alertstat = 'invalid'" %(pd.to_datetime(ts) - timedelta(5))
+    query = "SELECT * FROM smsalerts where ts_set >= '%s' and alertstat = 'invalid'" %(pd.to_datetime(ts) - timedelta(10))
     df = q.GetDBDataFrame(query)
     
     dfid = df.groupby('alert_id')
@@ -49,7 +54,10 @@ def main(ts=datetime.now()):
 
     allpub = pd.read_csv('PublicAlert.txt', sep = '\t')
     withalert = allpub.loc[allpub.alert != 'A0'].site
-    alertdf = alertdf[alertdf.site.isin(withalert)][['site', 'alert', 'timestamp', 'iomp', 'remarks']]
+    alertdf = alertdf[alertdf.site.isin(withalert)]
+    sitealertdf = alertdf.groupby('site')
+    alertdf = sitealertdf.apply(invsensor)
+    alertdf = alertdf[['site', 'alert', 'timestamp', 'iomp', 'remarks']]
     alertdf.to_csv('InvalidAlert.txt', sep=':', header=True, index=False, mode='w')
 
 if __name__ == '__main__':
