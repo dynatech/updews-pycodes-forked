@@ -425,7 +425,7 @@ def syncRealTime(host, port):
     ws.close()
 
 #Synchronize all allowed schemas, tables and data at the time of activation
-def syncStartUp(host, port):
+def syncStartUp(host, port, batchRows=200):
     url = "ws://%s:%s/" % (host, port)
     
     print "%s: Starting Start Up Sync" % (common.whoami())
@@ -460,36 +460,11 @@ def syncStartUp(host, port):
                 
             #TEMPORARY: To be deleted after test
             if table == "smsinbox":
-                batchRows = 1000
-                returnedRows = batchRows
-
-                #Loop data update by batch
-                while returnedRows >= batchRows:
-                    #Get the Data Update from Web Socket Server
-                    dataUpdate = masyncGD.getDataUpdateList(ws, schema, table, batchRows, True)
-                    returnedRows = len(dataUpdate)
-                    #Push new data to Client's Database Table
-                    bdb.PushDBjson(dataUpdate, table, schema, batchRows, "ignore") 
+                updateTableData(ws, schema, table, batchRows, "ignore")
                               
-
-                
-            #TEMPORARY: To be deleted after test
-#            if table == "smsoutbox":
-#                latestPKval = getLatestPKValue(schema, table) 
-#                
-#                for key,value in latestPKval.iteritems():
-#                    print("key: {} | value: {}".format(key, value))
-#                    schemaList.append(value)
-                
-            #TEMPORARY: To be deleted after test
-#            if table == "rain_noah_107":
-#                latestPKval = getLatestPKValue(schema, table)
-#                updateCmd = masyncSR.getDataUpdateCommand(schema, table, latestPKval)
-                
-            #TEMPORARY: To be deleted after test
-#            if table == "magta":
-#                latestPKval = getLatestPKValue(schema, table)
-#                masyncSR.getDataUpdateCommand(schema, table, latestPKval)
+            #TEMPORARY: to be deleted after test
+            # if table == "agbsb":
+            #     updateTableData(ws, schema, table, batchRows, "ignore")
             
 #        print "\nExisting: "
 #        print tablesExisting
@@ -498,8 +473,18 @@ def syncStartUp(host, port):
 #        print "\n\n"
     
     ws.close()
-    
-    #Temporary: to be removed
-#    return result
+
+
+# Update Data based on table and schema
+def updateTableData(ws, schema, table, batchRows=200, insType="ignore"):
+    returnedRows = batchRows
+
+    #Loop data update by batch
+    while returnedRows >= batchRows:
+        #Get the Data Update from Web Socket Server
+        dataUpdate = masyncGD.getDataUpdateList(ws, schema, table, batchRows, True)
+        returnedRows = len(dataUpdate)
+        #Push new data to Client's Database Table
+        bdb.PushDBjson(dataUpdate, table, schema, batchRows, "ignore") 
 
 
