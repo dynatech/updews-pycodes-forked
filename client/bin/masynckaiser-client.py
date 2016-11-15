@@ -60,7 +60,7 @@ schema = "senslopedb"
 table = "smsoutbox"
 
 output = masync.syncStartUp(host, port)
-bdb.PushDBjson(jsonData=output, table_name='smsinbox', schema_name='senslopedb', insType='ignore')
+# bdb.PushDBjson(jsonData=output, table_name='smsinbox', schema_name='senslopedb', insType='ignore')
 
 #msg = format(schemas.decode('utf8'))
 #parsed_json = json.loads(json.loads(msg))

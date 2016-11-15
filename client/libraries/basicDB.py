@@ -194,9 +194,9 @@ def PushDBjson(jsonData, table_name, schema_name=None, limit=100, insType="inser
 
     #Compose data insertion query
     query = queryHeader + queryKeys + queryValues
-    print "query: %s" % (query)
+    # print "query: %s" % (query)
 
-    #TODO: Execute the query
+    #Execute the query
     ExecuteQuery(query, schema_name)
 
 

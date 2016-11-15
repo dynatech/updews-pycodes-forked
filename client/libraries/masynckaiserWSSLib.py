@@ -460,13 +460,18 @@ def syncStartUp(host, port):
                 
             #TEMPORARY: To be deleted after test
             if table == "smsinbox":
-                #Get the Data Update from Web Socket Server
-                dataUpdate = masyncGD.getDataUpdateList(ws, schema, table, 10, True)
-                return dataUpdate
-                # print "%s: Data for Update: %s" % (common.whoami(), dataUpdate)
+                batchRows = 1000
+                returnedRows = batchRows
 
-                #TODO: Push new data to Client's Database Table
-                
+                #Loop data update by batch
+                while returnedRows >= batchRows:
+                    #Get the Data Update from Web Socket Server
+                    dataUpdate = masyncGD.getDataUpdateList(ws, schema, table, batchRows, True)
+                    returnedRows = len(dataUpdate)
+                    #Push new data to Client's Database Table
+                    bdb.PushDBjson(dataUpdate, table, schema, batchRows, "ignore") 
+                              
+
                 
             #TEMPORARY: To be deleted after test
 #            if table == "smsoutbox":
