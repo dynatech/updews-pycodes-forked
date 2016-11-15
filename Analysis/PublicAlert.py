@@ -654,7 +654,7 @@ def main():
     public_json = PublicAlert.to_json(orient="records")
     
     invdf = pd.read_csv('InvalidAlert.txt', sep = ':')
-    invdf['ts'] = invdf['ts'].apply(lambda x: str(x))
+    invdf['timestamp'] = invdf['timestamp'].apply(lambda x: str(x))
     inv_json = invdf.to_json(orient="records")
 
     df_json = dict({'alerts': public_json, 'invalids': inv_json})
