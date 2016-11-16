@@ -53,7 +53,7 @@ data_dt = 0.5			;time interval between data points, in hours
 rt_window_length = 3.	;length of real-time monitoring window, in days
 roll_window_length = 3.	;length of rolling/moving window operations in hours
 num_roll_window_ops = 2	;number of rolling window operations in the whole monitoring analysis
-col_pos_interval = '4H' ;string expression indicating interval between two adjacent column position dates ex: '1D'= 1 day
+col_pos_interval = 4H	;string expression indicating interval between two adjacent column position dates ex: '1D'= 1 day
 num_col_pos = 7         ;number of column position dates to plot 
 to_fill = 1				;to forward fill (1 or 0)
 to_smooth = 1			;to smooth xz and xy through moving average (1 or 0)
