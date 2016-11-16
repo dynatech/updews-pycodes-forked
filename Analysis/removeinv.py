@@ -34,6 +34,18 @@ def invsensor(df):
         df['remarks'] = df['remarks'].apply(lambda x: x + ' [invalid sensor retrigger until ' + str(pd.to_datetime(df['timestamp'].values[0]) + timedelta(hours=7)) + ']')
     return df
 
+def currentinv(df, withalert):
+    level = df['alert'].values[0]
+    if level == 'A3':
+        alert = withalert.loc[withalert.alert == 'A3']
+        df = df[df.site.isin(alert.site)]
+    elif level == 'A2':
+        alert = withalert.loc[withalert.alert != 'A3']
+        df = df[df.site.isin(alert.site)]
+    else:
+        df = df[df.site.isin(withalert.site)]
+    return df
+
 def main(ts=datetime.now()):
     query = "SELECT * FROM smsalerts where ts_set >= '%s' and alertstat = 'invalid'" %(pd.to_datetime(ts) - timedelta(10))
     df = q.GetDBDataFrame(query)
@@ -50,12 +62,16 @@ def main(ts=datetime.now()):
     sitealertdf.apply(removeinvpub)
 
     allpub = pd.read_csv('PublicAlert.txt', sep = '\t')
-    withalert = allpub.loc[allpub.alert != 'A0'].site
-    alertdf = alertdf[alertdf.site.isin(withalert)]
+    withalert = allpub.loc[allpub.alert != 'A0']
     sitealertdf = alertdf.groupby('site')
     alertdf = sitealertdf.apply(invsensor)
     alertdf = alertdf[['site', 'alert', 'timestamp', 'iomp', 'remarks']]
-    alertdf.to_csv('InvalidAlert.txt', sep=':', header=True, index=False, mode='w')
+    alertdf = alertdf.sort_values('timestamp', ascending = False)
+    alertdf = alertdf.drop_duplicates(['site', 'alert'])
+    alertdflevel = alertdf.groupby('alert')
+    finaldf = alertdflevel.apply(currentinv, withalert=withalert)
+    print finaldf
+    finaldf.to_csv('InvalidAlert.txt', sep=':', header=True, index=False, mode='w')
 
 if __name__ == '__main__':
     start = datetime.now()
