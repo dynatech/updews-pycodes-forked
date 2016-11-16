@@ -17,7 +17,7 @@ def invalert(df):
     return alertdf
 
 def removeinvpub(df):
-    ts = pd.to_datetime(df['ts'].values[0])
+    ts = pd.to_datetime(df['timestamp'].values[0])
     db, cur = q.SenslopeDBConnect(q.Namedb)
     query = "DELETE FROM site_level_alert where site = '%s' and source = 'public' and alert = '%s'" %(df['site'].values[0], df['alert'].values[0])
     query += " and timestamp <= '%s' and updateTS >= '%s'" %(ts+timedelta(hours=0.5), ts-timedelta(hours=0.5))
@@ -46,11 +46,8 @@ def main(ts=datetime.now()):
     invalertdf = invalertdf[~(invalertdf.source.str.contains('sensor'))]
     invalertdf = invalertdf.loc[invalertdf.alert != 'A1']
 
-    try:    
-        sitealertdf = invalertdf.groupby('site')
-        sitealertdf.apply(removeinvpub)
-    except:
-        print 'No new invalid alert'
+    sitealertdf = invalertdf.groupby('site')
+    sitealertdf.apply(removeinvpub)
 
     allpub = pd.read_csv('PublicAlert.txt', sep = '\t')
     withalert = allpub.loc[allpub.alert != 'A0'].site
