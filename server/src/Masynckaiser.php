@@ -4,6 +4,8 @@ use Ratchet\MessageComponentInterface;
 use Ratchet\ConnectionInterface;
 use MyApp\MasynckaiserModel;
 
+//Debug
+define("DEBUG", false);
 //Data direction: Server to Client
 define("STOC", 0);
 //Data direction: Client to Server
@@ -75,7 +77,9 @@ class Masynckaiser implements MessageComponentInterface {
                         $output = $this->MSKModel->readFromServer($query);
 
                         // Debug print only
-                        echo json_encode($output);
+                        if (DEBUG) {
+                            echo json_encode($output);
+                        }
 
                         // Send the database output to the client
                         $from->send(json_encode($output));
