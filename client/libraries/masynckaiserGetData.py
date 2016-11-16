@@ -76,6 +76,12 @@ def getDataUpdateList(ws=None, schema=None, table=None, limit=10, withKey=True):
         return None
 
     latestPKval = getLatestPKValue(schema, table)
+
+    #TEMPORARY: catch if no PKval was returned
+    if latestPKval == -1:
+        print "%s TESTING: multiple primary keys in a table"
+        return None
+
     updateCmd = masyncSR.getDataUpdateCommand(schema, table, latestPKval, limit)
     if updateCmd:    
         ws.send(updateCmd)
@@ -102,28 +108,53 @@ def getLatestPKValue(schema, table):
         PKs.append(pk[4])
     
     if numPKs == 1:
+        return constructPKjson(schema, table, PKs[0])
+
+    elif numPKs > 1 and numPKs < 4:
+        curBiggestPKcount = 0
+        mainPK = ""
+
+        #Identify the Main Primary Key (usually the timestamp)
+        for pk in PKs:
+            query = "SELECT COUNT(DISTINCT %s) FROM %s" % (pk, table)
+            PKcount = bdb.GetDBResultset(query, schema)
+
+            try:
+                # print "%s %s.%s count = %s" % (common.whoami(), table, pk, PKcount)
+                if PKcount > curBiggestPKcount:
+                    curBiggestPKcount = PKcount
+                    mainPK = pk
+                    # print "Main PK is now (%s)" % (mainPK)
+            except:
+                pass
+
+        print "%s %s Main Primary Key: %s (%s distinct values)" % (common.whoami(), table, mainPK, curBiggestPKcount)
+        return constructPKjson(schema, table, mainPK)
+
+    else:
+        #There is a different procedure for tables with multiple PKs greater than 3
+        print "\n%s: %s Number of Primary Keys: %s (TODO)" % (common.whoami(), table, numPKs)
+        return -1
+
+def constructPKjson(schema, table, pKey):
+        #Get the latest value of Main PK
         query = """
                 SELECT %s 
                 FROM %s 
                 ORDER BY %s DESC 
-                LIMIT 1""" % (primaryKeys[0][4], table, primaryKeys[0][4])
-#        print "\n%s: %s" % (table, query)
+                LIMIT 1""" % (pKey, table, pKey)
         pkLatestValues = bdb.GetDBResultset(query, schema)
-        
+
         #Construct json string
         try:
-            jsonPKandValstring = '{"%s":"%s"}' % (PKs[0], pkLatestValues[0][0])
+            jsonPKandValstring = '{"%s":"%s"}' % (pKey, pkLatestValues[0][0])
         except IndexError:
-            jsonPKandValstring = '{"%s":null}' % (PKs[0])
+            jsonPKandValstring = '{"%s":null}' % (pKey)
 
+        #Return JSON PK and Value/s
         jsonPKandVal = json.loads(jsonPKandValstring)
         print jsonPKandVal
         return jsonPKandVal
-                
-    elif numPKs > 1:
-        #TODO: There is a different procedure for tables with multiple PKs
-        print "\n%s: %s Number of Primary Keys: %s (TODO)" % (common.whoami(), table, numPKs)
-        return -1
 
 #Parse the json message and return as an array
 def parseBasicList(payload, withKey=False):

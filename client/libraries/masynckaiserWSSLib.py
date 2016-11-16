@@ -463,8 +463,11 @@ def syncStartUp(host, port, batchRows=200):
                 updateTableData(ws, schema, table, batchRows, "ignore")
                               
             #TEMPORARY: to be deleted after test
-            # if table == "agbsb":
-            #     updateTableData(ws, schema, table, batchRows, "ignore")
+            if table == "agbsb":
+                updateTableData(ws, schema, table, batchRows, "ignore")
+
+            if table == "gndmeas":
+                pass
             
 #        print "\nExisting: "
 #        print tablesExisting
@@ -483,8 +486,10 @@ def updateTableData(ws, schema, table, batchRows=200, insType="ignore"):
     while returnedRows >= batchRows:
         #Get the Data Update from Web Socket Server
         dataUpdate = masyncGD.getDataUpdateList(ws, schema, table, batchRows, True)
-        returnedRows = len(dataUpdate)
-        #Push new data to Client's Database Table
-        bdb.PushDBjson(dataUpdate, table, schema, batchRows, "ignore") 
-
-
+        
+        try:
+            returnedRows = len(dataUpdate)
+            #Push new data to Client's Database Table
+            bdb.PushDBjson(dataUpdate, table, schema, batchRows, "ignore") 
+        except:
+            return
