@@ -7,7 +7,7 @@ from datetime import datetime as dt
 
 
 def countAlertAnalysisInstances():
-	p = subprocess.Popen("ps ax | grep AlertAnalysis.py -c", stdout=subprocess.PIPE, shell=True, stderr=subprocess.STDOUT)
+	p = subprocess.Popen("ps ax | grep alertgen.py -c", stdout=subprocess.PIPE, shell=True, stderr=subprocess.STDOUT)
 	out, err = p.communicate()
 	return int(out)
 
@@ -41,7 +41,7 @@ def main():
 		mc.set('alertgenlist',[])
 		mc.set('alertgenlist',alertgenlist)
 
-		command = "~/anaconda2/bin/python %s %s && ~/anaconda2/bin/python %s %s" % (c.fileio.alertgenscript,col,c.fileio.alertanalysisscript,col)
+		command = "~/anaconda2/bin/python %s %s" % (c.fileio.alertgenscript,col)
 
 		print "Running", col, "alertgen"
         
