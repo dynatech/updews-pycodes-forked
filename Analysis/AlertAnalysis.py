@@ -325,7 +325,7 @@ def main(site=''):
     
     col = q.GetSensorList(site)
     
-    monitoring = g.genproc(col[0], window, config)
+    monitoring = g.genproc(col[0], window, config, config.io.column_fix)
     lgd = q.GetLastGoodDataFromDb(monitoring.colprops.name)
 
     
