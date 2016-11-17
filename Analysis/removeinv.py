@@ -40,7 +40,7 @@ def currentinv(df, withalert):
         alert = withalert.loc[withalert.alert == 'A3']
         df = df[df.site.isin(alert.site)]
     elif level == 'A2':
-        alert = withalert.loc[withalert.alert != 'A3']
+        alert = withalert.loc[withalert.alert == 'A2']
         df = df[df.site.isin(alert.site)]
     else:
         df = df[df.site.isin(withalert.site)]
