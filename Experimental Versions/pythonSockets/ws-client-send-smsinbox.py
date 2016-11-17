@@ -8,7 +8,8 @@ Created on Wed Sep 23 13:59:18 2016
 import dewsSocketLeanLib as dsll
 
 port = 5050
-host = "www.dewslandslide.com"
+# host = "www.dewslandslide.com"
+url = "54.166.60.233"
 
 # Send 100 messages from smsinbox to the websocket server
 dsll.sendBatchReceivedGSMtoDEWS(host, port, 100)
