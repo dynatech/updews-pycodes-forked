@@ -754,15 +754,6 @@ def mon_main():
                 print 'enter an integer'
                 continue
 
-        while True:
-            column_fix = raw_input('column fix for colpos (top/bottom); default for monitoring is fix bottom: ').lower()
-            if column_fix == 'top' or column_fix == 'bottom':
-                break
-            else:
-                print 'top or bottom only'
-            
-        config.io.column_fix = column_fix
-
         query = "(SELECT * FROM senslopedb.%s where timestamp > '2010-01-01 00:00' ORDER BY timestamp LIMIT 1)" %col[0].name
         query += " UNION ALL"
         query += " (SELECT * FROM senslopedb.%s ORDER BY timestamp DESC LIMIT 1)" %col[0].name
@@ -786,6 +777,14 @@ def mon_main():
         config.io.col_pos_interval = str(col_pos_interval) + 'D'
         config.io.num_col_pos = int((window.end - window.start).days/col_pos_interval + 1)
     
+        while True:
+            column_fix = raw_input('column fix for colpos (top/bottom); default for monitoring is fix bottom: ').lower()
+            if column_fix == 'top' or column_fix == 'bottom':
+                break
+            else:
+                print 'top or bottom only'
+            
+        config.io.column_fix = column_fix
     
         while True:
             show_all_legend = raw_input('show all legend in column position plot? (Y/N): ').lower()
