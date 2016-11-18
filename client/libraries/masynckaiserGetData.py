@@ -79,7 +79,7 @@ def getDataUpdateList(ws=None, schema=None, table=None, limit=10, withKey=True):
 
     #TEMPORARY: catch if no PKval was returned
     if latestPKval == -1:
-        print "%s TESTING: multiple primary keys in a table"
+        print "%s TESTING: multiple primary keys in a table" % (common.whoami())
         return None
 
     updateCmd = masyncSR.getDataUpdateCommand(schema, table, latestPKval, limit)

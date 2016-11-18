@@ -124,7 +124,7 @@ def GetDBResultset(query, schema_name=None):
         db.commit()
         db.close()
     except:
-        PrintOut("ERROR: Exception detected")
+        PrintOut("ERROR: Exception detected [%s]" % (query))
 
     if a:
         return cur.fetchall()

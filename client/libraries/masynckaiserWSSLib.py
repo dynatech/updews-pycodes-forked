@@ -458,16 +458,22 @@ def syncStartUp(host, port, batchRows=200):
                 print "%s: Creating Table (%s)..." % (common.whoami(), table)                    
                 bdb.ExecuteQuery(tableCreationCommand, schema)
                 
-            #TEMPORARY: To be deleted after test
-            if table == "smsinbox":
-                updateTableData(ws, schema, table, batchRows, "ignore")
+            # #TEMPORARY: To be deleted after test
+            # if table == "smsinbox":
+            #     updateTableData(ws, schema, table, batchRows, "ignore")
                               
-            #TEMPORARY: to be deleted after test
-            if table == "agbsb":
-                updateTableData(ws, schema, table, batchRows, "ignore")
+            # #TEMPORARY: to be deleted after test
+            # if table == "agbsb":
+            #     updateTableData(ws, schema, table, batchRows, "ignore")
 
-            if table == "gndmeas":
-                pass
+            # if table == "gndmeas":
+            #     updateTableData(ws, schema, table, batchRows, "ignore")
+
+            # if table == "bartaw":
+            #     updateTableData(ws, schema, table, batchRows, "ignore")
+
+            # Update Current Table
+            updateTableData(ws, schema, table, batchRows, "ignore")
             
 #        print "\nExisting: "
 #        print tablesExisting
