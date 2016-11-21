@@ -466,8 +466,8 @@ def syncStartUp(host, port, batchRows=200):
             #     print "%s: Execution Time: %s" % (common.whoami(), elapsed)
                 
             # #TEMPORARY: To be deleted after test
-            # if table == "public_alert":
-            #     updateTableData(ws, schema, table, batchRows, "ignore")
+            if table == "public_alert":
+                updateTableData(ws, schema, table, batchRows, "ignore")
 
             # #TEMPORARY: to be deleted after test
             # if table == "agbsb":
@@ -509,6 +509,7 @@ def updateTableData(ws, schema, table, batchRows=200, insType="ignore"):
                 #TODO: Drop the current table
                 bdb.DropTable(schema, table)
                 #TODO: Create the new table based from Server
+                createTableFromWSS(ws, schema, table)
                 #TODO: Update Table
                 updateTableData(ws, schema, table, batchRows, insType)
                 pass
