@@ -99,5 +99,6 @@ class config:
 
 		self.io = Container()
 		self.io.proc_limit = cfg.getint("io","proc_limit")
+		self.io.active_lgr_limit = cfg.getint("io","active_lgr_limit")
 		
 
