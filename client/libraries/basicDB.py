@@ -123,8 +123,13 @@ def GetDBResultset(query, schema_name=None):
         a = cur.execute(query)
         db.commit()
         db.close()
-    except:
-        PrintOut("ERROR: Exception detected [%s]" % (query))
+    except mysqlDriver.Error, e:
+        try:
+            print "ERROR [%d]: %s" % (e.args[0], e.args[1])
+            # print "ERROR: Exception detected [%s]" % (query)
+            return e.args
+        except IndexError:
+            print "ERROR: %s" % str(e)
 
     if a:
         return cur.fetchall()
@@ -197,7 +202,7 @@ def PushDBjson(jsonData, table_name, schema_name=None, limit=100, insType="inser
     # print "query: %s" % (query)
 
     #Execute the query
-    ExecuteQuery(query, schema_name)
+    return GetDBResultset(query, schema_name)
 
 
 #GetDBDataFrame(query): queries a specific sensor data table and returns it as

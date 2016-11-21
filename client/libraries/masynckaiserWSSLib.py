@@ -11,6 +11,7 @@ import os
 import sys
 import thread
 import time
+import timeit
 import json
 import simplejson
 import pandas as pd
@@ -462,6 +463,18 @@ def syncStartUp(host, port, batchRows=200):
             # if table == "smsinbox":
             #     updateTableData(ws, schema, table, batchRows, "ignore")
                               
+            #TEMPORARY: To be deleted after test
+            if table == "smsoutbox":
+                start_time = timeit.default_timer()
+                updateTableData(ws, schema, table, batchRows, "ignore")
+                elapsed = timeit.default_timer() - start_time
+                print "%s: Execution Time: %s" % (common.whoami(), elapsed)
+                
+
+            # #TEMPORARY: To be deleted after test
+            # if table == "public_alert":
+            #     updateTableData(ws, schema, table, batchRows, "ignore")
+
             # #TEMPORARY: to be deleted after test
             # if table == "agbsb":
             #     updateTableData(ws, schema, table, batchRows, "ignore")
@@ -473,7 +486,7 @@ def syncStartUp(host, port, batchRows=200):
             #     updateTableData(ws, schema, table, batchRows, "ignore")
 
             # Update Current Table
-            updateTableData(ws, schema, table, batchRows, "ignore")
+            # updateTableData(ws, schema, table, batchRows, "ignore")
             
 #        print "\nExisting: "
 #        print tablesExisting
@@ -486,16 +499,32 @@ def syncStartUp(host, port, batchRows=200):
 
 # Update Data based on table and schema
 def updateTableData(ws, schema, table, batchRows=200, insType="ignore"):
-    returnedRows = batchRows
+    #Get the Data Update from Web Socket Server
+    dataUpdate = masyncGD.getDataUpdateList(ws, schema, table, batchRows, True)
+    
+    try:
+        returnedRows = len(dataUpdate)
+        #Push new data to Client's Database Table
+        retMsg = bdb.PushDBjson(dataUpdate, table, schema, batchRows, "ignore") 
 
-    #Loop data update by batch
-    while returnedRows >= batchRows:
-        #Get the Data Update from Web Socket Server
-        dataUpdate = masyncGD.getDataUpdateList(ws, schema, table, batchRows, True)
-        
+        #Check if there was an error in pushing the data to the target table
         try:
-            returnedRows = len(dataUpdate)
-            #Push new data to Client's Database Table
-            bdb.PushDBjson(dataUpdate, table, schema, batchRows, "ignore") 
-        except:
+            #Handle "Unknown Column" in "field list"
+            if retMsg[0] == 1054:
+                #TODO: Drop the current table
+                #TODO: Create the new table based from Server
+                #TODO: Update Table
+                print "%s: Dropping and Creating a NEW %s table" % (common.whoami(), table)
+                pass
+
+        except Exception as e:
+            pass
+
+        if returnedRows >= batchRows:
+            updateTableData(ws, schema, table, batchRows, insType)
+        else:
             return
+        
+    except:
+        return
+
