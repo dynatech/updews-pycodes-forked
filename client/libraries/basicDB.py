@@ -131,8 +131,8 @@ def GetDBResultset(query, schema_name=None):
         db.close()
     except mysqlDriver.Error, e:
         try:
+            print "ERROR: Exception detected [%s]" % (query)
             print "ERROR [%d]: %s" % (e.args[0], e.args[1])
-            # print "ERROR: Exception detected [%s]" % (query)
             return e.args
         except IndexError:
             print "ERROR: %s" % str(e)

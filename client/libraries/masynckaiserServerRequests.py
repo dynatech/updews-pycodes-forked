@@ -56,7 +56,7 @@ def getDataUpdateCommand(schema, table, PKeysValsJson, limit = 1000):
     keys = []
     values = []
     for key,value in PKeysValsJson.iteritems():
-        print("key: {} | value: {}".format(key, value))
+        # print("key: {} | value: {}".format(key, value))
         keys.append(key)
         values.append(value)
         

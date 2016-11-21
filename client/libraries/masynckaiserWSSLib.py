@@ -432,9 +432,16 @@ def syncStartUp(host, port, batchRows=200):
     print "%s: Starting Start Up Sync" % (common.whoami())
     ws = create_connection(url)
 
+    #List of blocked schemas
+    schemasBlocked = ["information_schema","mysql","performance_schema","phpmyadmin"]
+
     #Get names of all schemas
     schemas = masyncGD.getSchemaList(ws)
     for schema in schemas:
+        if schema in schemasBlocked:
+            print "This is one of the blocked schemas"
+            continue
+
         print schema            
         
         #Create schema if it is non-existent
@@ -455,8 +462,8 @@ def syncStartUp(host, port, batchRows=200):
                 createTableFromWSS(ws, schema, table)
                 
             # #TEMPORARY: To be deleted after test
-            if table == "smsinbox":
-                updateTableData(ws, schema, table, batchRows, "ignore")
+            # if table == "smsinbox":
+            #     updateTableData(ws, schema, table, batchRows, "ignore")
                               
             #TEMPORARY: To be deleted after test
             # if table == "smsoutbox":
@@ -466,8 +473,8 @@ def syncStartUp(host, port, batchRows=200):
             #     print "%s: Execution Time: %s" % (common.whoami(), elapsed)
                 
             # #TEMPORARY: To be deleted after test
-            if table == "public_alert":
-                updateTableData(ws, schema, table, batchRows, "ignore")
+            # if table == "public_alert":
+            #     updateTableData(ws, schema, table, batchRows, "ignore")
 
             # #TEMPORARY: to be deleted after test
             # if table == "agbsb":
@@ -480,7 +487,7 @@ def syncStartUp(host, port, batchRows=200):
             #     updateTableData(ws, schema, table, batchRows, "ignore")
 
             # Update Current Table
-            # updateTableData(ws, schema, table, batchRows, "ignore")
+            updateTableData(ws, schema, table, batchRows, "ignore")
             
 #        print "\nExisting: "
 #        print tablesExisting
@@ -498,29 +505,32 @@ def updateTableData(ws, schema, table, batchRows=200, insType="ignore"):
     
     try:
         returnedRows = len(dataUpdate)
-        #Push new data to Client's Database Table
-        retMsg = bdb.PushDBjson(dataUpdate, table, schema, batchRows, "ignore") 
 
-        #Check if there was an error in pushing the data to the target table
-        try:
-            #Handle "Unknown Column" in "field list"
-            if retMsg[0] == 1054:
-                print "%s: Dropping and Creating a NEW %s table" % (common.whoami(), table)
-                #TODO: Drop the current table
-                bdb.DropTable(schema, table)
-                #TODO: Create the new table based from Server
-                createTableFromWSS(ws, schema, table)
-                #TODO: Update Table
-                updateTableData(ws, schema, table, batchRows, insType)
+        if returnedRows > 0:
+            #Push new data to Client's Database Table
+            retMsg = bdb.PushDBjson(dataUpdate, table, schema, batchRows, "ignore") 
+
+            #Check if there was an error in pushing the data to the target table
+            try:
+                #Handle "Unknown Column" in "field list"
+                if retMsg[0] == 1054:
+                    print "%s: Dropping and Creating a NEW %s table" % (common.whoami(), table)
+                    #Drop the current table
+                    bdb.DropTable(schema, table)
+                    #Create the new table based from Server
+                    createTableFromWSS(ws, schema, table)
+                    #Update Table
+                    updateTableData(ws, schema, table, batchRows, insType)
+                    pass
+            except Exception as e:
                 pass
 
-        except Exception as e:
-            pass
-
-        if returnedRows >= batchRows:
-            updateTableData(ws, schema, table, batchRows, insType)
+            if returnedRows >= batchRows:
+                updateTableData(ws, schema, table, batchRows, insType)
+            else:
+                return
         else:
-            return
+            print "%s: Empty or Null returned rows" % (common.whoami())
         
     except:
         return

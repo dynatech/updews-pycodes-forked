@@ -99,7 +99,7 @@ def getDataUpdateList(ws=None, schema=None, table=None, limit=10, withKey=True):
 def getLatestPKValue(schema, table):
     primaryKeys = bdb.GetTablePKs(schema, table)
     numPKs = len(primaryKeys)    
-    print "\n%s %s: Number of Primary Keys: %s" % (common.whoami(), table, numPKs)
+    # print "\n%s %s: Number of Primary Keys: %s" % (common.whoami(), table, numPKs)
     
     print "%s:" % (table),
     PKs = []
@@ -128,12 +128,12 @@ def getLatestPKValue(schema, table):
             except:
                 pass
 
-        print "%s %s Main Primary Key: %s (%s distinct values)" % (common.whoami(), table, mainPK, curBiggestPKcount)
+        # print "%s %s Main Primary Key: %s (%s distinct values)" % (common.whoami(), table, mainPK, curBiggestPKcount)
         return constructPKjson(schema, table, mainPK)
 
     else:
         #There is a different procedure for tables with multiple PKs greater than 3
-        print "\n%s: %s Number of Primary Keys: %s (TODO)" % (common.whoami(), table, numPKs)
+        print "\n(TODO) %s: %s Number of Primary Keys: %s (TODO)" % (common.whoami(), table, numPKs)
         return -1
 
 def constructPKjson(schema, table, pKey):
