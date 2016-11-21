@@ -452,25 +452,19 @@ def syncStartUp(host, port, batchRows=200):
                 tablesExisting.append(table)
             else:
                 tablesNonExistent.append(table)
-                #Request SQL command for generating missing tables on local
-                #   database of client
-                tableCreationCommand = masyncGD.getTableCreationCmd(ws, schema, table)
-                #Create Table
-                print "%s: Creating Table (%s)..." % (common.whoami(), table)                    
-                bdb.ExecuteQuery(tableCreationCommand, schema)
+                createTableFromWSS(ws, schema, table)
                 
             # #TEMPORARY: To be deleted after test
-            # if table == "smsinbox":
-            #     updateTableData(ws, schema, table, batchRows, "ignore")
+            if table == "smsinbox":
+                updateTableData(ws, schema, table, batchRows, "ignore")
                               
             #TEMPORARY: To be deleted after test
-            if table == "smsoutbox":
-                start_time = timeit.default_timer()
-                updateTableData(ws, schema, table, batchRows, "ignore")
-                elapsed = timeit.default_timer() - start_time
-                print "%s: Execution Time: %s" % (common.whoami(), elapsed)
+            # if table == "smsoutbox":
+            #     start_time = timeit.default_timer()
+            #     updateTableData(ws, schema, table, batchRows, "ignore")
+            #     elapsed = timeit.default_timer() - start_time
+            #     print "%s: Execution Time: %s" % (common.whoami(), elapsed)
                 
-
             # #TEMPORARY: To be deleted after test
             # if table == "public_alert":
             #     updateTableData(ws, schema, table, batchRows, "ignore")
@@ -511,10 +505,12 @@ def updateTableData(ws, schema, table, batchRows=200, insType="ignore"):
         try:
             #Handle "Unknown Column" in "field list"
             if retMsg[0] == 1054:
+                print "%s: Dropping and Creating a NEW %s table" % (common.whoami(), table)
                 #TODO: Drop the current table
+                bdb.DropTable(schema, table)
                 #TODO: Create the new table based from Server
                 #TODO: Update Table
-                print "%s: Dropping and Creating a NEW %s table" % (common.whoami(), table)
+                updateTableData(ws, schema, table, batchRows, insType)
                 pass
 
         except Exception as e:
@@ -528,3 +524,11 @@ def updateTableData(ws, schema, table, batchRows=200, insType="ignore"):
     except:
         return
 
+# Create Table from Information gathered from Web Socket Server
+def createTableFromWSS(ws, schema, table):
+    #Request SQL command for generating missing tables on local
+    #   database of client
+    tableCreationCommand = masyncGD.getTableCreationCmd(ws, schema, table)
+    #Create Table
+    print "%s: Creating Table (%s)..." % (common.whoami(), table)                    
+    bdb.ExecuteQuery(tableCreationCommand, schema)

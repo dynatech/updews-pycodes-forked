@@ -68,7 +68,13 @@ def DoesTableExist(schema_name, table_name):
     else:
         db.close()
         return False
-        
+
+# Drop Table
+# Note: Use with extreme caution
+def DropTable(schema_name, table_name):
+    query = "DROP TABLE IF EXISTS %s" % (table_name)
+    return GetDBResultset(query, schema_name)
+
 # Get table Primary Key/s
 def GetTablePKs(schema_name, table_name):
     query = """SHOW INDEX FROM %s""" % (table_name)
