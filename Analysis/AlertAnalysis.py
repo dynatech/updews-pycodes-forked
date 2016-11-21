@@ -290,34 +290,9 @@ def trending_alertgen(trending_alert, monitoring, lgd, window, config):
     
     return trending_alert
 
-def alert_toDB(df, table_name, window):
-    
-    query = "SELECT timestamp, site, source, alert FROM senslopedb.%s WHERE site = '%s' ORDER BY timestamp DESC LIMIT 1" %(table_name, df.site.values[0])
-    
-    df2 = q.GetDBDataFrame(query)
-    
-    if len(df2) == 0 or df2.alert.values[0] != df.alert.values[0]:
-        engine = create_engine('mysql://'+q.Userdb+':'+q.Passdb+'@'+q.Hostdb+':3306/'+q.Namedb)
-        df.to_sql(name = table_name, con = engine, if_exists = 'append', schema = q.Namedb, index = False)
-    elif df2.timestamp.values[0] == df.timestamp.values[0]:
-        db, cur = q.SenslopeDBConnect(q.Namedb)
-        query = "UPDATE senslopedb.%s SET updateTS='%s', alert='%s' WHERE site = '%s' and source = 'sensor' and alert = '%s' and timestamp = '%s'" %(table_name, window.end, df.alert.values[0], df2.site.values[0], df2.alert.values[0], pd.to_datetime(str(df2.timestamp.values[0])))
-        cur.execute(query)
-        db.commit()
-        db.close()
-    elif df2.alert.values[0] == df.alert.values[0]:
-        db, cur = q.SenslopeDBConnect(q.Namedb)
-        query = "UPDATE senslopedb.%s SET updateTS='%s' WHERE site = '%s' and source = 'sensor' and alert = '%s' and timestamp = '%s'" %(table_name, window.end, df2.site.values[0], df2.alert.values[0], pd.to_datetime(str(df2.timestamp.values[0])))
-        cur.execute(query)
-        db.commit()
-        db.close()
-
-def main(site=''):
-
-    if site == '':
-        site = sys.argv[1].lower()
+def main(site, end):
         
-    window,config = rtw.getwindow()
+    window,config = rtw.getwindow(end)
     
     monwinTS = pd.date_range(start = window.end - timedelta(hours=3), end = window.end, freq = '30Min')
     trending_alert = pd.DataFrame({'site': [np.nan]*len(monwinTS), 'alert': [np.nan]*len(monwinTS), 'timestamp': monwinTS, 'source': [np.nan]*len(monwinTS)})
@@ -325,7 +300,7 @@ def main(site=''):
     
     col = q.GetSensorList(site)
     
-    monitoring = g.genproc(col[0], window, config)
+    monitoring = g.genproc(col[0], window, config, config.io.column_fix)
     lgd = q.GetLastGoodDataFromDb(monitoring.colprops.name)
 
     
@@ -334,7 +309,5 @@ def main(site=''):
     
     site_level_alert = output.loc[output.timestamp == window.end]
     site_level_alert['updateTS'] = [window.end]
-    
-    alert_toDB(site_level_alert, 'column_level_alert', window)
     
     return site_level_alert

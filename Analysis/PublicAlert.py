@@ -649,10 +649,20 @@ def main():
     
     PublicAlert.to_csv('PublicAlert.txt', header=True, index=None, sep='\t', mode='w')
     
-    dfjson = PublicAlert.to_json(orient="records", date_format="iso")
-    dfjson = dfjson.replace('T', ' ').replace('.000Z', '').replace('retrigger S','retriggerTS')
+    PublicAlert['timestamp'] = PublicAlert['timestamp'].apply(lambda x: str(x))
+    PublicAlert['validity'] = PublicAlert['validity'].apply(lambda x: str(x))
+    public_json = PublicAlert.to_json(orient="records")
+    
+    invdf = pd.read_csv('InvalidAlert.txt', sep = ':')
+    invdf['timestamp'] = invdf['timestamp'].apply(lambda x: str(x))
+    inv_json = invdf.to_json(orient="records")
+
+    df_json = dict({'alerts': public_json, 'invalids': inv_json})
+    
+    df_json = '[' + str(df_json).replace("\\\'", '').replace('\'', '').replace('alerts:', '"alerts":').replace('invalids:', '"invalids":') + ']'
+
     with open('PublicAlert.json', 'w') as w:
-        w.write(dfjson)
+        w.write(df_json)
                 
     return PublicAlert
 

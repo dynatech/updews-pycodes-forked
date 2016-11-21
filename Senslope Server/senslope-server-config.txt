@@ -6,7 +6,7 @@ dbname = senslopedb
 
 [GSMDB]
 username = root
-host = 192.168.1.100
+host = 127.0.0.1
 password = senslope
 dbname = senslopedb
 
@@ -57,3 +57,4 @@ script_mode = procmsg
 
 [io]
 proc_limit = 10
+active_lgr_limit = 40

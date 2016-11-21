@@ -86,7 +86,7 @@ def sendStatusUpdates(reporter='scheduled'):
 	if reporter == 'scheduled':
 		reportnumber = getNumberOfReporter(dt.today())
 		server.WriteOutboxMessageToDb(status_message,reportnumber)
-	elif int(active_loggers_count) < 50:
+	elif int(active_loggers_count) < c.io.active_lgr_limit:
 		print ">> Sending alert sms for server"
 		server.WriteOutboxMessageToDb(status_message,c.smsalert.serveralert)
 

@@ -75,7 +75,7 @@ class config:
 		self.io.rt_window_length = cfg.getfloat("I/O","rt_window_length")
 		self.io.roll_window_length = cfg.getfloat("I/O","roll_window_length")
 		self.io.num_roll_window_ops = cfg.getint("I/O","num_roll_window_ops")
-		self.io.col_pos_interval = cfg.get("I/O","col_pos_interval")
+		self.io.col_pos_interval = str(cfg.get("I/O","col_pos_interval"))
 		self.io.num_col_pos = cfg.getint("I/O","num_col_pos")
 		self.io.to_fill = cfg.getint("I/O","to_fill")
 		self.io.to_smooth = cfg.getint("I/O","to_smooth")

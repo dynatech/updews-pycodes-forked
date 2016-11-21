@@ -9,46 +9,69 @@ def invalert(df):
     site = inv_alert[1][0:3]
     alert = inv_alert[1][4:6]
     source = inv_alert[1][7:len(inv_alert[1])]
-    alertdf = pd.DataFrame({'ts': [ts], 'site': [site], 'alert': [alert], 'source': [source]})
+    iomp = df['ack'].values[0]
+    remarks = df['remarks'].values[0]
+    alertdf = pd.DataFrame({'timestamp': [ts], 'site': [site], 'alert': [alert], 'source': [source], 'iomp': [iomp], 'remarks': [remarks]})
+    if len(alertdf) == 0:
+        alertdf = pd.DataFrame({'timestamp': [], 'site': [], 'alert': [], 'source': [], 'iomp': [], 'remarks': []})
     return alertdf
 
 def removeinvpub(df):
-    ts = pd.to_datetime(df.ts[0])
+    ts = pd.to_datetime(df['timestamp'].values[0])
     db, cur = q.SenslopeDBConnect(q.Namedb)
-    query = "DELETE FROM site_level_alert where site = '%s' and source = 'public' and alert = '%s' and timestamp <= '%s' \
-            and updateTS >= '%s'" %(df.site[0], df.alert[0], ts+timedelta(hours=0.5), ts-timedelta(hours=0.5))
+    query = "DELETE FROM site_level_alert where site = '%s' and source = 'public' and alert = '%s'" %(df['site'].values[0], df['alert'].values[0])
+    query += " and timestamp <= '%s' and updateTS >= '%s'" %(ts+timedelta(hours=0.5), ts-timedelta(hours=0.5))
+    cur.execute(query)
+    db.commit()
+    query = "DELETE FROM site_level_alert where site = '%s' and source = 'internal' and alert like '%s'" %(df['site'].values[0], df['alert'].values[0] + '%')
+    query += " and timestamp <= '%s' and updateTS >= '%s'" %(ts+timedelta(hours=0.5), ts-timedelta(hours=0.5))
     cur.execute(query)
     db.commit()
     db.close()
 
+def invsensor(df):
+    if 'sensor' in df['source'].values[0]:
+        df['remarks'] = df['remarks'].apply(lambda x: x + ' [invalid sensor retrigger until ' + str(pd.to_datetime(df['timestamp'].values[0]) + timedelta(hours=7)) + ']')
+    return df
+
+def currentinv(df, withalert):
+    level = df['alert'].values[0]
+    if level == 'A3':
+        alert = withalert.loc[withalert.alert == 'A3']
+        df = df[df.site.isin(alert.site)]
+    elif level == 'A2':
+        alert = withalert.loc[withalert.alert == 'A2']
+        df = df[df.site.isin(alert.site)]
+    else:
+        df = df[df.site.isin(withalert.site)]
+    return df
+
 def main(ts=datetime.now()):
-    query = "SELECT * FROM smsalerts where ts_set >= '%s' and alertstat = 'invalid'" %(pd.to_datetime(ts) - timedelta(3))
+    query = "SELECT * FROM smsalerts where ts_set >= '%s' and alertstat = 'invalid'" %(pd.to_datetime(ts) - timedelta(10))
     df = q.GetDBDataFrame(query)
     
     dfid = df.groupby('alert_id')
     alertdf = dfid.apply(invalert)
     alertdf = alertdf.reset_index(drop=True)
-    
-    invalertdf = alertdf.loc[alertdf.ts >= ts - timedelta(hours=0.5)]
-    invalertdf = invalertdf[~(invalertdf.source.str.contains('sensor'))]
-    invalertdf = invalertdf.loc[invalertdf.alert == 'A1']
 
-    try:    
-        sitealertdf = invalertdf.groupby('site')
-        sitealertdf.apply(removeinvpub)
-    except:
-        print 'No invalid alert'
+    invalertdf = alertdf.loc[alertdf.timestamp >= ts - timedelta(hours=3)]
+    invalertdf = invalertdf[~(invalertdf.source.str.contains('sensor'))]
+    invalertdf = invalertdf.loc[invalertdf.alert != 'A1']
+
+    sitealertdf = invalertdf.groupby('site')
+    sitealertdf.apply(removeinvpub)
 
     allpub = pd.read_csv('PublicAlert.txt', sep = '\t')
-    withalert = allpub.loc[allpub.alert != 'A0'].site
-    alertdf = alertdf[alertdf.site.isin(withalert)][['alert', 'site']]
-    
-    with open('PublicAlert.txt', 'w') as w:
-        w.write('INVALID ALERTS:\n')
-    alertdf.to_csv('PublicAlert.txt', sep=':', header=False, index=False, mode='a')
-    with open('PublicAlert.txt', 'a') as w:
-        w.write('\n')
-    allpub.to_csv('PublicAlert.txt', sep='\t', header=True, index=False, mode='a')
+    withalert = allpub.loc[allpub.alert != 'A0']
+    sitealertdf = alertdf.groupby('site')
+    alertdf = sitealertdf.apply(invsensor)
+    alertdf = alertdf[['site', 'alert', 'timestamp', 'iomp', 'remarks']]
+    alertdf = alertdf.sort_values('timestamp', ascending = False)
+    alertdf = alertdf.drop_duplicates(['site', 'alert'])
+    alertdflevel = alertdf.groupby('alert')
+    finaldf = alertdflevel.apply(currentinv, withalert=withalert)
+    print finaldf
+    finaldf.to_csv('InvalidAlert.txt', sep=':', header=True, index=False, mode='w')
 
 if __name__ == '__main__':
     start = datetime.now()

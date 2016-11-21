@@ -56,7 +56,10 @@ def colpos_json(monitoring_vel, window, config, num_nodes, seg_len, fixpoint):
     # compute column position
     colposdf = plotter.compute_colpos(window, config, monitoring_vel, num_nodes, seg_len, fixpoint=fixpoint)
     colposdfj = colposdf.rename(columns = {'cs_xz': 'downslope', 'cs_xy': 'latslope', 'x': 'depth'})
+    colposdfj['ts'] = colposdfj['ts'].apply(lambda x: str(x))
+
 #    colposdfj = colposdfj[0:3]
+
     colposdf_json = colposdfj[['ts', 'id', 'downslope', 'latslope', 'depth']].to_json(orient="records", date_format="iso")
     return colposdf, colposdf_json
 
@@ -85,7 +88,10 @@ def velocity_json(monitoring_vel, window, config, num_nodes):
     velplot = velplot_xz, velplot_xy, L2_xz, L2_xy, L3_xz, L3_xy
     
     L2 = L2_xz.append(L2_xy)
-    L3 = L3_xz.append(L3_xy)    
+    L3 = L3_xz.append(L3_xy)  
+    L2['ts'] = L2['ts'].apply(lambda x: str(x))
+    L3['ts'] = L3['ts'].apply(lambda x: str(x))    
+
 #    L2 = L2[0:3]
 #    L3 = L3[0:3]
     
@@ -117,8 +123,12 @@ def displacement_json(monitoring_vel, window, config, num_nodes, fixpoint):
     #zeroing and offseting xz,xy
     df0off = plotter.disp0off(monitoring_vel, window, config, xzd_plotoffset, num_nodes, fixpoint=fixpoint)
     df0offj = df0off.rename(columns = {'xz': 'downslope', 'xy': 'latslope'})
+    df0offj = df0offj.reset_index()
+    df0offj['ts'] = df0offj['ts'].apply(lambda x: str(x))
+
 #    df0offj = df0offj[0:3]
-    df0off_json = df0offj.reset_index()[['ts', 'id', 'downslope', 'latslope']].to_json(orient="records", date_format="iso")
+
+    df0off_json = df0offj[['ts', 'id', 'downslope', 'latslope']].to_json(orient="records", date_format="iso")
 
     return df0off, df0off_json
 
@@ -167,5 +177,8 @@ def vcdgen(colname, endTS='', startTS='', day_interval=1, fixpoint='bottom'):
 #    
 #if __name__ == '__main__':
 #    start = datetime.now()
+#    v=velocity('magta', endTS='2016-10-12 12:00')
 #    c=colpos('magta', endTS='2016-10-12 12:00')
+#    d=displacement('magta', endTS='2016-10-12 12:00')
+#    vcd=vcdgen('magta', endTS='2016-10-12 12:00')
 #    print "runtime =", str(datetime.now() - start)

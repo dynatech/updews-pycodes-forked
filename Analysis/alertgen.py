@@ -296,13 +296,12 @@ def write_site_alert(site, window):
     return output
 
 
-def main(name=''):
+def main(name='', end=datetime.now()):
     if name == '':
         name = sys.argv[1].lower()
-
-    start = datetime.now()
     
-    window,config = rtw.getwindow()    
+    window,config = rtw.getwindow(end)
+
     col = q.GetSensorList(name)
     monitoring = g.genproc(col[0], window, config, config.io.column_fix)
     lgd = q.GetLastGoodDataFromDb(monitoring.colprops.name)
@@ -330,12 +329,12 @@ def main(name=''):
         
     column_level_alert = pd.DataFrame({'timestamp': [window.end], 'site': [monitoring.colprops.name], 'source': ['sensor'], 'alert': [site_alert], 'updateTS': [window.end]})
     
-    print column_level_alert
-    
     if site_alert in ('L2', 'L3'):
-        A.main(monitoring.colprops.name)
-    else:
-        alert_toDB(column_level_alert, 'column_level_alert', window)
+        column_level_alert = A.main(monitoring.colprops.name, window.end)
+
+    alert_toDB(column_level_alert, 'column_level_alert', window)
+    
+    print column_level_alert
     
     write_site_alert(monitoring.colprops.name, window)
 
@@ -357,12 +356,12 @@ def main(name=''):
         plotter.main(monitoring, window, config, plotvel_start=window.end-timedelta(hours=3), plotvel_end=window.end, realtime=False)
 
 #######################
-
-    print 'run time =', datetime.now()-start
     
     return column_level_alert
 
 ################################################################################
 
 if __name__ == "__main__":
+    start = datetime.now()
     main()
+    print 'run time =', datetime.now()-start
