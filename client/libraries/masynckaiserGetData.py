@@ -133,7 +133,21 @@ def getLatestPKValue(schema, table):
 
     else:
         #There is a different procedure for tables with multiple PKs greater than 3
-        print "\n(TODO) %s: %s Number of Primary Keys: %s (TODO)" % (common.whoami(), table, numPKs)
+        print "\n(TODO) %s: %s Number of Primary Keys: %s" % (common.whoami(), table, numPKs)
+        # return -1
+        countTS = 0
+        countID = 0
+
+        for pk in PKs:
+            #TODO: check if there is a key with the word "timestamp" on it and use it as PK
+            if pk.find("timestamp") >= 0:
+                print "%s: %s Use %s as Primary Key" % (common.whoami(), table, pk)
+                #TODO: contruct the PK Json using the timestamp as primary key
+                return constructPKjson(schema, table, pk)
+                continue
+
+            #TODO: check if there is a key with the word "id" on it and use it as PK
+
         return -1
 
 def constructPKjson(schema, table, pKey):

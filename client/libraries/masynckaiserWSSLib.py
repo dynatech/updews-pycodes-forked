@@ -461,6 +461,9 @@ def syncStartUp(host, port, batchRows=200):
                 tablesNonExistent.append(table)
                 createTableFromWSS(ws, schema, table)
                 
+            if table in ["gndmeas","gndmeasbak","lut_activities","membership","public_alert_release","rain_noah"]:
+                updateTableData(ws, schema, table, batchRows, "ignore")
+                
             # #TEMPORARY: To be deleted after test
             # if table == "smsinbox":
             #     updateTableData(ws, schema, table, batchRows, "ignore")
@@ -487,7 +490,7 @@ def syncStartUp(host, port, batchRows=200):
             #     updateTableData(ws, schema, table, batchRows, "ignore")
 
             # Update Current Table
-            updateTableData(ws, schema, table, batchRows, "ignore")
+            # updateTableData(ws, schema, table, batchRows, "ignore")
             
 #        print "\nExisting: "
 #        print tablesExisting
@@ -521,7 +524,10 @@ def updateTableData(ws, schema, table, batchRows=200, insType="ignore"):
                     createTableFromWSS(ws, schema, table)
                     #Update Table
                     updateTableData(ws, schema, table, batchRows, insType)
+                #Handle "Syntax Error"
+                elif retMsg[0] == 1064:
                     pass
+                
             except Exception as e:
                 pass
 
