@@ -99,7 +99,7 @@ def plot_cracks(which_site,zeroed=True):
         site_p = []
         site_num_data = []
         site_max_feature_name = 0
-        if len(features)>1:
+        if len(features)>=1:
             #generating non-repeating colors for features######## 
             jet = cm = plt.get_cmap('jet') 
             cNorm  = colors.Normalize(vmin=0, vmax=len(features)-1)
