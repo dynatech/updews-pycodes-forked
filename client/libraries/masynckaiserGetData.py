@@ -111,44 +111,47 @@ def getLatestPKValue(schema, table):
         return constructPKjson(schema, table, PKs[0])
 
     elif numPKs > 1 and numPKs < 4:
-        curBiggestPKcount = 0
-        mainPK = ""
-
         #Identify the Main Primary Key (usually the timestamp)
-        for pk in PKs:
-            query = "SELECT COUNT(DISTINCT %s) FROM %s" % (pk, table)
-            PKcount = bdb.GetDBResultset(query, schema)
-
-            try:
-                # print "%s %s.%s count = %s" % (common.whoami(), table, pk, PKcount)
-                if PKcount > curBiggestPKcount:
-                    curBiggestPKcount = PKcount
-                    mainPK = pk
-                    # print "Main PK is now (%s)" % (mainPK)
-            except:
-                pass
-
-        # print "%s %s Main Primary Key: %s (%s distinct values)" % (common.whoami(), table, mainPK, curBiggestPKcount)
+        mainPK = getPKwithMostCount(schema, table, PKs)
         return constructPKjson(schema, table, mainPK)
 
     else:
         #There is a different procedure for tables with multiple PKs greater than 3
-        print "\n(TODO) %s: %s Number of Primary Keys: %s" % (common.whoami(), table, numPKs)
+        # print "\n(TODO) %s: %s Number of Primary Keys: %s" % (common.whoami(), table, numPKs)
         # return -1
         countTS = 0
         countID = 0
+        pkTS = []
+        pkID = []
 
         for pk in PKs:
-            #TODO: check if there is a key with the word "timestamp" on it and use it as PK
+            #Check if there is a key with the word "timestamp" on it and use it as PK
             if pk.find("timestamp") >= 0:
-                print "%s: %s Use %s as Primary Key" % (common.whoami(), table, pk)
-                #TODO: contruct the PK Json using the timestamp as primary key
-                return constructPKjson(schema, table, pk)
-                continue
+                # print "%s: %s Use %s as Primary Key" % (common.whoami(), table, pk)
+                #contruct the PK Json using the timestamp as primary key
+                pkTS.append(pk)
 
-            #TODO: check if there is a key with the word "id" on it and use it as PK
+            #Check if there is a key with the word "id" on it and use it as PK
+            if pk.find("id") >= 0:
+                # print "%s: %s Use %s as Primary Key" % (common.whoami(), table, pk)
+                #contruct the PK Json using the id as primary key
+                pkTS.append(pk)
 
-        return -1
+        if len(pkTS) > 0:
+            #Identify the Main Primary Key (usually the timestamp)
+            mainPK = getPKwithMostCount(schema, table, pkTS)
+            mainPKjson = constructPKjson(schema, table, mainPK)
+            # print "%s: Main Primary Key JSON (%s)" % (common.whoami(), mainPKjson)
+            return mainPKjson
+        elif len(pkID) > 0:
+            #Identify the Main Primary Key (use ID if the timestamp is unavailable)
+            mainPK = getPKwithMostCount(schema, table, pkID)
+            mainPKjson = constructPKjson(schema, table, mainPK)
+            # print "%s: Main Primary Key JSON (%s)" % (common.whoami(), mainPKjson)
+            return mainPKjson
+        else:
+            print "%s ERROR: No Main Primary Key Found for %s!" % (common.whoami(), table)
+            return -1
 
 def constructPKjson(schema, table, pKey):
         #Get the latest value of Main PK
@@ -167,8 +170,32 @@ def constructPKjson(schema, table, pKey):
 
         #Return JSON PK and Value/s
         jsonPKandVal = json.loads(jsonPKandValstring)
-        print jsonPKandVal
+        print "%s: %s" % (common.whoami(), jsonPKandVal)
         return jsonPKandVal
+
+def getPKwithMostCount(schema, table, pKeys):
+    if len(pKeys) <= 0:
+        print "%s ERROR: No Primary Keys Found for %s" % (common.whoami(), table)
+        return -1
+
+    curBiggestPKcount = 0
+    mainPK = ""
+
+    for pk in pKeys:
+        query = "SELECT COUNT(DISTINCT %s) FROM %s" % (pk, table)
+        PKcount = bdb.GetDBResultset(query, schema)
+
+        try:
+            # print "%s %s.%s count = %s" % (common.whoami(), table, pk, PKcount)
+            if PKcount > curBiggestPKcount:
+                curBiggestPKcount = PKcount
+                mainPK = pk
+                # print "Main PK is now (%s)" % (mainPK)
+        except:
+            print "%s ERROR: Crash happened in counting for %s" % (common.whoami(), pk)
+
+    #Return the mainPK 
+    return mainPK
 
 #Parse the json message and return as an array
 def parseBasicList(payload, withKey=False):
