@@ -190,20 +190,20 @@ def crack_eval(df,out_folder,end):
                     else:
                         crack_alert = 'l0'
                     #Perform p value computation for specific crack
-                    if abs_disp == 1:
-                        if len(df) >= 4:
-                            #get the last 4 data values for the current feature
-                            last_cur_feature_measure = df.tail(4).meas.values
-                            last_cur_feature_time = (df.timestamp.tail(4).values - df.timestamp.values[0])/np.timedelta64(1,'D')
-                
-                            #perform linear regression to get p value
-                            m, b, r, p, std = stats.linregress(last_cur_feature_time,last_cur_feature_measure)
-                            #^&*()
-                            print p
-                            
-                            #Evaluate p value
-                            if p > 0.05:
-                                crack_alert = 'l0p'
+#                    if abs_disp == 1:
+#                        if len(df) >= 4:
+#                            #get the last 4 data values for the current feature
+#                            last_cur_feature_measure = df.tail(4).meas.values
+#                            last_cur_feature_time = (df.timestamp.tail(4).values - df.timestamp.values[0])/np.timedelta64(1,'D')
+#                
+#                            #perform linear regression to get p value
+#                            m, b, r, p, std = stats.linregress(last_cur_feature_time,last_cur_feature_measure)
+#                            #^&*()
+#                            print p
+#                            
+#                            #Evaluate p value
+#                            if p > 0.05:
+#                                crack_alert = 'l0p'
                                 
                     #Perform Trending Test if alert is not L0
                     if (crack_alert != 'l0' and crack_alert != 'l0p'):
@@ -276,22 +276,20 @@ def alert_toDB(df,end):
     
     df2 = GetDBDataFrame(query)
     try:
-        if len(df2) == 0 or df2.alert.values[0] != df.alert.values[0]:
+        if len(df2) == 0 or ((df2.alert.values[0] != df.alert.values[0]) and (df2.timestamp.values[0] != df.timestamp.values[0])):
             engine = create_engine('mysql://'+Userdb+':'+Passdb+'@'+Hostdb+':3306/'+Namedb)
             df['updateTS'] = end
             df.to_sql(name = 'site_level_alert', con = engine, if_exists = 'append', schema = Namedb, index = False)
-        elif df2.timestamp.values[0] == df.timestamp.values[0]:
+        elif (df2.timestamp.values[0] == df.timestamp.values[0]) and (df2.alert.values[0] != df.alert.values[0]):
             db, cur = SenslopeDBConnect(Namedb)
             query = "UPDATE senslopedb.%s SET updateTS='%s', alert='%s' WHERE site = '%s' and source = 'ground' and alert = '%s' and timestamp = '%s'" %('site_level_alert', pd.to_datetime(str(end)), df.alert.values[0], df2.site.values[0], df2.alert.values[0], pd.to_datetime(str(df2.timestamp.values[0])))
             cur.execute(query)
             db.commit()
             db.close()
         elif df2.alert.values[0] == df.alert.values[0]:
-            db, cur = SenslopeDBConnect(Namedb)
-            query = "UPDATE senslopedb.%s SET updateTS='%s' WHERE site = '%s' and source = 'ground' and alert = '%s' and timestamp = '%s'" %('site_level_alert', pd.to_datetime(str(end)), df2.site.values[0], df2.alert.values[0], pd.to_datetime(str(df2.timestamp.values[0])))
-            cur.execute(query)
-            db.commit()
-            db.close()
+            engine = create_engine('mysql://'+Userdb+':'+Passdb+'@'+Hostdb+':3306/'+Namedb)
+            df['updateTS'] = end
+            df.to_sql(name = 'site_level_alert', con = engine, if_exists = 'append', schema = Namedb, index = False)
     except:
         print "Cannot write to db {}".format(df.site.values[0])
 
@@ -519,28 +517,28 @@ def GenerateGroundDataAlert(site=None,end=None):
     uptoDB_gndmeas_alerts(ground_alert_release,ground_alert_previous)
     
     #Step 6: Upload to site_level_alert        
-#    ground_site_level = ground_alert_release.reset_index()
-#    ground_site_level['source'] = 'ground'
-#    
-#    df_for_db = ground_site_level[['timestamp','site','source','alert']]    
-#    df_for_db.dropna()
-#    print df_for_db    
-#    
-#    site_DBdf = df_for_db.groupby('site')
-#    site_DBdf.apply(alert_toDB,end)    
+    ground_site_level = ground_alert_release.reset_index()
+    ground_site_level['source'] = 'ground'
+    
+    df_for_db = ground_site_level[['timestamp','site','source','alert']]    
+    df_for_db.dropna()
+    print df_for_db    
+    
+    site_DBdf = df_for_db.groupby('site')
+    site_DBdf.apply(alert_toDB,end)    
     
     
     #Step 7: Displacement plot for each crack and site for the last 30 days
-#    start = pd.to_datetime(end) - timedelta(days = 30)
-#    ground_data_to_plot = get_ground_df(start,end,site)
-#    ground_data_to_plot['site_id'] = map(lambda x: x.lower(),ground_data_to_plot['site_id'])
-#    ground_data_to_plot['crack_id'] = map(lambda x: x.title(),ground_data_to_plot['crack_id'])
-#    
-#    tsn=pd.to_datetime(end).strftime("%Y-%m-%d_%H-%M-%S")
-#    site_data_to_plot = ground_data_to_plot.groupby('site_id')
-#    site_data_to_plot.apply(PlotSite,tsn,print_out_path)
-#    
-#    end_time = datetime.now()
+    start = pd.to_datetime(end) - timedelta(days = 30)
+    ground_data_to_plot = get_ground_df(start,end,site)
+    ground_data_to_plot['site_id'] = map(lambda x: x.lower(),ground_data_to_plot['site_id'])
+    ground_data_to_plot['crack_id'] = map(lambda x: x.title(),ground_data_to_plot['crack_id'])
+    
+    tsn=pd.to_datetime(end).strftime("%Y-%m-%d_%H-%M-%S")
+    site_data_to_plot = ground_data_to_plot.groupby('site_id')
+    site_data_to_plot.apply(PlotSite,tsn,print_out_path)
+    
+    end_time = datetime.now()
 #    print "time = ",end_time-start_time
 ################## #Stand by Functionalities
 
