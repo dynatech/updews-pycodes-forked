@@ -129,7 +129,7 @@ def genproc(col, window, config, fixpoint, realtime=False):
     monitoring = monitoring.loc[monitoring.id <= col.nos]
     
     #assigns timestamps from LGD to be timestamp of offsetstart
-    monitoring.loc[monitoring.ts < window.offsetstart, ['ts']] = window.offsetstart
+    monitoring.loc[(monitoring.ts < window.offsetstart)|(pd.isnull(monitoring.ts)), ['ts']] = window.offsetstart
     
     monitoring['xz'],monitoring['xy'] = accel_to_lin_xz_xy(col.seglen,monitoring.x.values,monitoring.y.values,monitoring.z.values)
     
