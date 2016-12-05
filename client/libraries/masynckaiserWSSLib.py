@@ -456,8 +456,10 @@ def syncStartUp(host, port, batchRows=200):
         
         for table in tables:
             if bdb.DoesTableExist(schema, table):
+                # print "Table Exists: %s" % (table)
                 tablesExisting.append(table)
             else:
+                # print "Table does NOT Exist: %s" % (table)
                 tablesNonExistent.append(table)
                 createTableFromWSS(ws, schema, table)
                 
@@ -489,6 +491,9 @@ def syncStartUp(host, port, batchRows=200):
             # if table == "bartaw":
             #     updateTableData(ws, schema, table, batchRows, "ignore")
 
+            # if table == "rain_noah_812":
+            #     updateTableData(ws, schema, table, batchRows, "ignore")
+
             # Update Current Table
             updateTableData(ws, schema, table, batchRows, "ignore")
             
@@ -505,8 +510,17 @@ def syncStartUp(host, port, batchRows=200):
 def updateTableData(ws, schema, table, batchRows=200, insType="ignore"):
     #Get the Data Update from Web Socket Server
     dataUpdate = masyncGD.getDataUpdateList(ws, schema, table, batchRows, True)
-    
+
     try:
+        #Handle mismatched table construction
+        if dataUpdate[0] == 1146:
+            print "%s: Dropping and Creating a NEW %s table" % (common.whoami(), table)
+            #Drop the current table
+            bdb.DropTable(schema, table)
+            #Create the new table based from Server
+            createTableFromWSS(ws, schema, table)
+            return
+
         returnedRows = len(dataUpdate)
 
         if returnedRows > 0:
@@ -516,7 +530,7 @@ def updateTableData(ws, schema, table, batchRows=200, insType="ignore"):
             #Check if there was an error in pushing the data to the target table
             try:
                 #Handle "Unknown Column" in "field list"
-                if retMsg[0] == 1054:
+                if (retMsg[0] == 1054) or (retMsg[0] == 1146):
                     print "%s: Dropping and Creating a NEW %s table" % (common.whoami(), table)
                     #Drop the current table
                     bdb.DropTable(schema, table)

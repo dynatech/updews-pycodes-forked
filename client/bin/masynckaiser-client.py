@@ -59,7 +59,7 @@ port = 5055
 schema = "senslopedb"
 table = "smsoutbox"
 
-output = masync.syncStartUp(host, port, 10000)
+output = masync.syncStartUp(host, port, 1000)
 # bdb.PushDBjson(jsonData=output, table_name='smsinbox', schema_name='senslopedb', insType='ignore')
 
 #msg = format(schemas.decode('utf8'))

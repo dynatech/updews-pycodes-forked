@@ -77,6 +77,13 @@ def getDataUpdateList(ws=None, schema=None, table=None, limit=10, withKey=True):
 
     latestPKval = getLatestPKValue(schema, table)
 
+    try:
+        #Catch mismatched table construction
+        if latestPKval[0] == 1146:
+            return latestPKval
+    except Exception as e:
+        pass
+
     #TEMPORARY: catch if no PKval was returned
     if latestPKval == -1:
         print "%s TESTING: multiple primary keys in a table" % (common.whoami())
@@ -99,13 +106,17 @@ def getDataUpdateList(ws=None, schema=None, table=None, limit=10, withKey=True):
 def getLatestPKValue(schema, table):
     primaryKeys = bdb.GetTablePKs(schema, table)
     numPKs = len(primaryKeys)    
-    # print "\n%s %s: Number of Primary Keys: %s" % (common.whoami(), table, numPKs)
+    print "\n%s %s: Number of Primary Keys: %s" % (common.whoami(), table, numPKs)
     
     print "%s:" % (table),
     PKs = []
-    for pk in primaryKeys:
-        print "%s" % (pk[4]), 
-        PKs.append(pk[4])
+    try:
+        for pk in primaryKeys:
+            print "%s" % (pk[4]), 
+            PKs.append(pk[4])
+    except:
+        errorDetails = primaryKeys
+        return errorDetails
     
     if numPKs == 1:
         return constructPKjson(schema, table, PKs[0])
