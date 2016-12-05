@@ -20,17 +20,6 @@ def showTables(schema=None):
                   "schema":"%s"}""" % (schema)
     return request
     
-def getTableConstructionCommand(schema, table):
-    if (not schema) or (not table):
-        msgError = "%s ERROR: No schema or table selected" % (common.whoami())
-        print msgError
-        return None
-    
-    request = """{"dir":0,"action":"read",
-                  "query":"SHOW CREATE TABLE %s",
-                  "schema":"%s"}""" % (table, schema)
-    return request
-    
 def showPrimaryKey(schema, table):
     if (not schema) or (not table):
         msgError = "%s ERROR: No schema or table selected" % (common.whoami())
@@ -39,6 +28,17 @@ def showPrimaryKey(schema, table):
     
     request = """{"dir":0,"action":"read",
                   "query":"SHOW INDEX FROM %s",
+                  "schema":"%s"}""" % (table, schema)
+    return request
+
+def getTableConstructionCommand(schema, table):
+    if (not schema) or (not table):
+        msgError = "%s ERROR: No schema or table selected" % (common.whoami())
+        print msgError
+        return None
+    
+    request = """{"dir":0,"action":"read",
+                  "query":"SHOW CREATE TABLE %s",
                   "schema":"%s"}""" % (table, schema)
     return request
     
