@@ -26,7 +26,7 @@ def getSchemaList(ws=None):
         ws.send(requestMsg)
         result = ws.recv()
 #        print "%s: Received '%s'" % (common.whoami(), result)
-        schemaList = parseBasicList(result)
+        schemaList = common.parseBasicList(result)
         
         return schemaList
     else:
@@ -44,7 +44,7 @@ def getTableList(ws=None, schema=None):
         ws.send(requestMsg)
         result = ws.recv()
 #        print "%s: Received '%s\n\n'" % (common.whoami(), result)
-        tableList = parseBasicList(result)
+        tableList = common.parseBasicList(result)
         
         return tableList
     else:
@@ -62,7 +62,7 @@ def getTableCreationCmd(ws=None, schema=None, table=None):
         ws.send(requestMsg)
         result = ws.recv()
 #        print "%s: Received '%s\n\n'" % (common.whoami(), result)
-        tableCreationCommand = parseTableCreationCommand(result)
+        tableCreationCommand = common.parseTableCreationCommand(result)
         
         return tableCreationCommand
     else:
@@ -80,7 +80,7 @@ def findTableExistence(ws=None, schema=None, table=None):
         ws.send(requestMsg)
         result = ws.recv()
 #        print "%s: Received '%s\n\n'" % (common.whoami(), result)
-        doesTableExist = len(parseBasicList(result))
+        doesTableExist = len(common.parseBasicList(result))
         
         return doesTableExist
     else:
@@ -112,7 +112,7 @@ def getDataUpdateList(ws=None, schema=None, table=None, limit=10, withKey=True):
         ws.send(updateCmd)
         result = ws.recv()
         # print "%s: Received '%s\n\n'" % (common.whoami(), result)
-        dataUpdate = parseBasicList(result, withKey)
+        dataUpdate = common.parseBasicList(result, withKey)
         
         # Return data update
         return dataUpdate
@@ -225,32 +225,3 @@ def getPKwithMostCount(schema, table, pKeys):
 
     #Return the mainPK 
     return mainPK
-
-#Parse the json message and return as an array
-def parseBasicList(payload, withKey=False):
-    msg = format(payload.decode('utf8'))
-    parsed_json = json.loads(json.loads(msg))
-    
-    if withKey:
-        return parsed_json
-    else:
-        schemaList = []
-        for json_dict in parsed_json:
-            for key,value in json_dict.iteritems():
-    #            print("key: {} | value: {}".format(key, value))
-                schemaList.append(value)
-                
-        return schemaList
-
-def parseTableCreationCommand(payload):
-    msg = format(payload.decode('utf8'))
-    parsed_json = json.loads(json.loads(msg))
-    
-    schemaList = []
-    for json_dict in parsed_json:
-        for key,value in json_dict.iteritems():
-#            print("key: {} | value: {}".format(key, value))
-            schemaList.append(value)
-            
-#    print schemaList[1]
-    return schemaList[1]
