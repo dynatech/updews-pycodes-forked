@@ -198,7 +198,7 @@ def SitePublicAlert(PublicAlert, window):
         if 'D' in other_alerts:
             source += ['on demand']
     except:
-        retriggerTS = ''
+        retriggerTS = {}
         source = ''
         print 'Public Alert- A0'
     
