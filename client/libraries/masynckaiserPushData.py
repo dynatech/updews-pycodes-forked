@@ -14,6 +14,7 @@ from websocket import create_connection
 import basicDB as bdb
 import common
 import masynckaiserServerRequests as masyncSR
+import masynckaiserGetData as masyncGD
 
 # Initiate a database table creation on the web socket server using the 
 # special client request

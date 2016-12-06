@@ -120,6 +120,46 @@ def getDataUpdateList(ws=None, schema=None, table=None, limit=10, withKey=True):
         print "%s ERROR: No request message passed" % (common.whoami())
         return None
 
+# Compare PK Values of Special Client (localhost) and Websocket Server
+# Returns:
+#       False - if there is no need to update the websocket server
+#       Primary Key and the WSS Max Value - if the websocket server needs
+#               to be updated
+def comparePKValuesSCandWSS(ws=None, schema=None, table=None):
+    # Get latest PK Value from Local Server
+    mainPKandVal = getLatestPKValue(schema, table)
+
+    # TODO: Check latest value available on WSS
+    mainPK = None
+    pkValLocalMax = None
+
+    for key, value in mainPKandVal.iteritems():
+        mainPK = key 
+        pkValLocalMax = value
+
+    qWSSPKval = "SELECT MAX(%s) as %s FROM %s" % (mainPK, mainPK, table)
+    # print "WSS Query: %s" % (qWSSPKval)
+    wsspkvalCmd = masyncSR.compReadQuery(schema, qWSSPKval)
+    # print wsspkvalCmd
+    if wsspkvalCmd:
+        ws.send(wsspkvalCmd)
+        result = ws.recv()
+        # print "%s: Received '%s\n\n'" % (common.whoami(), result)
+        dataWSSpkval = (common.parseBasicList(result, True))[0]
+        print dataWSSpkval
+
+        # Compare latest PK Value from Local Server and WSS
+        pkValWSS = None
+        for key, value in dataWSSpkval.iteritems():
+            pkValWSS = value
+
+        if pkValLocalMax > pkValWSS:
+            print "Local Data is more updated. Update Websocket Server data"
+            return dataWSSpkval
+        else:
+            print "No need to update Websocket Server data using Special Client"
+            return False
+
 #Get the latest value of Primary Key/s of the client's database
 def getLatestPKValue(schema, table):
     primaryKeys = bdb.GetTablePKs(schema, table)

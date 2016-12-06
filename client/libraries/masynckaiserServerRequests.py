@@ -32,6 +32,18 @@ def findTable(schema, table):
                   "schema":"%s"}""" % (table, schema)
     return request
     
+#Composite Read Query
+def compReadQuery(schema, query):
+    if (not schema) or (not query):
+        msgError = "%s ERROR: No schema or query selected" % (common.whoami())
+        print msgError
+        return None
+    
+    request = """{"dir":0,"action":"read",
+                  "query":"%s",
+                  "schema":"%s"}""" % (query, schema)
+    return request
+
 #Modifier Query sent to Web Socket Server
 #WARNING: This is a VERY POWERFUL command that can edit/add/delete data on the
 #   web socket server side

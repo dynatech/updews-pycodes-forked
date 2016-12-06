@@ -451,21 +451,26 @@ def syncSpecialClientToWSS(host, port, batchRows=200):
     for row in returnedRows:
         table = row[0]
 
-        if table in ["agbsb","gndmeas","smsoutbox","lootb"]:   
+        # if table in ["agbsb","gndmeas","smsoutbox","lootb"]:   
+        if table in ["agbsb","parta","sinb","sintb","tueta"]:
             # print "%s: %s" % (schema, table)
             # Check if table target exists on WSS
             doesExist = masyncGD.findTableExistence(ws, schema, table)
             if doesExist:
-                print "EXISTS on WSS: %s" % (table)
+                print "\nEXISTS on WSS: %s" % (table)
             else:
                 print "DOES NOT exist on WSS: %s" % (table)
                 # Create table on WSS if target doesn't exist
                 ret = masyncPD.pushTableCreation(ws, schema, table)
 
-        # TODO: Check latest value available on WSS
-        # TODO: Collect latest data to be transferred to WSS from Special Client
-        # TODO: Transfer data from Special Client to WSS
-        # TODO: Repeat until latest of Special Client and WSS are the same
+            # Compare PK Values of Special Client (localhost) and Websocket Server
+            wssPKandVal = masyncGD.comparePKValuesSCandWSS(ws, schema, table)
+
+            # TODO: Collect latest data to be transferred to WSS from Special Client
+
+            
+            # TODO: Transfer data from Special Client to WSS
+            # TODO: Repeat until latest of Special Client and WSS are the same
 
     # #Get names of all schemas
     # schemas = masyncGD.getSchemaList(ws)
@@ -547,7 +552,8 @@ def syncStartUp(host, port, batchRows=200):
                 tablesNonExistent.append(table)
                 createTableFromWSS(ws, schema, table)
                 
-            if table in ["agbsb","blcb","gndmeas","gndmeasbak","lut_activities","membership","public_alert_release","rain_noah"]:
+            # if table in ["agbsb","blcb","gndmeas","gndmeasbak","lut_activities","membership","public_alert_release","rain_noah"]:
+            if table in ["agbsb","parta","sinb","sintb","tueta"]:
                 updateTableData(ws, schema, table, batchRows, "ignore")
 
             # #TEMPORARY: To be deleted after test
