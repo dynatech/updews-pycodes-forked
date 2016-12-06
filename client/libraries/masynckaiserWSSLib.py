@@ -29,6 +29,7 @@ from websocket import create_connection
 import basicDB as bdb
 import common
 import masynckaiserGetData as masyncGD
+import masynckaiserPushData as masyncPD
 import masynckaiserServerRequests as masyncSR
 
 ###############################################################################
@@ -455,25 +456,11 @@ def syncSpecialClientToWSS(host, port, batchRows=200):
             # Check if table target exists on WSS
             doesExist = masyncGD.findTableExistence(ws, schema, table)
             if doesExist:
-                print "EXISTS: %s" % (table)
+                print "EXISTS on WSS: %s" % (table)
             else:
-                print "Table (%s): DOES NOT EXIST..." % (table)
-                # TODO: Create table on WSS if target doesn't exist
-                qShowCreateTable = "SHOW CREATE TABLE %s" % (table)
-                qTableCreation = (bdb.GetDBResultset(qShowCreateTable, schema))[0][1]
-                # print qTableCreation
-                requestMsg = masyncSR.modifierQuery(schema, qTableCreation)
-                # print requestMsg
-
-                if requestMsg:    
-                    ws.send(requestMsg)
-                    result = ws.recv()
-                    print "Result: %s" % (result)
-
-                    if result == "false":
-                        print "Table (%s) creation on Web Server Failed" % (table)
-                    elif result == "true":
-                        print "Table (%s) creation on Web Server SUCCEEDED!" % (table)
+                print "DOES NOT exist on WSS: %s" % (table)
+                # Create table on WSS if target doesn't exist
+                ret = masyncPD.pushTableCreation(ws, schema, table)
 
         # TODO: Check latest value available on WSS
         # TODO: Collect latest data to be transferred to WSS from Special Client
