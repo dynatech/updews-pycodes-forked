@@ -171,19 +171,20 @@ def SitePublicAlert(PublicAlert, window):
         if 'd1' in RED_alert.alert.values:
             other_alerts += 'D'
         #last L2/L3 retriggger
-        retriggerTS = []
+        retriggerTS = {}
         for i in ['l2', 'l3', 'L2', 'L3']:
             try:
-                retriggerTS += [i + '_' + str(pd.to_datetime(max(SG_alert.loc[SG_alert.alert == i].updateTS.values)))]
+                retriggerTS[i] = str(pd.to_datetime(max(SG_alert.loc[SG_alert.alert == i].updateTS.values)))
             except:
                 continue        
         #last RED retriggger
         for i in ['r1', 'e1', 'd1']:
             try:
-                retriggerTS += [i + '_' + str(pd.to_datetime(max(RED_alert.loc[RED_alert.alert == i].updateTS.values)))]
+                retriggerTS[i] = str(pd.to_datetime(max(RED_alert.loc[RED_alert.alert == i].updateTS.values)))
+                print retriggerTS
             except:
                 continue
-        retriggerTS = ';'.join(retriggerTS)
+        retriggerTS = [retriggerTS]
         
         source = []
         if 'L2' in SG_alert['alert'].values or 'L3' in SG_alert['alert'].values:
