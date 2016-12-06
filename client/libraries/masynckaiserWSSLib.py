@@ -28,7 +28,7 @@ from websocket import create_connection
 
 import basicDB as bdb
 import common
-import masynckaiserGetLocalData as masyncGLD
+import masynckaiserGetData as masyncGD
 import masynckaiserServerRequests as masyncSR
 
 ###############################################################################
@@ -440,15 +440,44 @@ def syncSpecialClientToWSS(host, port, batchRows=200):
     schemasBlocked = ["information_schema","mysql","performance_schema","phpmyadmin"]
 
     # TODO: Check all schemas allowed by WSS for syncing from Special Client
-    # TODO: Check if table target exists on WSS
-        # TODO: Create table on WSS if target doesn't exist
+
+    # Get list of tables from local database
+    queryShowLocalTables = "SHOW TABLES;"
+    allowedSchema = "senslopedb"
+    schema = allowedSchema
+    returnedRows = bdb.GetDBResultset(queryShowLocalTables, schema)
+    
+    # Iterate through the list of tables
+    for row in returnedRows:
+        table = row[0]
+
+        if table in ["agbsb","gndmeas","smsoutbox","lootb"]:   
+            # print "%s: %s" % (schema, table)
+            # Check if table target exists on WSS
+            doesExist = masyncGD.findTableExistence(ws, schema, table)
+            if doesExist:
+                print "EXISTS: %s" % (table)
+            else:
+                print "DOES NOT EXIST..."
+                # TODO: Create table on WSS if target doesn't exist
+                qShowCreateTable = "SHOW CREATE TABLE %s" % (table)
+                qTableCreation = (bdb.GetDBResultset(qShowCreateTable, schema))[0][1]
+                # print qTableCreation
+                requestMsg = masyncSR.compositeQuery(schema, qTableCreation)
+                print requestMsg
+
+                if requestMsg:    
+                    ws.send(requestMsg)
+                    result = ws.recv()
+                    print "Result: %s" % (result)
+
         # TODO: Check latest value available on WSS
         # TODO: Collect latest data to be transferred to WSS from Special Client
         # TODO: Transfer data from Special Client to WSS
         # TODO: Repeat until latest of Special Client and WSS are the same
 
     # #Get names of all schemas
-    # schemas = masyncGLD.getSchemaList(ws)
+    # schemas = masyncGD.getSchemaList(ws)
     # for schema in schemas:
     #     if schema in schemasBlocked:
     #         print "This is one of the blocked schemas"
@@ -462,7 +491,7 @@ def syncSpecialClientToWSS(host, port, batchRows=200):
     #         bdb.CreateSchema(schema)
         
     #     #Get all table names per available schema
-    #     tables = masyncGLD.getTableList(ws, schema)  
+    #     tables = masyncGD.getTableList(ws, schema)  
     #     tablesExisting = []
     #     tablesNonExistent = []
         
@@ -500,7 +529,7 @@ def syncStartUp(host, port, batchRows=200):
     schemasBlocked = ["information_schema","mysql","performance_schema","phpmyadmin"]
 
     #Get names of all schemas
-    schemas = masyncGLD.getSchemaList(ws)
+    schemas = masyncGD.getSchemaList(ws)
     for schema in schemas:
         if schema in schemasBlocked:
             print "This is one of the blocked schemas"
@@ -514,7 +543,7 @@ def syncStartUp(host, port, batchRows=200):
             bdb.CreateSchema(schema)
         
         #Get all table names per available schema
-        tables = masyncGLD.getTableList(ws, schema)  
+        tables = masyncGD.getTableList(ws, schema)  
         tablesExisting = []
         tablesNonExistent = []
         
@@ -573,7 +602,7 @@ def syncStartUp(host, port, batchRows=200):
 # Update Data based on table and schema
 def updateTableData(ws, schema, table, batchRows=200, insType="ignore"):
     #Get the Data Update from Web Socket Server
-    dataUpdate = masyncGLD.getDataUpdateList(ws, schema, table, batchRows, True)
+    dataUpdate = masyncGD.getDataUpdateList(ws, schema, table, batchRows, True)
 
     try:
         #Handle mismatched table construction
@@ -623,7 +652,7 @@ def updateTableData(ws, schema, table, batchRows=200, insType="ignore"):
 def createTableFromWSS(ws, schema, table):
     #Request SQL command for generating missing tables on local
     #   database of client
-    tableCreationCommand = masyncGLD.getTableCreationCmd(ws, schema, table)
+    tableCreationCommand = masyncGD.getTableCreationCmd(ws, schema, table)
     #Create Table
     print "%s: Creating Table (%s)..." % (common.whoami(), table)                    
     bdb.ExecuteQuery(tableCreationCommand, schema)

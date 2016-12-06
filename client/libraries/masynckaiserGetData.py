@@ -69,6 +69,24 @@ def getTableCreationCmd(ws=None, schema=None, table=None):
         print "%s ERROR: No request message passed" % (common.whoami())
         return None
 
+#Find the existence of table in the Web Socket Server
+def findTableExistence(ws=None, schema=None, table=None):
+    if not ws or not schema or not table:
+        print "%s ERROR: No ws|schema|table value passed" % (common.whoami())
+        return None
+    
+    requestMsg = masyncSR.findTable(schema, table)
+    if requestMsg:    
+        ws.send(requestMsg)
+        result = ws.recv()
+#        print "%s: Received '%s\n\n'" % (common.whoami(), result)
+        doesTableExist = len(parseBasicList(result))
+        
+        return doesTableExist
+    else:
+        print "%s ERROR: No request message passed" % (common.whoami())
+        return None
+
 #Get the Data Update from the Websocket Server
 def getDataUpdateList(ws=None, schema=None, table=None, limit=10, withKey=True):
     if not ws or not schema or not table:

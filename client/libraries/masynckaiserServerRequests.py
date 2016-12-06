@@ -19,7 +19,35 @@ def showTables(schema=None):
     request = """{"dir":0,"action":"read","query":"SHOW TABLES",
                   "schema":"%s"}""" % (schema)
     return request
+
+#Find if table exists in the Web Socket Server
+def findTable(schema, table):
+    if (not schema) or (not table):
+        msgError = "%s ERROR: No schema or table selected" % (common.whoami())
+        print msgError
+        return None
     
+    request = """{"dir":0,"action":"read",
+                  "query":"SHOW TABLES LIKE '%s'",
+                  "schema":"%s"}""" % (table, schema)
+    return request
+    
+#Composite Query sent to Web Socket Server
+#WARNING: This is a VERY POWERFUL command that can edit/add/delete data on the
+#   web socket server side
+# TODO: Create inclusion of secret key to the query to be sent to WSS for
+#   more resilience to unwanted data tampering
+def compositeQuery(schema, query):
+    if (not schema) or (not query):
+        msgError = "%s ERROR: No schema or query selected" % (common.whoami())
+        print msgError
+        return None
+    
+    request = """{"dir":0,"action":"read",
+                  "query":"%s",
+                  "schema":"%s"}""" % (query, schema)
+    return request
+
 def showPrimaryKey(schema, table):
     if (not schema) or (not table):
         msgError = "%s ERROR: No schema or table selected" % (common.whoami())

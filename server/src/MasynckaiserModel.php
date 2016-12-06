@@ -116,8 +116,10 @@ class MasynckaiserModel {
         }
     }
 
-    //Run Any Kind of Query
-    public function runQuery($query) {
+    //Run Any Kind of Query (READ)
+    //  Ex: Select, Show, Describe
+    //Use this if you are expecting query results
+    public function runReadQuery($query) {
         $escQuery = $this->dbconn->escape_string($query);
         echo __FUNCTION__ . " Raw Query: " . $query . "\n";
         echo __FUNCTION__ . " Escaped Query: " . $escQuery . "\n";
@@ -142,12 +144,47 @@ class MasynckaiserModel {
         }
     }
 
+    //Run Any Kind of SQL Modifying Commands
+    //  Ex: Create, Insert, Delete, Update, Alter, Drop
+    //Use this if you don't expect query results
+    public function runModifierQuery($query) {
+        $escQuery = $this->dbconn->escape_string($query);
+        echo __FUNCTION__ . " Raw Query: " . $query . "\n";
+        echo __FUNCTION__ . " Escaped Query: " . $escQuery . "\n";
+
+        // Make sure the connection is still alive, if not, try to reconnect 
+        $this->checkConnectionDB($query);
+
+        $result = $this->dbconn->query($query);
+        if (!$result) {
+            $error_string = __FUNCTION__ . " Error: " . $this->dbconn->error . "\n";
+            echo $error_string;
+            
+            return $error_string;
+        } 
+        else {
+            return "Success";
+        }
+    }
+
     //Read Queries only
     public function readFromServer($query) {
         //TODO: Apply regex in order to filter out malicious queries that are outside of
         //      the "READ" functionality
 
-        $array = $this->runQuery($query);
+        //Modifier commands that aren't allowed in a read only request
+        $unallowedCommands = ["CREATE", "INSERT", "DELETE", "UPDATE", "ALTER", "DROP"];
+        $trimmedQuery = trim($query);
+
+        foreach ($unallowedCommands as $modifierCmd) {
+            $pos = stripos($trimmedQuery, $modifierCmd);
+            if ($pos === 0) {
+                echo __FUNCTION__ . " Contains unallowed command ($modifierCmd): $query \n";
+                return false;
+            }
+        }
+
+        $array = $this->runReadQuery($query);
         // print_r($array);
         return json_encode($array);
     }
