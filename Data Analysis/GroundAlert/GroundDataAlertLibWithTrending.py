@@ -502,7 +502,7 @@ def del_data(df):
     #INPUT: Data frame of site and timestamp by groupby
     #Deletes the row at gndmeas_alerts table of [site] at time [end]            
     db, cur = SenslopeDBConnect(Namedb)
-    query = "DELETE FROM senslopedb.gndmeas_alerts WHERE timestamp = '{}' AND site = '{}'".format(pd.to_datetime(str(df.timestamp.values[0])),str(df.site.values[0]))
+    query = "DELETE FROM senslopedb.gndmeas_alerts_with_trending WHERE timestamp = '{}' AND site = '{}'".format(pd.to_datetime(str(df.timestamp.values[0])),str(df.site.values[0]))
     cur.execute(query)
     db.commit()
     db.close()
