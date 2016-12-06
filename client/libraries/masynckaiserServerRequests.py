@@ -32,18 +32,18 @@ def findTable(schema, table):
                   "schema":"%s"}""" % (table, schema)
     return request
     
-#Composite Query sent to Web Socket Server
+#Modifier Query sent to Web Socket Server
 #WARNING: This is a VERY POWERFUL command that can edit/add/delete data on the
 #   web socket server side
 # TODO: Create inclusion of secret key to the query to be sent to WSS for
 #   more resilience to unwanted data tampering
-def compositeQuery(schema, query):
+def modifierQuery(schema, query):
     if (not schema) or (not query):
         msgError = "%s ERROR: No schema or query selected" % (common.whoami())
         print msgError
         return None
     
-    request = """{"dir":0,"action":"read",
+    request = """{"dir":1,"action":"modify",
                   "query":"%s",
                   "schema":"%s"}""" % (query, schema)
     return request

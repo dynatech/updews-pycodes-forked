@@ -409,7 +409,6 @@ def syncRealTime(host, port):
     while True:
         try:
             result = ws.recv()
-#            parseRecvMsg(result)
             print "%s: Received '%s'" % (common.whoami(), result)
             delay = 5
         except Exception, e:
@@ -458,18 +457,23 @@ def syncSpecialClientToWSS(host, port, batchRows=200):
             if doesExist:
                 print "EXISTS: %s" % (table)
             else:
-                print "DOES NOT EXIST..."
+                print "Table (%s): DOES NOT EXIST..." % (table)
                 # TODO: Create table on WSS if target doesn't exist
                 qShowCreateTable = "SHOW CREATE TABLE %s" % (table)
                 qTableCreation = (bdb.GetDBResultset(qShowCreateTable, schema))[0][1]
                 # print qTableCreation
-                requestMsg = masyncSR.compositeQuery(schema, qTableCreation)
-                print requestMsg
+                requestMsg = masyncSR.modifierQuery(schema, qTableCreation)
+                # print requestMsg
 
                 if requestMsg:    
                     ws.send(requestMsg)
                     result = ws.recv()
                     print "Result: %s" % (result)
+
+                    if result == "false":
+                        print "Table (%s) creation on Web Server Failed" % (table)
+                    elif result == "true":
+                        print "Table (%s) creation on Web Server SUCCEEDED!" % (table)
 
         # TODO: Check latest value available on WSS
         # TODO: Collect latest data to be transferred to WSS from Special Client

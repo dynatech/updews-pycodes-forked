@@ -55,15 +55,6 @@ class Masynckaiser implements MessageComponentInterface {
 
                 if (strcasecmp($action, "READ") == 0) {
                     echo __FUNCTION__ . ": READ \n";
-
-                    // TODO: Very important! Since the direction is from server to client
-                    //      only... You should reject queries with words like the ff:
-                    //          - INSERT
-                    //          - DELETE
-                    //          - UPDATE
-                    //          - DROP
-                    //          - CREATE
-
                     # TODO: Needs schema information
                     $schema = isset($decodedText->schema) ? $decodedText->schema : "masynckaiser";
                     $query = isset($decodedText->query) ? $decodedText->query : NULL;
@@ -72,7 +63,7 @@ class Masynckaiser implements MessageComponentInterface {
                         // TODO: Check first if the there are restrictions on the schema
                         //      and table that the client wishes to see
 
-                        // TODO: Execute the query request from the client
+                        // Execute the query request from the client
                         $this->MSKModel->connectToSchema($schema);
                         $output = $this->MSKModel->readFromServer($query);
 
@@ -86,7 +77,9 @@ class Masynckaiser implements MessageComponentInterface {
                     }
                 }
                 else {
-                    echo "Unknown Action\n";
+                    echo __FUNCTION__ . ": Unknown Action\n";
+                    // Return False
+                    $from->send(json_encode(false));
                 }
 
             }
@@ -98,6 +91,35 @@ class Masynckaiser implements MessageComponentInterface {
                 // Note: This functionality won't be available to the quick
                 //      prototype version.
                 echo "Client to Server Data Direction\n";
+
+                if (strcasecmp($action, "MODIFY") == 0) {
+                    echo __FUNCTION__ . ": MODIFY \n";
+                    # TODO: Needs schema information
+                    $schema = isset($decodedText->schema) ? $decodedText->schema : "masynckaiser";
+                    $query = isset($decodedText->query) ? $decodedText->query : NULL;
+
+                    if ($query) {
+                        // TODO: Check first if the there are restrictions on the schema
+                        //      and table that the client wishes to see
+
+                        // Execute the query request from the client
+                        $this->MSKModel->connectToSchema($schema);
+                        $output = $this->MSKModel->writeToServer($query);
+
+                        // Debug print only
+                        if (DEBUG) {
+                            echo json_encode($output);
+                        }
+
+                        // Send the database output to the client
+                        $from->send(json_encode($output));
+                    }
+                }
+                else {
+                    echo __FUNCTION__ . ": Unknown Action\n";
+                    // Return False
+                    $from->send(json_encode(false));
+                }
             }
             elseif ($dir == BROADCAST) {
                 echo "Broadcast Message...\n";
