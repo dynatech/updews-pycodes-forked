@@ -205,10 +205,11 @@ def getInsertQueryForServerTX(ws=None, schema=None, table=None, limit=10):
             queryValues = queryValues + "("
             for value in data:
                 try:
-                    # Make sure to escape special characters
-                    test = "%s" % (value)
-                    esc_value = json.dumps(test)
-                    queryValues = queryValues + esc_value
+                    # TODO: Make sure to escape special characters
+                    # test = "%s" % (value)
+                    # esc_value = json.dumps(test)
+                    # queryValues = queryValues + esc_value
+                    queryValues = queryValues + "'%s'" % (value)
                 except TypeError:
                     queryValues = queryValues + "null"
 
@@ -222,9 +223,27 @@ def getInsertQueryForServerTX(ws=None, schema=None, table=None, limit=10):
             if ctrRow < numRows:
                 queryValues = queryValues + ","
 
-        #Compose data insertion query
+        # Compose data insertion query
         query = queryHeader + queryValues
-        return query
+        # return query
+
+        # Transfer data from Special Client to WSS
+        requestMsg = masyncSR.modifierQuery(schema, query)
+        # print requestMsg
+
+        if requestMsg:    
+            ws.send(requestMsg)
+            result = ws.recv()
+            # print "Result: %s" % (result)
+
+            if result == "false":
+                print "Table (%s) writing data on Web Server Failed" % (table)
+                # return False
+            elif result == "true":
+                print "Table (%s) writing data on Web Server SUCCEEDED!" % (table)
+                # return True
+                getInsertQueryForServerTX(ws, schema, table, limit)
+
 
 #Get the latest value of Primary Key/s of the client's database
 def getLatestPKValue(schema, table):

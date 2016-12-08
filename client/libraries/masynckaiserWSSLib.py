@@ -481,9 +481,8 @@ def syncSpecialClientToWSS(host, port, batchRows=200):
 
             # Collect latest data to be transferred to WSS from Special Client
             qInsertToServer = masyncGD.getInsertQueryForServerTX(ws, schema, table, batchRows)
-            print qInsertToServer
+            # print qInsertToServer
 
-            # TODO: Transfer data from Special Client to WSS
             # TODO: Repeat until latest of Special Client and WSS are the same
 
     # #Get names of all schemas
