@@ -176,7 +176,7 @@ def comparePKValuesSCandWSS(ws=None, schema=None, table=None):
             return False
 
 # Get Latest Data from localhost that will be transferred to the Websocket Server
-def getLocalDataForWSStransfer(ws=None, schema=None, table=None, limit=10):
+def getInsertQueryForServerTX(ws=None, schema=None, table=None, limit=10):
     # Compare PK Values of Special Client (localhost) and Websocket Server
     wssPKandVal = comparePKValuesSCandWSS(ws, schema, table)
 
@@ -189,9 +189,42 @@ def getLocalDataForWSStransfer(ws=None, schema=None, table=None, limit=10):
             pkValLocalMax = value
 
         qGetLocalData = "SELECT * FROM %s WHERE %s >= '%s' LIMIT %s" % (table, key, value, limit)
-        print "Query: %s" % (qGetLocalData)
+        # print "Query: %s" % (qGetLocalData)
         result = bdb.GetDBResultset(qGetLocalData, schema)
-        return json.dumps(result, cls=DateTimeEncoder)
+        fullData = json.dumps(result, cls=DateTimeEncoder)
+
+        # Compose SQL to be sent to the WSS from Local Data Gathered
+        queryHeader = "REPLACE INTO %s " % (table)
+        queryValues = "VALUES "
+
+        ctrRow = 0
+        numRows = len(result)
+        for data in result:
+            ctr = 0
+            numElements = len(data)
+            queryValues = queryValues + "("
+            for value in data:
+                try:
+                    # Make sure to escape special characters
+                    test = "%s" % (value)
+                    esc_value = json.dumps(test)
+                    queryValues = queryValues + esc_value
+                except TypeError:
+                    queryValues = queryValues + "null"
+
+                ctr = ctr + 1
+                if ctr < numElements:
+                    queryValues = queryValues + ","
+                else:
+                    queryValues = queryValues + ")"
+
+            ctrRow = ctrRow + 1
+            if ctrRow < numRows:
+                queryValues = queryValues + ","
+
+        #Compose data insertion query
+        query = queryHeader + queryValues
+        return query
 
 #Get the latest value of Primary Key/s of the client's database
 def getLatestPKValue(schema, table):

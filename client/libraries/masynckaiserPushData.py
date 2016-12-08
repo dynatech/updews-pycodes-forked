@@ -40,3 +40,4 @@ def pushTableCreation(ws=None, schema=None, table=None):
         elif result == "true":
             print "Table (%s) creation on Web Server SUCCEEDED!" % (table)
             return True
+

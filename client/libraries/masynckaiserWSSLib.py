@@ -480,8 +480,8 @@ def syncSpecialClientToWSS(host, port, batchRows=200):
                 ret = masyncPD.pushTableCreation(ws, schema, table)
 
             # Collect latest data to be transferred to WSS from Special Client
-            jsonData = masyncGD.getLocalDataForWSStransfer(ws, schema, table, batchRows)
-            print jsonData
+            qInsertToServer = masyncGD.getInsertQueryForServerTX(ws, schema, table, batchRows)
+            print qInsertToServer
 
             # TODO: Transfer data from Special Client to WSS
             # TODO: Repeat until latest of Special Client and WSS are the same
