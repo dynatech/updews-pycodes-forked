@@ -236,49 +236,63 @@ def PushDBDataFrame(df,table_name):
 #    df.ts = pd.to_datetime(df.ts)
 #    
 #    return df
-def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid = 32, targetnode ="", batt=0, returndb=True):
+def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid = "", targetnode ="", batt=0, returndb=True):
     if not siteid:
         raise ValueError('no site id entered')
         
     if printtostdout:
         PrintOut('Querying database ...')
-        
+
     if (len(siteid) == 5):
-        query = " SELECT timestamp,'%s' as 'name',id,xvalue,yvalue,zvalue  FROM senslopedb.%s"  % (siteid,siteid)
-        
-        targetnode_query = " WHERE id IN (SELECT node_id FROM senslopedb.node_accel_table WHERE site_name = '%s' and accel = 1)" %siteid 
-        if targetnode != '':
-            targetnode_query = " WHERE id IN ('%d')" %targetnode
-        query = query + targetnode_query
-    
-        query = query + " AND msgid in (11, 32)"
-        if not fromTime:
-            fromTime = "2010-01-01"
-        query = query + " AND timestamp >= '%s'" %fromTime
-        
-        toTime_query = ''
-        if toTime != '':
-            toTime = pd.to_datetime(toTime)+tda(hours=0.5)
-            toTime_query =  " AND timestamp <= '%s'" %toTime
-        elif toTime:
-            toTime_query = ''
-        
-        query = query+ " AND batt >= 3.16 AND batt <= 3.4 "
+        if not msgid:
+            query = " SELECT timestamp,'%s' as 'name',id,xvalue,yvalue,zvalue,batt  FROM senslopedb.%s"  % (siteid,siteid)
             
-        query = query + toTime_query
-        query = query + " UNION ALL"
-        query = query + " SELECT timestamp,'%s' as 'name',id,xvalue,yvalue,zvalue  FROM senslopedb.%s"  % (siteid,siteid)
-
-        targetnode_query = " WHERE id IN (SELECT node_id FROM senslopedb.node_accel_table WHERE site_name = '%s' and accel = 2)" %siteid 
-        if targetnode != '':
-            targetnode_query = " WHERE id IN ('%d')" %targetnode
-        query = query + targetnode_query
-
-        query = query + " AND msgid in (12, 33)"
-        query = query+ " AND timestamp > '%s'" %fromTime
-        query = query + toTime_query
+            targetnode_query = " WHERE id IN (SELECT node_id FROM senslopedb.node_accel_table WHERE site_name = '%s' and accel = 1)" %siteid 
+            if targetnode != '':
+                targetnode_query = " WHERE id IN ('%d')" %targetnode
+            query = query + targetnode_query
         
-        query = query+ " AND batt >= 3.16 AND batt <= 3.4 "
+            query = query + " AND msgid in (11, 32)"
+            if not fromTime:
+                fromTime = "2010-01-01"
+            query = query + " AND timestamp >= '%s'" %fromTime
+            
+            toTime_query = ''
+            if toTime != '':
+                toTime = pd.to_datetime(toTime)+tda(hours=0.5)
+                toTime_query =  " AND timestamp <= '%s'" %toTime
+            elif toTime:
+                toTime_query = ''
+                
+            query = query + toTime_query
+            query = query + " UNION ALL"
+            query = query + " SELECT timestamp,'%s' as 'name',id,xvalue,yvalue,zvalue,batt  FROM senslopedb.%s"  % (siteid,siteid)
+    
+            targetnode_query = " WHERE id IN (SELECT node_id FROM senslopedb.node_accel_table WHERE site_name = '%s' and accel = 2)" %siteid 
+            if targetnode != '':
+                targetnode_query = " WHERE id IN ('%d')" %targetnode
+            query = query + targetnode_query
+    
+            query = query + " AND msgid in (12, 33)"
+            query = query+ " AND timestamp > '%s'" %fromTime
+            query = query + toTime_query
+        else:
+            query = " SELECT timestamp,'%s' as 'name',id,xvalue,yvalue,zvalue,batt  FROM senslopedb.%s WHERE msgid = %d"  % (siteid,siteid,msgid)
+            if (targetnode != ""):
+                query = query + " AND id = %d" %(targetnode)
+                
+            if not fromTime:
+                fromTime = "2010-01-01"
+            query = query + " AND timestamp >= '%s'" %fromTime
+            
+            toTime_query = ''
+            if toTime != '':
+                toTime = pd.to_datetime(toTime)+tda(hours=0.5)
+                toTime_query =  " AND timestamp <= '%s'" %toTime
+            elif toTime:
+                toTime_query = ''
+                
+            query = query + toTime_query
 
     elif (len(siteid) == 4):
         query = "select timestamp,'%s' as 'name',id,xvalue,yvalue,zvalue from senslopedb.%s " % (siteid,siteid)
@@ -295,12 +309,28 @@ def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid
             query = query + " and id = %s" % (targetnode)
         else:
             query = query + " and id >= 1 and id <= %s " % (str(maxnode))
-    
-    if returndb:     
-        df =  GetDBDataFrame(query)
+        
+
+    if returndb:
+        if (len(siteid) == 5):
+            df =  GetDBDataFrame(query)
+#            df = df.groupby(['id'])
+#            df = df.apply(filterSensorData.volt_filter) #function in filterSensorData
+#            df = df.reset_index(drop=True)
+            if (batt == 1):                
+                df.columns = ['ts','name','id','x','y','z','batt']
+                df.ts = pd.to_datetime(df.ts)
+                return df
+            else:
+                df = df.drop('batt',axis=1)
+                
+        else:
+            df =  GetDBDataFrame(query)
+        
         df.columns = ['ts','name','id','x','y','z']
         df.ts = pd.to_datetime(df.ts)
         return df
+        
     else:
         return query
 
