@@ -15,6 +15,21 @@ import basicDB as bdb
 import common
 import masynckaiserServerRequests as masyncSR
 
+def date_handler(obj):
+    if hasattr(obj, 'isoformat'):
+        return obj.isoformat()
+    else:
+        raise TypeError
+
+class DateTimeEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, datetime):
+            return obj.strftime('%Y-%m-%d %H:%M:%S')
+        elif isinstance(obj, date):
+            return obj.strftime('%Y-%m-%d')
+        # Let the base class default method raise the TypeError
+        return json.JSONEncoder.default(self, obj)
+
 #Get the schema list from the Websocket Server
 def getSchemaList(ws=None):
     if not ws:
@@ -154,11 +169,29 @@ def comparePKValuesSCandWSS(ws=None, schema=None, table=None):
             pkValWSS = value
 
         if pkValLocalMax > pkValWSS:
-            print "Local Data is more updated. Update Websocket Server data"
+            # print "Local Data is more updated. Update Websocket Server data"
             return dataWSSpkval
         else:
-            print "No need to update Websocket Server data using Special Client"
+            print "%s: No need to update Websocket Server data using Special Client" % (table)
             return False
+
+# Get Latest Data from localhost that will be transferred to the Websocket Server
+def getLocalDataForWSStransfer(ws=None, schema=None, table=None, limit=10):
+    # Compare PK Values of Special Client (localhost) and Websocket Server
+    wssPKandVal = comparePKValuesSCandWSS(ws, schema, table)
+
+    # Collect latest data to be transferred to WSS from Special Client
+    if wssPKandVal:
+        mainPK = None
+        pkValLocalMax = None
+        for key, value in wssPKandVal.iteritems():
+            mainPK = key 
+            pkValLocalMax = value
+
+        qGetLocalData = "SELECT * FROM %s WHERE %s >= '%s' LIMIT %s" % (table, key, value, limit)
+        print "Query: %s" % (qGetLocalData)
+        result = bdb.GetDBResultset(qGetLocalData, schema)
+        return json.dumps(result, cls=DateTimeEncoder)
 
 #Get the latest value of Primary Key/s of the client's database
 def getLatestPKValue(schema, table):

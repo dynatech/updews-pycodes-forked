@@ -32,6 +32,21 @@ import masynckaiserGetData as masyncGD
 import masynckaiserPushData as masyncPD
 import masynckaiserServerRequests as masyncSR
 
+def date_handler(obj):
+    if hasattr(obj, 'isoformat'):
+        return obj.isoformat()
+    else:
+        raise TypeError
+
+class DateTimeEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, datetime):
+            return obj.strftime('%Y-%m-%d %H:%M:%S')
+        elif isinstance(obj, date):
+            return obj.strftime('%Y-%m-%d')
+        # Let the base class default method raise the TypeError
+        return json.JSONEncoder.default(self, obj)
+
 ###############################################################################
 # GSM Functionalities
 ###############################################################################
@@ -452,7 +467,8 @@ def syncSpecialClientToWSS(host, port, batchRows=200):
         table = row[0]
 
         # if table in ["agbsb","gndmeas","smsoutbox","lootb"]:   
-        if table in ["agbsb","parta","sinb","sintb","tueta"]:
+        # if table in ["agbsb","parta","sinb","sintb","tueta"]:
+        if table in ["agbsb","parta","sinb"]:   
             # print "%s: %s" % (schema, table)
             # Check if table target exists on WSS
             doesExist = masyncGD.findTableExistence(ws, schema, table)
@@ -463,12 +479,10 @@ def syncSpecialClientToWSS(host, port, batchRows=200):
                 # Create table on WSS if target doesn't exist
                 ret = masyncPD.pushTableCreation(ws, schema, table)
 
-            # Compare PK Values of Special Client (localhost) and Websocket Server
-            wssPKandVal = masyncGD.comparePKValuesSCandWSS(ws, schema, table)
+            # Collect latest data to be transferred to WSS from Special Client
+            jsonData = masyncGD.getLocalDataForWSStransfer(ws, schema, table, batchRows)
+            print jsonData
 
-            # TODO: Collect latest data to be transferred to WSS from Special Client
-
-            
             # TODO: Transfer data from Special Client to WSS
             # TODO: Repeat until latest of Special Client and WSS are the same
 

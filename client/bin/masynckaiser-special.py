@@ -57,7 +57,7 @@ port = 5055
 schema = "senslopedb"
 table = "smsoutbox"
 
-output = masync.syncSpecialClientToWSS(host, port, 10)
+output = masync.syncSpecialClientToWSS(host, port, 20)
 # bdb.PushDBjson(jsonData=output, table_name='smsinbox', schema_name='senslopedb', insType='ignore')
 
 #msg = format(schemas.decode('utf8'))
