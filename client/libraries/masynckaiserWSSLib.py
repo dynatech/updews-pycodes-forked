@@ -466,9 +466,9 @@ def syncSpecialClientToWSS(host, port, batchRows=200):
     for row in returnedRows:
         table = row[0]
 
-        # if table in ["agbsb","gndmeas","smsoutbox","lootb"]:   
+        if table in ["agbsb","gndmeas","smsoutbox","lootb"]:   
         # if table in ["agbsb","parta","sinb","sintb","tueta"]:
-        if table in ["agbsb","parta","sinb"]:   
+        # if table in ["agbsb","parta","sinb"]:   
             # print "%s: %s" % (schema, table)
             # Check if table target exists on WSS
             doesExist = masyncGD.findTableExistence(ws, schema, table)
@@ -565,8 +565,8 @@ def syncStartUp(host, port, batchRows=200):
                 tablesNonExistent.append(table)
                 createTableFromWSS(ws, schema, table)
                 
-            # if table in ["agbsb","blcb","gndmeas","gndmeasbak","lut_activities","membership","public_alert_release","rain_noah"]:
-            if table in ["agbsb","parta","sinb","sintb","tueta"]:
+            if table in ["agbsb","blcb","gndmeas","gndmeasbak","lut_activities","membership","public_alert_release","rain_noah"]:
+            # if table in ["agbsb","parta","sinb","sintb","tueta"]:
                 updateTableData(ws, schema, table, batchRows, "ignore")
 
             # #TEMPORARY: To be deleted after test

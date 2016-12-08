@@ -188,7 +188,11 @@ def getInsertQueryForServerTX(ws=None, schema=None, table=None, limit=10):
             mainPK = key 
             pkValLocalMax = value
 
-        qGetLocalData = "SELECT * FROM %s WHERE %s >= '%s' LIMIT %s" % (table, key, value, limit)
+        if pkValLocalMax:
+            qGetLocalData = "SELECT * FROM %s WHERE %s >= '%s' LIMIT %s" % (table, mainPK, pkValLocalMax, limit)
+        else:
+            qGetLocalData = "SELECT * FROM %s LIMIT %s" % (table, limit)
+
         # print "Query: %s" % (qGetLocalData)
         result = bdb.GetDBResultset(qGetLocalData, schema)
         fullData = json.dumps(result, cls=DateTimeEncoder)
