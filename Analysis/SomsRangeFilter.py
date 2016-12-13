@@ -5,24 +5,19 @@ Created on Thu Apr 07 09:29:47 2016
 @author: SENSLOPEY
 """
 import numpy as np
-import matplotlib.pyplot as plt
 import ConvertSomsRaw as CSR
 import pandas as pd
 import datetime
 import os
+import matplotlib.pyplot as plt
+import querySenslopeDb as qDb
 
 v2=['NAGSA', 'BAYSB', 'AGBSB', 'MCASB', 'CARSB', 'PEPSB','BLCSA']
 #'absolute' minimum and maximum values for SOMS v2 and v3
 m=[['RAW v2', 'RAW v3'],['CAL v2', 'CAL v3']]   #format for smin and smax
 
 
-import numpy as np
-import matplotlib.pyplot as plt
-import querySenslopeDb as qDb
-import ConvertSomsRaw as CSR
-import pandas as pd
-import datetime
-import os
+
 plt.style.use('ggplot')
 
 v2=['NAGSA', 'BAYSB', 'AGBSB', 'MCASB', 'CARSB', 'PEPSB','BLCSA']
