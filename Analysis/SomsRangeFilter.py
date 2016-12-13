@@ -9,7 +9,7 @@ import ConvertSomsRaw as CSR
 import pandas as pd
 import datetime
 import os
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import querySenslopeDb as qDb
 
 v2=['NAGSA', 'BAYSB', 'AGBSB', 'MCASB', 'CARSB', 'PEPSB','BLCSA']
@@ -18,7 +18,7 @@ m=[['RAW v2', 'RAW v3'],['CAL v2', 'CAL v3']]   #format for smin and smax
 
 
 
-plt.style.use('ggplot')
+#plt.style.use('ggplot')
 
 v2=['NAGSA', 'BAYSB', 'AGBSB', 'MCASB', 'CARSB', 'PEPSB','BLCSA']
 
