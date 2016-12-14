@@ -36,7 +36,7 @@ def getsomsrawdata(column="", gid=0, fdate="", tdate=""):
     df = pd.DataFrame(columns=['sraw', 'scal'])
     print 'getsomsdata: ' + column + ',' + str(gid)
     try:
-        df = qs.GetSomsData(siteid=column, fromTime=fdate, toTime=tdate, targetnode=gid)
+        df = qs.GetSomsData(siteid=column+'m', fromTime=fdate, toTime=tdate, targetnode=gid)
 
     except:
         print 'No data available for ' + column.upper()
@@ -85,7 +85,7 @@ def getsomscaldata(column="", gid=0, fdate="", tdate=""):
         return df  
         
     try:
-        df = qs.GetSomsData(siteid=column, fromTime=fdate, toTime=tdate, targetnode=gid, msgid=msgid)
+        df = qs.GetSomsData(siteid=column+'m', fromTime=fdate, toTime=tdate, targetnode=gid, msgid=msgid)
         df.index=df.ts
         df= df.mval1
 
