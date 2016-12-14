@@ -52,7 +52,7 @@ def f_outlier(df,column,node,mode):
             
     df= df[(df>smin[mode][ver])&(df<smax[mode][ver])]
     try:   
-        df= df.resample('30Min',base=0)
+        df= df.resample('30Min',base=0).first()
     except:
         return df
     
