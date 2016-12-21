@@ -628,6 +628,17 @@ def SitePublicAlert(PublicAlert, window):
         
         with open('GSMAlert.txt', 'w') as w:
             w.write('')
+            
+    #sms alert for l0t
+    groundTS = RoundTime(window.end) - timedelta(hours=4)
+    l0t_alert = SG_alert.loc[(SG_alert.alert == 'l0t') & (SG_alert.updateTS >= groundTS)]
+    if len(l0t_alert) != 0:
+        with open('l0t_alert.txt', 'w') as w:
+            w.write('As of ' + str(datetime.now())[:16] + '\n')
+            w.write(site + ':l0t:ground')
+        writeAlertToDb('l0t_alert.txt')
+        with open('GSMAlert.txt', 'w') as w:
+            w.write('')
 
     return PublicAlert
 
