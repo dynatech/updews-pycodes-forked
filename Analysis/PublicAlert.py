@@ -631,14 +631,18 @@ def SitePublicAlert(PublicAlert, window):
             
     #sms alert for l0t
     groundTS = RoundTime(window.end) - timedelta(hours=4)
-    l0t_alert = SG_alert.loc[(SG_alert.alert == 'l0t') & (SG_alert.updateTS >= groundTS)]
+    l0t_alert = validity_site_alert.loc[(validity_site_alert.alert == 'l0t') & (validity_site_alert.updateTS >= groundTS)]
     if len(l0t_alert) != 0:
-        with open('l0t_alert.txt', 'w') as w:
-            w.write('As of ' + str(datetime.now())[:16] + '\n')
-            w.write(site + ':l0t:ground')
-        writeAlertToDb('l0t_alert.txt')
-        with open('GSMAlert.txt', 'w') as w:
-            w.write('')
+        l0talert = site + ':l0t:ground'
+        query = "SELECT * FROM senslopedb.smsalerts where alertmsg like '%s' and ts_set >= '%s' ORDER BY ts_set desc" %('%'+l0talert+'%', groundTS)
+        df = q.GetDBDataFrame(query)
+        if len(df) == 0:
+            with open('l0t_alert.txt', 'w') as w:
+                w.write('As of ' + str(datetime.now())[:16] + '\n')
+                w.write(l0talert)
+            writeAlertToDb('l0t_alert.txt')
+            with open('l0t_alert.txt', 'w') as w:
+                w.write('')
 
     return PublicAlert
 
