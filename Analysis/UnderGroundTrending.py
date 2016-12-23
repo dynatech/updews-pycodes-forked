@@ -489,8 +489,8 @@ for i in range(len(tableau20)):
 
 ##########################################################
 ###INPUTS
-colname = 'magta'
-node = 10
+colname = 'pngta'
+node = 5
 axis = 'xz'
 k = 3 #degree of spline
 c = 1 #factor of error
@@ -498,8 +498,8 @@ c = 1 #factor of error
 #Step 1: Get dataframe for xz and xy using RealTimePlotter Code
 col = q.GetSensorList(colname)
 
-start = '2016-10-09 00:00:00'
-end = '2016-10-14 12:00:00'
+start = '2016-12-10 00:00:00'
+end = '2016-12-17 12:00:00'
 
 
 window, config = rtw.getwindow(pd.to_datetime(end))

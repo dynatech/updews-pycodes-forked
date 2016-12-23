@@ -208,7 +208,7 @@ def crack_eval(df,out_folder,end):
                     #Perform Trending Test if alert is not L0
                     if (crack_alert != 'l0' and crack_alert != 'l0p'):
                         trend_alert = check_trending(df,out_folder,plot = True)
-                        if trend_alert != 'Legit':
+                        if (trend_alert != 'Legit' and crack_alert != 'l3'):
                             crack_alert = 'l0t'
                 
                 

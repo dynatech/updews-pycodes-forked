@@ -6,6 +6,8 @@ import matplotlib.dates as pltdate
 import numpy as np
 import matplotlib.patches as mpatches
 import matplotlib.lines as mlines
+import matplotlib.colors as colors
+import matplotlib.cm as cmx
 #import seaborn as sns
 plt.ion()
 
@@ -184,7 +186,12 @@ def plotRain(rain,rainsite,ax):
 #    ax2=ax.twinx()
 #    ax2.plot(rain.gts,rain.rain, marker='.',color='red', label = '15 Min',alpha=1)
     
-    query = "SELECT * FROM rain_props where name = '%s'" %rainsite[0:3]
+    if rainsite[0:3] == 'mes':
+        rain_props_name = 'msu'
+    else:
+        rain_props_name = rainsite[0:3]
+    
+    query = "SELECT * FROM rain_props where name = '%s'" %rain_props_name
     df = q.GetDBDataFrame(query)
     twoyrmax = df['max_rain_2year'].values[0]
     halfmax = twoyrmax/2
@@ -204,7 +211,7 @@ def plotRain(rain,rainsite,ax):
 #    ax2.set_yticks(np.linspace(ax2.get_ybound()[0], ax2.get_ybound()[1], 7)) 
 #    ax2.grid(b=False)
     
-    ax.legend(loc='upper left', fontsize='small')
+    ax.legend(loc='upper left', fontsize='small',fancybox = True,framealpha = 0.5)
 #    ax2.legend(loc='lower right')
     return 0
 
@@ -221,7 +228,7 @@ def plotGround(ax,ground):
         ax.set_ylabel('Change in \nMeasurement (cm)')
         ax.set_yticks(np.linspace(ax.get_ybound()[0]-3.5, ax.get_ybound()[1]+3.5, 7))
         ax.set_title('Ground Measurement Data')
-        ax.legend(loc = 'best',ncol=3, fontsize='small')
+        ax.legend(loc = 'best',ncol=3, fontsize='small',fancybox = True,framealpha = 0.5)
         
     return 0
 
@@ -232,6 +239,33 @@ def smooth(sens):
     smooth['gts'] = smooth.ts.apply(datenum)
     
     return smooth
+    
+def plotRTS(ax,rts):
+    mohon_list = sorted(list(np.unique(rts.mohon.values)))
+    ###Generate non-repeating colors
+    jet = plt.get_cmap('jet') 
+    cNorm  = colors.Normalize(vmin=0, vmax=len(mohon_list)-1)
+    scalarMap = cmx.ScalarMappable(norm=cNorm, cmap=jet)
+    colorVal = scalarMap.to_rgba(np.arange(len(mohon_list)))
+    n = 0
+    for mohon in mohon_list:
+        cur = rts[rts.mohon == mohon]
+        ax.plot(cur.timestamp,cur.disp,marker = 'o',label='Mohon {}'.format(int(mohon)),color = colorVal[n])
+        ax.set_ylabel('Displacement of Mohon (cm)')
+        ax.set_title('Robotic Total Station Data')
+        ax.legend(loc = 'best',ncol = 3, fontsize = 'small',fancybox = True,framealpha = 0.5)
+        n += 1
+
+def getRTS(rts_file,site,start,end,filter_data = True):
+    df = pd.read_csv(rts_file,header = 0,usecols =[0,1,2,3,4])
+    df['timestamp'] = pd.to_datetime(df['timestamp'].values)
+    df = df[df.site == site]
+    df = df[df.timestamp >= pd.to_datetime(start)]
+    df = df[df.timestamp <= pd.to_datetime(end)]
+    if filter_data:
+        df = df[df.note != 'b']
+        df = df[df.note != 'n']
+    return df
 
 ############################# IMMULI JULY 31 TO AUG 5 EVENT ##################################
 #
@@ -407,16 +441,18 @@ def smooth(sens):
 
 #############################
 #user input
-start = pd.to_datetime('2016-09-14 00:00:00')
-end = pd.to_datetime('2016-11-12 00:00:00')
+start = pd.to_datetime('2016-01-01 00:00:00')
+end = pd.to_datetime('2016-12-13 12:00:00')
 
-rainsite = 'partaw'
-groundsite = 'par'
+rainsite = 'inatbw'
+groundsite = 'ina'
 #############################
 #get data
 
 rain = getrain(rainsite,start,end)
 ground = getGroundDF(groundsite,start,end)
+rts = getRTS('rts3.csv',groundsite.upper(),start,end)
+
 
 
 
@@ -424,37 +460,40 @@ ground = getGroundDF(groundsite,start,end)
 # set up axes and plot
 #cmap = sns.blend_palette(['yellow','red','green','blue','purple'],len(nodelist)+5)
 fig=plt.figure()
-ax1 = fig.add_subplot(211)
-ax2 = fig.add_subplot(212, sharex=ax1)
+ax1 = fig.add_subplot(311)
+ax2 = fig.add_subplot(312, sharex=ax1)
+ax3 = fig.add_subplot(313, sharex=ax1)
 
 #############################
 #actual plotting
 
 plotGround(ax1,ground)
 plotRain(rain,rainsite,ax2)
+plotRTS(ax3,rts)
 
-plotSingleEvent([ax1,ax2],pd.to_datetime('2016-09-16 09:58'),'red','l2')
-plotSingleEvent([ax1,ax2],pd.to_datetime('2016-09-27 07:05'),'red','l3')
-plotSingleEvent([ax1,ax2],pd.to_datetime('2016-10-14 09:24'),'red','l2')
-plotSingleEvent([ax1,ax2],pd.to_datetime('2016-10-21 11:05'),'red','l2')
-plotSingleEvent([ax1,ax2],pd.to_datetime('2016-10-25 11:50'),'red','l2')
-plotSingleEvent([ax1,ax2],pd.to_datetime('2016-10-30 11:28'),'red','l2')
-plotSingleEvent([ax1,ax2],pd.to_datetime('2016-11-04 08:46'),'red','l3')
-plotSingleEvent([ax1,ax2],pd.to_datetime('2016-11-04 19:00'),'red','r1')
-
-plotSingleEvent([ax1,ax2],pd.to_datetime('2016-09-21 12:00'),'blue','A0')
-plotSingleEvent([ax1,ax2],pd.to_datetime('2016-10-11 12:00'),'blue','A0')
-plotSingleEvent([ax1,ax2],pd.to_datetime('2016-10-17 16:00'),'blue','A0')
-plotSingleEvent([ax1,ax2],pd.to_datetime('2016-10-22 16:00'),'blue','A0')
-plotSingleEvent([ax1,ax2],pd.to_datetime('2016-10-28 12:00'),'blue','A0')
-plotSingleEvent([ax1,ax2],pd.to_datetime('2016-11-02 16:00'),'blue','A0')
-plotSingleEvent([ax1,ax2],pd.to_datetime('2016-11-11 08:00'),'blue','A0')
+#plotSingleEvent([ax1,ax2],pd.to_datetime('2016-09-16 09:58'),'red','l2')
+#plotSingleEvent([ax1,ax2],pd.to_datetime('2016-09-27 07:05'),'red','l3')
+#plotSingleEvent([ax1,ax2],pd.to_datetime('2016-10-14 09:24'),'red','l2')
+#plotSingleEvent([ax1,ax2],pd.to_datetime('2016-10-21 11:05'),'red','l2')
+#plotSingleEvent([ax1,ax2],pd.to_datetime('2016-10-25 11:50'),'red','l2')
+#plotSingleEvent([ax1,ax2],pd.to_datetime('2016-10-30 11:28'),'red','l2')
+#plotSingleEvent([ax1,ax2],pd.to_datetime('2016-11-04 08:46'),'red','l3')
+#plotSingleEvent([ax1,ax2],pd.to_datetime('2016-11-04 19:00'),'red','r1')
+#
+#plotSingleEvent([ax1,ax2],pd.to_datetime('2016-09-21 12:00'),'blue','A0')
+#plotSingleEvent([ax1,ax2],pd.to_datetime('2016-10-11 12:00'),'blue','A0')
+#plotSingleEvent([ax1,ax2],pd.to_datetime('2016-10-17 16:00'),'blue','A0')
+#plotSingleEvent([ax1,ax2],pd.to_datetime('2016-10-22 16:00'),'blue','A0')
+#plotSingleEvent([ax1,ax2],pd.to_datetime('2016-10-28 12:00'),'blue','A0')
+#plotSingleEvent([ax1,ax2],pd.to_datetime('2016-11-02 16:00'),'blue','A0')
+#plotSingleEvent([ax1,ax2],pd.to_datetime('2016-11-11 08:00'),'blue','A0')
 
 ax1.grid(True)
 ax2.grid(True)
+ax3.grid(True)
 
 ax1.xaxis_date()
-ax1.xaxis.set_major_locator(pltdate.DayLocator(interval=5))
+ax1.xaxis.set_major_locator(pltdate.DayLocator(interval=30))
 ax1.xaxis.set_major_formatter(pltdate.DateFormatter('%b %d'))
 
 #############################
@@ -462,8 +501,8 @@ ax1.xaxis.set_major_formatter(pltdate.DateFormatter('%b %d'))
 fig.subplots_adjust(top=0.85, hspace=0.4)
 fig.set_figheight(10)
 fig.set_figwidth(15)
-fig.suptitle("Parasanon Event Timeline from %s to %s" % (start.date(),end.date()),fontsize=20)
-plt.savefig('D:\Documents\DYNA\NIGSCON2016\\'+groundsite+' event '+str(start.date())+' to '+str(end.date())+'.png',
+fig.suptitle("{} Event Timeline from {} to {}".format(groundsite.title(),start.date().strftime("%B %d, %Y"),end.date().strftime("%B %d, %Y")),fontsize=20)
+plt.savefig('C:\Users\Win8\Documents\Dynaslope\Data Analysis\updews-pycodes\Analysis\\'+groundsite+' event '+str(start.date())+' to '+str(end.date())+' x y z.png',
                 dpi=400, facecolor='w', edgecolor='w',orientation='portrait',mode='w')
 
 ###########################################################################################
