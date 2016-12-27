@@ -54,7 +54,8 @@ def main():
 
 #main()
 
-host = "sandbox"
+#host = "sandbox"
+host = "www.dewslandslide.com"
 port = 5055
 schema = "senslopedb"
 table = "smsoutbox"
