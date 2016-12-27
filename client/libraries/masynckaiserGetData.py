@@ -123,11 +123,11 @@ def getDataUpdateList(ws=None, schema=None, table=None, limit=10, withKey=True):
         return None
 
     updateCmd = masyncSR.getDataUpdateCommand(schema, table, latestPKval, limit)
-    print "%s: %s" % (common.whoami(), updateCmd)
+    # print "%s: %s" % (common.whoami(), updateCmd)
     if updateCmd:    
         ws.send(updateCmd)
         result = ws.recv()
-        print "%s: Received '%s\n\n'" % (common.whoami(), result)
+        # print "%s: Received '%s\n\n'" % (common.whoami(), result)
 
         # Search for a smaller return limit in case buffer from server side is
         #   unable to handle the data amount returned
