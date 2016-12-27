@@ -123,14 +123,24 @@ def getDataUpdateList(ws=None, schema=None, table=None, limit=10, withKey=True):
         return None
 
     updateCmd = masyncSR.getDataUpdateCommand(schema, table, latestPKval, limit)
+    print "%s: %s" % (common.whoami(), updateCmd)
     if updateCmd:    
         ws.send(updateCmd)
         result = ws.recv()
-        # print "%s: Received '%s\n\n'" % (common.whoami(), result)
-        dataUpdate = common.parseBasicList(result, withKey)
-        
-        # Return data update
-        return dataUpdate
+        print "%s: Received '%s\n\n'" % (common.whoami(), result)
+
+        # Search for a smaller return limit in case buffer from server side is
+        #   unable to handle the data amount returned
+        if result.find("false") == 0:
+            dataUpdate = getDataUpdateList(ws, schema, table, limit/2, withKey)
+
+            # Return data update
+            return dataUpdate
+        else:
+            dataUpdate = common.parseBasicList(result, withKey)
+            
+            # Return data update
+            return dataUpdate
     else:
         print "%s ERROR: No request message passed" % (common.whoami())
         return None
@@ -148,32 +158,35 @@ def comparePKValuesSCandWSS(ws=None, schema=None, table=None):
     mainPK = None
     pkValLocalMax = None
 
-    for key, value in mainPKandVal.iteritems():
-        mainPK = key 
-        pkValLocalMax = value
+    try:
+        for key, value in mainPKandVal.iteritems():
+            mainPK = key 
+            pkValLocalMax = value
 
-    qWSSPKval = "SELECT MAX(%s) as %s FROM %s" % (mainPK, mainPK, table)
-    # print "WSS Query: %s" % (qWSSPKval)
-    wsspkvalCmd = masyncSR.compReadQuery(schema, qWSSPKval)
-    # print wsspkvalCmd
-    if wsspkvalCmd:
-        ws.send(wsspkvalCmd)
-        result = ws.recv()
-        # print "%s: Received '%s\n\n'" % (common.whoami(), result)
-        dataWSSpkval = (common.parseBasicList(result, True))[0]
-        print dataWSSpkval
+        qWSSPKval = "SELECT MAX(%s) as %s FROM %s" % (mainPK, mainPK, table)
+        # print "WSS Query: %s" % (qWSSPKval)
+        wsspkvalCmd = masyncSR.compReadQuery(schema, qWSSPKval)
+        # print wsspkvalCmd
+        if wsspkvalCmd:
+            ws.send(wsspkvalCmd)
+            result = ws.recv()
+            # print "%s: Received '%s\n\n'" % (common.whoami(), result)
+            dataWSSpkval = (common.parseBasicList(result, True))[0]
+            print dataWSSpkval
 
-        # Compare latest PK Value from Local Server and WSS
-        pkValWSS = None
-        for key, value in dataWSSpkval.iteritems():
-            pkValWSS = value
+            # Compare latest PK Value from Local Server and WSS
+            pkValWSS = None
+            for key, value in dataWSSpkval.iteritems():
+                pkValWSS = value
 
-        if pkValLocalMax > pkValWSS:
-            # print "Local Data is more updated. Update Websocket Server data"
-            return dataWSSpkval
-        else:
-            print "%s: No need to update Websocket Server data using Special Client" % (table)
-            return False
+            if pkValLocalMax > pkValWSS:
+                # print "Local Data is more updated. Update Websocket Server data"
+                return dataWSSpkval
+            else:
+                print "%s: No need to update Websocket Server data using Special Client" % (table)
+                return False
+    except:
+        return False
 
 # Get Latest Data from localhost that will be transferred to the Websocket Server
 def getInsertQueryForServerTX(ws=None, schema=None, table=None, limit=10):
@@ -195,7 +208,6 @@ def getInsertQueryForServerTX(ws=None, schema=None, table=None, limit=10):
 
         # print "Query: %s" % (qGetLocalData)
         result = bdb.GetDBResultset(qGetLocalData, schema)
-        fullData = json.dumps(result, cls=DateTimeEncoder)
 
         # Compose SQL to be sent to the WSS from Local Data Gathered
         queryHeader = "REPLACE INTO %s " % (table)
@@ -246,6 +258,7 @@ def getInsertQueryForServerTX(ws=None, schema=None, table=None, limit=10):
             elif result == "true":
                 print "Table (%s) writing data on Web Server SUCCEEDED!" % (table)
                 # return True
+                # Repeat until latest of Special Client and WSS are the same
                 getInsertQueryForServerTX(ws, schema, table, limit)
 
 
