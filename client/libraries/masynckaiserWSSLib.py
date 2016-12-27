@@ -500,7 +500,7 @@ def syncStartUp(host, port, batchRows=200):
     ws = create_connection(url)
 
     #List of blocked schemas
-    schemasBlocked = ["information_schema","mysql","performance_schema","phpmyadmin"]
+    schemasBlocked = ["information_schema","mysql","performance_schema","phpmyadmin","bugtracker2"]
 
     #Get names of all schemas
     schemas = masyncGD.getSchemaList(ws)
@@ -563,7 +563,7 @@ def syncStartUp(host, port, batchRows=200):
             #     updateTableData(ws, schema, table, batchRows, "ignore")
 
             # Update Current Table
-             updateTableData(ws, schema, table, batchRows, "ignore")
+            updateTableData(ws, schema, table, batchRows, "ignore")
             
 #        print "\nExisting: "
 #        print tablesExisting
