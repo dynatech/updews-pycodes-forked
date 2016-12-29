@@ -45,7 +45,7 @@ def sendAlertMessage():
         return
 
     message = 'Alert ID %d:\n%s\n' % (alertmsg[0][0],alertmsg[0][1])
-    message += 'Text "ACK <alert id> <valid/invalid> <remarks> to acknowledge"'
+    message += 'Text "ACK <alert id> <valid/invalid> <remarks>" to acknowledge'
 
     # send to alert staff
     contacts = getAlertStaffNumbers()
@@ -85,17 +85,17 @@ def processAckToAlert(msg):
             return True
 
     try:
-        remarks = re.search("(?<=\d ).+(?=($|\r|\n))",msg.data).group(0)
+        remarks = re.search("(?<=\d ).+(?=($|\r|\n))",msg.data,re.IGNORECASE).group(0)
     except:
         errmsg = "Please put in your remarks."
         server.WriteOutboxMessageToDb(errmsg,msg.simnum)
         return True
 
     try:
-        alert_status = re.search("(in)*valid",remarks).group(0)
+        alert_status = re.search("(in)*valid(ating)*",remarks,re.IGNORECASE).group(0)
         remarks = remarks.replace(alert_status,"").strip()
     except:
-        errmsg = "Please put in the alert status validity. i.e (VALID, INVALID)"
+        errmsg = "Please put in the alert status validity. i.e (VALID, INVALID, VALIDATING)"
         server.WriteOutboxMessageToDb(errmsg,msg.simnum)
         return True
 
