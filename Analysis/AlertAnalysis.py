@@ -248,19 +248,17 @@ def trending_alertgen(trending_alert, monitoring, lgd, window, config):
     
     palert = alert.loc[(alert.col_alert == 'L2') | (alert.col_alert == 'L3')]
         
-    if endTS == window.end:
+    if len(palert) != 0:
+        palert['site']=monitoring.colprops.name
+        palert = palert[['timestamp', 'site', 'disp_alert', 'vel_alert', 'col_alert']].reset_index()
+        palert = palert[['timestamp', 'site', 'id', 'disp_alert', 'vel_alert', 'col_alert']]
         
-        if len(palert) != 0:
-            palert['site']=monitoring.colprops.name
-            palert = palert[['timestamp', 'site', 'disp_alert', 'vel_alert', 'col_alert']].reset_index()
-            palert = palert[['timestamp', 'site', 'id', 'disp_alert', 'vel_alert', 'col_alert']]
-            
-            engine = create_engine('mysql://'+q.Userdb+':'+q.Passdb+'@'+q.Hostdb+':3306/'+q.Namedb)
-            for i in palert.index:
-                try:
-                    palert.loc[palert.index == i].to_sql(name = 'node_level_alert', con = engine, if_exists = 'append', schema = q.Namedb, index = False)
-                except:
-                    print 'data already written in senslopedb.node_level_alert'
+        engine = create_engine('mysql://'+q.Userdb+':'+q.Passdb+'@'+q.Hostdb+':3306/'+q.Namedb)
+        for i in palert.index:
+            try:
+                palert.loc[palert.index == i].to_sql(name = 'node_level_alert', con = engine, if_exists = 'append', schema = q.Namedb, index = False)
+            except:
+                print 'data already written in senslopedb.node_level_alert'
 
     alert['TNL'] = alert['col_alert'].values
     
@@ -269,7 +267,10 @@ def trending_alertgen(trending_alert, monitoring, lgd, window, config):
             query = "SELECT * FROM senslopedb.node_level_alert WHERE site = '%s' and timestamp >= '%s' and id = %s" %(monitoring.colprops.name, endTS-timedelta(hours=3), i)
             nodal_palertDF = q.GetDBDataFrame(query)
             if len(nodal_palertDF) >= 3:
-                alert.loc[alert.id == i, 'TNL'] = max(getmode(list(nodal_palertDF['col_alert'].values)))
+                palert_index = alert.loc[alert.id == i].index[0]
+                alert.loc[palert_index]['TNL'] = max(getmode(list(nodal_palertDF['col_alert'].values)))
+            else:
+                alert.loc[palert_index]['TNL'] = 'L0'
     
     not_working = q.GetNodeStatus(1).loc[q.GetNodeStatus(1).site == monitoring.colprops.name]['node'].values
     
@@ -304,10 +305,8 @@ def main(site, end):
     
     trending_alertTS = trending_alert.groupby('timestamp')
     output = trending_alertTS.apply(trending_alertgen, window=window, config=config, monitoring=monitoring, lgd=lgd)
-    final_alert = min(getmode(list(output['alert'].values)))
     
     site_level_alert = output.loc[output.timestamp == window.end]
     site_level_alert['updateTS'] = [window.end]
-    site_level_alert['alert'] = [final_alert]
     
     return site_level_alert
