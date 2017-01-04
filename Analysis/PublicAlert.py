@@ -215,6 +215,7 @@ def SitePublicAlert(PublicAlert, window):
         sensor_site = 'mesta%'
     query = "SELECT * FROM ( SELECT * FROM senslopedb.column_level_alert WHERE site LIKE '%s' AND updateTS >= '%s' ORDER BY timestamp DESC) AS sub GROUP BY site" %(sensor_site,window.end-timedelta(hours=3))
     sensor_alertDF = q.GetDBDataFrame(query)
+    nonNDsensor = sensor_alertDF[sensor_alertDF.alert != 'ND']
     if len(sensor_alertDF) != 0:
         colsensor_alertDF = sensor_alertDF.groupby('site')
         sensor_alert = []
@@ -271,7 +272,7 @@ def SitePublicAlert(PublicAlert, window):
             # both ground and sensor triggered
             if alert_source == 'both ground and sensor':
                 # with data
-                if 'L' in list_ground_alerts and 'l' in list_ground_alerts:
+                if ('L' in list_ground_alerts or len(nonNDsensor) != 0) and 'l' in list_ground_alerts:
                     internal_alert = 'A0'
                     public_alert = 'A0'
                     alert_source = '-'
@@ -292,7 +293,7 @@ def SitePublicAlert(PublicAlert, window):
             # sensor triggered
             elif alert_source == 'sensor':
                 # with data
-                if 'L' in list_ground_alerts:
+                if 'L' in list_ground_alerts or len(nonNDsensor) != 0:
                     internal_alert = 'A0'
                     public_alert = 'A0'
                     alert_source = '-'
@@ -353,13 +354,13 @@ def SitePublicAlert(PublicAlert, window):
             # evaluates which triggers A2
             if 'L2' in SG_alert.alert.values and 'l2' in SG_alert.alert.values:
                 alert_source = 'both ground and sensor'
-                if 'L' in list_ground_alerts and 'l' in list_ground_alerts:
+                if ('L' in list_ground_alerts or len(nonNDsensor) != 0) and 'l' in list_ground_alerts:
                     internal_alert = 'A2-sg' + other_alerts
                 else:
-                    if 'L' not in list_ground_alerts and 'l' not in list_ground_alerts:
+                    if ('L' not in list_ground_alerts and len(nonNDsensor) == 0) and 'l' not in list_ground_alerts:
                         internal_alert = 'A2-s0g0' + other_alerts
                     else:
-                        if 'L' in list_ground_alerts:
+                        if ('L' in list_ground_alerts or len(nonNDsensor) != 0):
                             internal_alert = 'A2-s'
                         else:
                             internal_alert = 'A2-s0'
@@ -372,7 +373,7 @@ def SitePublicAlert(PublicAlert, window):
                     
             elif 'L2' in SG_alert.alert.values:
                 alert_source = 'sensor'
-                if 'L' in list_ground_alerts:
+                if 'L' in list_ground_alerts or len(nonNDsensor) != 0:
                     internal_alert = 'A2-s' + other_alerts
                 else:
                     internal_alert = 'A2-s0' + other_alerts
@@ -397,7 +398,7 @@ def SitePublicAlert(PublicAlert, window):
             # both ground and sensor triggered
             if alert_source == 'both ground and sensor':
                 # with data
-                if 'L' in list_ground_alerts and 'l' in list_ground_alerts:
+                if ('L' in list_ground_alerts or len(nonNDsensor) != 0) and 'l' in list_ground_alerts:
                     internal_alert = 'A0'
                     public_alert = 'A0'
                     alert_source = '-'
@@ -406,10 +407,10 @@ def SitePublicAlert(PublicAlert, window):
                     # within 3 days of 4hr-extension
                     if RoundTime(window.end) - validity < timedelta(3):
                         validity = RoundTime(window.end)
-                        if 'L' not in list_ground_alerts and 'l' not in list_ground_alerts:
+                        if ('L' not in list_ground_alerts and len(nonNDsensor) == 0) and 'l' not in list_ground_alerts:
                             internal_alert = 'A2-s0g0' + other_alerts
                         else:
-                            if 'L' in list_ground_alerts:
+                            if 'L' in list_ground_alerts or len(nonNDsensor) != 0:
                                 internal_alert = 'A2-s'
                             else:
                                 internal_alert = 'A2-s0'
@@ -429,7 +430,7 @@ def SitePublicAlert(PublicAlert, window):
             # sensor triggered
             elif alert_source == 'sensor':
                 # with data
-                if 'L' in list_ground_alerts:
+                if 'L' in list_ground_alerts or len(nonNDsensor) != 0:
                     internal_alert = 'A0'
                     public_alert = 'A0'
                     alert_source = '-'
@@ -489,7 +490,7 @@ def SitePublicAlert(PublicAlert, window):
             alert_source = ','.join(RED_source)
 
             # identifies if with ground data
-            if 'L' in list_ground_alerts or 'l' in list_ground_alerts:
+            if 'L' in list_ground_alerts or 'l' in list_ground_alerts or len(nonNDsensor) != 0:
                 internal_alert = 'A1-' + other_alerts
             else:
                 internal_alert = 'ND-' + other_alerts
@@ -497,7 +498,7 @@ def SitePublicAlert(PublicAlert, window):
         # end of A1 validity if with data with no significant mov't
         else:
             # with ground data
-            if 'L' in list_ground_alerts or 'l' in list_ground_alerts:
+            if 'L' in list_ground_alerts or 'l' in list_ground_alerts or len(nonNDsensor) != 0:
                 # if nd rainfall alert                
                 if rain_alert == 'nd':
                     query = "SELECT * FROM senslopedb.site_level_alert WHERE site = '%s' AND source = 'rain' ORDER BY TIMESTAMP DESC LIMIT 2" %site
@@ -523,7 +524,7 @@ def SitePublicAlert(PublicAlert, window):
                             public_alert = 'A0'
                             alert_source = '-'
                             validity = '-'
-                            internal_alert = 'ND'
+                            internal_alert = 'A0'
                     else:
                         internal_alert = 'A0'
                         public_alert = 'A0'
@@ -552,11 +553,7 @@ def SitePublicAlert(PublicAlert, window):
                         RED_source += ['on demand']
                     alert_source = ','.join(RED_source)
         
-                    # identifies if with ground data
-                    if 'L' in list_ground_alerts or 'l' in list_ground_alerts:
-                        internal_alert = 'A1-' + other_alerts
-                    else:
-                        internal_alert = 'ND-' + other_alerts
+                    internal_alert = 'ND-' + other_alerts
 
                 else:
                     public_alert = 'A0'
@@ -569,7 +566,7 @@ def SitePublicAlert(PublicAlert, window):
         alert_source = '-'
         public_alert = 'A0'
         validity = '-'
-        if 'L' in list_ground_alerts or 'l' in list_ground_alerts:
+        if 'L' in list_ground_alerts or 'l' in list_ground_alerts or len(nonNDsensor) != 0:
             internal_alert = 'A0'
         else:
             internal_alert = 'ND'
