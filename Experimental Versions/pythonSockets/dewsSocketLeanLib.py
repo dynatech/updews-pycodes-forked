@@ -274,9 +274,9 @@ def formatAckSentGSMtext(ts_written, ts_sent, recipient):
     return jsonText   
 
 def sendDataToDEWS(msg, port=None):
-    # host = "www.dewslandslide.com"
+    host = "www.dewslandslide.com"
     # New Micro hosting for the Chatterbox app
-    host = "54.166.60.233"
+    # host = "54.166.60.233"
     
     if port == None:
         port = 5050
@@ -357,8 +357,8 @@ def sendBatchReceivedGSMtoDEWS(host="www.codesword.com", port=5050, limit=20):
 
 # Send Acknowledgement for ALL outbox sms with send_status "SEND"
 #   to DEWS Web Socket Server
-# def sendAllAckSentGSMtoDEWS(host="www.dewslandslide.com", port=5050, limit=20):
-def sendAllAckSentGSMtoDEWS(host="54.166.60.233", port=5050, limit=20):
+def sendAllAckSentGSMtoDEWS(host="www.dewslandslide.com", port=5050, limit=20):
+# def sendAllAckSentGSMtoDEWS(host="54.166.60.233", port=5050, limit=20):
     #Load all sms messages with "SENT" status
     allmsgs = getAllSMSoutbox('SENT',limit)
 
