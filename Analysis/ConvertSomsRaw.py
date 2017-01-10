@@ -34,7 +34,7 @@ def getsomsrawdata(column="", gid=0, fdate="", tdate=""):
     v3=[ 'lpasa','lpasb','laysa','laysb','imesb','barsc','messb','imusc','oslsc',
          'mngsa','gaasa','gaasb','hinsa','hinsb','talsa' ]
     df = pd.DataFrame(columns=['sraw', 'scal'])
-    print 'getsomsdata: ' + column + ',' + str(gid)
+#    print 'getsomsdata: ' + column + ',' + str(gid)
     try:
         df = qs.GetSomsData(siteid=column+'m', fromTime=fdate, toTime=tdate, targetnode=gid)
 
