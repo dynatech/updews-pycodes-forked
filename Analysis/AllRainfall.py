@@ -235,21 +235,21 @@ def SensorPlot(name, col, start, end, tsn, halfmax, twoyrmax, base, RainfallPlot
     ins3 = fig.add_subplot(len(col),2,5, sharex=ins1, sharey=ins1)
 
     cum1 = fig.add_subplot(len(col),2,2)
-    cum2 = fig.add_subplot(len(col),2,4, sharex=cum1, sharey=cum1)
-    cum3 = fig.add_subplot(len(col),2,6, sharex=cum1, sharey=cum1)
+    cum2 = fig.add_subplot(len(col),2,4, sharex=cum1)
+    cum3 = fig.add_subplot(len(col),2,6, sharex=cum1)
 
     insax = [ins1, ins2, ins3]
     cumax = [cum1, cum2, cum3]
 
     if len(col) >= 4:
         ins4 = fig.add_subplot(len(col),2,7, sharex=ins1, sharey=ins1)
-        cum4 = fig.add_subplot(len(col),2,8, sharex=cum1, sharey=cum1)
+        cum4 = fig.add_subplot(len(col),2,8, sharex=cum1)
         insax.append(ins4)
         cumax.append(cum4)
 
     if len(col) == 5:
         ins5 = fig.add_subplot(len(col),2,9, sharex=ins1, sharey=ins1)
-        cum5 = fig.add_subplot(len(col),2,10, sharex=cum1, sharey=cum1)
+        cum5 = fig.add_subplot(len(col),2,10, sharex=cum1)
         insax.append(ins5)
         cumax.append(cum5)
 
