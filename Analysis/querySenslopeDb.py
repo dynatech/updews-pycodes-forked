@@ -236,7 +236,7 @@ def PushDBDataFrame(df,table_name):
 #    df.ts = pd.to_datetime(df.ts)
 #    
 #    return df
-def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid = 0, targetnode =0, batt=0, returndb=True):
+def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid = "", targetnode ="", batt=0, returndb=True):
     if not siteid:
         raise ValueError('no site id entered')
         
@@ -244,8 +244,7 @@ def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid
         PrintOut('Querying database ...')
 
     if (len(siteid) == 5):
-        if (msgid == 0):
-            print 'msgid == 0'
+        if not msgid:
             query = " SELECT timestamp,'%s' as 'name',id,xvalue,yvalue,zvalue,batt  FROM senslopedb.%s"  % (siteid,siteid)
             
             targetnode_query = " WHERE id IN (SELECT node_id FROM senslopedb.node_accel_table WHERE site_name = '%s' and accel = 1)" %siteid 
@@ -277,10 +276,7 @@ def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid
             query = query + " AND msgid in (12, 33)"
             query = query+ " AND timestamp > '%s'" %fromTime
             query = query + toTime_query
-            
-        elif msgid in (11,12,32,33):
-
-            print 'msgid in 11,12,32,33'
+        else:
             query = " SELECT timestamp,'%s' as 'name',id,xvalue,yvalue,zvalue,batt  FROM senslopedb.%s WHERE msgid = %d"  % (siteid,siteid,msgid)
             if (targetnode != ""):
                 query = query + " AND id = %d" %(targetnode)
