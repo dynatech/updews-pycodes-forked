@@ -51,7 +51,7 @@ def main(ts=datetime.now(), site=''):
             break
         print '\n\n'
         print 'rain gauge id not in the list'
-        rain_lst = '###  ' + ','.join(gauge_ids) + '  ###'
+        rain_lst = '##  ' + ','.join(gauge_ids) + '  ##'
         print '#'*len(rain_lst)
         print rain_lst
         print '#'*len(rain_lst)
@@ -65,38 +65,53 @@ def main(ts=datetime.now(), site=''):
 
     try:
         one,three = A.onethree_val_writer(rainfall)
-        return ts, site, one, halfmax, three, twoyrmax
+        return ts, site, one, halfmax, three, twoyrmax, gauge_ids, gauge
     except:
         one, three = '', ''
-        return ts, site, one, halfmax, three, twoyrmax
+        return ts, site, one, halfmax, three, twoyrmax, gauge_ids, gauge
 
 ###############################################################################
 
 if __name__ == "__main__":
     start_time = datetime.now()
-    ts, site, one, halfmax, three, twoyrmax = main()
-    while True:
-        if one == '':
-            print '\n\n\n\n\n'
-            print "no data choose other rain gauge"
-            print '\n\n\n\n\n'
-            ts, site, one, halfmax, three, twoyrmax = main(ts=ts, site=site)
+    ts, site, one, halfmax, three, twoyrmax, gauge_ids, gauge = main()
+    gauge_lst = gauge_ids
+    while gauge in gauge_lst:
+        gauge_lst.remove(gauge)
+        if len(gauge_lst) == 0 and one == '':
+            break
+        elif one == '':
+            note_data = "##  no data choose other rain gauge  ##"
+            print '\n\n\n'
+            print '#' * len(note_data)
+            print note_data
+            print '#' * len(note_data)
+            print '\n\n\n'
+            ts, site, one, halfmax, three, twoyrmax, gauge_ids, gauge = main(ts=ts, site=site)
         else:
             break
-    one_cml = '1-day: ' + str(one) + ' mm (threshold: ' + str(halfmax) + ')'
-    three_cml = '3-day: ' + str(three) + ' mm (threshold: ' + str(twoyrmax) + ')'
-    space = len(three_cml) - len(one_cml)
-    print '\n\n\n\n\n'
-    print '#'*(max(len(one_cml), len(three_cml))+6)
-    if len(three_cml) == len(one_cml):
-        print '#  ' + one_cml + '  #'
-        print '#  ' + three_cml + '  #'
-    elif len(three_cml) > len(one_cml):
-        print '#  ' + one_cml + ' '*space + '  #'
-        print '#  ' + three_cml + '  #'
+    if one != '':
+        one_cml = '1-day: ' + str(one) + ' mm (threshold: ' + str(halfmax) + ')'
+        three_cml = '3-day: ' + str(three) + ' mm (threshold: ' + str(twoyrmax) + ')'
+        space = len(three_cml) - len(one_cml)
+        print '\n\n\n'
+        print '#'*(max(len(one_cml), len(three_cml))+8)
+        if len(three_cml) == len(one_cml):
+            print '##  ' + one_cml + '  ##'
+            print '##  ' + three_cml + '  ##'
+        elif len(three_cml) > len(one_cml):
+            print '##  ' + one_cml + ' '*space + '  ##'
+            print '##  ' + three_cml + '  ##'
+        else:
+            print '##  ' + one_cml + '  ##'
+            print '##  ' + three_cml + ' '*space + '  ##'
+        print '#'*(max(len(one_cml), len(three_cml))+8)
+        print '\n\n\n'
     else:
-        print '#  ' + one_cml + '  #'
-        print '#  ' + three_cml + ' '*space + '  #'
-    print '#'*(max(len(one_cml), len(three_cml))+6)
-    print '\n\n\n\n\n'
+        note = "##  No data for all rain gauges  ##"
+        print '\n\n\n'
+        print '#'*len(note)
+        print note
+        print '#'*len(note)
+        print '\n\n\n'
     print "runtime = ", datetime.now()-start_time
