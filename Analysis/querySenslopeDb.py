@@ -276,7 +276,8 @@ def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid
             query = query + " AND msgid in (12, 33)"
             query = query+ " AND timestamp > '%s'" %fromTime
             query = query + toTime_query
-        else:
+            
+        elif msgid in (11,12,32,33):
             query = " SELECT timestamp,'%s' as 'name',id,xvalue,yvalue,zvalue,batt  FROM senslopedb.%s WHERE msgid = %d"  % (siteid,siteid,msgid)
             if (targetnode != ""):
                 query = query + " AND id = %d" %(targetnode)
