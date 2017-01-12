@@ -4,9 +4,9 @@ import pandas as pd
 import AllRainfall as A
 import querySenslopeDb as q
 
-def main(ts=datetime.now(), site=''):
+def main(ts='', site=''):
     # data timestamp
-    if ts == datetime.now():
+    if ts == '':
         while True:
             try:
                 ts = pd.to_datetime(raw_input('timestamp format YYYY-MM-DD HH:MM (e.g. 2017-01-13 19:30): '))
@@ -32,12 +32,12 @@ def main(ts=datetime.now(), site=''):
     gauge_ids = [site_rain_props['RG1'].values[0]] +[site_rain_props['RG2'].values[0]] +[site_rain_props['RG3'].values[0]]
     try:
         if site_rain_props['rain_senslope'].values[0] != None:
-            gauge_ids += [site_rain_props['rain_senslope'].values[0]]
+            gauge_ids = [site_rain_props['rain_senslope'].values[0]] + gauge_ids
     except:
         pass
     try:
         if site_rain_props['rain_arq'].values[0] != None:
-            gauge_ids += [site_rain_props['rain_arq'].values[0]]
+            gauge_ids = [site_rain_props['rain_arq'].values[0]] + gauge_ids
     except:
         pass
     # rain gauge id
