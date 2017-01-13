@@ -236,7 +236,7 @@ def PushDBDataFrame(df,table_name):
 #    df.ts = pd.to_datetime(df.ts)
 #    
 #    return df
-def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid = 0, targetnode ="", batt=0, returndb=True):
+def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid = "", targetnode ="", batt=0, returndb=True):
     if not siteid:
         raise ValueError('no site id entered')
         
@@ -245,7 +245,7 @@ def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid
 
     if (len(siteid) == 5):
         if not msgid:
-            print "inside ----> if not msgid:"
+            # print "inside ----> if not msgid:"
             query = " SELECT timestamp,'%s' as 'name',id,xvalue,yvalue,zvalue,batt  FROM senslopedb.%s"  % (siteid,siteid)
             
             targetnode_query = " WHERE id IN (SELECT node_id FROM senslopedb.node_accel_table WHERE site_name = '%s' and accel = 1)" %siteid 
