@@ -632,7 +632,7 @@ def GenerateGroundDataAlert(site=None,end=None):
     
     GrndMeasPlotsPath = cfg.get('I/O','GrndMeasPlotsPath')
     print_out_path = out_path + GrndMeasPlotsPath
-    print_out_path2 = out_path + GrndMeasPlotsPath + 'TrendingPlots/'
+    print_out_path2 = out_path + GrndMeasPlotsPath + 'TrendingPlots/OldAlerts/'
     for path in [print_out_path,print_out_path2]:
         if not os.path.exists(path):
             os.makedirs(path)
