@@ -55,9 +55,6 @@ def SiteCoord():
     df['name'] = df.name.apply(lambda x: x[0:3] + 'w')
     RGCoord = RGCoord.append(df)
     
-    query = "SELECT * FROM senslopedb.site_column where name = 'loo'"
-    df = q.GetDBDataFrame(query)
-    RGCoord = RGCoord.append(df)
     RGCoord = RGCoord.drop_duplicates(['sitio', 'barangay', 'municipality', 'province'])
     RGCoord = RGCoord[['name', 'lat', 'lon', 'barangay', 'province']]    
     RGCoord = RGCoord.rename(columns = {'name': 'dev_id', 'barangay': 'location'})
@@ -83,8 +80,8 @@ def AllRGCoord():
     
 def Distance(name):
     Coord = SiteCoord()
-    lat = Coord.loc[Coord.dev_id == name].lat.values[0]
-    lon = Coord.loc[Coord.dev_id == name].lon.values[0]
+    lat = Coord.loc[Coord.dev_id == name]['lat'].values[0]
+    lon = Coord.loc[Coord.dev_id == name]['lon'].values[0]
     
     NearGauge = AllRGCoord()
     
@@ -104,13 +101,10 @@ def Distance(name):
     return NearGauge[0:3]
 
 def NearRGdf(df):
-    if df['name'].values[0] == 'loo':
-        d = Distance('loo')
-    else:
-        try:
-            d = Distance(df['rain_arq'].values[0])
-        except:
-            d = Distance(df['rain_senslope'].values[0])
+    try:
+        d = Distance(df['rain_arq'].values[0])
+    except:
+        d = Distance(df['rain_senslope'].values[0])
 
     d['d'] = np.round(d['d'], 2)
     
