@@ -132,12 +132,14 @@ def getAllSmsFromDb(read_status):
 
         except MySQLdb.OperationalError:
             print '9.',
+            time.sleep(20)
             
 def getAllOutboxSmsFromDb(send_status,network,limit=10):
-    db, cur = SenslopeDBConnect('gsm')
+    # db, cur = SenslopeDBConnect('gsm')
     
     while True:
         try:
+            db, cur = SenslopeDBConnect('gsm')
             query = """select sms_id, timestamp_written, recepients, sms_msg from %s.smsoutbox
                 where send_status like '%s%s%s' and gsm_id = '%s' limit %d""" % (gsmdbinstance.name,'%',send_status,'%',network,limit)
                 # where send_status = '%s' and gsm_id = '%s' limit %d""" % (gsmdbinstance.name,send_status,network,limit)
@@ -151,7 +153,8 @@ def getAllOutboxSmsFromDb(send_status,network,limit=10):
             return out
 
         except MySQLdb.OperationalError:
-            print '9.',
+            print '10.',
+            time.sleep(20)
 
 def commitToDb(query, identifier, instance='local'):
     db, cur = SenslopeDBConnect(instance)
