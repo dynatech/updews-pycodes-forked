@@ -40,7 +40,7 @@ def get_rt_window(rt_window_length,roll_window_length):
 
 ################################     MAIN     ################################
 
-def main():
+def main(site=''):
 
     output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
     
@@ -56,7 +56,11 @@ def main():
     tsn=end.strftime("%Y-%m-%d_%H-%M-%S")
     
     #rainprops containing noah id and threshold
-    rainprops = q.GetRainProps('rain_props')    
+    rainprops = q.GetRainProps('rain_props')  
+    if site == '':
+        pass
+    else:
+        rainprops = rainprops[rainprops.name == site]
     siterainprops = rainprops.groupby('name')
     
     summary = siterainprops.apply(RA.main, end=end, s=s)
@@ -64,10 +68,11 @@ def main():
     
     if s.io.PrintSummaryAlert:
         summary.to_csv(output_path+s.io.RainfallPlotsPath+'SummaryOfRainfallAlertGenerationFor'+tsn+s.io.CSVFormat,sep=',',mode='w')
-    
-    print summary
 
-    siterainprops.apply(RP.main, offsetstart=offsetstart, start=start, end=end, tsn=tsn, s=s, output_path=output_path)
+    if s.io.PrintPlot:
+        siterainprops.apply(RP.main, offsetstart=offsetstart, start=start, end=end, tsn=tsn, s=s, output_path=output_path)
+        
+    return summary
 
 ###############################################################################
 

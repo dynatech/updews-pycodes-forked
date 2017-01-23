@@ -153,12 +153,12 @@ def RainfallAlert(siterainprops, end, s):
         if len(rain_timecheck.dropna())<1:
             #from rain_senslope, plots and alerts are processed
             rainfall = GetResampledData(rain_senslope, offsetstart, start, end)
-            datasource="rain_senslope"
+            datasource = rain_senslope
             summary = summary_writer(name,datasource,twoyrmax,halfmax,rainfall)
                     
         else:
             #alerts are processed if senslope rain gauge data is updated
-            datasource = "rain_arq"
+            datasource = rain_arq
             summary = summary_writer(name,datasource,twoyrmax,halfmax,rainfall)
 
     except:

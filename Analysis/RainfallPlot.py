@@ -51,7 +51,7 @@ def shade_range(df, lst):
     return lst
 
 def plot_shade(df, ax):
-    ax.vspan(pd.to_datetime(df['shaded_range'].values[0][0]), pd.to_datetime(df['shaded_range'].values[0][1]), ec = None, alpha = 0.5, color='red')
+    ax.axvspan(pd.to_datetime(df['shaded_range'].values[0][0]), pd.to_datetime(df['shaded_range'].values[0][1]), alpha = 0.5, color='#afeeee')
 
 def PlotData(rain_gauge_col, offsetstart, start, end, sub, col, insax, cumax, fig, name):
     data = GetData(rain_gauge_col['rain_gauge'].values[0], offsetstart, end)
@@ -93,13 +93,9 @@ def PlotData(rain_gauge_col, offsetstart, start, end, sub, col, insax, cumax, fi
         nan_range = nan_range[0]
         nan_range = nan_range[1:len(nan_range)]
         shaded_range = stitch_intervals(nan_range)
-#        shaded_df = pd.DataFrame({'shaded_range': stitch_intervals(nan_range)})
-#        shaded_grp = shaded_df.groupby('shaded_range')
-
-#        shaded_grp.apply(plot_shade, ax=inscurax)
-        for i in shaded_range:
-            inscurax.axvspan(i[0], i[1], alpha=0.5, color='#afeeee')
-#        inscurax.axvspan(shaded_range['shaded_range'].values[0][0], shaded_range['shaded_range'].values[0][0], alpha=0.5, color='red')
+        shaded_df = pd.DataFrame({'shaded_range': shaded_range})
+        shaded_grp = shaded_df.groupby('shaded_range')
+        shaded_grp.apply(plot_shade, ax=inscurax)
     except:
         pass
 
@@ -174,7 +170,7 @@ def SensorPlot(name, col, offsetstart, start, end, tsn, halfmax, twoyrmax, base,
     rain_gauge_col.apply(PlotData, offsetstart=offsetstart, start=start, end=end, sub=sub, col=col, insax=insax, cumax=cumax, fig=fig, name=name) 
     
     lgd = plt.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize='medium')
-    plt.savefig(RainfallPlotsPath+tsn+"_"+name, dpi=200, 
+    plt.savefig(RainfallPlotsPath+tsn+"_"+name, dpi=100, 
         facecolor='w', edgecolor='w',orientation='landscape',mode='w',
         bbox_extra_artists=(lgd,))#, bbox_inches='tight')
     plt.close()
