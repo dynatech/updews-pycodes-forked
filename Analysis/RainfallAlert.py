@@ -166,7 +166,7 @@ def RainfallAlert(siterainprops, end, s):
             #if no data from senslope rain gauge, data is gathered from nearest senslope rain gauge from other site or noah rain gauge
             col = [RG1, RG2, RG3]
             rainfall, r = GetUnemptyOtherRGdata(col, offsetstart, start, end)
-            datasource = "Other Rain Gauge: %s" %r
+            datasource = r
             summary = summary_writer(name,datasource,twoyrmax,halfmax,rainfall)
         except:
             #if no data for all rain gauge

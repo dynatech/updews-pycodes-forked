@@ -40,7 +40,7 @@ def get_rt_window(rt_window_length,roll_window_length):
 
 ################################     MAIN     ################################
 
-def main(site=''):
+def main(site='', Print=True):
 
     output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
     
@@ -65,14 +65,17 @@ def main(site=''):
     
     summary = siterainprops.apply(RA.main, end=end, s=s)
     summary = summary.reset_index(drop=True).set_index('site')[['1D cml', 'half of 2yr max', '3D cml', '2yr max', 'DataSource', 'alert', 'advisory']]
-    
-    if s.io.PrintSummaryAlert:
-        summary.to_csv(output_path+s.io.RainfallPlotsPath+'SummaryOfRainfallAlertGenerationFor'+tsn+s.io.CSVFormat,sep=',',mode='w')
 
-    if s.io.PrintPlot:
-        siterainprops.apply(RP.main, offsetstart=offsetstart, start=start, end=end, tsn=tsn, s=s, output_path=output_path)
+    if Print == True:
+        if s.io.PrintSummaryAlert:
+            summary.to_csv(output_path+s.io.RainfallPlotsPath+'SummaryOfRainfallAlertGenerationFor'+tsn+s.io.CSVFormat,sep=',',mode='w')
         
-    return summary
+        if s.io.PrintPlot:
+            siterainprops.apply(RP.main, offsetstart=offsetstart, start=start, end=end, tsn=tsn, s=s, output_path=output_path)
+        
+    summary_json = summary.reset_index().to_json(orient="records")
+    
+    return summary_json
 
 ###############################################################################
 
