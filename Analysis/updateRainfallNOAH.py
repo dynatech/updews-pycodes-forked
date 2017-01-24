@@ -27,10 +27,10 @@ def downloadRainfallNOAH(rsite, fdate, tdate):
     #Reduce by another 1 day due to the "rolling_sum" function
     fdateMinus = (pd.to_datetime(fdate) - td(2)).strftime("%Y-%m-%d")
     
-    url = "http://weather.asti.dost.gov.ph/home/index.php/api/data/%s/from/%s/to/%s" % (rsite,fdateMinus,tdate)
+    url = "http://weather.asti.dost.gov.ph/web-api/index.php/api/data/%s/from/%s/to/%s" % (rsite,fdateMinus,tdate)
     
     try:
-        r = requests.get(url)
+        r = requests.get(url, auth=('phivolcs.ggrdd', 'PhiVolcs0117'))
     except:
         print "    Can not get request. Please check if your internet connection is stable"
         return pd.DataFrame()
@@ -62,7 +62,6 @@ def downloadRainfallNOAH(rsite, fdate, tdate):
         
         #rename the "index" into "timestamp"
         dfa.index.names = ["timestamp"]
-        print 'dfa', dfa
         return dfa
         
     except:
@@ -99,17 +98,22 @@ def updateRainfallNOAHTableData(rsite, fdate, tdate):
             #Insert an entry with values: [timestamp,-1,-1] as a marker
             #   for the next time it is used
             #   note: values with -1 should not be included in values used for computation
-            placeHolderData = pd.DataFrame({"timestamp": tdate+" 00:00:00","cumm":-1,"rval":-1}, index=[0])
+            placeHolderData = pd.DataFrame({"timestamp": tdate,"cumm":-1,"rval":-1}, index=[0])
             placeHolderData = placeHolderData.set_index(['timestamp'])
             #print placeHolderData
-            qs.PushDBDataFrame(placeHolderData, table_name) 
+            try:
+                qs.PushDBDataFrame(placeHolderData, table_name) 
+            except:
+                print 'previously written in db'
             
             #call this function again until the maximum recent timestamp is hit        
             updateNOAHSingleTable(rsite)
 
     else:        
         #Insert the new data on the noahid table
-        qs.PushDBDataFrame(noahData, table_name) 
+        noahDataI = noahData.reset_index()
+        grpnoahData = noahDataI.groupby('timestamp')
+        grpnoahData.apply(qs.PushDBDataFrame, table_name=table_name)
         
         #The table is already up to date
         if tdate > curTS:
