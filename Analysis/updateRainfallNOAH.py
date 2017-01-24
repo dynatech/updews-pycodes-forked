@@ -98,7 +98,7 @@ def updateRainfallNOAHTableData(rsite, fdate, tdate):
             #Insert an entry with values: [timestamp,-1,-1] as a marker
             #   for the next time it is used
             #   note: values with -1 should not be included in values used for computation
-            placeHolderData = pd.DataFrame({"timestamp": tdate,"cumm":-1,"rval":-1}, index=[0])
+            placeHolderData = pd.DataFrame({"timestamp": tdate+" 00:00:00","cumm":-1,"rval":-1}, index=[0])
             placeHolderData = placeHolderData.set_index(['timestamp'])
             #print placeHolderData
             try:
@@ -111,9 +111,7 @@ def updateRainfallNOAHTableData(rsite, fdate, tdate):
 
     else:        
         #Insert the new data on the noahid table
-        noahDataI = noahData.reset_index()
-        grpnoahData = noahDataI.groupby('timestamp')
-        grpnoahData.apply(qs.PushDBDataFrame, table_name=table_name)
+        qs.PushDBDataFrame(noahData, table_name)
         
         #The table is already up to date
         if tdate > curTS:
