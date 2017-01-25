@@ -5,9 +5,6 @@ import numpy as np
 import time
 from datetime import timedelta as td
 from datetime import datetime as dt
-import sqlalchemy
-from sqlalchemy import create_engine
-import sys
 import requests
 #import querySenslopeDb as qs
 
@@ -82,7 +79,6 @@ def downloadRainfallNOAHJson(rsite, fdate, tdate):
 #insert the newly downloaded data to the database
 def updateRainfallNOAHTableData(rsite, fdate, tdate):
     noahData = downloadRainfallNOAH(rsite, fdate, tdate)
-    #print noahData
     
     curTS = time.strftime("%Y-%m-%d")  
     
@@ -111,7 +107,9 @@ def updateRainfallNOAHTableData(rsite, fdate, tdate):
 
     else:        
         #Insert the new data on the noahid table
-        qs.PushDBDataFrame(noahData, table_name)
+        noahData = noahData.reset_index()
+        grpnoahData = noahData.groupby('timestamp')
+        grpnoahData.apply(qs.PushDBDataFrame, table_name=table_name)
         
         #The table is already up to date
         if tdate > curTS:
