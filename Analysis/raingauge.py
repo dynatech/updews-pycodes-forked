@@ -86,6 +86,7 @@ def Distance(name):
     lon = Coord.loc[Coord.dev_id == name]['lon'].values[0]
     
     NearGauge = AllRGCoord()
+    NearGauge = NearGauge.drop_duplicates('dev_id')
     
     NearGauge['dlat'] = NearGauge['lat'].apply(lambda x: float(x) - lat)
     NearGauge['dlon'] = NearGauge['lon'].apply(lambda x: float(x) - lon)
