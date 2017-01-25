@@ -1,15 +1,15 @@
 from datetime import datetime, timedelta
 import pandas as pd
 
-import AllRainfall as A
+import RainfallAlert as A
 import querySenslopeDb as q
 
-def main(ts='', site=''):
+def main(end='', site=''):
     # data timestamp
-    if ts == '':
+    if end == '':
         while True:
             try:
-                ts = pd.to_datetime(raw_input('timestamp format YYYY-MM-DD HH:MM (e.g. 2017-01-13 19:30): '))
+                end = pd.to_datetime(raw_input('timestamp format YYYY-MM-DD HH:MM (e.g. 2017-01-13 19:30): '))
                 break
             except:
                 print 'invalid timestamp format'
@@ -58,23 +58,23 @@ def main(ts='', site=''):
         print '\n\n'
         
     # rainfall data for the past 3 days
-    start = ts - timedelta(3) - timedelta(hours=0.5)
-    end = ts + timedelta(hours=0.5)
-    rainfall = A.GetResampledData(gauge, start, end)
-    rainfall = rainfall[(rainfall.index >= ts - timedelta(3))&(rainfall.index <= ts)]
+    start = end - timedelta(3)
+    offsetstart = start - timedelta(hours=0.5)
+    rainfall = A.GetResampledData(gauge, offsetstart, start, end)
+    rainfall = rainfall[(rainfall.index >= start)&(rainfall.index <= end)]
 
     try:
         one,three = A.onethree_val_writer(rainfall)
-        return ts, site, one, halfmax, three, twoyrmax, gauge_ids, gauge
+        return end, site, one, halfmax, three, twoyrmax, gauge_ids, gauge
     except:
         one, three = '', ''
-        return ts, site, one, halfmax, three, twoyrmax, gauge_ids, gauge
+        return end, site, one, halfmax, three, twoyrmax, gauge_ids, gauge
 
 ###############################################################################
 
 if __name__ == "__main__":
     start_time = datetime.now()
-    ts, site, one, halfmax, three, twoyrmax, gauge_ids, gauge = main()
+    end, site, one, halfmax, three, twoyrmax, gauge_ids, gauge = main()
     gauge_lst = gauge_ids
     while gauge in gauge_lst:
         gauge_lst.remove(gauge)
@@ -87,7 +87,7 @@ if __name__ == "__main__":
             print note_data
             print '#' * len(note_data)
             print '\n\n\n'
-            ts, site, one, halfmax, three, twoyrmax, gauge_ids, gauge = main(ts=ts, site=site)
+            end, site, one, halfmax, three, twoyrmax, gauge_ids, gauge = main(end=end, site=site)
         else:
             break
     if one != '':

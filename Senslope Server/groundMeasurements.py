@@ -1,7 +1,7 @@
 import re, sys
 from datetime import datetime as dt
 import cfgfileio as cfg
-import subprocess
+import subprocess, time
 
 def getTimeFromSms(text):
   # timetxt = ""
@@ -29,8 +29,12 @@ def getTimeFromSms(text):
     else:
       print 'not', fmt
   
-  # if re.search("00:00:00",date_str):
-  #   raise ValueError
+  # sanity check
+  time_val = dt.strptime(time_str,"%H:%M:%S").time()
+  if time_val > dt.now().time():
+    raise ValueError
+  elif time_val > dt.strptime("18:00:00","%H:%M:%S").time() or time_val < dt.strptime("05:00:00","%H:%M:%S").time(): 
+    raise ValueError
 
   return time_str
 
@@ -64,8 +68,9 @@ def getDateFromSms(text):
       date_str = dt.strptime(date_str,date_format_dict[fmt]).strftime("%Y-%m-%d")
       break
 
-  # if re.search("0000-00-00",date_str):
-  #   raise ValueError
+  date_val = dt.strptime(date_str,"%Y-%m-%d")
+  if date_val > dt.now():
+    raise ValueError
       
   return date_str
 

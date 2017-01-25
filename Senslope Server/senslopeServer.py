@@ -176,7 +176,7 @@ def SendMessagesFromDb(network,limit=10):
     if len(allmsgs) <= 0:
         # print ">> No messages in outbox"
         return
-
+    
     print ">> Sending messagess from db"
         
     msglist = []
@@ -195,12 +195,13 @@ def SendMessagesFromDb(network,limit=10):
         recepient_list = msg.simnum.split(",")
         for num in recepient_list:
             try:
-                num_prefix = re.match("^((0)|(63))9\d\d",num).group()
+                num_prefix = re.match("^ *((0)|(63))9\d\d",num).group()
+                num_prefix = num_prefix.strip()
             except:
                 continue
             # check if recepient number in allowed prefixed list    
             if num_prefix in allowed_prefixes:
-                ret = gsmio.sendMsg(msg.data,num)
+                ret = gsmio.sendMsg(msg.data,num.strip())
                 if ret == 0:
                     send_success_list.append(msg.num)
                 else:
