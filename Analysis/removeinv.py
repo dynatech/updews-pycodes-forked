@@ -69,7 +69,7 @@ def main_inv(ts=datetime.now()):
     sitealertdf.apply(removeinvpub)
 
     allpub = pd.read_csv('PublicAlert.txt', sep = '\t')
-    withalert = allpub.loc[allpub.alert != 'A0']
+    withalert = allpub.loc[(allpub.alert != 'A0')|(allpub.alert != 'l0t')]
     sitealertdf = alertdf.groupby('site')
     alertdf = sitealertdf.apply(invsensor)
     alertdf = alertdf[['site', 'alert', 'timestamp', 'iomp', 'remarks']]
