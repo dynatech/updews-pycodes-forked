@@ -60,16 +60,17 @@ def main_inv(ts=datetime.now()):
     dfid = df.groupby('alert_id')
     alertdf = dfid.apply(alertmsg)
     alertdf = alertdf.reset_index(drop=True)
+    alertdf = alertdf.loc[(alertdf.alert != 'l0t')]
 
     invalertdf = alertdf.loc[alertdf.timestamp >= ts - timedelta(hours=3)]
     invalertdf = invalertdf[~(invalertdf.source.str.contains('sensor'))]
-    invalertdf = invalertdf.loc[invalertdf.alert != 'A1']
+    invalertdf = invalertdf.loc[(invalertdf.alert != 'A1')]
 
     sitealertdf = invalertdf.groupby('site')
     sitealertdf.apply(removeinvpub)
 
     allpub = pd.read_csv('PublicAlert.txt', sep = '\t')
-    withalert = allpub.loc[(allpub.alert != 'A0')|(allpub.alert != 'l0t')]
+    withalert = allpub.loc[(allpub.alert != 'A0')]
     sitealertdf = alertdf.groupby('site')
     alertdf = sitealertdf.apply(invsensor)
     alertdf = alertdf[['site', 'alert', 'timestamp', 'iomp', 'remarks']]
