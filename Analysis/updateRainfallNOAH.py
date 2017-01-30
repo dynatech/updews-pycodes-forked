@@ -95,12 +95,7 @@ def updateRainfallNOAHTableData(rsite, fdate, tdate):
             #   for the next time it is used
             #   note: values with -1 should not be included in values used for computation
             placeHolderData = pd.DataFrame({"timestamp": tdate+" 00:00:00","cumm":-1,"rval":-1}, index=[0])
-            placeHolderData = placeHolderData.set_index(['timestamp'])
-            #print placeHolderData
-            try:
-                qs.PushDBDataFrame(placeHolderData, table_name) 
-            except:
-                print 'previously written in db'
+            qs.PushDBDataFrame(placeHolderData, table_name) 
             
             #call this function again until the maximum recent timestamp is hit        
             updateNOAHSingleTable(rsite)
@@ -108,6 +103,7 @@ def updateRainfallNOAHTableData(rsite, fdate, tdate):
     else:        
         #Insert the new data on the noahid table
         noahData = noahData.reset_index()
+        noahData = noahData.drop_duplicates('timestamp')
         grpnoahData = noahData.groupby('timestamp')
         grpnoahData.apply(qs.PushDBDataFrame, table_name=table_name)
         
