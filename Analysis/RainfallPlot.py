@@ -106,6 +106,10 @@ def PlotData(rain_gauge_col, offsetstart, start, end, sub, col, insax, cumax, fi
         cumcurax.plot(plot3.index,plot3,color='r') # 72-hr cumulative rainfall #pink e377c2
         cumcurax.plot(plot4.index,plot4,color='b',linestyle='--') # half of 2-yr max rainfall
         cumcurax.plot(plot5.index,plot5,color='r',linestyle='--')  # 2-yr max rainfall
+        b, t = cumcurax.get_ylim()
+        if t > 500:
+            t = 500
+        cumcurax.set_ylim([b, t + 25])
         for tick in inscurax.xaxis.get_major_ticks():
             tick.label.set_rotation('vertical')
         for tick in cumcurax.xaxis.get_major_ticks():
@@ -169,6 +173,8 @@ def SensorPlot(name, col, offsetstart, start, end, tsn, halfmax, twoyrmax, base,
     
     rain_gauge_col.apply(PlotData, offsetstart=offsetstart, start=start, end=end, sub=sub, col=col, insax=insax, cumax=cumax, fig=fig, name=name) 
     
+    ins1.set_xlim([start - timedelta(hours=2), end + timedelta(hours=2)])
+    cum1.set_xlim([start - timedelta(hours=2), end + timedelta(hours=2)])
     lgd = plt.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize='medium')
     plt.savefig(RainfallPlotsPath+tsn+"_"+name, dpi=100, 
         facecolor='w', edgecolor='w',orientation='landscape',mode='w',
