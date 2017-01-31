@@ -177,7 +177,7 @@ def GetDBDataFrame(query):
 def PushDBDataFrame(df,table_name):     
     engine = create_engine('mysql://'+Userdb+':'+Passdb+'@'+Hostdb+':3306/'+Namedb)
     try:
-        df.to_sql(name = table_name, con = engine, if_exists = 'append', schema = Namedb, index = False)
+        df.to_sql(name = table_name, con = engine, if_exists = 'append', schema = Namedb)
     except:
         print 'already in db'
 
