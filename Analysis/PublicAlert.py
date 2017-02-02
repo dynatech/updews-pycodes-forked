@@ -39,10 +39,10 @@ def alert_toDB(df, table_name, window, source):
     
     df2 = q.GetDBDataFrame(query)
     
-    if len(df2) == 0 or df2.alert.values[0] != df.alert.values[0]:
+    if len(df2) == 0 or df2['alert'].values[0] != df['alert'].values[0]:
         engine = create_engine('mysql://'+q.Userdb+':'+q.Passdb+'@'+q.Hostdb+':3306/'+q.Namedb)
         df.to_sql(name = table_name, con = engine, if_exists = 'append', schema = q.Namedb, index = False)
-    elif df2.alert.values[0] == df.alert.values[0]:
+    elif df2['alert'].values[0] == df['alert'].values[0]:
         db, cur = q.SenslopeDBConnect(q.Namedb)
         query = "UPDATE senslopedb.%s SET updateTS='%s' WHERE site = '%s' and source = '%s' and alert = '%s' and timestamp = '%s'" %(table_name, window.end, df2.site.values[0], source, df2.alert.values[0], pd.to_datetime(str(df2.timestamp.values[0])))
         cur.execute(query)
@@ -57,7 +57,7 @@ def SensorAlertLst(df, lst):
         lst += [sensor_alert]
 
 def SitePublicAlert(PublicAlert, window):
-    site = PublicAlert.site.values[0]
+    site = PublicAlert['site'].values[0]
     print site
     
     # latest alert per source (rain,sensor,ground,internal,public,eq,on demand)*
@@ -87,45 +87,45 @@ def SitePublicAlert(PublicAlert, window):
     site_alert = site_alert.loc[site_alert.updateTS >= window.end - timedelta(hours=3)]
 
     # public alert
-    public_PrevAlert = validity_site_alert.loc[validity_site_alert.source == 'public'].alert.values[0]
+    public_PrevAlert = validity_site_alert.loc[validity_site_alert.source == 'public']['alert'].values[0]
     
     # timestamp of start of monitoring
     # alert is still in effect or continuing operational trigger
-    if 'A0' not in validity_site_alert.alert.values:
+    if 'A0' not in validity_site_alert['alert'].values:
         query = "SELECT * FROM senslopedb.site_level_alert WHERE site = '%s' AND source = 'public' AND alert != 'A0' ORDER BY timestamp DESC LIMIT 3" %site
         prev_PAlert = q.GetDBDataFrame(query)
-        print 'Public Alert-', prev_PAlert.alert.values[0]
+        print 'Public Alert-', prev_PAlert['alert'].values[0]
         # one prev alert
         if len(prev_PAlert) == 1:
             start_monitor = pd.to_datetime(prev_PAlert.timestamp.values[0])
         # two prev alert
         elif len(prev_PAlert) == 2:
             # one event with two prev alert
-            if pd.to_datetime(prev_PAlert.timestamp.values[0]) - pd.to_datetime(prev_PAlert.updateTS.values[1]) <= timedelta(hours=0.5):
-                start_monitor = pd.to_datetime(prev_PAlert.timestamp.values[1])
+            if pd.to_datetime(prev_PAlert['timestamp'].values[0]) - pd.to_datetime(prev_PAlert['updateTS'].values[1]) <= timedelta(hours=0.5):
+                start_monitor = pd.to_datetime(prev_PAlert['timestamp'].values[1])
             else:
-                start_monitor = pd.to_datetime(prev_PAlert.timestamp.values[0])
+                start_monitor = pd.to_datetime(prev_PAlert['timestamp'].values[0])
         # three prev alert
         else:
-            if pd.to_datetime(prev_PAlert.timestamp.values[0]) - pd.to_datetime(prev_PAlert.updateTS.values[1]) <= timedelta(hours=0.5):
+            if pd.to_datetime(prev_PAlert['timestamp'].values[0]) - pd.to_datetime(prev_PAlert['updateTS'].values[1]) <= timedelta(hours=0.5):
                 # one event with three prev alert
-                if pd.to_datetime(prev_PAlert.timestamp.values[1]) - pd.to_datetime(prev_PAlert.updateTS.values[2]) <= timedelta(hours=0.5):
+                if pd.to_datetime(prev_PAlert['timestamp'].values[1]) - pd.to_datetime(prev_PAlert['updateTS'].values[2]) <= timedelta(hours=0.5):
                     start_monitor = pd.to_datetime(prev_PAlert.timestamp.values[2])
                 # one event with two prev alert
                 else:
-                    start_monitor = pd.to_datetime(prev_PAlert.timestamp.values[1])
+                    start_monitor = pd.to_datetime(prev_PAlert['timestamp'].values[1])
             else:
-                start_monitor = pd.to_datetime(prev_PAlert.timestamp.values[0])
+                start_monitor = pd.to_datetime(prev_PAlert['timestamp'].values[0])
     # occurrence of operational trigger
-    elif 'r1' in site_alert.alert.values or 'e1' in site_alert.alert.values or 'd1' in site_alert.alert.values \
-            or 'l2' in site_alert.alert.values or 'l3' in site_alert.alert.values \
-            or 'L2' in site_alert.alert.values  or 'L3' in site_alert.alert.values:
+    elif 'r1' in site_alert['alert'].values or 'e1' in site_alert['alert'].values or 'd1' in site_alert['alert'].values \
+            or 'l2' in site_alert['alert'].values or 'l3' in site_alert['alert'].values \
+            or 'L2' in site_alert['alert'].values  or 'L3' in site_alert['alert'].values:
         start_monitor = RoundTime(window.end) - timedelta(hours=4)
-        if 'l3' in site_alert.alert.values or 'L3' in site_alert.alert.values:
+        if 'l3' in site_alert['alert'].values or 'L3' in site_alert['alert'].values:
             print 'Public Alert- A3'
-        if 'l2' in site_alert.alert.values or 'L2' in site_alert.alert.values:
+        if 'l2' in site_alert['alert'].values or 'L2' in site_alert['alert'].values:
             print 'Public Alert- A2'
-        if 'r1' in site_alert.alert.values or 'e1' in site_alert.alert.values or 'd1' in site_alert.alert.values:
+        if 'r1' in site_alert['alert'].values or 'e1' in site_alert['alert'].values or 'd1' in site_alert['alert'].values:
             print 'Public Alert- A1'
 
     try:
@@ -171,23 +171,23 @@ def SitePublicAlert(PublicAlert, window):
         SG_alert = PAlert.loc[(PAlert.source == 'sensor')|(PAlert.source == 'ground')]
         RED_alert = PAlert.loc[(PAlert.source == 'rain')|(PAlert.source == 'eq')|(PAlert.source == 'on demand')]
         other_alerts = ''
-        if 'r1' in RED_alert.alert.values:
+        if 'r1' in RED_alert['alert'].values:
             other_alerts += 'R'
-        if 'e1' in RED_alert.alert.values:
+        if 'e1' in RED_alert['alert'].values:
             other_alerts += 'E'
-        if 'd1' in RED_alert.alert.values:
+        if 'd1' in RED_alert['alert'].values:
             other_alerts += 'D'
         #last L2/L3 retriggger
         retriggerTS = []
         for i in ['l2', 'l3', 'L2', 'L3']:
             try:
-                retriggerTS += [{'retrigger': i, 'timestamp': str(pd.to_datetime(max(SG_alert.loc[SG_alert.alert == i].updateTS.values)))}]
+                retriggerTS += [{'retrigger': i, 'timestamp': str(pd.to_datetime(max(SG_alert.loc[SG_alert.alert == i]['updateTS'].values)))}]
             except:
                 continue        
         #last RED retriggger
         for i in ['r1', 'e1', 'd1']:
             try:
-                retriggerTS += [{'retrigger': i, 'timestamp': str(pd.to_datetime(max(RED_alert.loc[RED_alert.alert == i].updateTS.values)))}]
+                retriggerTS += [{'retrigger': i, 'timestamp': str(pd.to_datetime(max(RED_alert.loc[RED_alert.alert == i]['updateTS'].values)))}]
             except:
                 continue
         
@@ -225,7 +225,7 @@ def SitePublicAlert(PublicAlert, window):
     
     # latest rain alert within 3hrs
     try:
-        rain_alert = site_alert.loc[(site_alert.source == 'rain') & (site_alert.updateTS >= window.end-timedelta(hours=3))].alert.values[0]
+        rain_alert = site_alert.loc[(site_alert.source == 'rain') & (site_alert.updateTS >= window.end-timedelta(hours=3))]['alert'].values[0]
     except:
         rain_alert = 'nd'
 
@@ -238,23 +238,23 @@ def SitePublicAlert(PublicAlert, window):
     list_ground_alerts = ','.join(SG_alert.loc[SG_alert.timestamp >= window.end - timedelta(hours=3)]['alert'].values)
 
     #Public Alert A3
-    if 'L3' in SG_alert.alert.values or 'l3' in SG_alert.alert.values or 'A3' in validity_site_alert.alert.values:
-        validity_RED = RED_alert.loc[(RED_alert.alert == 'r1')|(RED_alert.alert == 'e1')|(RED_alert.alert == 'd1')].updateTS.values
-        validity_L = SG_alert.loc[(SG_alert.alert == 'L3')|(SG_alert.alert == 'l3')|(SG_alert.alert == 'L2')|(SG_alert.alert == 'l2')].updateTS.values
-        validity_A = site_alert.loc[(site_alert.alert == 'A3')].timestamp.values
+    if 'L3' in SG_alert['alert'].values or 'l3' in SG_alert['alert'].values or 'A3' in validity_site_alert['alert'].values:
+        validity_RED = RED_alert.loc[(RED_alert.alert == 'r1')|(RED_alert.alert == 'e1')|(RED_alert.alert == 'd1')]['updateTS'].values
+        validity_L = SG_alert.loc[(SG_alert.alert == 'L3')|(SG_alert.alert == 'l3')|(SG_alert.alert == 'L2')|(SG_alert.alert == 'l2')]['updateTS'].values
+        validity_A = site_alert.loc[(site_alert.alert == 'A3')]['timestamp'].values
         validity = RoundTime(pd.to_datetime(str(max(list(validity_L) + list(validity_A) + list(validity_RED))))) + timedelta(2)
         
         # A3 is still valid
         if validity > window.end + timedelta(hours=0.5):
             public_alert = 'A3'
             # evaluates which triggers A3
-            if ('L3' in SG_alert.alert.values or 'L2' in SG_alert.alert.values) and ('l3' in SG_alert.alert.values or 'l2' in SG_alert.alert.values):
+            if ('L3' in SG_alert['alert'].values or 'L2' in SG_alert['alert'].values) and ('l3' in SG_alert['alert'].values or 'l2' in SG_alert['alert'].values):
                 alert_source = 'both ground and sensor'
                 internal_alert = 'A3-SG' + other_alerts
-            elif 'L3' in SG_alert.alert.values:
+            elif 'L3' in SG_alert['alert'].values:
                 alert_source = 'sensor'
                 internal_alert = 'A3-S' + other_alerts
-            elif 'l3' in SG_alert.alert.values:
+            elif 'l3' in SG_alert['alert'].values:
                 alert_source = 'ground'
                 internal_alert = 'A3-G' + other_alerts
             
@@ -262,11 +262,11 @@ def SitePublicAlert(PublicAlert, window):
         else:
             
             # evaluates which triggers A3
-            if ('L3' in SG_alert.alert.values or 'L2' in SG_alert.alert.values) and ('l3' in SG_alert.alert.values or 'l2' in SG_alert.alert.values):
+            if ('L3' in SG_alert['alert'].values or 'L2' in SG_alert['alert'].values) and ('l3' in SG_alert['alert'].values or 'l2' in SG_alert['alert'].values):
                 alert_source = 'both ground and sensor'
-            elif 'L3' in SG_alert.alert.values:
+            elif 'L3' in SG_alert['alert'].values:
                 alert_source = 'sensor'
-            elif 'l3' in SG_alert.alert.values:
+            elif 'l3' in SG_alert['alert'].values:
                 alert_source = 'ground'
 
             # both ground and sensor triggered
@@ -334,17 +334,17 @@ def SitePublicAlert(PublicAlert, window):
 
         # replace S or G by s or g if L2 or l2 triggered only
         if 'S' in internal_alert:
-            if 'L3' not in SG_alert.alert.values:
+            if 'L3' not in SG_alert['alert'].values:
                 internal_alert = internal_alert.replace('S', 's')
         if 'G' in internal_alert:
-            if 'l3' not in SG_alert.alert.values:
+            if 'l3' not in SG_alert['alert'].values:
                 internal_alert = internal_alert.replace('G', 'g')
 
     #Public Alert A2
-    elif 'L2' in SG_alert.alert.values or 'l2' in SG_alert.alert.values or 'A2' in validity_site_alert.alert.values:
-        validity_RED = RED_alert.loc[(RED_alert.alert == 'r1')|(RED_alert.alert == 'e1')|(RED_alert.alert == 'd1')].updateTS.values
-        validity_L = SG_alert.loc[(SG_alert.alert == 'L2')|(SG_alert.alert == 'l2')].updateTS.values
-        validity_A = site_alert.loc[(site_alert.alert == 'A2')].timestamp.values
+    elif 'L2' in SG_alert['alert'].values or 'l2' in SG_alert['alert'].values or 'A2' in validity_site_alert['alert'].values:
+        validity_RED = RED_alert.loc[(RED_alert.alert == 'r1')|(RED_alert.alert == 'e1')|(RED_alert.alert == 'd1')]['updateTS'].values
+        validity_L = SG_alert.loc[(SG_alert.alert == 'L2')|(SG_alert.alert == 'l2')]['updateTS'].values
+        validity_A = site_alert.loc[(site_alert.alert == 'A2')]['timestamp'].values
         validity = RoundTime(pd.to_datetime(str(max(list(validity_L) + list(validity_A) + list(validity_RED))))) + timedelta(1)
         
         # A2 is still valid
@@ -352,7 +352,7 @@ def SitePublicAlert(PublicAlert, window):
             public_alert = 'A2'
 
             # evaluates which triggers A2
-            if 'L2' in SG_alert.alert.values and 'l2' in SG_alert.alert.values:
+            if 'L2' in SG_alert['alert'].values and 'l2' in SG_alert['alert'].values:
                 alert_source = 'both ground and sensor'
                 if ('L' in list_ground_alerts or len(nonNDsensor) != 0) and 'l' in list_ground_alerts:
                     internal_alert = 'A2-sg' + other_alerts
@@ -371,13 +371,13 @@ def SitePublicAlert(PublicAlert, window):
                         internal_alert += other_alerts
 
                     
-            elif 'L2' in SG_alert.alert.values:
+            elif 'L2' in SG_alert['alert'].values:
                 alert_source = 'sensor'
                 if 'L' in list_ground_alerts or len(nonNDsensor) != 0:
                     internal_alert = 'A2-s' + other_alerts
                 else:
                     internal_alert = 'A2-s0' + other_alerts
-            elif 'l2' in SG_alert.alert.values:
+            elif 'l2' in SG_alert['alert'].values:
                 alert_source = 'ground'
                 if 'l' in list_ground_alerts:
                     internal_alert = 'A2-g' + other_alerts
@@ -388,11 +388,11 @@ def SitePublicAlert(PublicAlert, window):
         else:
     
             # evaluates which triggers A2
-            if 'L2' in SG_alert.alert.values and 'l2' in SG_alert.alert.values:
+            if 'L2' in SG_alert['alert'].values and 'l2' in SG_alert['alert'].values:
                 alert_source = 'both ground and sensor'
-            elif 'L2' in SG_alert.alert.values:
+            elif 'L2' in SG_alert['alert'].values:
                 alert_source = 'sensor'
-            elif 'l2' in SG_alert.alert.values:
+            elif 'l2' in SG_alert['alert'].values:
                 alert_source = 'ground'
 
             # both ground and sensor triggered
@@ -470,9 +470,9 @@ def SitePublicAlert(PublicAlert, window):
                         internal_alert = 'ND'
 
     #Public ALert A1
-    elif 'r1' in site_alert.alert.values or 'e1' in site_alert.alert.values or 'd1' in site_alert.alert.values or 'A1' in validity_site_alert.alert.values:
-        validity_RED = RED_alert.loc[(RED_alert.alert == 'r1')|(RED_alert.alert == 'e1')|(RED_alert.alert == 'd1')].updateTS.values
-        validity_A = site_alert.loc[(site_alert.alert == 'A1')].timestamp.values
+    elif 'r1' in site_alert['alert'].values or 'e1' in site_alert['alert'].values or 'd1' in site_alert['alert'].values or 'A1' in validity_site_alert['alert'].values:
+        validity_RED = RED_alert.loc[(RED_alert.alert == 'r1')|(RED_alert.alert == 'e1')|(RED_alert.alert == 'd1')]['updateTS'].values
+        validity_A = site_alert.loc[(site_alert.alert == 'A1')]['timestamp'].values
         validity = RoundTime(pd.to_datetime(str(max(list(validity_RED) + list(validity_A))))) + timedelta(1)
         
         # A1 is still valid
@@ -504,7 +504,7 @@ def SitePublicAlert(PublicAlert, window):
                     query = "SELECT * FROM senslopedb.site_level_alert WHERE site = '%s' AND source = 'rain' ORDER BY TIMESTAMP DESC LIMIT 2" %site
                     rain_alertDF = q.GetDBDataFrame(query)
                     # if rainfall alert is nd from r1
-                    if rain_alertDF.alert.values[1] == 'r1':
+                    if rain_alertDF['alert'].values[1] == 'r1':
                         # within 1-day cap of 4H extension for nd
                         if RoundTime(window.end) - validity < timedelta(1):
                             validity = RoundTime(window.end)
@@ -578,9 +578,9 @@ def SitePublicAlert(PublicAlert, window):
     
     nonND_alert = site_alert.loc[(site_alert.source != 'public')&(site_alert.source != 'internal')&(site_alert.alert != 'nd')&(site_alert.alert != 'ND')].dropna()
     if len(nonND_alert) != 0:
-        PublicAlert.loc[alert_index] = [pd.to_datetime(str(nonND_alert.sort('updateTS', ascending = False).updateTS.values[0])), PublicAlert.site.values[0], 'public', public_alert, window.end, alert_source, internal_alert, validity, sensor_alert, rain_alert, retriggerTS]
+        PublicAlert.loc[alert_index] = [pd.to_datetime(str(nonND_alert.sort('updateTS', ascending = False)['updateTS'].values[0])), PublicAlert['site'].values[0], 'public', public_alert, window.end, alert_source, internal_alert, validity, sensor_alert, rain_alert, retriggerTS]
     else:
-        PublicAlert.loc[alert_index] = [window.end, PublicAlert.site.values[0], 'public', public_alert, window.end, alert_source, internal_alert, validity, sensor_alert, rain_alert, retriggerTS]
+        PublicAlert.loc[alert_index] = [window.end, PublicAlert['site'].values[0], 'public', public_alert, window.end, alert_source, internal_alert, validity, sensor_alert, rain_alert, retriggerTS]
         
     InternalAlert = PublicAlert.loc[PublicAlert.site == site][['timestamp', 'site', 'internal_alert', 'updateTS']]
     InternalAlert['source'] = 'internal'
@@ -598,29 +598,41 @@ def SitePublicAlert(PublicAlert, window):
     except:
         print 'duplicate'
     
-    public_CurrAlert = SitePublicAlert.alert.values[0]
+    public_CurrAlert = SitePublicAlert['alert'].values[0]
         
     if public_CurrAlert != 'A0' and (len(validity_A) == 0 or public_PrevAlert != public_CurrAlert):
-        GSMAlert = PublicAlert.loc[PublicAlert.site == site][['site', 'alert', 'palert_source']]            
+
+        if public_CurrAlert == 'A3':
+            smsAlertSource = site_alert[(site_alert['alert'] == 'l3')|(site_alert['alert'] == 'L3')]
+            smsAlertSource = ','.join(smsAlertSource['source'].values)
+        elif public_CurrAlert == 'A2':
+            smsAlertSource = site_alert[(site_alert['alert'] == 'l2')|(site_alert['alert'] == 'L2')]
+            smsAlertSource = ','.join(smsAlertSource['source'].values)
+        
+        try:
+            GSMAlert = pd.DataFrame({'site': [site], 'alert': [public_CurrAlert], 'palert_source': [smsAlertSource]})
+        except:
+            GSMAlert = PublicAlert.loc[PublicAlert.site == site][['site', 'alert', 'palert_source']]        
 
         #node_level_alert
         if 'sensor' in alert_source:
             query = "SELECT * FROM senslopedb.node_level_alert WHERE site LIKE '%s' AND timestamp >= '%s' ORDER BY timestamp DESC" %(sensor_site,start_monitor)
             allnode_alertDF = q.GetDBDataFrame(query)
-            column_name = set(allnode_alertDF.site.values)
-            colnode_source = ''
+            column_name = set(allnode_alertDF['site'].values)
+            colnode_source = []
             for i in column_name:
                 node_alertDF = allnode_alertDF.loc[allnode_alertDF.site == i]
-                node_alert = list(set(node_alertDF.id.values))
+                node_alert = list(set(node_alertDF['id'].values))
                 node_alert = str(node_alert)[1:len(str(node_alert))-1].replace(' ', '')
-                colnode_source += str(i) + ':' + node_alert + ' '
-            GSMAlert['palert_source'] = [GSMAlert.palert_source.values[0] + '(' + colnode_source + ')']
+                colnode_source += [str(i) + ':' + node_alert]
+            colnode_source = 'sensor(' + ','.join(colnode_source) + ')'
+            GSMAlert['palert_source'] = [GSMAlert['palert_source'].values[0].replace('sensor', colnode_source)]
             
         with open('GSMAlert.txt', 'w') as w:
             w.write('As of ' + str(datetime.now())[:16] + '\n')
         GSMAlert.to_csv('GSMAlert.txt', header = False, index = None, sep = ':', mode = 'a')
 
-        # write text file to db
+        #write text file to db
         writeAlertToDb('GSMAlert.txt')
         
         with open('GSMAlert.txt', 'w') as w:
@@ -660,9 +672,9 @@ def main():
     window,config = rtw.getwindow()
     
     props = q.GetRainProps('rain_props')
-    PublicAlert = pd.DataFrame({'timestamp': [window.end]*len(props), 'site': props.name.values, 'source': ['public']*len(props), 'alert': [np.nan]*len(props), 'updateTS': [window.end]*len(props), 'palert_source': [np.nan]*len(props), 'internal_alert': [np.nan]*len(props), 'validity': [np.nan]*len(props), 'sensor_alert': [[]]*len(props), 'rain_alert': [np.nan]*len(props), 'retriggerTS': [[]]*len(props)})
+    PublicAlert = pd.DataFrame({'timestamp': [window.end]*len(props), 'site': props['name'].values, 'source': ['public']*len(props), 'alert': [np.nan]*len(props), 'updateTS': [window.end]*len(props), 'palert_source': [np.nan]*len(props), 'internal_alert': [np.nan]*len(props), 'validity': [np.nan]*len(props), 'sensor_alert': [[]]*len(props), 'rain_alert': [np.nan]*len(props), 'retriggerTS': [[]]*len(props)})
     PublicAlert = PublicAlert[['timestamp', 'site', 'source', 'alert', 'updateTS', 'palert_source', 'internal_alert', 'validity', 'sensor_alert', 'rain_alert', 'retriggerTS']]
-    
+
     Site_Public_Alert = PublicAlert.groupby('site')
     PublicAlert = Site_Public_Alert.apply(SitePublicAlert, window=window)
     PublicAlert = PublicAlert[['timestamp', 'site', 'alert', 'palert_source', 'internal_alert', 'validity', 'sensor_alert', 'rain_alert', 'retriggerTS']]
