@@ -600,14 +600,14 @@ def SitePublicAlert(PublicAlert, window):
     
     public_CurrAlert = SitePublicAlert['alert'].values[0]
         
-    if public_CurrAlert != 'A0' and (len(validity_A) == 0 or public_PrevAlert != public_CurrAlert):
+    if public_CurrAlert != 'A0':# and (len(validity_A) == 0 or public_PrevAlert != public_CurrAlert):
 
         if public_CurrAlert == 'A3':
-            smsAlertSource = site_alert[(site_alert['alert'] == 'l3')|(site_alert['alert'] == 'L3')]
-            smsAlertSource = ','.join(smsAlertSource['source'].values)
+            smsAlertSource = SG_alert[(SG_alert['alert'] == 'l3')|(SG_alert['alert'] == 'L3')]
+            smsAlertSource = smsAlertSource['source'].values[0]
         elif public_CurrAlert == 'A2':
-            smsAlertSource = site_alert[(site_alert['alert'] == 'l2')|(site_alert['alert'] == 'L2')]
-            smsAlertSource = ','.join(smsAlertSource['source'].values)
+            smsAlertSource = SG_alert[(SG_alert['alert'] == 'l2')|(SG_alert['alert'] == 'L2')]
+            smsAlertSource = smsAlertSource['source'].values[0]
         
         try:
             GSMAlert = pd.DataFrame({'site': [site], 'alert': [public_CurrAlert], 'palert_source': [smsAlertSource]})
