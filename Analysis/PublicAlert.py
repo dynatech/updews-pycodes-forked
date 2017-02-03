@@ -600,8 +600,8 @@ def SitePublicAlert(PublicAlert, window):
     
     public_CurrAlert = SitePublicAlert['alert'].values[0]
         
-    if public_CurrAlert != 'A0' and (len(validity_A) == 0 or public_PrevAlert != public_CurrAlert):
-
+    if public_PrevAlert != public_CurrAlert:
+        
         if public_CurrAlert == 'A3':
             smsAlertSource = SG_alert[(SG_alert['alert'] == 'l3')|(SG_alert['alert'] == 'L3')]
             smsAlertSource = smsAlertSource['source'].values[0]
