@@ -624,10 +624,11 @@ def SitePublicAlert(PublicAlert, window):
                 node_alertDF = allnode_alertDF.loc[allnode_alertDF.site == i]
                 node_alert = list(set(node_alertDF['id'].values))
                 node_alert = str(node_alert)[1:len(str(node_alert))-1].replace(' ', '')
-                colnode_source += [str(i) + ':' + node_alert]
+                colnode_source += [str(i) + '-' + node_alert]
             colnode_source = 'sensor(' + ','.join(colnode_source) + ')'
             GSMAlert['palert_source'] = [GSMAlert['palert_source'].values[0].replace('sensor', colnode_source)]
-            
+        
+        GSMAlert = GSMAlert[['site', 'alert', 'palert_source']]            
         with open('GSMAlert.txt', 'w') as w:
             w.write('As of ' + str(datetime.now())[:16] + '\n')
         GSMAlert.to_csv('GSMAlert.txt', header = False, index = None, sep = ':', mode = 'a')

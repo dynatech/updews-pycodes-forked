@@ -23,7 +23,6 @@ def alertmsg(df):
 def removeinvpub(df):
     try:
         ts = pd.to_datetime(df['timestamp'].values[0])
-        
         db, cur = q.SenslopeDBConnect(q.Namedb)
         query = "SELECT * FROM (SELECT * FROM site_level_alert WHERE site = '%s' and source = 'public' and alert like '%s' and timestamp >= '%s' and updateTS <= '%s' order by timestamp desc) AS sub GROUP BY source" %(df['site'].values[0], df['alert'].values[0] + '%', ts.date(), ts + timedelta(hours=4))
         df = q.GetDBDataFrame(query)
@@ -57,11 +56,20 @@ def main_inv(ts=datetime.now()):
     # sites with invalid alert
     query = "SELECT * FROM smsalerts where ts_set >= '%s' and alertstat = 'invalid'" %(pd.to_datetime(ts) - timedelta(10))
     df = q.GetDBDataFrame(query)
+    
+    # wrong format in db
+    if 409 in df['alert_id'].values:
+        alertmsg409 = 'As of 2017-02-03 09:36\nosl:A2:ground'
+        df.loc[df['alert_id'] == 409, ['alertmsg']] = alertmsg409
+    if 408 in df['alert_id'].values:
+        alertmsg408 = 'As of 2017-02-02 20:11\npla:A2:"sensor(plat:20)"'
+        df.loc[df['alert_id'] == 408, ['alertmsg']] = alertmsg408
+    
     dfid = df.groupby('alert_id')
     alertdf = dfid.apply(alertmsg)
     alertdf = alertdf.reset_index(drop=True)
     alertdf = alertdf.loc[(alertdf.alert != 'l0t')]
-
+    
     # remove invalid public and internal alert in db
     invalertdf = alertdf.loc[alertdf.timestamp >= ts - timedelta(hours=3)]
     invalertdf = invalertdf[~(invalertdf.source.str.contains('sensor'))]
