@@ -490,7 +490,7 @@ for i in range(len(tableau20)):
 ##########################################################
 ###INPUTS
 colname = 'pngta'
-node = 5
+node = 8
 axis = 'xz'
 k = 3 #degree of spline
 c = 1 #factor of error
@@ -498,8 +498,8 @@ c = 1 #factor of error
 #Step 1: Get dataframe for xz and xy using RealTimePlotter Code
 col = q.GetSensorList(colname)
 
-start = '2016-12-10 00:00:00'
-end = '2016-12-17 12:00:00'
+start = '2017-01-09 7:00:00'
+end = '2017-01-10 09:00:00'
 
 
 window, config = rtw.getwindow(pd.to_datetime(end))
@@ -507,7 +507,7 @@ config.io.to_smooth = 0
 window.start = pd.to_datetime(start).to_datetime()
 
 
-window.numpts = int(73)
+window.numpts = int(7)
 window.offsetstart = window.start - timedelta(days=(config.io.num_roll_window_ops*window.numpts-1)/48.)
 
 out_path = 'C:\Users\Win8\Documents\Dynaslope\\Data Analysis\\Filters\\Acceleration Velocity\\'
@@ -665,9 +665,11 @@ for i in np.arange(window.numpts,len(t)+1):
     ax3.legend(loc = 'upper left',fancybox = True, framealpha = 0.5)
     
     #Plot Acceleration vs. Time
+    text = "v = {}\na= {}".format(round(v_n[-1],5),round(a_n[-1],5))
     ax4 = ax3.twinx()
     ax4.plot(t_n,a_n,c = tableau20[6],label = 'Acceleration')
     ax4.set_ylabel('Acceleration (m/day$^2$)')
+    ax4.text(1-0.320, 0.664705882353-1.60,text,transform = ax2.transAxes,verticalalignment = 'top',horizontalalignment = 'left',bbox = props)
     ax4.legend(loc = 'upper right',fancybox = True, framealpha = 0.5)
     
     fig4_out_path = out_path3 + " {} ".format(tsn4) + colname + " " + str(node) + " velocity vs acceleration" +" {} {}".format(str(k),str(c).replace('.',''))
