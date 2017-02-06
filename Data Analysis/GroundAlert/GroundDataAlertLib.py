@@ -334,8 +334,8 @@ def del_data(df):
 
 def GenerateGroundDataAlert(site=None,end=None):
     if site == None and end == None:
-        site, end = sys.argv[1].lower(),sys.argv[2].lower()
-    
+        site, end = sys.argv[1].lower()[:3],sys.argv[2].lower()
+    print site,end
     
     start_time = datetime.now()
     #Monitoring output directory
