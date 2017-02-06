@@ -609,8 +609,8 @@ def velocity_alert_values(time_delta):
 
 def GenerateGroundDataAlert(site=None,end=None):
     if site == None and end == None:
-        site, end = sys.argv[1].lower(),sys.argv[2].lower()
-        
+        site, end = sys.argv[1].lower()[:3],sys.argv[2].lower()
+    print site,end
     start_time = datetime.now()
     #Monitoring output directory
     path2 = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
