@@ -1,9 +1,7 @@
 import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
-from pandas.stats.api import ols
+from datetime import timedelta
 from sqlalchemy import create_engine
-import sys
 
 import rtwindow as rtw
 import querySenslopeDb as q
@@ -239,7 +237,7 @@ def getmode(li):
     return n
 
 def trending_alertgen(trending_alert, monitoring, lgd, window, config):
-    endTS = pd.to_datetime(trending_alert.timestamp.values[0])
+    endTS = pd.to_datetime(trending_alert['timestamp'].values[0])
     monitoring_vel = monitoring.vel[endTS-timedelta(3):endTS]
     monitoring_vel = monitoring_vel.reset_index().sort_values('ts',ascending=True)
     nodal_dv = monitoring_vel.groupby('id')     
@@ -250,40 +248,41 @@ def trending_alertgen(trending_alert, monitoring, lgd, window, config):
     
     palert = alert.loc[(alert.col_alert == 'L2') | (alert.col_alert == 'L3')]
         
-    if endTS == window.end:
+    if len(palert) != 0:
+        palert['site']=monitoring.colprops.name
+        palert = palert[['timestamp', 'site', 'disp_alert', 'vel_alert', 'col_alert']].reset_index()
+        palert = palert[['timestamp', 'site', 'id', 'disp_alert', 'vel_alert', 'col_alert']]
         
-        if len(palert) != 0:
-            palert['site']=monitoring.colprops.name
-            palert = palert[['timestamp', 'site', 'disp_alert', 'vel_alert', 'col_alert']].reset_index()
-            palert = palert[['timestamp', 'site', 'id', 'disp_alert', 'vel_alert', 'col_alert']]
-            
-            engine = create_engine('mysql://'+q.Userdb+':'+q.Passdb+'@'+q.Hostdb+':3306/'+q.Namedb)
-            for i in palert.index:
-                try:
-                    palert.loc[palert.index == i].to_sql(name = 'node_level_alert', con = engine, if_exists = 'append', schema = q.Namedb, index = False)
-                except:
-                    print 'data already written in senslopedb.node_level_alert'
+        engine = create_engine('mysql://'+q.Userdb+':'+q.Passdb+'@'+q.Hostdb+':3306/'+q.Namedb)
+        for i in palert.index:
+            try:
+                palert.loc[palert.index == i].to_sql(name = 'node_level_alert', con = engine, if_exists = 'append', schema = q.Namedb, index = False)
+            except:
+                print 'data already written in senslopedb.node_level_alert'
 
-    alert['TNL'] = alert.col_alert.values
+    alert['TNL'] = alert['col_alert'].values
     
     if len(palert) != 0:
-        for i in palert.id.values:
+        for i in palert['id'].values:
             query = "SELECT * FROM senslopedb.node_level_alert WHERE site = '%s' and timestamp >= '%s' and id = %s" %(monitoring.colprops.name, endTS-timedelta(hours=3), i)
             nodal_palertDF = q.GetDBDataFrame(query)
             if len(nodal_palertDF) >= 3:
-                alert.loc[alert.id == i, 'TNL'] = max(getmode(list(nodal_palertDF.col_alert.values)))
+                palert_index = alert.loc[alert.id == i].index[0]
+                alert.loc[palert_index]['TNL'] = max(getmode(list(nodal_palertDF['col_alert'].values)))
+            else:
+                alert.loc[palert_index]['TNL'] = 'L0'
     
-    not_working = q.GetNodeStatus(1).loc[q.GetNodeStatus(1).site == monitoring.colprops.name].node.values
+    not_working = q.GetNodeStatus(1).loc[q.GetNodeStatus(1).site == monitoring.colprops.name]['node'].values
     
     for i in not_working:
         alert = alert.loc[alert.id != i]
     
-    if 'L3' in alert.TNL.values:
+    if 'L3' in alert['TNL'].values:
         site_alert = 'L3'
-    elif 'L2' in alert.TNL.values:
+    elif 'L2' in alert['TNL'].values:
         site_alert = 'L2'
     else:
-        site_alert = min(getmode(list(alert.TNL.values)))
+        site_alert = min(getmode(list(alert['TNL'].values)))
     
     alert_index = trending_alert.loc[trending_alert.timestamp == endTS].index[0]
     trending_alert.loc[alert_index] = [endTS, monitoring.colprops.name, 'sensor', site_alert]

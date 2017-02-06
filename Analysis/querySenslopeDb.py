@@ -10,6 +10,7 @@ import numpy as np
 import StringIO
 import filterSensorData
 import platform
+from sqlalchemy import create_engine
 
 curOS = platform.system()
 
@@ -174,12 +175,11 @@ def GetDBDataFrame(query):
         
 #Push a dataframe object into a table
 def PushDBDataFrame(df,table_name):     
-    db, cur = SenslopeDBConnect(Namedb)
-
-    df.to_sql(con=db, name=table_name, if_exists='append', flavor='mysql')
-    db.commit()
-    db.close()
-
+    engine = create_engine('mysql://'+Userdb+':'+Passdb+'@'+Hostdb+':3306/'+Namedb)
+    try:
+        df.to_sql(name = table_name, con = engine, if_exists = 'append', schema = Namedb)
+    except:
+        print 'already in db'
 
 #GetRawAccelData(siteid = "", fromTime = "", maxnode = 40): 
 #    retrieves raw data from the database table specified by parameters
@@ -245,6 +245,7 @@ def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid
 
     if (len(siteid) == 5):
         if not msgid:
+            # print "inside ----> if not msgid:"
             query = " SELECT timestamp,'%s' as 'name',id,xvalue,yvalue,zvalue,batt  FROM senslopedb.%s"  % (siteid,siteid)
             
             targetnode_query = " WHERE id IN (SELECT node_id FROM senslopedb.node_accel_table WHERE site_name = '%s' and accel = 1)" %siteid 
@@ -276,7 +277,9 @@ def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid
             query = query + " AND msgid in (12, 33)"
             query = query+ " AND timestamp > '%s'" %fromTime
             query = query + toTime_query
-        else:
+            
+        elif msgid in (11,12,32,33):
+            # print "inside ----> elif msgid in (11,12,32,33):"
             query = " SELECT timestamp,'%s' as 'name',id,xvalue,yvalue,zvalue,batt  FROM senslopedb.%s WHERE msgid = %d"  % (siteid,siteid,msgid)
             if (targetnode != ""):
                 query = query + " AND id = %d" %(targetnode)

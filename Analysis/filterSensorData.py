@@ -7,14 +7,28 @@ Created on Thu Jun 18 14:39:48 2015
 
 import pandas as pd
 import numpy as np
-import time
-from datetime import timedelta as td
-from datetime import datetime as dt
-import sqlalchemy
-from sqlalchemy import create_engine
-import sys
-import ConfigParser
-from querySenslopeDb import *
+#import time
+#from datetime import timedelta as td
+#from datetime import datetime as dt
+#import sqlalchemy
+#from sqlalchemy import create_engine
+#import sys
+#import ConfigParser
+import querySenslopeDb as qdb
+
+def volt_filter(dfc):
+    #assume for a single node lang ito
+    df = dfc.copy()
+#    print df
+    name = str(df.head(1).iloc[0][1])
+    n_id = int(df.head(1).iloc[0][2])
+    query = """
+    select vmax,vmin from senslopedb.node_accel_table where site_name = '%s' and node_id = %d limit 1""" %(name,n_id)
+    dfv = qdb.GetDBDataFrame(query)
+    vmin = dfv.head(1).iloc[0][1]
+    vmax = dfv.head(1).iloc[0][0]
+    df = df[(df.batt >= vmin) & (df.batt <= vmax)]
+    return df
 
 def checkAccelDrift(df):
     df['mag'] = np.nan

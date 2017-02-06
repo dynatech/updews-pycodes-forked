@@ -1,7 +1,7 @@
 import re, sys
 from datetime import datetime as dt
 import cfgfileio as cfg
-import subprocess
+import subprocess, time
 
 def getTimeFromSms(text):
   # timetxt = ""
@@ -29,6 +29,13 @@ def getTimeFromSms(text):
     else:
       print 'not', fmt
   
+  # sanity check
+  time_val = dt.strptime(time_str,"%H:%M:%S").time()
+  if time_val > dt.now().time():
+    raise ValueError
+  elif time_val > dt.strptime("18:00:00","%H:%M:%S").time() or time_val < dt.strptime("05:00:00","%H:%M:%S").time(): 
+    raise ValueError
+
   return time_str
 
     
@@ -60,6 +67,10 @@ def getDateFromSms(text):
         date_str = date_str + cur_year 
       date_str = dt.strptime(date_str,date_format_dict[fmt]).strftime("%Y-%m-%d")
       break
+
+  date_val = dt.strptime(date_str,"%Y-%m-%d")
+  if date_val > dt.now():
+    raise ValueError
       
   return date_str
 
@@ -92,13 +103,13 @@ def getGndMeas(text):
   try:
     date_str = getDateFromSms(data_field)
     print "Date: " + date_str
-  except:
+  except ValueError:
     raise ValueError(c.reply.faildateen)
   
   try:
     time_str = getTimeFromSms(data_field)
     print "Time: " + time_str
-  except:
+  except ValueError:
     raise ValueError(c.reply.failtimeen)
   
   # get all the measurement pairs
@@ -154,7 +165,7 @@ def getGndMeas(text):
 
   site_code = sms_list[1].lower()  
   ts = date_str+" "+time_str
-  command = """~/anaconda2/bin/python %s %s "%s" > ~/scriptlogs/gndalert.txt 2>&1 && ~/anaconda2/bin/python %s %s "%s" && ~/anaconda2/bin/python %s %s "%s" """ % (c.fileio.gndalert1, site_code, ts, c.fileio.gndalert2, site_code, ts, c.fileio.gndalert3, site_code, ts) 
+  command = """~/anaconda2/bin/python %s %s "%s" > ~/scriptlogs/gndalert.txt 2>&1 && ~/anaconda2/bin/python %s %s "%s" > ~/scriptlogs/gndalert2.txt 2>&1 && ~/anaconda2/bin/python %s %s "%s" > ~/scriptlogs/gndalert3.txt 2>&1""" % (c.fileio.gndalert1, site_code, ts, c.fileio.gndalert2, site_code, ts, c.fileio.gndalert3, site_code, ts) 
 
   p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, stderr=subprocess.STDOUT)
   
