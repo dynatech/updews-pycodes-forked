@@ -65,15 +65,18 @@ def main(site='', Print=True):
     
     summary = siterainprops.apply(RA.main, end=end, s=s)
     summary = summary.reset_index(drop=True).set_index('site')[['1D cml', 'half of 2yr max', '3D cml', '2yr max', 'DataSource', 'alert', 'advisory']]
+    summary_json = summary.reset_index().to_json(orient="records")
 
     if Print == True:
         if s.io.PrintSummaryAlert:
             summary.to_csv(output_path+s.io.RainfallPlotsPath+'SummaryOfRainfallAlertGenerationFor'+tsn+s.io.CSVFormat,sep=',',mode='w')
-        
+            
+            with open(output_path+s.io.RainfallPlotsPath+'summary'+tsn+'.json', 'w') as w:
+                w.write(summary_json)
+
+    
         if s.io.PrintPlot:
             siterainprops.apply(RP.main, offsetstart=offsetstart, start=start, end=end, tsn=tsn, s=s, output_path=output_path)
-        
-    summary_json = summary.reset_index().to_json(orient="records")
     
     return summary_json
 
