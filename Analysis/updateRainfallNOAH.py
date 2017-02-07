@@ -2,7 +2,6 @@ import os
 import sys
 import pandas as pd
 import numpy as np
-import time
 from datetime import timedelta as td
 from datetime import datetime as dt
 import requests
@@ -22,7 +21,7 @@ def downloadRainfallNOAH(rsite, fdate, tdate):
     #Reduce latestTS by 1 day as a work around for NOAH's API of returning data
     #   that starts from 8am
     #Reduce by another 1 day due to the "rolling_sum" function
-    fdateMinus = (pd.to_datetime(fdate) - td(2)).strftime("%Y-%m-%d")
+    fdateMinus = (pd.to_datetime(fdate) - td(1)).strftime("%Y-%m-%d")
     
     url = "http://weather.asti.dost.gov.ph/web-api/index.php/api/data/%s/from/%s/to/%s" % (rsite,fdateMinus,tdate)
     
@@ -40,22 +39,17 @@ def downloadRainfallNOAH(rsite, fdate, tdate):
 
     try:
         df = df.drop_duplicates('dateTimeRead')
+        df['dateTimeRead'] = df['dateTimeRead'].apply(lambda x: pd.to_datetime(str(x)[0:len(str(x))-3]))
         df = df.set_index(['dateTimeRead'])
-        df.index = pd.to_datetime(df.index)
         df = df["rain_value"].astype(float)
         df.resample('15Min')
-        df = df.fillna(0.00)
         df = df.sort_index(ascending = True)
         dfs = df.rolling(min_periods=1,window=96,center=False).sum()
         dfa = pd.DataFrame({"rval":df,"cumm":dfs})
-        dfa = dfa.fillna(0.00)
         dfa = np.round(dfa, decimals=2)
         
         #remove the entries that are less than fdate
         dfa = dfa[dfa.index > fdate]            
-        
-        #set "cumm" values to 0 if it is smaller than 0.1
-        dfa.cumm[(dfa.cumm < 0.1) & (dfa.cumm > 0)] = 0
         
         #rename the "index" into "timestamp"
         dfa.index.names = ["timestamp"]
@@ -79,8 +73,8 @@ def downloadRainfallNOAHJson(rsite, fdate, tdate):
 #insert the newly downloaded data to the database
 def updateRainfallNOAHTableData(rsite, fdate, tdate):
     noahData = downloadRainfallNOAH(rsite, fdate, tdate)
-    
-    curTS = time.strftime("%Y-%m-%d")  
+
+    curTS = dt.now()
     
     table_name = "rain_noah_%s" % (rsite)
     
@@ -88,19 +82,15 @@ def updateRainfallNOAHTableData(rsite, fdate, tdate):
         print "    no data..."
         
         #The table is already up to date
-        if tdate > curTS:
+        if pd.to_datetime(tdate) > curTS:
             return 
         else:
             #Insert an entry with values: [timestamp,-1,-1] as a marker
             #   for the next time it is used
             #   note: values with -1 should not be included in values used for computation
             placeHolderData = pd.DataFrame({"timestamp": tdate+" 00:00:00","cumm":-1,"rval":-1}, index=[0])
-            placeHolderData = placeHolderData.set_index(['timestamp'])
-            #print placeHolderData
-            try:
-                qs.PushDBDataFrame(placeHolderData, table_name) 
-            except:
-                print 'previously written in db'
+            placeHolderData = placeHolderData.set_index('timestamp')
+            qs.PushDBDataFrame(placeHolderData, table_name) 
             
             #call this function again until the maximum recent timestamp is hit        
             updateNOAHSingleTable(rsite)
@@ -108,11 +98,12 @@ def updateRainfallNOAHTableData(rsite, fdate, tdate):
     else:        
         #Insert the new data on the noahid table
         noahData = noahData.reset_index()
-        grpnoahData = noahData.groupby('timestamp')
-        grpnoahData.apply(qs.PushDBDataFrame, table_name=table_name)
+        noahData = noahData.drop_duplicates('timestamp')
+        noahData = noahData.set_index('timestamp')
+        qs.PushDBDataFrame(noahData, table_name)
         
         #The table is already up to date
-        if tdate > curTS:
+        if pd.to_datetime(tdate) > curTS:
             return         
         else:
             #call this function again until the maximum recent timestamp is hit        
@@ -186,30 +177,12 @@ def updateNOAHSingleTable(noahid):
     #Download data for noahid
     updateRainfallNOAHTableData(noahid, latestTS, endTS)    
 
-    
 def updateNOAHTables():
     #get the list of rainfall NOAH rain gauge IDs
     dfRain = qs.GetRainNOAHList()
-
+    
     for noahid in dfRain:
         updateNOAHSingleTable(noahid)
-
-def DeleteOldNOAHdata():
-    #deletes data older than 15days    
-    
-    dfRain = qs.GetRainNOAHList()
-    
-    db, cur = qs.SenslopeDBConnect(qs.Namedb)
-    cur.execute("use "+ qs.Namedb)
-    
-    for noahid in dfRain:
-        print 'deleting old noah data for rain_noah_', noahid
-        oldestTSneeded = str(pd.to_datetime(dt.now().strftime('%Y-%m-%d %H:%M:%S')) - td(15))
-        query = """DELETE FROM rain_noah_%s WHERE timestamp < TIMESTAMP('%s')""" % (noahid, oldestTSneeded)
-        cur.execute(query)
-        db.commit()        
-        
-    db.close()
     
 ######################################
 

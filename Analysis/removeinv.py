@@ -24,22 +24,21 @@ def removeinvpub(df):
     try:
         ts = pd.to_datetime(df['timestamp'].values[0])
         db, cur = q.SenslopeDBConnect(q.Namedb)
+        query = "SELECT * FROM (SELECT * FROM site_level_alert WHERE site = '%s' and source = 'public' and alert like '%s' and timestamp >= '%s' and updateTS <= '%s' order by timestamp desc) AS sub GROUP BY source" %(df['site'].values[0], df['alert'].values[0] + '%', ts.date(), ts + timedelta(hours=4))
+        df = q.GetDBDataFrame(query)
+        
+        ts = pd.to_datetime(df['timestamp'].values[0])
         query = "DELETE FROM site_level_alert where site = '%s' and source = 'public' and alert = '%s'" %(df['site'].values[0], df['alert'].values[0])
-        query += " and timestamp <= '%s' and updateTS >= '%s'" %(ts+timedelta(hours=0.5), ts-timedelta(hours=0.5))
+        query += " and timestamp = '%s'" %ts
         cur.execute(query)
         db.commit()
         query = "DELETE FROM site_level_alert where site = '%s' and source = 'internal' and alert like '%s'" %(df['site'].values[0], df['alert'].values[0] + '%')
-        query += " and timestamp <= '%s' and updateTS >= '%s'" %(ts+timedelta(hours=0.5), ts-timedelta(hours=0.5))
+        query += " and timestamp = '%s'" %ts
         cur.execute(query)
         db.commit()
         db.close()
     except:
         pass
-
-def invsensor(df):
-    if 'sensor' in df['source'].values[0]:
-        df['remarks'] = df['remarks'].apply(lambda x: x + ' [invalid sensor retrigger until ' + str(pd.to_datetime(df['timestamp'].values[0]) + timedelta(hours=7)) + ']')
-    return df
 
 def currentinv(df, withalert):
     level = df['alert'].values[0]
@@ -54,24 +53,33 @@ def currentinv(df, withalert):
     return df
 
 def main_inv(ts=datetime.now()):
+    # sites with invalid alert
     query = "SELECT * FROM smsalerts where ts_set >= '%s' and alertstat = 'invalid'" %(pd.to_datetime(ts) - timedelta(10))
     df = q.GetDBDataFrame(query)
+    
+    # wrong format in db
+    if 409 in df['alert_id'].values:
+        alertmsg409 = 'As of 2017-02-03 09:36\nosl:A2:ground'
+        df.loc[df['alert_id'] == 409, ['alertmsg']] = alertmsg409
+    if 408 in df['alert_id'].values:
+        alertmsg408 = 'As of 2017-02-02 20:11\npla:A2:"sensor(plat:20)"'
+        df.loc[df['alert_id'] == 408, ['alertmsg']] = alertmsg408
     
     dfid = df.groupby('alert_id')
     alertdf = dfid.apply(alertmsg)
     alertdf = alertdf.reset_index(drop=True)
-
+    alertdf = alertdf.loc[(alertdf.alert != 'l0t')]
+    
+    # remove invalid public and internal alert in db
     invalertdf = alertdf.loc[alertdf.timestamp >= ts - timedelta(hours=3)]
     invalertdf = invalertdf[~(invalertdf.source.str.contains('sensor'))]
-    invalertdf = invalertdf.loc[invalertdf.alert != 'A1']
-
+    invalertdf = invalertdf.loc[(invalertdf.alert != 'A1')]
     sitealertdf = invalertdf.groupby('site')
     sitealertdf.apply(removeinvpub)
 
+    # write site with current invalid alert to InvalidAlert.txt
     allpub = pd.read_csv('PublicAlert.txt', sep = '\t')
-    withalert = allpub.loc[allpub.alert != 'A0']
-    sitealertdf = alertdf.groupby('site')
-    alertdf = sitealertdf.apply(invsensor)
+    withalert = allpub.loc[(allpub.alert != 'A0')]
     alertdf = alertdf[['site', 'alert', 'timestamp', 'iomp', 'remarks']]
     alertdf = alertdf.sort_values('timestamp', ascending = False)
     alertdf = alertdf.drop_duplicates(['site', 'alert'])
@@ -80,14 +88,13 @@ def main_inv(ts=datetime.now()):
     finaldf.to_csv('InvalidAlert.txt', sep=':', header=True, index=False, mode='w')
 
 def main_l0t(ts=datetime.now()):
-    query = "SELECT * FROM smsalerts where ts_ack >= '%s' and alertstat = 'valid'" %(pd.to_datetime(ts) - timedelta(hours=1))
+    query = "SELECT * FROM smsalerts where ts_ack >= '%s' and alertstat = 'valid' and alertmsg like '%s'" %(pd.to_datetime(ts) - timedelta(hours=1), '%l0t%')
     df = q.GetDBDataFrame(query)
 
     if len(df) != 0:
         dfid = df.groupby('alert_id')
         alertdf = dfid.apply(alertmsg)
-        alertdf = alertdf.reset_index(drop=True)   
-        alertdf = alertdf[alertdf.alert == 'l0t']
+        alertdf = alertdf.reset_index(drop=True)
     
         if len(alertdf) != 0:
             sites = str(list(alertdf.site.values)).replace('[', '(').replace(']', ')')
