@@ -202,7 +202,7 @@ class MasynckaiserModel {
         // TODO: Apply regex in order to filter out unwanted sql commands
 
         //Modifier commands that aren't allowed in a read only request
-        $allowedCommands = ["CREATE", "INSERT", "DELETE", "UPDATE", "ALTER", "DROP"];
+        $allowedCommands = ["CREATE", "INSERT", "DELETE", "UPDATE", "ALTER", "DROP", "REPLACE"];
         $trimmedQuery = trim($query);
 
         foreach ($allowedCommands as $modifierCmd) {
