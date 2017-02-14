@@ -14,9 +14,9 @@ import vcdgen as vcd
     
 def getDF():
 
-        site = 'agb'
-        fdate = '2016-01-01'
-        tdate = '2016-04-04'
+        site = sys.argv[1]
+        fdate = sys.argv[2]
+        tdate = sys.argv[3]
         df= vcd.vcdgen(site, tdate, fdate,1)
 
         print df
