@@ -41,13 +41,21 @@ def proc(func, colname, endTS, startTS, day_interval, fixpoint):
     if func == 'colpos' or func == 'vcdgen':
         #colpos interval
         config.io.col_pos_interval = str(day_interval) + 'D'
-        config.io.num_col_pos = int((window.end - window.start).days/day_interval + 1)  
+        config.io.num_col_pos = int((window.end - window.start).days/day_interval + 1)
+        
+    if func == 'displacement' or func == 'colpos':
+        comp_vel = False
+    else:
+        comp_vel = True
     
-    monitoring = g.genproc(col[0], window, config, fixpoint)
+    monitoring = g.genproc(col[0], window, config, fixpoint, comp_vel=comp_vel)
 
     num_nodes = monitoring.colprops.nos
     seg_len = monitoring.colprops.seglen
-    monitoring_vel = monitoring.vel.reset_index()[['ts', 'id', 'xz', 'xy', 'vel_xz', 'vel_xy']]
+    if comp_vel == True:
+        monitoring_vel = monitoring.vel.reset_index()[['ts', 'id', 'xz', 'xy', 'vel_xz', 'vel_xy']]
+    else:
+        monitoring_vel = monitoring.vel.reset_index()[['ts', 'id', 'xz', 'xy']]
     monitoring_vel = monitoring_vel.loc[(monitoring_vel.ts >= window.start)&(monitoring_vel.ts <= window.end)]
 
     return monitoring_vel, window, config, num_nodes, seg_len
@@ -134,7 +142,7 @@ def displacement_json(monitoring_vel, window, config, num_nodes, fixpoint):
 
 def displacement(colname, endTS='', startTS='', fixpoint='bottom'):
     
-    monitoring_vel, window, config, num_nodes, seg_len = proc('velocity', colname, endTS, startTS, '', fixpoint)    
+    monitoring_vel, window, config, num_nodes, seg_len = proc('displacement', colname, endTS, startTS, '', fixpoint)    
     df0off, df0off_json = displacement_json(monitoring_vel, window, config, num_nodes, fixpoint)
 
 #    #############################
@@ -149,7 +157,7 @@ def displacement(colname, endTS='', startTS='', fixpoint='bottom'):
 
 def vcdgen(colname, endTS='', startTS='', day_interval=1, fixpoint='bottom'):
     
-    monitoring_vel, window, config, num_nodes, seg_len = proc('velocity', colname, endTS, startTS, day_interval, fixpoint)    
+    monitoring_vel, window, config, num_nodes, seg_len = proc('vcdgen', colname, endTS, startTS, day_interval, fixpoint)    
 
     colposdf, colposdf_json = colpos_json(monitoring_vel, window, config, num_nodes, seg_len, fixpoint)
 
