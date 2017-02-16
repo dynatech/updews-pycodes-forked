@@ -24,60 +24,61 @@ from datetime import timedelta
 #for a in range(1,17,1):
 
 
-#def heatmap(column,fdate,tdate ):
-df_merge = pd.DataFrame()
-smin=0; smax=255;mini = 0; maxi = 1300
-
-column = raw_input('column name: ').lower()
-tdate = raw_input('target date (ex. 2017-01-01): ').lower()
-window = raw_input('select monitoring window[1d, 3d, 30d]: ').lower()
-if (window == '1d'):
-	timew = 24
-	interval = '30Min'
-elif (window == '3d'):
-	timew = 72
-	interval = '90Min'
-elif (window == '30d'):
-	timew = 720
-	interval = '1D'
-else:
-	print "invalid monitoring window"
-
-
-tdate = pd.to_datetime(pd.to_datetime(tdate) + timedelta(hours = 24))
-fdate = pd.to_datetime(pd.to_datetime(tdate) - timedelta(hours = timew))	
-
-query = "select num_nodes from senslopedb.site_column_props where name = '%s'" %column
-node = qs.GetDBDataFrame(query)
-for node_num in range (1,int(node.num_nodes[0])+1):
-	df = CSR.getsomscaldata(column,node_num,fdate,tdate)
-
-	df = df.reset_index()
-	df.ts=pd.to_datetime(df.ts)
-
-	df.index=df.ts                         
-	df.drop('ts', axis=1, inplace=True)    
-
-	df=df[((df<1300) == True) & ((df>0)==True)] 
-	df['mval1'] = df['mval1'].apply(lambda x:(x- mini) * smax / (maxi) + smin)
-	dfrs =pd.rolling_mean(df.resample(interval), window=3, min_periods=1)   #mean for one day (dataframe)
+def heatmap(is_debug = False):
+	df_merge = pd.DataFrame()
+	smin=0; smax=255;mini = 0; maxi = 1300
 	
-
-	n=len(dfrs)-1
-
-	dfp=dfrs[n-timew:n]
-	dfp = dfp.reset_index()
+	column = raw_input('column name: ').lower()
+	tdate = raw_input('target date (ex. 2017-01-01): ').lower()
+	window = raw_input('select monitoring window[1d, 3d, 30d]: ').lower()
+	if (window == '1d'):
+		timew = 24
+		interval = '30Min'
+	elif (window == '3d'):
+		timew = 72
+		interval = '90Min'
+	elif (window == '30d'):
+		timew = 720
+		interval = '1D'
+	else:
+		print "invalid monitoring window"
 	
-
+	
+	tdate = pd.to_datetime(pd.to_datetime(tdate) + timedelta(hours = 24))
+	fdate = pd.to_datetime(pd.to_datetime(tdate) - timedelta(hours = timew))	
+	
+	query = "select num_nodes from senslopedb.site_column_props where name = '%s'" %column
+	node = qs.GetDBDataFrame(query)
+	for node_num in range (1,int(node.num_nodes[0])+1):
+		df = CSR.getsomscaldata(column,node_num,fdate,tdate)
+	
+		df = df.reset_index()
+		df.ts=pd.to_datetime(df.ts)
+	
+		df.index=df.ts                         
+		df.drop('ts', axis=1, inplace=True)    
+	
+		df=df[((df<1300) == True) & ((df>0)==True)] 
+		df['cval'] = df['mval1'].apply(lambda x:(x- mini) * smax / (maxi) + smin)	
+		dfrs =pd.rolling_mean(df.resample(interval), window=3, min_periods=1)   #mean for one day (dataframe)
+		dfrs = dfrs.drop('mval1', axis=1)
+	
+		n=len(dfrs)-1
+	
+		dfp=dfrs[n-timew:n]
+		dfp = dfp.reset_index()
 
 	
-	df_merge = pd.concat([df_merge, dfp], axis = 0)
-	dfpr = dfp.transpose()
-
-
-
-
-
-df_merge['ts'] = df_merge.ts.astype(str)
-dfjson = df_merge.to_json(orient='records')
-print dfjson
+	
+		
+		df_merge = pd.concat([df_merge, dfp], axis = 0)
+		
+	
+	
+	
+	
+	
+	df_merge['ts'] = df_merge.ts.astype(str)
+	dfjson = df_merge.to_json(orient='records')
+	
+	return dfjson
