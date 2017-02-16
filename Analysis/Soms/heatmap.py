@@ -77,6 +77,7 @@ for node_num in range (1,int(node.num_nodes[0])+1):
 
 
 
-dfjson = df_merge.to_json(orient='records')
 
+df_merge['ts'] = df_merge.ts.astype(str)
+dfjson = df_merge.to_json(orient='records')
 print dfjson
