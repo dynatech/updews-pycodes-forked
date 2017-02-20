@@ -24,9 +24,11 @@ from datetime import timedelta
 #for a in range(1,17,1):
 
 
-col = raw_input('column name: ').lower()
-t_timestamp = raw_input('target date (ex. 2017-01-01): ').lower()
-t_win = raw_input('select monitoring window[1d, 3d, 30d]: ').lower()
+# Commented these out since the 3 lines below should be on a different file
+#   - Prado
+#col = raw_input('column name: ').lower()
+#t_timestamp = raw_input('target date (ex. 2017-01-01): ').lower()
+#t_win = raw_input('select monitoring window[1d, 3d, 30d]: ').lower()
 
 def heatmap(col, t_timestamp, t_win, is_debug = False):
 	df_merge = pd.DataFrame()
