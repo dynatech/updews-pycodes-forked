@@ -78,7 +78,6 @@ def heatmap(col, t_timestamp, t_win = '1d', is_debug = False):
 				dfrs =pd.rolling_mean(df.resample(interval), window=3, min_periods=1)   #mean for one day (dataframe)
 				if 'mval1' in df.columns:				
 					dfrs = dfrs.drop('mval1', axis=1)
-				else:
 					pd.options.display.float_format = '{:,.0f}'.format
 					
 					n=len(dfrs)-1
@@ -91,5 +90,7 @@ def heatmap(col, t_timestamp, t_win = '1d', is_debug = False):
 			
 					df_merge['ts'] = df_merge.ts.astype(str)
 					dfjson = df_merge.to_json(orient='records' , double_precision=0)
+				else:
+					print "no data"
 				
-					return dfjson
+				return dfjson
