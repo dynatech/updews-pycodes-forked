@@ -198,25 +198,25 @@ def validity_check(adj_node_ind, alert, i, col_node, col_alert, k_ac_ax):
                     break
                 
             else:
-                check_pl_cur=abs(alert['xz_disp'].values[i-1])>=abs(alert['xy_disp'].values[i-1])
-
-                if check_pl_cur==True:
-                    max_disp_cur=abs(alert['xz_disp'].values[i-1])
-                    max_disp_adj=abs(alert['xz_disp'].values[j-1])
-                else:
-                    max_disp_cur=abs(alert['xy_disp'].values[i-1])
-                    max_disp_adj=abs(alert['xy_disp'].values[j-1])        
-
-                if max_disp_adj>=max_disp_cur*1/(2.**abs(i-j)):
-                    #current adjacent node alert assumes value of current node alert
-                    col_node.append(i-1)
-                    col_alert.append(alert['node_alert'].values[i-1])
-                    break
-                    
-                else:
-                    adj_node_alert.append(0)
-                    col_alert.append(max(getmode(adj_node_alert)))
-                    break
+#                check_pl_cur=abs(alert['xz_disp'].values[i-1])>=abs(alert['xy_disp'].values[i-1])
+#
+#                if check_pl_cur==True:
+#                    max_disp_cur=abs(alert['xz_disp'].values[i-1])
+#                    max_disp_adj=abs(alert['xz_disp'].values[j-1])
+#                else:
+#                    max_disp_cur=abs(alert['xy_disp'].values[i-1])
+#                    max_disp_adj=abs(alert['xy_disp'].values[j-1])        
+#
+#                if max_disp_adj>=max_disp_cur*1/(2.**abs(i-j)):
+#                    #current adjacent node alert assumes value of current node alert
+                col_node.append(i-1)
+                col_alert.append(alert['node_alert'].values[i-1])
+                break
+#                    
+#                else:
+#                    adj_node_alert.append(0)
+#                    col_alert.append(max(getmode(adj_node_alert)))
+#                    break
                 
         if j==adj_node_ind[-1]:
             col_alert.append(max(getmode(adj_node_alert)))
