@@ -737,7 +737,7 @@ def mon_main():
                 plotvel = False
     
             monitoring = g.genproc(col[0], window, config, config.io.column_fix, comp_vel = plotvel)
-            main(monitoring, window, config, plotvel=plotvel, show_part_legend = show_part_legend, plotvel_end=window.end, plotvel_start=window.start, plot_inc=False)
+            main(monitoring, window, config, plotvel=plotvel, show_part_legend = show_part_legend, plotvel_end=window.end, plotvel_start=window.start, plot_inc=False, comp_vel=plotvel)
         
     # plots from start to end of data
     elif plot_all_data == 'y':
@@ -820,7 +820,7 @@ def mon_main():
             plotvel = False
 
         monitoring = g.genproc(col[0], window, config, config.io.column_fix, comp_vel = plotvel)
-        main(monitoring, window, config, plotvel=plotvel, show_part_legend = show_part_legend, plot_inc=False)
+        main(monitoring, window, config, plotvel=plotvel, show_part_legend = show_part_legend, plot_inc=False, comp_vel=plotvel)
 
 ##########################################################
 if __name__ == "__main__":
