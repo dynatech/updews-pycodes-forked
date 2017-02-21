@@ -2,7 +2,7 @@
 """
 Created on Mon Oct 24 18:08:15 2016
 
-@author: PradoArturo
+@author: Prado Arturo Bognot
 """
 
 import os
@@ -28,24 +28,24 @@ fixpoints = ['top', 'bottom', 'TOP', 'BOTTOM', 'Top', 'Bottom','']
 
 # Works for "magta" but not for many other sites
 #c = vcd.displacement("mamb", endTS=tdate, startTS=fdate)
-#c = vcd.displacement('magta', endTS=tdate)
+# c = vcd.displacement('magta', endTS=tdate, fixpoint='BOTTOM')
 
 try:
-    #Get list of sensors
-    sensorsInfo = qs.GetSensorDF()
-    columns = sensorsInfo["name"]
-    
+   #Get list of sensors
+   sensorsInfo = qs.GetSensorDF()
+   columns = sensorsInfo["name"]
+   
 #    for fixpoint in fixpoints:
 #        print fixpoint
-    
-    for column in columns:
-        print """Current Sensor Column: %s, End Date: %s, Start Date: %s""" % (column, tdate, fdate)
-        disp = vcd.displacement(column, endTS=tdate)
-        print disp
-        print "\n"
-        
+   
+   for column in columns:
+       print """Current Sensor Column: %s, End Date: %s, Start Date: %s""" % (column, tdate, fdate)
+       disp = vcd.displacement(column, endTS=tdate)
+       print disp
+       print "\n"
+       
 except IndexError:
-    print '>> Error in writing extracting database data to files..'
+   print '>> Error in writing extracting database data to files..'
     
     
     

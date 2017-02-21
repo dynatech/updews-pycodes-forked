@@ -2,7 +2,7 @@
 """
 Created on Mon Oct 24 18:08:15 2016
 
-@author: PradoArturo
+@author: Prado Arturo Bognot
 """
 
 import os
