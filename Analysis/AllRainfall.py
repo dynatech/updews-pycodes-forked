@@ -1,5 +1,7 @@
 import os
 from datetime import datetime, timedelta, date, time
+import numpy as np
+
 import querySenslopeDb as q
 import rainconfig as cfg
 import RainfallAlert as RA
@@ -65,6 +67,7 @@ def main(site='', Print=True):
     
     summary = siterainprops.apply(RA.main, end=end, s=s)
     summary = summary.reset_index(drop=True).set_index('site')[['1D cml', 'half of 2yr max', '3D cml', '2yr max', 'DataSource', 'alert', 'advisory']]
+    summary[['1D cml', 'half of 2yr max', '3D cml', '2yr max']] = np.round(summary[['1D cml', 'half of 2yr max', '3D cml', '2yr max']], 1)
     summary_json = summary.reset_index().to_json(orient="records")
 
     if Print == True:
