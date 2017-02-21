@@ -247,7 +247,7 @@ def trending_alertgen(trending_alert, monitoring, lgd, window, config):
     alert['timestamp']=endTS
     
     palert = alert.loc[(alert.col_alert == 'L2') | (alert.col_alert == 'L3')]
-        
+
     if len(palert) != 0:
         palert['site']=monitoring.colprops.name
         palert = palert[['timestamp', 'site', 'disp_alert', 'vel_alert', 'col_alert']].reset_index()
@@ -270,6 +270,7 @@ def trending_alertgen(trending_alert, monitoring, lgd, window, config):
                 palert_index = alert.loc[alert.id == i].index[0]
                 alert.loc[palert_index]['TNL'] = max(getmode(list(nodal_palertDF['col_alert'].values)))
             else:
+                palert_index = alert.loc[alert.id == i].index[0]
                 alert.loc[palert_index]['TNL'] = 'L0'
     
     not_working = q.GetNodeStatus(1).loc[q.GetNodeStatus(1).site == monitoring.colprops.name]['node'].values
