@@ -422,15 +422,15 @@ def ProcessEarthquake(msg):
         depthstr = 'NULL'
 
     #find latitude
-    if re.search("\d+\.\d+(?=N)",line):
-        latstr = re.search("\d+\.\d+(?=N)",line).group(0)
+    if re.search("\d+[\.\:]\d+(?=N)",line):
+        latstr = re.search("\d+[\.\:]\d+(?=N)",line).group(0)
     else:
         print ">> No latitude string recognized"
         latstr = 'NULL'
 
     #find longitude
-    if re.search("\d+\.\d+(?=E)",line):
-        longstr = re.search("\d+\.\d+(?=E)",line).group(0)
+    if re.search("\d+[\.\:]\d+(?=E)",line):
+        longstr = re.search("\d+[\.\:]\d+(?=E)",line).group(0)
     else:
         print ">> No longitude string recognized"
         longstr = 'NULL'
