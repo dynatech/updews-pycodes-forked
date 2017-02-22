@@ -45,6 +45,12 @@ class config:
 		self.gsmdb.pwd = cfg.get("GSMDB","password")
 		self.gsmdb.name = cfg.get("GSMDB","dbname")
 
+		self.backupdb = Container()
+		self.backupdb.user = cfg.get("BackupDB","username")
+		self.backupdb.host = cfg.get("BackupDB","host")
+		self.backupdb.pwd = cfg.get("BackupDB","password")
+		self.backupdb.name = cfg.get("BackupDB","dbname")
+
 		self.serialio = Container()
 		self.serialio.baudrate = cfg.getint("Serial","baudrate")
 		self.serialio.globeport = cfg.get("Serial","globeport")
@@ -53,6 +59,8 @@ class config:
 
 		self.gsmio = Container()
 		self.gsmio.resetpin = cfg.getint("gsmio","resetpin")
+		self.gsmio.sim_gsm = cfg.getboolean("gsmio","simulate_gsm")
+		
 		
 		self.smsalert = Container()
 		self.smsalert.communitynum = cfg.get("SMSAlert","communityphonenumber")

@@ -10,7 +10,7 @@ host = 127.0.0.1
 password = senslope
 dbname = senslopedb
 
-[MirrorDB]
+[BackupDB]
 username = root
 host = 192.168.1.105
 password = senslope
@@ -25,6 +25,7 @@ smartport = /dev/smartport
 
 [gsmio]
 resetpin = 38
+simulate_gsm = true
 
 [SMSAlert]
 communityphonenumber = 09175048863

@@ -16,14 +16,20 @@ c = cfg.config()
 
 localdbinstance = dbInstance(c.localdb.name,c.localdb.host,c.localdb.user,c.localdb.pwd)
 gsmdbinstance = dbInstance(c.gsmdb.name,c.gsmdb.host,c.gsmdb.user,c.gsmdb.pwd)
+backupdbinstance = dbInstance(c.backupdb.name,c.backupdb.host,c.backupdb.user,c.backupdb.pwd)
+
 
 # def SenslopeDBConnect():
 # Definition: Connect to senslopedb in mysql
 def SenslopeDBConnect(instance):
     if instance.upper() == 'LOCAL':
         dbc = localdbinstance
+    elif instance.upper() == 'BACKUP':
+        dbc = backupdbinstance
     else:
         dbc = gsmdbinstance
+
+    print dbc.host
     while True:
         try:
             db = MySQLdb.connect(host = dbc.host, user = dbc.user, passwd = dbc.password, db = dbc.name)
@@ -209,6 +215,9 @@ def querydatabase(query, identifier, instance='local'):
     except MySQLdb.OperationalError:
         a =  None
     except KeyError:
+        a = None
+    except MySQLdb.ProgrammingError:
+        print 'ERROR: Check sql query'
         a = None
     finally:
         db.close()

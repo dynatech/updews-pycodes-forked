@@ -226,6 +226,24 @@ def getSensorNumbers():
 
     return nums
 
+def getLoggerContacts():
+
+    query = """ 
+    SELECT t1.contact_id,t1.sim_num 
+    FROM logger_contacts AS t1 
+    LEFT OUTER JOIN logger_contacts AS t2 
+        ON t1.sim_num = t2.sim_num 
+            AND (t1.date_activated < t2.date_activated 
+            OR (t1.date_activated = t2.date_activated AND t1.contact_id < t2.contact_id)) 
+    WHERE t2.sim_num IS NULL """
+
+    # print querys
+
+    nums = dbio.querydatabase(query,'getSensorNumbers','BACKUP')
+    nums = {key: value for (value, key) in nums}
+
+    return nums
+
 def writeAlertToDb(alertmsg):
     dbio.createTable('smsalerts','smsalerts')
 
@@ -259,6 +277,66 @@ def deleteMessagesfromGSM():
         print 'OK'
     except ValueError:
         print '>> Error deleting messages'
+
+def simulateGSM():
+    print "Simulating GSM"
+    
+    db, cur = dbio.SenslopeDBConnect('backup')
+    
+    smsinbox_sms = []
+
+    try:
+        query = """select sms_id, timestamp, sim_num, sms_msg from smsinbox
+            where web_flag != '0' limit 10""" 
+    
+        a = cur.execute(query)
+        out = []
+        if a:
+            smsinbox_sms = cur.fetchall()
+        
+    except MySQLdb.OperationalError:
+        print '9.',
+        time.sleep(20)
+
+    print smsinbox_sms
+
+    logger_contacts = getLoggerContacts()
+    
+    query = "insert into smsinbox_loggers (ts_received,contact_id,sms_msg,read_status,gsm_id) values "
+
+    sms_id_ok = []
+    sms_id_unk = []
+    for m in smsinbox_sms:
+        ts_received = m[1]
+        try:
+            contact_id = logger_contacts[m[2]]
+        except KeyError:
+            print 'Unknown number', m[2]
+            sms_id_unk.append(m[0])
+            continue
+        sms_msg = m[3]
+        read_status = 0
+        gsm_id = 1
+
+        query += "('%s',%d,'%s',%d,%d)," % (ts_received,contact_id,sms_msg,read_status,gsm_id)
+        sms_id_ok.append(m[0])
+
+    query = query[:-1]
+    print query
+
+    dbio.commitToDb(query,'simulateGSM','BACKUP')
+
+    if len(sms_id_ok)>0:
+        sms_id_ok = str(sms_id_ok).replace("L","")[1:-1]
+        query = "update smsinbox set web_flag = '0' where sms_id in (%s);" % (sms_id_ok)
+        dbio.commitToDb(query,'simulateGSM','BACKUP')
+
+    if len(sms_id_unk)>0:
+        sms_id_unk = str(sms_id_unk).replace("L","")[1:-1]
+        query = "update smsinbox set web_flag = '-1' where sms_id in (%s);" % (repr(sms_id_unk))
+        dbio.commitToDb(query,'simulateGSM','BACKUP')
+    
+    sys.exit()
         
 def RunSenslopeServer(network):
     minute_of_last_alert = dt.now().minute
@@ -267,6 +345,10 @@ def RunSenslopeServer(network):
     logruntimeflag = True
     global checkIfActive 
     checkIfActive = True
+
+    if cfg.config().gsmio.sim_gsm == True:
+        simulateGSM()
+        sys.exit()
 
     try:
         gsm = gsmio.gsmInit(network)        
@@ -280,8 +362,8 @@ def RunSenslopeServer(network):
     dbio.createTable("runtimelog","runtime",cfg.config().mode.logtoinstance)
     logRuntimeStatus(network,"startup")
     
-    dbio.createTable('smsinbox','smsinbox',cfg.config().mode.logtoinstance)
-    dbio.createTable('smsoutbox','smsoutbox',cfg.config().mode.logtoinstance)
+    # dbio.createTable('smsinbox','smsinbox',cfg.config().mode.logtoinstance)
+    # dbio.createTable('smsoutbox','smsoutbox',cfg.config().mode.logtoinstance)
 
     sensor_numbers_str = str(getSensorNumbers())
 
