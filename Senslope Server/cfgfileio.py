@@ -49,6 +49,7 @@ class config:
 		self.serialio.baudrate = cfg.getint("Serial","baudrate")
 		self.serialio.globeport = cfg.get("Serial","globeport")
 		self.serialio.smartport = cfg.get("Serial","smartport")
+		self.serialio.callport = cfg.get("Serial","callport")
 		self.serialio.timeout = cfg.getint("Serial","timeout")
 
 		self.gsmio = Container()

@@ -20,6 +20,7 @@ dbname = senslopedb
 baudrate = 57600
 sunport = COM16
 globeport = /dev/globeport
+callport = /dev/callport
 timeout = 5
 smartport = /dev/smartport
 
