@@ -40,17 +40,36 @@ def removeinvpub(df):
     except:
         pass
 
-def currentinv(df, withalert):
-    level = df['alert'].values[0]
-    if level == 'A3':
-        alert = withalert.loc[withalert.alert == 'A3']
-        df = df[df.site.isin(alert.site)]
-    elif level == 'A2':
-        alert = withalert.loc[withalert.alert == 'A2']
-        df = df[df.site.isin(alert.site)]
+def currentinv(withalert, df):
+    site = withalert['site'].values[0]
+    
+    query = "SELECT * FROM senslopedb.site_level_alert WHERE site = '%s' AND source = 'public' AND alert != 'A0' ORDER BY timestamp DESC LIMIT 3" %site
+    prev_PAlert = q.GetDBDataFrame(query)
+    # one prev alert
+    if len(prev_PAlert) == 1:
+        start_monitor = pd.to_datetime(prev_PAlert.timestamp.values[0])
+    # two prev alert
+    elif len(prev_PAlert) == 2:
+        # one event with two prev alert
+        if pd.to_datetime(prev_PAlert['timestamp'].values[0]) - pd.to_datetime(prev_PAlert['updateTS'].values[1]) <= timedelta(hours=0.5):
+            start_monitor = pd.to_datetime(prev_PAlert['timestamp'].values[1])
+        else:
+            start_monitor = pd.to_datetime(prev_PAlert['timestamp'].values[0])
+    # three prev alert
     else:
-        df = df[df.site.isin(withalert.site)]
-    return df
+        if pd.to_datetime(prev_PAlert['timestamp'].values[0]) - pd.to_datetime(prev_PAlert['updateTS'].values[1]) <= timedelta(hours=0.5):
+            # one event with three prev alert
+            if pd.to_datetime(prev_PAlert['timestamp'].values[1]) - pd.to_datetime(prev_PAlert['updateTS'].values[2]) <= timedelta(hours=0.5):
+                start_monitor = pd.to_datetime(prev_PAlert.timestamp.values[2])
+            # one event with two prev alert
+            else:
+                start_monitor = pd.to_datetime(prev_PAlert['timestamp'].values[1])
+        else:
+            start_monitor = pd.to_datetime(prev_PAlert['timestamp'].values[0])
+
+    invdf = df[(df.site == site)&(df.timestamp >= start_monitor)]
+
+    return invdf
 
 def main_inv(ts=datetime.now()):
     # sites with invalid alert
@@ -78,14 +97,15 @@ def main_inv(ts=datetime.now()):
     sitealertdf.apply(removeinvpub)
 
     # write site with current invalid alert to InvalidAlert.txt
-    allpub = pd.read_csv('PublicAlert.txt', sep = '\t')
-    withalert = allpub.loc[(allpub.alert != 'A0')]
-    alertdf = alertdf[['site', 'alert', 'timestamp', 'iomp', 'remarks']]
-    alertdf = alertdf.sort_values('timestamp', ascending = False)
-    alertdf = alertdf.drop_duplicates(['site', 'alert'])
-    alertdflevel = alertdf.groupby('alert')
-    finaldf = alertdflevel.apply(currentinv, withalert=withalert)
+    query = "(SELECT * FROM (SELECT * FROM site_level_alert WHERE source = 'public' \
+        AND alert != 'A0' AND updateTS >= '%s' ORDER BY timestamp DESC) AS SUB GROUP BY site)" %(ts - timedelta(hours=0.5))
+    withalert = q.GetDBDataFrame(query)
+    sitewithalert = withalert.groupby('site')
+    alertdf = alertdf[alertdf.site.isin(withalert['site'].values)]
+    finaldf = sitewithalert.apply(currentinv, df=alertdf)
+    finaldf = finaldf.sort('timestamp', ascending=False).drop_duplicates(['site','source'], keep='first').reset_index(drop='True')
     finaldf.to_csv('InvalidAlert.txt', sep=':', header=True, index=False, mode='w')
+    return finaldf
 
 def main_l0t(ts=datetime.now()):
     query = "SELECT * FROM smsalerts where ts_ack >= '%s' and alertstat = 'valid' and alertmsg like '%s'" %(pd.to_datetime(ts) - timedelta(hours=1), '%l0t%')

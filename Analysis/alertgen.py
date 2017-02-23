@@ -211,26 +211,26 @@ def validity_check(adj_node_ind, alert, i, col_node, col_alert, k_ac_ax):
                     break
                 
             else:
-                check_pl_cur=abs(alert['xz_disp'].values[i-1])>=abs(alert['xy_disp'].values[i-1])
-
-                if check_pl_cur==True:
-                    max_disp_cur=abs(alert['xz_disp'].values[i-1])
-                    max_disp_adj=abs(alert['xz_disp'].values[j-1])
-                else:
-                    max_disp_cur=abs(alert['xy_disp'].values[i-1])
-                    max_disp_adj=abs(alert['xy_disp'].values[j-1])        
-
-                if max_disp_adj>=max_disp_cur*1/(2.**abs(i-j)):
+#                check_pl_cur=abs(alert['xz_disp'].values[i-1])>=abs(alert['xy_disp'].values[i-1])
+#
+#                if check_pl_cur==True:
+#                    max_disp_cur=abs(alert['xz_disp'].values[i-1])
+#                    max_disp_adj=abs(alert['xz_disp'].values[j-1])
+#                else:
+#                    max_disp_cur=abs(alert['xy_disp'].values[i-1])
+#                    max_disp_adj=abs(alert['xy_disp'].values[j-1])        
+#
+#                if max_disp_adj>=max_disp_cur*1/(2.**abs(i-j)):
                     #current adjacent node alert assumes value of current node alert
-                    col_node.append(i-1)
-                    col_alert.append(alert['node_alert'].values[i-1])
-                    break
-                    
-                else:
-                    adj_node_alert.append(0)
-                    col_alert.append(max(getmode(adj_node_alert)))
-                    break
-                
+                col_node.append(i-1)
+                col_alert.append(alert['node_alert'].values[i-1])
+                break
+#                    
+#                else:
+#                    adj_node_alert.append(0)
+#                    col_alert.append(max(getmode(adj_node_alert)))
+#                    break
+#                
         if j==adj_node_ind[-1]:
             col_alert.append(max(getmode(adj_node_alert)))
         
@@ -314,7 +314,7 @@ def main(name='', end=datetime.now()):
     
     alert = nodal_dv.apply(node_alert2, colname=monitoring.colprops.name, num_nodes=monitoring.colprops.nos, T_disp=config.io.t_disp, T_velL2=config.io.t_vell2, T_velL3=config.io.t_vell3, k_ac_ax=config.io.k_ac_ax, lastgooddata=lgd,window=window,config=config)
     alert = column_alert(alert, config.io.num_nodes_to_check, config.io.k_ac_ax)
-    
+
     not_working = q.GetNodeStatus(1).loc[q.GetNodeStatus(1).site == name].node.values
     
     for i in not_working:

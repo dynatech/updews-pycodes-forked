@@ -527,12 +527,15 @@ def df_add_offset_col(df, offset, num_nodes):
     return np.round(df,4)
     
     
-def main(monitoring, window, config, plotvel_start='', plotvel_end='', plotvel=True, show_part_legend = False, realtime=True, plot_inc=True):
+def main(monitoring, window, config, plotvel_start='', plotvel_end='', plotvel=True, show_part_legend = False, realtime=True, plot_inc=True, comp_vel=True):
 
     colname = monitoring.colprops.name
     num_nodes = monitoring.colprops.nos
     seg_len = monitoring.colprops.seglen
-    monitoring_vel = monitoring.vel.reset_index()[['ts', 'id', 'xz', 'xy', 'vel_xz', 'vel_xy']]
+    if comp_vel == True:
+        monitoring_vel = monitoring.vel.reset_index()[['ts', 'id', 'xz', 'xy', 'vel_xz', 'vel_xy']]
+    else:
+        monitoring_vel = monitoring.vel.reset_index()[['ts', 'id', 'xz', 'xy']]
     monitoring_vel = monitoring_vel.loc[(monitoring_vel.ts >= window.start)&(monitoring_vel.ts <= window.end)]
 
     output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
@@ -733,8 +736,8 @@ def mon_main():
             else:
                 plotvel = False
     
-            monitoring = g.genproc(col[0], window, config, config.io.column_fix)
-            main(monitoring, window, config, plotvel=plotvel, show_part_legend = show_part_legend, plotvel_end=window.end, plotvel_start=window.start, plot_inc=False)
+            monitoring = g.genproc(col[0], window, config, config.io.column_fix, comp_vel = plotvel)
+            main(monitoring, window, config, plotvel=plotvel, show_part_legend = show_part_legend, plotvel_end=window.end, plotvel_start=window.start, plot_inc=False, comp_vel=plotvel)
         
     # plots from start to end of data
     elif plot_all_data == 'y':
@@ -816,8 +819,8 @@ def mon_main():
         else:
             plotvel = False
 
-        monitoring = g.genproc(col[0], window, config, config.io.column_fix)
-        main(monitoring, window, config, plotvel=False, show_part_legend = show_part_legend, plot_inc=False)
+        monitoring = g.genproc(col[0], window, config, config.io.column_fix, comp_vel = plotvel)
+        main(monitoring, window, config, plotvel=plotvel, show_part_legend = show_part_legend, plot_inc=False, comp_vel=plotvel)
 
 ##########################################################
 if __name__ == "__main__":

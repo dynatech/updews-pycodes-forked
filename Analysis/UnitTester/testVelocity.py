@@ -2,7 +2,7 @@
 """
 Created on Mon Oct 24 18:08:15 2016
 
-@author: PradoArturo
+@author: Prado Arturo Bognot
 """
 
 import os
@@ -38,7 +38,7 @@ try:
     
     for column in columns:
         print """Current Sensor Column: %s, End Date: %s, Start Date: %s""" % (column, tdate, fdate)
-        vel = vcd.velocity(column, tdate, fdate)
+        vel = vcd.velocity(colname=column, endTS=tdate)
         print vel        
         
 except IndexError:

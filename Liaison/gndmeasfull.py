@@ -9,7 +9,7 @@ import requests
 import json
 
 def getDF():
-        gsite = "AGB"
+        gsite = sys.argv[1]
         measD = "1000"
         fdate = "2013-04-25"
         engine = create_engine('mysql+pymysql://root:senslope@127.0.0.1/senslopedb')

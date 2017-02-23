@@ -100,7 +100,7 @@ def node_inst_vel(filled_smoothened, roll_window_numpts, start):
     
     return filled_smoothened
 
-def genproc(col, window, config, fixpoint, realtime=False):
+def genproc(col, window, config, fixpoint, realtime=False, comp_vel=True):
     
     monitoring = q.GetRawAccelData(col.name, window.offsetstart, window.end)
     
@@ -162,15 +162,18 @@ def genproc(col, window, config, fixpoint, realtime=False):
     
     monitoring = filled_smoothened.set_index('ts')   
     
-    filled_smoothened['td'] = filled_smoothened.ts.values - filled_smoothened.ts.values[0]
-    filled_smoothened['td'] = filled_smoothened['td'].apply(lambda x: x / np.timedelta64(1,'D'))
-    
-    nodal_filled_smoothened = filled_smoothened.groupby('id') 
-    
-    disp_vel = nodal_filled_smoothened.apply(node_inst_vel, roll_window_numpts=window.numpts, start=window.start)
-    disp_vel = disp_vel[['ts', 'xz', 'xy', 'vel_xz', 'vel_xy','name']].reset_index()
-    disp_vel = disp_vel[['ts', 'id', 'xz', 'xy', 'vel_xz', 'vel_xy','name']]
-    disp_vel = disp_vel.set_index('ts')
-    disp_vel = disp_vel.sort_values('id', ascending=True)
+    if comp_vel == True:
+        filled_smoothened['td'] = filled_smoothened.ts.values - filled_smoothened.ts.values[0]
+        filled_smoothened['td'] = filled_smoothened['td'].apply(lambda x: x / np.timedelta64(1,'D'))
+        
+        nodal_filled_smoothened = filled_smoothened.groupby('id') 
+        
+        disp_vel = nodal_filled_smoothened.apply(node_inst_vel, roll_window_numpts=window.numpts, start=window.start)
+        disp_vel = disp_vel[['ts', 'xz', 'xy', 'vel_xz', 'vel_xy','name']].reset_index()
+        disp_vel = disp_vel[['ts', 'id', 'xz', 'xy', 'vel_xz', 'vel_xy','name']]
+        disp_vel = disp_vel.set_index('ts')
+        disp_vel = disp_vel.sort_values('id', ascending=True)
+    else:
+        disp_vel = monitoring
     
     return procdata(col,monitoring.sort(),disp_vel.sort(),max_min_df,max_min_cml)
