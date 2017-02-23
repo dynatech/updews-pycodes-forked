@@ -51,7 +51,8 @@ alertanalysisscript = /home/dynaslope/Desktop/updews-pycodes/Analysis/AlertAnaly
 websocketdir = /home/pi/updews-pycodes/Experimental Versions/pythonSockets
 gndalert1 = /home/dynaslope/Desktop/updews-pycodes/Data\ Analysis/GroundAlert/GenerateGroundAlert.py
 gndalert2 = /home/dynaslope/Desktop/updews-pycodes/Data\ Analysis/GroundAlert/GenerateGroundAlertWithTrendingNewAlerts.py
-gndalert3 = /home/dynaslope/Desktop/updews-pycodes/Data\ Analysis/GroundAlert/GenerateGroundAlertWithTrending.py 
+gndalert3 = /home/dynaslope/Desktop/updews-pycodes/Data\ Analysis/GroundAlert/GenerateGroundAlertWithTrending.py
+monitoringoutputdir =  /home/dynaslope/Desktop/MonitoringOutput/serverlogs/
 
 
 [simprefix]

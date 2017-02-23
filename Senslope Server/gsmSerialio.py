@@ -285,7 +285,16 @@ def getAllSms(network):
         
     
     return msglist
-
+    
+def callSite(number):
+    command= "ATD" +number+ "i;"
+    gsmcmd(command)
+    a=""
+    now = time.time()
+    while a.find("BUSY")<0 and a.find("NO")<0 and time.time()<now+60:
+            a += gsm.read(gsm.inWaiting())
+            time.sleep(0.5)
+    return a    
 
 if __name__ == '__main__':
 

@@ -80,6 +80,7 @@ class config:
 		self.fileio.gndalert1 = cfg.get("FileIO","gndalert1")
 		self.fileio.gndalert2 = cfg.get("FileIO","gndalert2")
 		self.fileio.gndalert3 = cfg.get("FileIO","gndalert3")
+		self.fileio.monitoringoutputdir = cfg.get("FileIO","monitoringoutputdir")
 		
 		
 		self.simprefix = Container()

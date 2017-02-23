@@ -408,8 +408,8 @@ def ProcessEarthquake(msg):
     datetimestr = datestr + ' ' + timestr
     
     #find magnitude
-    if re.search("((?<=M[SB]\=)|(?<=MLV\=))\d+\.\d+(?= )",line):
-        magstr = re.search("((?<=M[SB]\=)|(?<=MLV\=))\d+\.\d+(?= )",line).group(0)
+    if re.search("((?<=M[SBLVOW]\=)|(?<=M\=)|(?<=MLV\=))\d+\.\d+(?= )",line):
+        magstr = re.search("((?<=M[SBLVOW]\=)|(?<=M\=)|(?<=MLV\=))\d+\.\d+(?= )",line).group(0)
     else:
         print ">> No magnitude string recognized"
         magstr = 'NULL'
