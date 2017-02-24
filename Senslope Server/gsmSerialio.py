@@ -47,6 +47,8 @@ def gsmInit(network):
     c = cfg.config()
     if network.lower() == 'globe':
         Port = c.serialio.globeport
+    elif network.lower () == 'call':
+        Port =  c.serialio.callport
     else:
         Port = c.serialio.smartport
     print 'Connecting to GSM modem at', Port
@@ -288,12 +290,14 @@ def getAllSms(network):
     
 def callSite(number):
     command= "ATD" +number+ "i;"
+    print command
     gsmcmd(command)
     a=""
     now = time.time()
     while a.find("BUSY")<0 and a.find("NO")<0 and time.time()<now+60:
             a += gsm.read(gsm.inWaiting())
             time.sleep(0.5)
+    print a
     return a    
 
 if __name__ == '__main__':
