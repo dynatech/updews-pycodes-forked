@@ -63,7 +63,7 @@ def heatmap(col, t_timestamp, t_win = '1d', is_debug = False):
 			
 			df = CSR.getsomscaldata(col,node_num,f_timestamp,t_timestamp)
 			if (df.empty == True):
-				return "No Soil Moisture Data"
+				print "No Soil Moisture Data"
 			
 				
 			else:
@@ -78,19 +78,20 @@ def heatmap(col, t_timestamp, t_win = '1d', is_debug = False):
 				dfrs =pd.rolling_mean(df.resample(interval), window=3, min_periods=1)   #mean for one day (dataframe)
 				if 'mval1' in df.columns:				
 					dfrs = dfrs.drop('mval1', axis=1)
-					pd.options.display.float_format = '{:,.0f}'.format
-					
-					n=len(dfrs)-1
-				
-					dfp=dfrs[n-timew:n]
-					dfp = dfp.reset_index()
-				
-					df_merge = pd.concat([df_merge, dfp], axis = 0)
-	
-			
-					df_merge['ts'] = df_merge.ts.astype(str)
-					dfjson = df_merge.to_json(orient='records' , double_precision=0)
 				else:
 					print "no data"
 				
-				return dfjson
+				
+				n=len(dfrs)-1
+			
+				dfp=dfrs[n-timew:n]
+				dfp = dfp.reset_index()
+			
+				df_merge = pd.concat([df_merge, dfp], axis = 0)
+				df_merge['ts'] = df_merge.ts.astype(str)
+		
+		
+		dfjson = df_merge.to_json(orient='records' , double_precision=0)
+		print dfjson
+				
+			
