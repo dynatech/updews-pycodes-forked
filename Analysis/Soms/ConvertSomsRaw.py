@@ -57,7 +57,7 @@ def getsomsrawdata(column="", gid=0, fdate="", tdate=""):
     
     return sraw
 
-def getsomscaldata(column="", gid=0, fdate="", tdate="",is_debug = False):
+def getsomscaldata(column="", gid=0, fdate="", tdate="",is_debug=""):
     ''' 
         only for landslide sensors v2 and v3
         output:  df = series of unfiltered SOMS data (calibrated/normalized) of a specific node of the defined column 
