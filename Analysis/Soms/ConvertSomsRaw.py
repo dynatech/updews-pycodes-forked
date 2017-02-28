@@ -80,8 +80,11 @@ def getsomscaldata(column="", gid=0, fdate="", tdate="",is_debug = False):
     elif column.lower() in v3: # if version 3
             msgid = 113
     else:
-        print 'No data available for ' + column.upper()
-        return df  
+	  if (is_debug == True):
+	        print 'No data available for ' + column.upper()
+	        return df  
+	  else:
+              return df
         
     try:
         df = qs.GetSomsData(siteid=column+'m', fromTime=fdate, toTime=tdate, targetnode=gid, msgid=msgid)
@@ -94,5 +97,7 @@ def getsomscaldata(column="", gid=0, fdate="", tdate="",is_debug = False):
         if (is_debug == True):
 	        print 'No data available for ' + column.upper()
 	        return df  
+        else:
+              return df
 
     return df
