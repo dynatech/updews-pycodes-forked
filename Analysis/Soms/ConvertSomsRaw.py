@@ -57,7 +57,7 @@ def getsomsrawdata(column="", gid=0, fdate="", tdate=""):
     
     return sraw
 
-def getsomscaldata(column="", gid=0, fdate="", tdate=""):
+def getsomscaldata(column="", gid=0, fdate="", tdate="",is_debug = False):
     ''' 
         only for landslide sensors v2 and v3
         output:  df = series of unfiltered SOMS data (calibrated/normalized) of a specific node of the defined column 
@@ -91,7 +91,8 @@ def getsomscaldata(column="", gid=0, fdate="", tdate=""):
 	   
 								
     except:
-        print 'No data available for ' + column.upper()
-        return df  
+        if (is_debug == True):
+	        print 'No data available for ' + column.upper()
+	        return df  
 
     return df
