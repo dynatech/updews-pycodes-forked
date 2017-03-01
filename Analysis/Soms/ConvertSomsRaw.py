@@ -57,7 +57,7 @@ def getsomsrawdata(column="", gid=0, fdate="", tdate=""):
     
     return sraw
 
-def getsomscaldata(column="", gid=0, fdate="", tdate=""):
+def getsomscaldata(column="", gid=0, fdate="", tdate="",is_debug=""):
     ''' 
         only for landslide sensors v2 and v3
         output:  df = series of unfiltered SOMS data (calibrated/normalized) of a specific node of the defined column 
@@ -80,8 +80,11 @@ def getsomscaldata(column="", gid=0, fdate="", tdate=""):
     elif column.lower() in v3: # if version 3
             msgid = 113
     else:
-        print 'No data available for ' + column.upper()
-        return df  
+	  if (is_debug == True):
+	        print 'No data available for ' + column.upper()
+	        return df  
+	  else:
+              return df
         
     try:
         df = qs.GetSomsData(siteid=column+'m', fromTime=fdate, toTime=tdate, targetnode=gid, msgid=msgid)
@@ -91,7 +94,10 @@ def getsomscaldata(column="", gid=0, fdate="", tdate=""):
 	   
 								
     except:
-        print 'No data available for ' + column.upper()
-        return df  
+        if (is_debug == True):
+	        print 'No data available for ' + column.upper()
+	        return df  
+        else:
+              return df
 
     return df

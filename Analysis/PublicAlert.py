@@ -576,7 +576,7 @@ def SitePublicAlert(PublicAlert, window):
     if rain_alert == 'nd' and 'R' in internal_alert:
         internal_alert = internal_alert.replace('R', 'R0')
     
-    nonND_alert = site_alert.loc[(site_alert.source != 'public')&(site_alert.source != 'internal')&(site_alert.alert != 'nd')&(site_alert.alert != 'ND')].dropna()
+    nonND_alert = site_alert.loc[(site_alert.source != 'public')&(site_alert.source != 'internal')].dropna()
     if len(nonND_alert) != 0:
         PublicAlert.loc[alert_index] = [pd.to_datetime(str(nonND_alert.sort('updateTS', ascending = False)['updateTS'].values[0])), PublicAlert['site'].values[0], 'public', public_alert, window.end, alert_source, internal_alert, validity, sensor_alert, rain_alert, retriggerTS]
     else:
