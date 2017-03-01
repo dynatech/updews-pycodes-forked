@@ -20,7 +20,7 @@ import querySenslopeDb as qs
 #column = raw_input('Enter column name: ')
 #gid = int(raw_input('Enter id: '))
 
-def getsomsrawdata(column="", gid=0, fdate="", tdate=""):
+def getsomsrawdata(column="", gid=0, fdate="", tdate="", if_multi = False):
     ''' 
         only for landslide sensors v2 and v3
         output:  sraw = series of unfiltered SOMS data (raw) of a specific node of the defined column 
@@ -45,19 +45,36 @@ def getsomsrawdata(column="", gid=0, fdate="", tdate=""):
 
     if column.upper() in v2:
         if column.upper()=='NAGSA':
-            sraw =(((8000000/(df.mval1[(df.msgid==21)]))-(8000000/(df.mval2[(df.msgid==21)])))*4)/10
+		 if if_multi:
+			df = df[(df.msgid == 21)]	
+			df['output'] =(((8000000/(df.mval1))-(8000000/(df.mval2)))*4)/10
+			sraw = df[['id','mval1']]
+		 else:
+			sraw =(((8000000/(df.mval1[(df.msgid==21)]))-(8000000/(df.mval2[(df.msgid==21)])))*4)/10
+					
         else:
-            sraw =(((20000000/(df.mval1[(df.msgid==111)]))-(20000000/(df.mval2[(df.msgid==111)])))*4)/10           
-
+		if if_multi:
+			df = df[(df.msgid == 111)]
+			df['output'] =(((20000000/(df.mval1))-(20000000/(df.mval2)))*4)/10    
+			sraw = df[['id','output']]   
+		else:
+			sraw =(((20000000/(df.mval1[(df.msgid==111)]))-(20000000/(df.mval2[(df.msgid==111)])))*4)/10 
+			
     elif column.lower() in v3: # if version 3
-        sraw=df.mval1[(df.msgid==110)]
+        if if_multi:
+		df = df[(df.msgid == 110)]
+		sraw = df[['id','mval1']]
+        else:
+		sraw=df.mval1[(df.msgid==110)]
+		
+		
     else:
         sraw=pd.Series()
         pass
     
     return sraw
 
-def getsomscaldata(column="", gid=0, fdate="", tdate="",is_debug=""):
+def getsomscaldata(column="", gid=0, fdate="", tdate="",is_debug= False, if_multi = False):
     ''' 
         only for landslide sensors v2 and v3
         output:  df = series of unfiltered SOMS data (calibrated/normalized) of a specific node of the defined column 
@@ -88,8 +105,11 @@ def getsomscaldata(column="", gid=0, fdate="", tdate="",is_debug=""):
         
     try:
         df = qs.GetSomsData(siteid=column+'m', fromTime=fdate, toTime=tdate, targetnode=gid, msgid=msgid)
-        df.index=df.ts        
-        df = df[['id','mval1']]
+        df.index=df.ts      
+        if if_multi:
+	        df = df[['id','mval1']]
+        else:
+		  df= df.mval1
 	          
 	   
 								
