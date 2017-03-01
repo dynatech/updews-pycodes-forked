@@ -4,15 +4,12 @@ Created on Thu Apr 07 09:29:47 2016
 
 @author: SENSLOPEY
 """
+import numpy as np
+import ConvertSomsRaw as CSR
 import pandas as pd
+import datetime
 import os
-import sys
-
-#include the path of "Data Analysis" folder for the python scripts searching
-path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-if not path in sys.path:
-    sys.path.insert(1,path)
-del path   
+#import matplotlib.pyplot as plt
 import querySenslopeDb as qDb
 
 v2=['NAGSA', 'BAYSB', 'AGBSB', 'MCASB', 'CARSB', 'PEPSB','BLCSA']
@@ -44,7 +41,7 @@ def seek_outlier(df,column, node, mode):
     return outlier
 
 
-def f_outlier(df,column,node,mode): 
+def f_outlier(df,column,mode): 
     smin=[[2000,500],[0,0]]                         #format: [[v2raw_min, v3raw_min], [v2calib_min,v3calib_min]]
     smax=[[7800,1600],[1700,1500]]
 
