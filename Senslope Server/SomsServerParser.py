@@ -54,7 +54,7 @@ def somsparser(msgline,mode,div,err):
         maxnode = 9
         
     r = msgline.split('*')
-    site = r[0]+'M'
+    site = r[0]
     data = r[2]    
     if site in ['NAGSAM', 'BAYSBM']:
         a = siteptr[site]

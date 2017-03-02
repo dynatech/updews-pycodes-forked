@@ -164,6 +164,94 @@ def getAllOutboxSmsFromDb(send_status,network,limit=10):
             print '10.',
             time.sleep(20)
 
+def getLoggerNames(logger_type="all",instance="local"):
+    db, cur = SenslopeDBConnect(instance)
+
+    if logger_type == 'soms':
+        query = "SELECT `logger_name` from `loggers` where `model_id` in (SELECT `model_id` FROM `logger_models` where `has_soms`=1) and `logger_name` is not null"
+    elif logger_type == 'piezo':
+        query = "SELECT `logger_name` from `loggers` where `model_id` in (SELECT `model_id` FROM `logger_models` where `has_piezo`=1) and `logger_name` is not null"
+    elif logger_type == 'rain':
+        query = "SELECT `logger_name` from `loggers` where `model_id` in (SELECT `model_id` FROM `logger_models` where `has_rain`=1 or `logger_type`='arq') and `logger_name` is not null"
+    else:
+        query = "SELECT distinct(tsm_name) FROM senslopedb.tsm_sensors;"
+
+    print query 
+    result_set = querydatabase(query,"createSensorColumnTables",instance)
+
+    # print result_set
+    names = []
+    print names
+    for row in result_set:
+        names.append(row[0])
+
+    return names
+
+def createLoggerTables(logger_type='all',instance="local"):
+    db, cur = SenslopeDBConnect(instance)
+
+    logger_names = getLoggerNames(logger_type,instance)
+
+    query = ''
+
+    if logger_type == 'soms':
+        for n in logger_names:
+            query += """CREATE TABLE IF NOT EXISTS `soms_%s` (
+                      `data_id` INT NOT NULL AUTO_INCREMENT,
+                      `ts` TIMESTAMP NULL,
+                      `node_id` TINYINT NULL,
+                      `type_num` SMALLINT UNSIGNED NULL,
+                      `mval1` SMALLINT UNSIGNED NULL,
+                      `mval2` SMALLINT UNSIGNED NULL,
+                      PRIMARY KEY (`data_id`),
+                      UNIQUE INDEX `unique1` (`ts` ASC, `node_id` ASC, `type_num` ASC))
+                    ENGINE = InnoDB;\n\n""" % (n)
+
+    elif logger_type == 'piezo':
+        for n in logger_names:
+            query += """CREATE TABLE IF NOT EXISTS `piezo_%s` (
+                      `data_id` INT UNSIGNED NOT NULL,
+                      `ts` TIMESTAMP NULL DEFAULT NULL,
+                      `frequency_shift` SMALLINT UNSIGNED NULL DEFAULT NULL,
+                      `temperature` FLOAT NULL DEFAULT NULL,
+                      PRIMARY KEY (`data_id`))
+                    ENGINE = InnoDB;\n\n""" % (n)
+
+    elif logger_type == 'rain':
+        for n in logger_names:
+            query +=  """CREATE TABLE IF NOT EXISTS `rain_%s` (
+                      `data_id` INT NOT NULL AUTO_INCREMENT,
+                      `ts` TIMESTAMP NULL,
+                      `rain` FLOAT NULL DEFAULT NULL,
+                      `temperature` FLOAT NULL DEFAULT NULL,
+                      `humidity` FLOAT NULL DEFAULT NULL,
+                      `rain_jortacol` FLOAT NULL DEFAULT NULL,
+                      `battery1` FLOAT NULL DEFAULT NULL,
+                      `battery2` FLOAT NULL DEFAULT NULL,
+                      PRIMARY KEY (`data_id`))
+                    ENGINE = InnoDB;\n\n""" % (n)
+    
+    else:
+        for n in logger_names:
+            query += """CREATE TABLE IF NOT EXISTS `tilt_%s` (
+              `data_id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+              `ts` TIMESTAMP NULL DEFAULT NULL,
+              `node_id` TINYINT(3) UNSIGNED NULL DEFAULT NULL,
+              `type_num` TINYINT(3) UNSIGNED NULL DEFAULT NULL,
+              `xval` SMALLINT(6) NULL DEFAULT NULL,
+              `yval` SMALLINT(6) NULL DEFAULT NULL,
+              `zval` SMALLINT(6) NULL DEFAULT NULL,
+              `batt` FLOAT(11) NULL DEFAULT NULL,
+              PRIMARY KEY (`data_id`),
+              UNIQUE INDEX `unique1` (`ts` ASC, `node_id` ASC, `type_num` ASC))
+            ENGINE = InnoDB
+            DEFAULT CHARACTER SET = utf8;\n\n""" % (n)
+
+    print query
+
+    cur.execute(query)
+    db.close()
+
 def commitToDb(query, identifier, instance='local'):
     db, cur = SenslopeDBConnect(instance)
 
@@ -241,3 +329,15 @@ def checkNumberIfExists(simnumber,table='community'):
 
     return identity
 
+# for test codes    
+def test():
+    # dropTsmSensorTables("backup")
+    # createSomsTables("backup")
+    # createTTables("backup")
+    # createTsmSensorTables("backup")
+    # createTsmSensorTables("backup")
+    createLoggerTables("piezo","backup")
+    return
+
+if __name__ == "__main__":
+    test()

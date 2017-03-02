@@ -26,6 +26,7 @@ def updateLastMsgReceivedTable(txtdatetime,name,sim_num,msg):
     dbio.commitToDb(query, 'updateLastMsgReceivedTable')
     
 def updateSimNumTable(name,sim_num,date_activated):
+    return
     db, cur = dbio.SenslopeDBConnect('local')
     
     query = """INSERT IGNORE INTO site_column_sim_nums (name,sim_num,date_activated)
@@ -183,9 +184,8 @@ def ProcTwoAccelColData(msg,sender,txtdatetime):
     return outl
 
 def WriteTwoAccelDataToDb(dlist,msgtime):
-    query = """INSERT IGNORE INTO %s (timestamp,id,msgid,xvalue,yvalue,zvalue,batt) VALUES """ % str(dlist[0][0].lower())
+    query = """INSERT IGNORE INTO tilt_%s (ts,node_id,type_num,xval,yval,zval,batt) VALUES """ % (str(dlist[0][0].lower()))
     
-    dbio.createTable(dlist[0][0], "sensor v2")
     for item in dlist:
         timetowrite = str(item[1])
         query = query + """('%s',%s,%s,%s,%s,%s,%s),""" % (timetowrite,str(item[2]),str(item[3]),str(item[4]),str(item[5]),str(item[6]),str(item[7]))
@@ -196,10 +196,9 @@ def WriteTwoAccelDataToDb(dlist,msgtime):
     dbio.commitToDb(query, 'WriteTwoAccelDataToDb')
    
 def WriteSomsDataToDb(dlist,msgtime):
-    query = """INSERT IGNORE INTO %s (timestamp,id,msgid,mval1,mval2) VALUES """ % str(dlist[0][0].lower())
+    query = """INSERT IGNORE INTO soms_%s (ts,node_id,type_num,mval1,mval2) VALUES """ % (str(dlist[0][0].lower()))
     
     print "site_name", str(dlist[0][0])
-    dbio.createTable(str(dlist[0][0]), "soms")
     for item in dlist:            
         timetowrite = str(item[1])
         query = query + """('%s',%s,%s,%s,%s),""" % (timetowrite,str(item[2]),str(item[3]),str(item[4]),str(item[5]))
@@ -255,7 +254,8 @@ def ProcessColumn(line,txtdatetime,sender):
         
     updateSimNumTable(msgtable,sender,msgdatetime[:10])
         
-    query = query = """INSERT IGNORE INTO %s (timestamp,id,xvalue,yvalue,zvalue,mvalue) VALUES """ % (str(msgtable.lower()))
+    query_tilt = """INSERT IGNORE INTO tilt_%s (ts,node_id,xval,yval,zval) VALUES """ % (str(msgtable.lower()))
+    query_soms = """INSERT IGNORE INTO soms_%s (ts,node_id,mval1) VALUES """ % (str(msgtable.lower()))
     
     try:    
         i = 0
@@ -298,20 +298,27 @@ def ProcessColumn(line,txtdatetime,sender):
 	            valueZ = tempz - 4096
 
             valueF = tempf #is this the M VALUE?
-            
-            query = query + """('%s',%s,%s,%s,%s,%s),""" % (str(msgdatetime),str(node_id),str(valueX),str(valueY),str(valueZ),str(valueF))
-            
+
+            query_tilt += """('%s',%d,%d,%d,%d),""" % (str(msgdatetime),node_id,valueX,valueY,valueZ)
+            query_soms += """('%s',%d,%d),""" % (str(msgdatetime),node_id,valueF)
+
             print "%s\t%s\t%s\t%s\t%s" % (str(node_id),str(valueX),str(valueY),str(valueZ),str(valueF))
             
-        query = query[:-1]
+        query_tilt = query_tilt[:-1]
+        query_soms = query_soms[:-1]
+
+        print query_tilt
+        print query_soms
         
         # print query
 
         if i!=0:
-            dbio.createTable(str(msgtable), "sensor v1")
-            dbio.commitToDb(query, 'ProcessColumn')
-
-        SpawnAlertGen(msgtable)
+        #     # dbio.createTable(str(msgtable), "sensor v1")
+        #     dbio.commitToDb(query_tilt, 'ProcessColumn')
+            dbio.commitToDb(query_tilt, 'ProcessColumn')
+            dbio.commitToDb(query_soms, 'ProcessColumn')
+        
+        # SpawnAlertGen(msgtable)
                 
     except KeyboardInterrupt:
         print '\n>>Error: Unknown'
@@ -864,6 +871,24 @@ def ProcessCoordinatorMsg(coordsms, num):
 
 # for test codes    
 def test():
+    msg_test = "LABTDUE*1340008C0160A9F14DBC7FF7FF0B7D15473037DCC0AE8163E7FFF00B0A5D1700000000009FE183EB01DFB70B97193F1032FEF0A3F1A293E7F05E0B091B3D001C0360B2A*170201100040"
+    ProcessColumn(msg_test,'2017-02-01 09:31:06','639175083748')
+    # msg_test = "SINSA*b*016E193000026EAA3000036E4B3000046E153000056E073000066E1C3000076EF42000086E443000096E4730000A6E4D30000B6EF320000C6E5630000D6E303000*170201100031"
+    # msg_dt = "2017-02-01 09:58:10"
+    # msg_simnum = "639499942317"
+    # try:
+    #     dlist = ProcTwoAccelColData(msg_test,msg_simnum,msg_dt)
+    #     if dlist:
+    #         if len(dlist[0]) == 6:
+    #             WriteSomsDataToDb(dlist,msg_dt)
+    #         else:
+    #             WriteTwoAccelDataToDb(dlist,msg_dt)
+    # # except IndexError:
+    # #     print "\n\n>> Error: Possible data type error"
+    # #     print msg_test
+    # except ValueError:
+    #     print ">> Value error detected"
+
     return
 
 if __name__ == "__main__":
