@@ -35,12 +35,13 @@ def updateSimNumTable(name,sim_num,date_activated):
     dbio.commitToDb(query, 'updateSimNumTable')
 
 def checkNameOfNumber(number):
-    db, cur = dbio.SenslopeDBConnect('local')
+    db, cur = dbio.SenslopeDBConnect('sandbox')
     
     while True:
         try:
-            query = """select name from senslopedb.site_column_sim_nums
-                where sim_num like '%s' """ % (number)
+            query = """select logger_name from loggers where 
+                logger_id = (select logger_id from logger_contacts 
+                where sim_num = '%s' order by date_activated desc limit 1) """ % (number)
                 
             a = cur.execute(query)
             if a:
@@ -508,29 +509,24 @@ def ProcessARQWeather(line,sender):
         if msgname:
             print ">> Number registered as", msgname
             msgname_contact = msgname
-            msgname = msgname + 'w'
-
+            
         # else:
             # print ">> New number", sender
             # msgname = ''
             
-        r15m = int(linesplit[1])*0.5
-        r24h = int(linesplit[2])*0.5
+        rain = int(linesplit[1])*0.5
         batv1 = linesplit[3]
         batv2 = linesplit[4]
-        current = linesplit[5]
-        boostv1 = linesplit[6]    
-        boostv2 = linesplit[7]
-        charge = linesplit[8]
         csq = linesplit[9]
+        
         if csq=='':
-            csq = '0'
+            csq = 'NULL'
         temp = linesplit[10]
         hum = linesplit[11]
         flashp = linesplit[12]
         txtdatetime = dt.strptime(linesplit[13],'%y%m%d/%H%M%S').strftime('%Y-%m-%d %H:%M:00')
 
-        updateSimNumTable(msgname_contact,sender,txtdatetime[:8])
+        # updateSimNumTable(msgname_contact,sender,txtdatetime[:8])
             
         
         # print str(r15m),str(r24h),batv1, batv2, current, boostv1, boostv2, charge, csq, temp, hum, flashp,txtdatetime 
@@ -544,21 +540,21 @@ def ProcessARQWeather(line,sender):
         print '>> Error: Possible conversion mismatch ' + line
         return
         
-    if msgname:
-        dbio.createTable(str(msgname), "arqweather")
-    else:
-        print ">> Error: Number does not have station name yet"
-        return
+    # if msgname:
+    #     dbio.createTable(str(msgname), "arqweather")
+    # else:
+    #     print ">> Error: Number does not have station name yet"
+    #     return
 
     try:
-        query = """INSERT INTO %s (timestamp,name,r15m, r24h, batv1, batv2, cur, boostv1, boostv2, charge, csq, temp, hum, flashp) 
-        VALUES ('%s','%s',%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""" % (msgname,txtdatetime,msgname,r15m, r24h, batv1, batv2, current, boostv1, boostv2, charge, csq, temp, hum, flashp)
-        # print query
+        query = """INSERT INTO rain_%s (ts,rain,temperature,humidity,battery1,battery2,csq)
+        VALUES ('%s',%s,%s,%s,%s,%s,%s)""" % (msgname,txtdatetime,rain,temp,hum,batv1,batv2,csq)
+        print query
     except ValueError:
         print '>> Error writing query string.', 
         return
 
-    dbio.commitToDb(query, 'ProcessARQWeather')
+    dbio.commitToDb(query, 'ProcessARQWeather',"sandbox")
            
     print 'End of Process ARQ weather data'
     
@@ -577,7 +573,7 @@ def ProcessRain(line,sender):
 
     try:
     
-        msgtable = line.split(",")[0]
+        msgtable = line.split(",")[0][:-1]+'G'
         msgdatetime = re.search("\d{02}\/\d{02}\/\d{02},\d{02}:\d{02}:\d{02}",line).group(0)
 
         txtdatetime = dt.strptime(msgdatetime,'%m/%d/%y,%H:%M:%S')
@@ -585,7 +581,8 @@ def ProcessRain(line,sender):
         txtdatetime = txtdatetime.strftime('%Y-%m-%d %H:%M:00')
         
         # data = items.group(3)
-        data = line.split(",",3)[3]
+        rain = line.split(",")[6]
+        csq = line.split(",")[8]
 
     except IndexError and AttributeError:
         print '\n>> Error: Rain message format is not recognized'
@@ -595,22 +592,22 @@ def ProcessRain(line,sender):
         print '\n>>Error: Weather message format unknown ' + line
         return
         
-    updateSimNumTable(msgtable,sender,txtdatetime[:10])
+    # updateSimNumTable(msgtable,sender,txtdatetime[:10])
 
-    dbio.createTable(str(msgtable),"weather")
+    # dbio.createTable(str(msgtable),"weather")
 
     try:
-        query = """INSERT INTO %s (timestamp,name,temp,wspd,wdir,rain,batt,csq) VALUES ('%s','%s',%s)""" %(msgtable.lower(),txtdatetime,msgtable,data)
-            
+        query = """INSERT INTO rain_%s (ts,rain,csq) VALUES ('%s',%s,%s)""" %(msgtable.lower(),txtdatetime,rain,csq)
+        print query            
     except:
         print '>> Error writing weather data to database. ' +  line
         return
 
     try:
-        dbio.commitToDb(query, 'ProcesRain')
+        dbio.commitToDb(query, 'ProcesRain','sandbox')
     except MySQLdb.ProgrammingError:
         print query[:-2]
-        dbio.commitToDb(query[:-2]+')', 'ProcessRain')
+        dbio.commitToDb(query[:-2]+')', 'ProcessRain','sandbox')
         
     print 'End of Process weather data'
 
@@ -871,25 +868,16 @@ def ProcessCoordinatorMsg(coordsms, num):
 
 # for test codes    
 def test():
-    msg_test = "LABTDUE*1340008C0160A9F14DBC7FF7FF0B7D15473037DCC0AE8163E7FFF00B0A5D1700000000009FE183EB01DFB70B97193F1032FEF0A3F1A293E7F05E0B091B3D001C0360B2A*170201100040"
-    ProcessColumn(msg_test,'2017-02-01 09:31:06','639175083748')
-    # msg_test = "SINSA*b*016E193000026EAA3000036E4B3000046E153000056E073000066E1C3000076EF42000086E443000096E4730000A6E4D30000B6EF320000C6E5630000D6E303000*170201100031"
-    # msg_dt = "2017-02-01 09:58:10"
-    # msg_simnum = "639499942317"
-    # try:
-    #     dlist = ProcTwoAccelColData(msg_test,msg_simnum,msg_dt)
-    #     if dlist:
-    #         if len(dlist[0]) == 6:
-    #             WriteSomsDataToDb(dlist,msg_dt)
-    #         else:
-    #             WriteTwoAccelDataToDb(dlist,msg_dt)
-    # # except IndexError:
-    # #     print "\n\n>> Error: Possible data type error"
-    # #     print msg_test
-    # except ValueError:
-    #     print ">> Value error detected"
-
-    return
+    msg_test = "MARW,02/01/17,10:15:05,0,000,000,1.5,14.00,10"
+    simnum = '639175837453'
+    ProcessRain(msg_test,simnum)
+    
+    # msg_test = "ARQ+0+0+4.174+4.219+0.0666+5.179+0.121+1100+26+-40.0+-4.6+750+170201/100155"
+    # simnum = "639173270515"
+    
+    # ProcessARQWeather(msg_test,simnum)
+    # print checkNameOfNumber('639111111')
+    
 
 if __name__ == "__main__":
     test()

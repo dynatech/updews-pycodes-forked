@@ -207,7 +207,8 @@ def createLoggerTables(logger_type='all',instance="local"):
                       `ts` TIMESTAMP NULL DEFAULT NULL,
                       `frequency_shift` SMALLINT UNSIGNED NULL DEFAULT NULL,
                       `temperature` FLOAT NULL DEFAULT NULL,
-                      PRIMARY KEY (`data_id`))
+                      PRIMARY KEY (`data_id`),
+                      UNIQUE INDEX `unique1` (`ts` ASC))
                     ENGINE = InnoDB;\n\n""" % (n)
 
     elif logger_type == 'rain':
@@ -218,10 +219,11 @@ def createLoggerTables(logger_type='all',instance="local"):
                       `rain` FLOAT NULL DEFAULT NULL,
                       `temperature` FLOAT NULL DEFAULT NULL,
                       `humidity` FLOAT NULL DEFAULT NULL,
-                      `rain_jortacol` FLOAT NULL DEFAULT NULL,
                       `battery1` FLOAT NULL DEFAULT NULL,
                       `battery2` FLOAT NULL DEFAULT NULL,
-                      PRIMARY KEY (`data_id`))
+                      `csq` TINYINT(3) NULL DEFAULT NULL,
+                      PRIMARY KEY (`data_id`),
+                      UNIQUE INDEX `unique1` (`ts` ASC))
                     ENGINE = InnoDB;\n\n""" % (n)
     
     else:
@@ -329,8 +331,7 @@ def test():
     # createTTables("backup")
     # createTsmSensorTables("backup")
     # createTsmSensorTables("backup")
-    # createLoggerTables("piezo","backup")
-    db, cur = SenslopeDBConnect("gsm")
+    createLoggerTables("rain","sandbox")
     return
 
 if __name__ == "__main__":
