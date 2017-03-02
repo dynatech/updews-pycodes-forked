@@ -239,7 +239,7 @@ def getLoggerContacts():
 
     # print querys
 
-    nums = dbio.querydatabase(query,'getSensorNumbers','BACKUP')
+    nums = dbio.querydatabase(query,'getSensorNumbers','sandbox')
     nums = {key: value for (value, key) in nums}
 
     return nums
@@ -281,7 +281,7 @@ def deleteMessagesfromGSM():
 def simulateGSM():
     print "Simulating GSM"
     
-    db, cur = dbio.SenslopeDBConnect('backup')
+    db, cur = dbio.SenslopeDBConnect('sandbox')
     
     smsinbox_sms = []
 
@@ -324,17 +324,17 @@ def simulateGSM():
     query = query[:-1]
     print query
 
-    dbio.commitToDb(query,'simulateGSM','BACKUP')
+    dbio.commitToDb(query,'simulateGSM','sandbox')
 
     if len(sms_id_ok)>0:
         sms_id_ok = str(sms_id_ok).replace("L","")[1:-1]
         query = "update smsinbox set web_flag = '0' where sms_id in (%s);" % (sms_id_ok)
-        dbio.commitToDb(query,'simulateGSM','BACKUP')
+        dbio.commitToDb(query,'simulateGSM','sandbox')
 
     if len(sms_id_unk)>0:
         sms_id_unk = str(sms_id_unk).replace("L","")[1:-1]
         query = "update smsinbox set web_flag = '-1' where sms_id in (%s);" % (repr(sms_id_unk))
-        dbio.commitToDb(query,'simulateGSM','BACKUP')
+        dbio.commitToDb(query,'simulateGSM','sandbox')
     
     sys.exit()
         
@@ -360,7 +360,7 @@ def RunSenslopeServer(network):
         raise ValueError(">> Error: no com port found")
             
     dbio.createTable("runtimelog","runtime",cfg.config().mode.logtoinstance)
-    logRuntimeStatus(network,"startup")
+    logRuntimeStatus(network,"startup",)
     
     # dbio.createTable('smsinbox','smsinbox',cfg.config().mode.logtoinstance)
     # dbio.createTable('smsoutbox','smsoutbox',cfg.config().mode.logtoinstance)
@@ -410,3 +410,24 @@ def RunSenslopeServer(network):
         else:
             print '>> Error in parsing mesages: Error unknown'
             gsmio.resetGsm()
+
+def main():
+    network = sys.argv[1].upper()
+
+    if network[0:5] not in ['GLOBE','SMART']:
+        print ">> Error in network selection", network
+        sys.exit()
+    
+    RunSenslopeServer(network)
+
+if __name__ == '__main__':
+    while True:
+        try:
+            main()
+        except KeyboardInterrupt:
+            print 'Bye'
+            break
+        except gsmio.CustomGSMResetException:
+            print "> Resetting system because of GSM failure"
+            gsmio.resetGsm()
+            continue

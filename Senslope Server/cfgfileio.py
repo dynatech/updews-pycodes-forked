@@ -33,23 +33,13 @@ class config:
 		cfg = readCfgFile()            
 		self.cfg = cfg
 
-		self.localdb = Container()
-		self.localdb.user = cfg.get("LocalDB","username")
-		self.localdb.host = cfg.get("LocalDB","host")
-		self.localdb.pwd = cfg.get("LocalDB","password")
-		self.localdb.name = cfg.get("LocalDB","dbname")
-		
-		self.gsmdb = Container()
-		self.gsmdb.user = cfg.get("GSMDB","username")
-		self.gsmdb.host = cfg.get("GSMDB","host")
-		self.gsmdb.pwd = cfg.get("GSMDB","password")
-		self.gsmdb.name = cfg.get("GSMDB","dbname")
+		self.dbhost = dict()
+		for opt in cfg.options("Hosts"):
+			self.dbhost[opt] = cfg.get("Hosts",opt)
 
-		self.backupdb = Container()
-		self.backupdb.user = cfg.get("BackupDB","username")
-		self.backupdb.host = cfg.get("BackupDB","host")
-		self.backupdb.pwd = cfg.get("BackupDB","password")
-		self.backupdb.name = cfg.get("BackupDB","dbname")
+		self.db = dict()
+		for opt in cfg.options("Db"):
+			self.db[opt] = cfg.get("Db",opt)
 
 		self.serialio = Container()
 		self.serialio.baudrate = cfg.getint("Serial","baudrate")
@@ -59,8 +49,7 @@ class config:
 
 		self.gsmio = Container()
 		self.gsmio.resetpin = cfg.getint("gsmio","resetpin")
-		self.gsmio.sim_gsm = cfg.getboolean("gsmio","simulate_gsm")
-		
+		self.gsmio.sim_gsm = cfg.getboolean("gsmio","simulate_gsm")		
 		
 		self.smsalert = Container()
 		self.smsalert.communitynum = cfg.get("SMSAlert","communityphonenumber")
@@ -87,8 +76,7 @@ class config:
 		self.fileio.websocketdir = cfg.get("FileIO","websocketdir")
 		self.fileio.gndalert1 = cfg.get("FileIO","gndalert1")
 		self.fileio.gndalert2 = cfg.get("FileIO","gndalert2")
-		self.fileio.gndalert3 = cfg.get("FileIO","gndalert3")
-		
+		self.fileio.gndalert3 = cfg.get("FileIO","gndalert3")		
 		
 		self.simprefix = Container()
 		self.simprefix.smart = cfg.get("simprefix","smart")
@@ -110,3 +98,10 @@ class config:
 		self.io.active_lgr_limit = cfg.getint("io","active_lgr_limit")
 		
 
+def test():
+	c = config()
+	print c.dbhost["gsm"]
+	return
+
+if __name__ == "__main__":
+    test()

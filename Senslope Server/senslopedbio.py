@@ -4,32 +4,25 @@ import cfgfileio as cfg
 
 # cfg = ConfigParser.ConfigParser()
 # cfg.read(sys.path[0] + "/senslope-server-config.txt")
-
-class dbInstance:
-    def __init__(self,name,host,user,password):
-       self.name = name
-       self.host = host
-       self.user = user
-       self.password = password
-
 c = cfg.config()
 
-localdbinstance = dbInstance(c.localdb.name,c.localdb.host,c.localdb.user,c.localdb.pwd)
-gsmdbinstance = dbInstance(c.gsmdb.name,c.gsmdb.host,c.gsmdb.user,c.gsmdb.pwd)
-backupdbinstance = dbInstance(c.backupdb.name,c.backupdb.host,c.backupdb.user,c.backupdb.pwd)
+class dbInstance:
+    def __init__(self,host):
+       self.name = c.db["name"]
+       self.host = c.dbhost[host]
+       self.user = c.db["user"]
+       self.password = c.db["password"]
+
+# localdbinstance = dbInstance(c.localdb.name,c.localdb.host,c.localdb.user,c.localdb.pwd)
+# gsmdbinstance = dbInstance(c.gsmdb.name,c.gsmdb.host,c.gsmdb.user,c.gsmdb.pwd)
+# backupdbinstance = dbInstance(c.backupdb.name,c.backupdb.host,c.backupdb.user,c.backupdb.pwd)
 
 
 # def SenslopeDBConnect():
 # Definition: Connect to senslopedb in mysql
-def SenslopeDBConnect(instance):
-    if instance.upper() == 'LOCAL':
-        dbc = localdbinstance
-    elif instance.upper() == 'BACKUP':
-        dbc = backupdbinstance
-    else:
-        dbc = gsmdbinstance
+def SenslopeDBConnect(host):
+    dbc = dbInstance(host)
 
-    print dbc.host
     while True:
         try:
             db = MySQLdb.connect(host = dbc.host, user = dbc.user, passwd = dbc.password, db = dbc.name)
@@ -336,7 +329,8 @@ def test():
     # createTTables("backup")
     # createTsmSensorTables("backup")
     # createTsmSensorTables("backup")
-    createLoggerTables("piezo","backup")
+    # createLoggerTables("piezo","backup")
+    db, cur = SenslopeDBConnect("gsm")
     return
 
 if __name__ == "__main__":
