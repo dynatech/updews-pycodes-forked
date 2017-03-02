@@ -50,7 +50,7 @@ def f_outlier(df,column,mode):
     else:
         ver = 1
             
-    df= df[(df>smin[mode][ver])&(df<smax[mode][ver])]
+    df['mval1']= df.mval1[(df.mval1>smin[mode][ver])&(df.mval1<smax[mode][ver])]
     try:   
 	   
         df= df.resample('30Min',base=0).apply(lambda x:x)
