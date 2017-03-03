@@ -8,19 +8,8 @@ plt.ion()
 import os
 import pandas as pd
 import numpy as np
-from datetime import date, time, datetime, timedelta
-from scipy.stats import spearmanr
 from mpl_toolkits.axes_grid.anchored_artists import AnchoredText
 import time
-import platform
-
-curOS = platform.system()
-
-if curOS == "Windows":
-    import MySQLdb as mysqlDriver
-elif curOS == "Linux":
-    import pymysql as mysqlDriver
-
 
 #### Global Parameters
 data_path = os.path.dirname(os.path.realpath(__file__))
@@ -68,6 +57,7 @@ def onpress(event):
         color = tableau20[6]
     elif event.key == 'q':
         marker_history_edits = RemoveDuplicatesAndNone(marker_history_edits)
+        print "\nCurrent edits:\n"
         print marker_history_edits
     elif event.key == 'r':
         for axes in ax.figure.get_axes():
@@ -85,13 +75,14 @@ def onpress(event):
                 cur_history = RemoveDuplicatesAndNone(cur_history)
                 marker_history_edits = RemoveDuplicatesAndNone(marker_history_edits)
                 cur_history = cur_history.append(marker_history_edits)
+                print "\n\n"
                 print marker_history_edits
                 cur_history[['ts','site_code','marker_name','operation','data_source','previous_name']].to_csv(mhcsv, header = True,index = False)
                 mhcsv.close()
             marker_history_edits = pd.DataFrame(columns = ['ts','site_code','marker_name','operation','data_source'])
             print "^^^ the edits above have been successfuly saved!"
         except:
-            print "Error in saving edits, check csv file."
+            print "\n\nError in saving edits, check csv file."
     else:
         operation = 'none'
 
@@ -125,8 +116,7 @@ def onclick(event):
     else:
         print "\nData point"      
     
-    if operation == 'mute' or operation == 'reposition':
-        print '\ntimestamp: {}\nsite code: {}\nmarker name: {}\ndata source: {}\n\n'.format(pd.to_datetime(xdata[ind][0]).strftime('%m/%d/%Y %H:%M:%S'),label[4:7],label[8:],label[:3])
+    print '\ntimestamp: {}\nsite code: {}\nmarker name: {}\ndata source: {}\n\n'.format(pd.to_datetime(xdata[ind][0]).strftime('%m/%d/%Y %H:%M:%S'),label[4:7],label[8:],label[:3])
     marker_history_edits.loc[index,['ts']] = pd.to_datetime(xdata[ind][0])
     marker_history_edits.loc[index,['data_source']] = label[0:3]
     marker_history_edits.loc[index,['site_code']] = label[4:7]
@@ -176,6 +166,8 @@ def onpress_edit(event):
         color = tableau20[6]
     elif event.key == 'q':
         marker_history_edits = RemoveDuplicatesAndNone(marker_history_edits)
+        print "\nCurrent edits:\n"
+        print marker_history_edits
     elif event.key == 'r':
         for axes in ax.figure.get_axes():
             for line in axes.get_lines():
@@ -193,13 +185,14 @@ def onpress_edit(event):
                 cur_history = cur_history.append(marker_history_edits,ignore_index = True)
                 cur_history = RemoveDuplicatesAndNone(cur_history)
                 cur_history = cur_history[cur_history.operation != 'delete']
+                print "\n\n"
                 print marker_history_edits
                 cur_history[['ts','site_code','marker_name','operation','data_source','previous_name']].to_csv(mhcsv, header = True,index = False)
                 mhcsv.close()
             marker_history_edits = pd.DataFrame(columns = ['ts','site_code','marker_name','operation','data_source'])
             print "^^^ the edits above have been successfully saved."
         except:
-            print "Error in saving edits, check csv file."
+            print "\n\nError in saving edits, check csv file."
     elif event.key == 'delete':
         operation = 'delete'
         color = tableau20[14]
@@ -237,8 +230,7 @@ def onclick_edit(event):
     else:
         print "\nData point"    
     
-    if operation == 'delete' or operation == 'mute' or operation == 'reposition':
-        print '\ntimestamp: {}\nsite code: {}\nmarker name: {}\ndata source: {}\n\n'.format(pd.to_datetime(xdata[ind][0]).strftime('%m/%d/%Y %H:%M:%S'),label[4:7],label[8:],label[:3])
+    print '\ntimestamp: {}\nsite code: {}\nmarker name: {}\ndata source: {}\n\n'.format(pd.to_datetime(xdata[ind][0]).strftime('%m/%d/%Y %H:%M:%S'),label[4:7],label[8:],label[:3])
 
     marker_history_edits.loc[index,['ts']] = pd.to_datetime(xdata[ind][0])
     marker_history_edits.loc[index,['data_source']] = label[0:3]
@@ -298,6 +290,7 @@ def onpress_cumdisp(event):
         color = tableau20[(tableau20.index(cur_color) + 14)%20]
     elif event.key == 'q':
         marker_history_edits = RemoveDuplicatesAndNone(marker_history_edits)
+        print "\nCurrent edits:\n"
         print marker_history_edits
     elif event.key == 'r':
         for axes in ax.figure.get_axes():
@@ -316,13 +309,14 @@ def onpress_cumdisp(event):
                 cur_history = RemoveDuplicatesAndNone(cur_history)
                 marker_history_edits = RemoveDuplicatesAndNone(marker_history_edits)
                 cur_history = cur_history.append(marker_history_edits)
+                print "\n\n"
                 print marker_history_edits
                 cur_history[['ts','site_code','marker_name','operation','data_source','previous_name']].to_csv(mhcsv, header = True,index = False)
                 mhcsv.close()
             marker_history_edits = pd.DataFrame(columns = ['ts','site_code','marker_name','operation','data_source'])
             print "^^^the edits above have been successfully saved!"
         except:
-            print "Error in saving, check csv file."
+            print "\n\nError in saving, check csv file."
     else:
         operation = 'none'
 
@@ -353,8 +347,8 @@ def onclick_cumdisp(event):
         print "\nREPOSITION data point"
     else:
         print "\nData point"
-    if operation == 'mute' or operation == 'reposition':
-        print '\ntimestamp: {}\nsite code: {}\nmarker name: {}\ndata source: {}\n\n'.format(pd.to_datetime(xdata[ind][0]).strftime('%m/%d/%Y %H:%M:%S'),label[4:7],label[8:],label[:3])
+        
+    print '\ntimestamp: {}\nsite code: {}\nmarker name: {}\ndata source: {}\n\n'.format(pd.to_datetime(xdata[ind][0]).strftime('%m/%d/%Y %H:%M:%S'),label[4:7],label[8:],label[:3])
 
     marker_history_edits.loc[index,['ts']] = pd.to_datetime(xdata[ind][0])
     marker_history_edits.loc[index,['data_source']] = label[0:3]
