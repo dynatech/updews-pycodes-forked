@@ -35,7 +35,7 @@ import heatmap as hmap
 
 # Date Randomizer
 def dateRandomizer():
-	year = random.randint(2013, 2017)
+	year = random.randint(2016, 2017)
 	month = random.randint(1, 12)
 	day = random.randint(1, 28)
 	hour = random.randint(0, 23)

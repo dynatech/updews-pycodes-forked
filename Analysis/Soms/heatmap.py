@@ -61,7 +61,7 @@ def heatmap(col, t_timestamp, t_win = '1d', is_debug = False):
 		node = qs.GetDBDataFrame(query)
 		for node_num in range (1,int(node.num_nodes[0])+1):
 			
-			df = CSR.getsomscaldata(col,node_num,f_timestamp,t_timestamp, is_debug = is_debug,if_multi = True)
+			df = CSR.getsomscaldata(col,node_num,f_timestamp,t_timestamp, is_debug = False ,if_multi = True)
 			if (df.empty == True):
 				return df
 			

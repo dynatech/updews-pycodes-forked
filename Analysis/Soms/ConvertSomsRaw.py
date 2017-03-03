@@ -20,7 +20,7 @@ import querySenslopeDb as qs
 #column = raw_input('Enter column name: ')
 #gid = int(raw_input('Enter id: '))
 
-def getsomsrawdata(column="", gid=0, fdate="", tdate="", if_multi = False):
+def getsomsrawdata(column="", gid=0, fdate="", tdate="", if_multi=False ):
     ''' 
         only for landslide sensors v2 and v3
         output:  sraw = series of unfiltered SOMS data (raw) of a specific node of the defined column 
