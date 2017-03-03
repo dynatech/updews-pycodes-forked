@@ -41,7 +41,7 @@ def seek_outlier(df,column, node, mode):
     return outlier
 
 
-def f_outlier(df,column,node,mode): 
+def f_outlier(df,column,mode): 
     smin=[[2000,500],[0,0]]                         #format: [[v2raw_min, v3raw_min], [v2calib_min,v3calib_min]]
     smax=[[7800,1600],[1700,1500]]
 
