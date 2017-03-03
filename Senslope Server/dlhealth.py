@@ -143,9 +143,8 @@ def storehealthData():
     columns= ['logger_id','batv1', 'batv2', 'signal', 'model']
     siteHealthdf = pd.DataFrame(columns=columns)
     print globaldf
-    # j = 0
     for i in range (0, len(globaldf)):
-        if (globaldf.health_case.loc[i] == 3):
+        if (globaldf.health_case.loc[i] > 20 and globaldf.health_case.loc[i] < 25):
             lgr_name= str(globaldf.name.loc[i])
             logger_id= int(globaldf.logger_id.loc[i])
             logger_model= int(globaldf.model_id[i])
@@ -181,11 +180,11 @@ def storehealthData():
     
             siteHealthdf.set_value(i, 'model', logger_model)
             siteHealthdf.set_value(i, 'logger_id', logger_id)
-            # j=j+1
     print globaldf
     return siteHealthdf
 
 def healthCaseGenerator(siteHealthdf):
+    global globaldf
     print siteHealthdf
     health= 4
     for i in range (0, len(siteHealthdf)):
@@ -199,20 +198,57 @@ def healthCaseGenerator(siteHealthdf):
             
             # baka walang laman :()
 
+            if (globaldf.health_case.loc[i] == 21): #no carrier/ cannot be reached    
+                if (logger_model > 1 and logger_model < 10): #arq
+                    if (batv1 < 3.3 and batv2 < 3.3):
+                        health = 12
+                    elif (signal<10):
+                        health = 14
+                    else:
+                        # network ata sira
+                        health= 3
+                
+                # if (logger_model > 26 and logger_model < 35): #gateway
+                # if naka off na gateway
+                if (logger_model > 9 and logger_model < 18):
+                    if (batv1< 13):
+                        health= 12
+                    elif (signal<10):
+                        health = 14
+                    else:
+                        # network ata sira
+                        health= 3
 
-            if (logger_model > 1 and logger_model < 10): #arq
-                if (signal < 10):
-                    health = 14
-                elif (batv1 < 3.3 and batv2 < 3.3):
-                    health = 12
-            elif (logger_model > 9 and logger_model < 35 ): #ver3
-                if (signal > 90):
-                    health = 14
-                elif (batv1 < 12):
-                    health = 25
-            else:
-                health= 4
-            globaldf.set_value(i, 'health_case', health)
+            elif (globaldf.health_case.loc[i] == 22): #busy/ binaba
+                if (logger_model > 1 and logger_model < 10):
+                    health= 11
+                elif (batv1): #doublecheck
+                    health= 12
+                elif (logger_model > 17 and logger_model < 27): #regular    (walang case ng mababang csq dito)
+                    health=11
+                # (di ko machenes kung nagana pa yung iba)
+
+            elif (globaldf.health_case.loc[i] == 23): #no answer/ ringing
+                # (process-- text and command etc)                             
+                health =3
+            elif (globaldf.health_case.loc[i] == 24): #no dialtone
+                health=3
+
+
+            # if (logger_model > 1 and logger_model < 10): #arq
+            #     if (signal < 10):
+            #         health = 14
+            #     elif (batv1 < 3.3 and batv2 < 3.3):
+            #         health = 12
+            # elif (logger_model > 9 and logger_model < 35 ): #ver3
+            #     if (signal > 90):
+            #         health = 14
+            #     elif (batv1 < 12):
+            #         health = 25
+            # else:
+            #     health= 4
+            # globaldf.set_value(i, 'health_case', health)
+
         except KeyError, e:
             print ""  
     return 0
@@ -222,7 +258,7 @@ def gsmStatus(): #ibaaaaang approach
     global globaldf 
     gsmio.gsmInit('call')
     for i in range (0,len(globaldf)):
-        if (globaldf.health_case.loc[i] == 4):
+        if (globaldf.health_case.loc[i] == 3): #3 na yung chinecheck
             s_number= str(globaldf.sim_num.loc[i])
             t= time.strftime('%Y-%m-%d %H:%M:%S')
             s_number= s_number.replace("63","0",1)
@@ -330,8 +366,8 @@ def printloggerStatus():
             f.write(" ")
 
     count= globaldf["health_case"].value_counts()
-    print count
-    print count[4]
+    # print count
+    # print count[4]
     for j in range(2,26):
         try:
             co= count[j]
@@ -356,14 +392,24 @@ def printloggerStatus():
     for line in f.readlines():
         print line
 
+def encodeDataFrame(inputdf):
+    print inputdf
+    print setNames(inputdf), c("a","b")
 
-# def encodeDataFrame(inputdf):
-
+    # timeNow= dt.today()
+    # toLogHealthcols = ['logger_id','health_Case', 'ts', 'ts_updated']
+    
+    # INSERT INTO logger_health (logger_id,health_case,ts, timestamp) VALUES (1,1,1),(2,2,3),(3,9,3),(4,10,12)
+    # ON DUPLICATE KEY UPDATE Col1=VALUES(Col1),Col2=VALUES(Col2);
+    
+    # siteHealthdf = pd.DataFrame(columns=columns)
 
 def main():
     func = sys.argv[1] 
     if func == 'loggerstatus':
+        # global globaldf
         printloggerStatus()
+        # encodeDataFrame(globaldf)
     elif func == 'checknetstat':
         print 'check net stat'
         gsmStatus()
