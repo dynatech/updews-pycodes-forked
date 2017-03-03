@@ -1,8 +1,0 @@
-ts,site_code,marker_name,operation,data_source,previous_name
-2015-07-02 06:54:00,MSL,A,rename,DRS,Liki A
-2015-07-03 06:54:00,MSL,B,rename,DRS,Liki B
-2015-07-04 06:54:00,MSL,C,rename,DRS,Liki C
-2015-07-05 06:54:00,MSL,D,rename,DRS,Liki D
-2015-07-06 06:54:00,MSL,E,rename,DRS,Liki E
-2015-07-07 06:54:00,MSL,F,rename,DRS,Liki F
-2016-11-06 15:30:00,MSL,B,reposition,SMS,
