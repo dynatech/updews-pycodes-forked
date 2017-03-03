@@ -33,7 +33,7 @@ at  = AnchoredText(operation.title(),prop=dict(size=8), frameon=True,loc = 2)
 def RemoveDuplicatesAndNone(df):
     UpperSiteCodeUpperMarkerName(df)
     df.drop_duplicates(subset = ['ts','site_code','marker_name','data_source'],keep = 'last',inplace = True)
-    df = df[df.operation != 'none']
+    df = df[df.operation != 'delete']
     return df
 
 def onpress(event):
@@ -83,13 +83,17 @@ def onpress(event):
             print "^^^ the edits above have been successfuly saved!"
         except:
             print "\n\nError in saving edits, check csv file."
+    elif event.key == 'delete':
+        operation = 'delete'
+        color = tableau20[14]
     else:
         operation = 'none'
+
 
 #        if event.key == 's':
 #            out_file_name = '
 
-    if (event.key == 'control' or event.key =='alt') and event.inaxes:
+    if (event.key == 'control' or event.key =='alt' or event.key == 'delete') and event.inaxes:
         at  = AnchoredText(operation.title(),prop=dict(size=8), frameon=True,loc = 2)
         at.patch.set_facecolor(color)
         at.patch.set_alpha(0.5)
@@ -113,22 +117,26 @@ def onclick(event):
         print "\nMUTE data point"
     elif operation == 'reposition':
         print "\nREPOSITION data point"
+    elif operation == 'delete':
+        print "\nDELETE edits for data point"
     else:
         print "\nData point"      
     
     print '\ntimestamp: {}\nsite code: {}\nmarker name: {}\ndata source: {}\n\n'.format(pd.to_datetime(xdata[ind][0]).strftime('%m/%d/%Y %H:%M:%S'),label[4:7],label[8:],label[:3])
-    marker_history_edits.loc[index,['ts']] = pd.to_datetime(xdata[ind][0])
-    marker_history_edits.loc[index,['data_source']] = label[0:3]
-    marker_history_edits.loc[index,['site_code']] = label[4:7]
-    marker_history_edits.loc[index,['marker_name']] = label[8:]
-    marker_history_edits.loc[index,['operation']] = operation
+    
+    if operation in ['mute','reposition','delete']:
+        marker_history_edits.loc[index,['ts']] = pd.to_datetime(xdata[ind][0])
+        marker_history_edits.loc[index,['data_source']] = label[0:3]
+        marker_history_edits.loc[index,['site_code']] = label[4:7]
+        marker_history_edits.loc[index,['marker_name']] = label[8:]
+        marker_history_edits.loc[index,['operation']] = operation
     
     
     if operation == 'mute':
         ax.plot(xdata[ind][0],ydata[ind][0],'o',color = tableau20[6])
     elif operation == 'reposition':
         ax.plot(xdata[ind][0],ydata[ind][0],'o',color = tableau20[16])
-    elif operation == 'none' or not(operation == operation):
+    elif operation == 'delete':
         if label[:3] == 'SMS':
             ax.plot(xdata[ind][0],ydata[ind][0],'o',color = tableau20[0])
         elif label[:3] == 'DRS':
@@ -245,11 +253,7 @@ def onclick_edit(event):
         ax.plot(xdata[ind][0],ydata[ind][0],'o',color = tableau20[16],label = 'dummy')
     elif operation == 'delete':
         ax.plot(xdata[ind][0],ydata[ind][0],'o',color = tableau20[14],label = 'dummy')
-    elif operation == 'none' or not(operation == operation):
-        if label[:3] == 'SMS':
-            ax.plot(xdata[ind][0],ydata[ind][0],'o',color = tableau20[0],label = 'dummy')
-        elif label[:3] == 'DRS':
-            ax.plot(xdata[ind][0],ydata[ind][0],'o',color = tableau20[4],label = 'dummy')
+
 #    print ax._facecolors[event.ind,:]
     index += 1
     if operation != 'none':
@@ -288,6 +292,9 @@ def onpress_cumdisp(event):
     elif event.key == 'alt':
         operation = 'mute'
         color = tableau20[(tableau20.index(cur_color) + 14)%20]
+    elif event.key == 'delete':
+        operation = 'delete'
+        color = cur_color
     elif event.key == 'q':
         marker_history_edits = RemoveDuplicatesAndNone(marker_history_edits)
         print "\nCurrent edits:\n"
@@ -320,7 +327,7 @@ def onpress_cumdisp(event):
     else:
         operation = 'none'
 
-    if (event.key == 'control' or event.key =='alt') and event.inaxes:
+    if (event.key == 'control' or event.key =='alt' or event.key =='delete') and event.inaxes:
         at  = AnchoredText(operation.title(),prop=dict(size=8), frameon=True,loc = 2)
         at.patch.set_facecolor(color)
         at.patch.set_alpha(0.5)
@@ -345,28 +352,28 @@ def onclick_cumdisp(event):
         print "\nMUTE data point"
     elif operation == 'reposition':
         print "\nREPOSITION data point"
+    elif operation == 'delete':
+        print "\nDelete edits for data point"
     else:
         print "\nData point"
         
     print '\ntimestamp: {}\nsite code: {}\nmarker name: {}\ndata source: {}\n\n'.format(pd.to_datetime(xdata[ind][0]).strftime('%m/%d/%Y %H:%M:%S'),label[4:7],label[8:],label[:3])
-
-    marker_history_edits.loc[index,['ts']] = pd.to_datetime(xdata[ind][0])
-    marker_history_edits.loc[index,['data_source']] = label[0:3]
-    marker_history_edits.loc[index,['site_code']] = label[4:7]
-    marker_history_edits.loc[index,['marker_name']] = label[8:]
-    marker_history_edits.loc[index,['operation']] = operation
+    
+    if operation in ['mute','reposition','delete']:
+        marker_history_edits.loc[index,['ts']] = pd.to_datetime(xdata[ind][0])
+        marker_history_edits.loc[index,['data_source']] = label[0:3]
+        marker_history_edits.loc[index,['site_code']] = label[4:7]
+        marker_history_edits.loc[index,['marker_name']] = label[8:]
+        marker_history_edits.loc[index,['operation']] = operation
     
     
     if operation == 'mute':
         ax.plot(xdata[ind][0],ydata[ind][0],'o',color = color,label = 'dummy')
     elif operation == 'reposition':
         ax.plot(xdata[ind][0],ydata[ind][0],'o',color = color,label = 'dummy')
-    elif operation == 'none' or not(operation == operation):
-        cur_color = line.get_color()
-        if label[:3] == 'SMS':
-            ax.plot(xdata[ind][0],ydata[ind][0],'o',color = cur_color,label = 'dummy')
-        elif label[:3] == 'DRS':
-            ax.plot(xdata[ind][0],ydata[ind][0],'o',color = cur_color,label = 'dummy')
+    elif operation == 'delete':
+        ax.plot(xdata[ind][0],ydata[ind][0],'o',color = color,label = 'dummy')
+
 #    print ax._facecolors[event.ind,:]
     index += 1
     if operation != 'none':
@@ -845,6 +852,8 @@ print "Alt + Click: Propose to MUTE the datapoint"
 print "Ctrl + Click: Propose to REPOSITION the datapoint"
 if mode == 'MHP':
     print "Delete + Click: Propose to DELETE history of the data point"
+elif mode in ['SMP','CDP']:
+    print "Delete + Click: DELETE propositions to the history of the data point."
 print "Click: UNDO any edit to the datapoint"
 print "R: Refresh all proposed history"
 print "Q: View all pending edits"
