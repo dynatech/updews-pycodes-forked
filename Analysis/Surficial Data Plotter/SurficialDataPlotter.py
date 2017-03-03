@@ -33,7 +33,7 @@ at  = AnchoredText(operation.title(),prop=dict(size=8), frameon=True,loc = 2)
 def RemoveDuplicatesAndNone(df):
     UpperSiteCodeUpperMarkerName(df)
     df.drop_duplicates(subset = ['ts','site_code','marker_name','data_source'],keep = 'last',inplace = True)
-    df = df[df.operation != 'delete']
+    df = df[df.operation != 'discard']
     return df
 
 def onpress(event):
@@ -62,7 +62,7 @@ def onpress(event):
     elif event.key == 'r':
         for axes in ax.figure.get_axes():
             for line in axes.get_lines():
-                if np.logical_not(np.logical_or(line.get_label()[:3] == 'SMS',line.get_label()[:3] == 'DRS')):
+                if line.get_label() == 'dummy':
                     line.remove()
         marker_history_edits = pd.DataFrame(columns = ['ts','site_code','marker_name','operation','data_source'])
         ax.figure.canvas.draw()
@@ -83,8 +83,8 @@ def onpress(event):
             print "^^^ the edits above have been successfuly saved!"
         except:
             print "\n\nError in saving edits, check csv file."
-    elif event.key == 'delete':
-        operation = 'delete'
+    elif event.key == 'd':
+        operation = 'discard'
         color = tableau20[14]
     else:
         operation = 'none'
@@ -93,7 +93,7 @@ def onpress(event):
 #        if event.key == 's':
 #            out_file_name = '
 
-    if (event.key == 'control' or event.key =='alt' or event.key == 'delete') and event.inaxes:
+    if (event.key == 'control' or event.key =='alt' or event.key == 'discard') and event.inaxes:
         at  = AnchoredText(operation.title(),prop=dict(size=8), frameon=True,loc = 2)
         at.patch.set_facecolor(color)
         at.patch.set_alpha(0.5)
@@ -133,14 +133,14 @@ def onclick(event):
     
     
     if operation == 'mute':
-        ax.plot(xdata[ind][0],ydata[ind][0],'o',color = tableau20[6])
+        ax.plot(xdata[ind][0],ydata[ind][0],'o',color = tableau20[6],label = 'dummy')
     elif operation == 'reposition':
-        ax.plot(xdata[ind][0],ydata[ind][0],'o',color = tableau20[16])
-    elif operation == 'delete':
+        ax.plot(xdata[ind][0],ydata[ind][0],'o',color = tableau20[16],label = 'dummy')
+    elif operation == 'discard':
         if label[:3] == 'SMS':
-            ax.plot(xdata[ind][0],ydata[ind][0],'o',color = tableau20[0])
+            ax.plot(xdata[ind][0],ydata[ind][0],'o',color = tableau20[0],label = 'dummy')
         elif label[:3] == 'DRS':
-            ax.plot(xdata[ind][0],ydata[ind][0],'o',color = tableau20[4])
+            ax.plot(xdata[ind][0],ydata[ind][0],'o',color = tableau20[4],label = 'dummy')
 #    print ax._facecolors[event.ind,:]
     index += 1
     if operation != 'none':
@@ -179,7 +179,7 @@ def onpress_edit(event):
     elif event.key == 'r':
         for axes in ax.figure.get_axes():
             for line in axes.get_lines():
-                if np.logical_not(np.logical_or(line.get_label()[:3] == 'SMS',line.get_label()[:3] == 'DRS')):
+                if line.get_label() == 'dummy':
                     line.remove()
         marker_history_edits = pd.DataFrame(columns = ['ts','site_code','marker_name','operation','data_source'])
         ax.figure.canvas.draw()
@@ -204,12 +204,15 @@ def onpress_edit(event):
     elif event.key == 'delete':
         operation = 'delete'
         color = tableau20[14]
+    elif event.key == 'd':
+        operation = 'discard'
+        color = tableau20[18]
     else:
         operation = 'none'
 
 #        if event.key == 's':
 #            out_file_name = '
-    if (event.key == 'control' or event.key =='alt' or event.key == 'delete') and event.inaxes:
+    if (event.key in ['control','alt','delete','d']) and event.inaxes:
         at  = AnchoredText(operation.title(),prop=dict(size=8), frameon=True,loc = 2)
         at.patch.set_facecolor(color)
         at.patch.set_alpha(0.5)
@@ -229,16 +232,19 @@ def onclick_edit(event):
     label = line.get_label()
     ind = event.ind
     
+    
     if operation == 'mute':
         print "\nMUTE data point"
     elif operation == 'reposition':
         print "\nREPOSITION data point"
     elif operation == 'delete':
         print "\nDELETE history for data point"
+    elif operation == 'discard':
+        print "\nDISCARD edits for data point"
     else:
         print "\nData point"    
     
-    print '\ntimestamp: {}\nsite code: {}\nmarker name: {}\ndata source: {}\n\n'.format(pd.to_datetime(xdata[ind][0]).strftime('%m/%d/%Y %H:%M:%S'),label[4:7],label[8:],label[:3])
+    print '\ntimestamp: {}\nsite code: {}\nmarker name: {}\ndata source: {}\n\n'.format(pd.to_datetime(xdata[ind][0]).strftime('%m/%d/%Y %H:%M:%S'),label[4:7],label[8:-1],label[:3])
 
     marker_history_edits.loc[index,['ts']] = pd.to_datetime(xdata[ind][0])
     marker_history_edits.loc[index,['data_source']] = label[0:3]
@@ -253,6 +259,14 @@ def onclick_edit(event):
         ax.plot(xdata[ind][0],ydata[ind][0],'o',color = tableau20[16],label = 'dummy')
     elif operation == 'delete':
         ax.plot(xdata[ind][0],ydata[ind][0],'o',color = tableau20[14],label = 'dummy')
+    elif operation == 'discard':
+    #### Remove dummy points in its vicinity
+        for line in ax.get_lines():
+            cur_x, cur_y = line.get_data()
+            if line.get_label() == 'dummy' and cur_x[0] == xdata[ind][0] and cur_y[0] == ydata[ind][0]:
+                line.remove()
+
+
 
 #    print ax._facecolors[event.ind,:]
     index += 1
@@ -292,8 +306,8 @@ def onpress_cumdisp(event):
     elif event.key == 'alt':
         operation = 'mute'
         color = tableau20[(tableau20.index(cur_color) + 14)%20]
-    elif event.key == 'delete':
-        operation = 'delete'
+    elif event.key == 'd':
+        operation = 'discard'
         color = cur_color
     elif event.key == 'q':
         marker_history_edits = RemoveDuplicatesAndNone(marker_history_edits)
@@ -352,8 +366,8 @@ def onclick_cumdisp(event):
         print "\nMUTE data point"
     elif operation == 'reposition':
         print "\nREPOSITION data point"
-    elif operation == 'delete':
-        print "\nDelete edits for data point"
+    elif operation == 'discard':
+        print "\nDISCARD edits for data point"
     else:
         print "\nData point"
         
@@ -371,7 +385,7 @@ def onclick_cumdisp(event):
         ax.plot(xdata[ind][0],ydata[ind][0],'o',color = color,label = 'dummy')
     elif operation == 'reposition':
         ax.plot(xdata[ind][0],ydata[ind][0],'o',color = color,label = 'dummy')
-    elif operation == 'delete':
+    elif operation == 'discard':
         ax.plot(xdata[ind][0],ydata[ind][0],'o',color = color,label = 'dummy')
 
 #    print ax._facecolors[event.ind,:]
