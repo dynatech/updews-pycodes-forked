@@ -68,10 +68,10 @@ def onpress(event):
         ax.figure.canvas.draw()
         print "\nEDITS have been CLEARED"
     elif event.key == 'enter':
-        cur_history = pd.read_csv('markerhistory.csv')
+        cur_history = pd.read_csv(data_path + '/'+history_csv_file +'.csv')
         cur_history = RemoveDuplicatesAndNone(cur_history)
         try:
-            with open('markerhistory.csv','wb') as mhcsv:
+            with open(data_path + '/'+history_csv_file +'.csv','wb') as mhcsv:
                 cur_history = RemoveDuplicatesAndNone(cur_history)
                 marker_history_edits = RemoveDuplicatesAndNone(marker_history_edits)
                 cur_history = cur_history.append(marker_history_edits)
@@ -185,10 +185,10 @@ def onpress_edit(event):
         ax.figure.canvas.draw()
         print "\nEDITS have been CLEARED"
     elif event.key == 'enter':
-        cur_history = pd.read_csv('markerhistory.csv')
+        cur_history = pd.read_csv(data_path + '/'+history_csv_file +'.csv')
         cur_history = RemoveDuplicatesAndNone(cur_history)
         try:
-            with open('markerhistory.csv','wb') as mhcsv:
+            with open(data_path + '/'+history_csv_file +'.csv','wb') as mhcsv:
                 marker_history_edits = RemoveDuplicatesAndNone(marker_history_edits)
                 cur_history = cur_history.append(marker_history_edits,ignore_index = True)
                 cur_history = RemoveDuplicatesAndNone(cur_history)
@@ -322,11 +322,11 @@ def onpress_cumdisp(event):
         ax.figure.canvas.draw()
         print "\nEDITS have been CLEARED"
     elif event.key == 'enter':
-        cur_history = pd.read_csv('markerhistory.csv')
+        cur_history = pd.read_csv(data_path + '/'+history_csv_file +'.csv')
         cur_history = RemoveDuplicatesAndNone(cur_history)
 
         try:
-            with open('markerhistory.csv','wb') as mhcsv:
+            with open(data_path + '/'+history_csv_file +'.csv','wb') as mhcsv:
                 cur_history = RemoveDuplicatesAndNone(cur_history)
                 marker_history_edits = RemoveDuplicatesAndNone(marker_history_edits)
                 cur_history = cur_history.append(marker_history_edits)
@@ -866,9 +866,7 @@ print "Alt + Click: Propose to MUTE the datapoint"
 print "Ctrl + Click: Propose to REPOSITION the datapoint"
 if mode == 'MHP':
     print "Delete + Click: Propose to DELETE history of the data point"
-elif mode in ['SMP','CDP']:
-    print "Delete + Click: DELETE propositions to the history of the data point."
-print "Click: UNDO any edit to the datapoint"
+print "D: UNDO any edit to the datapoint"
 print "R: Refresh all proposed history"
 print "Q: View all pending edits"
 print "C: Reset view"
