@@ -70,7 +70,8 @@ class config:
 		self.reply.failmeasen = cfg.get("ReplyMessages","failmeasen")
 		self.reply.failweaen = cfg.get("ReplyMessages","failweaen")
 		self.reply.failobven = cfg.get("ReplyMessages","failobven")
-		
+		self.reply.failooben = cfg.get("ReplyMessages","failooben")
+
 		self.fileio = Container()
 		self.fileio.allalertsfile = cfg.get("FileIO","allalertsfile")
 		self.fileio.eqprocfile = cfg.get("FileIO","eqprocfile")
