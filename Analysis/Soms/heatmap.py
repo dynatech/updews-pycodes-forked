@@ -19,8 +19,10 @@ import pandas as pd
 import ConvertSomsRaw as CSR
 import querySenslopeDb as qs
 from datetime import timedelta
-#column = 'gaasb'
-#t_timestamp='2016-03-01'
+#col = 'imesb'
+#t_timestamp='2016-03-01 08:00'
+#t_win = '1d'
+#is_debug = True
 #for a in range(1,17,1):
 
 
@@ -48,11 +50,11 @@ def heatmap(col, t_timestamp, t_win = '1d', is_debug = False):
 	else:
 		print "invalid monitoring window"
 	
-	
-	t_timestamp = pd.to_datetime(pd.to_datetime(t_timestamp) + timedelta(hours = 24))
 	f_timestamp = pd.to_datetime(pd.to_datetime(t_timestamp) - timedelta(hours = timew))	
+	t_timestamp = pd.to_datetime(pd.to_datetime(t_timestamp) + timedelta(minutes = 30))
+	
 	if (len(col)<=4):
-		return df_merge
+		print df_merge
 	else:
 		
 	
@@ -61,11 +63,10 @@ def heatmap(col, t_timestamp, t_win = '1d', is_debug = False):
 		node = qs.GetDBDataFrame(query)
 		for node_num in range (1,int(node.num_nodes[0])+1):
 			
-			df = CSR.getsomscaldata(col,node_num,f_timestamp,t_timestamp, is_debug = False ,if_multi = True)
+			df = CSR.getsomscaldata(col,node_num,f_timestamp,t_timestamp, is_debug = is_debug,if_multi = True)
 			if (df.empty == True):
-				return df
+				print df
 			
-				
 			else:
 				df = df.reset_index()
 				df.ts=pd.to_datetime(df.ts)
@@ -79,18 +80,15 @@ def heatmap(col, t_timestamp, t_win = '1d', is_debug = False):
 			
 				if 'mval1' in df.columns:				
 					dfrs = dfrs.drop('mval1', axis=1)
-				else:
-					return df
-				      
-					
-				
-				
-				n=len(dfrs)-1
+	
+		
+#				n=len(dfrs)-1
+				dfrs = dfrs.reset_index(0)
 			
-				dfp=dfrs[n-timew:n]
-				dfp = dfp.reset_index()
+#				dfp=dfrs[n-timew:n]
+#				dfp = dfp.reset_index()
 			
-				df_merge = pd.concat([df_merge, dfp], axis = 0)
+				df_merge = pd.concat([df_merge, dfrs], axis = 0)
 				df_merge['ts'] = df_merge.ts.astype(str)
 		
 		
