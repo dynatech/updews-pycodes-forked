@@ -31,30 +31,42 @@ c = cfg.config()
 
 def readDataframe():
     
-    global globaldf
-
+    # global globaldf
+    localdf=0
     db, cur = dbio.SenslopeDBConnect('local')    
     query= '''SELECT logger_health.logger_id, name, model_id, sim_num, health_case from logger_health inner join loggers on logger_health.logger_id= loggers.logger_id inner join logger_contacts on logger_health.logger_id= logger_contacts.logger_id where logger_health.health_case !=5 and  logger_health.health_id IN (select max(logger_health.health_id) from logger_health group by logger_id)'''
     
     try:
-        globaldf = psql.read_sql(query,db)
+        localdf = psql.read_sql(query,db)
     except pd.io.sql.DatabaseError,e:
-        globaldf = 0
-    return globaldf
+        localdf = 0
+    return localdf
 
 def activeSites(): 
     global globaldf
-    readDataframe() 
+    globaldf= readDataframe() 
 
     for i in range (0, len(globaldf)):
         lgr_name= str (globaldf.name.loc[i])
         logger_id= int(globaldf.logger_id.loc[i])
         logger_model= int(globaldf.model_id[i])
+        case= int(globaldf.health_case[i])
 
-        if (logger_model < 27):
+        if (logger_model < 27):    
             res= checkLastActive(lgr_name)
-            globaldf.set_value(i, 'health_case', res)        
             
+            if (case > 5 and case <20):
+                if (res == 1 or res==20):
+                    globaldf.set_value(i, 'health_case', res)
+                else:
+                    globaldf.set_value(i, 'health_case', case)
+            elif (case > 20 and case <25):
+                globaldf.set_value(i, 'health_case', case)
+            elif (case== 4):
+                globaldf.set_value(i, 'health_case', case)
+            else:
+                globaldf.set_value(i, 'health_case', res)
+                
 def checkLastActive(lgr_name):
     db, cur = dbio.SenslopeDBConnect('local')
     query = """select timestamp from """ + lgr_name + """ order by timestamp desc limit 1 """
@@ -82,7 +94,7 @@ def checkLastActive(lgr_name):
     db.close()
 
 def encodeCase(timestamp, logger_id, case): #okay
-    db, cur = dbio.SenslopeDBConnect('local') 
+    db, cur = dbio.SenslopeDBConnect('local')
     query = '''SELECT health_id, health_case from logger_health where logger_id = ''' + str(logger_id) + ''' order by health_id desc limit 1'''
     casedf = psql.read_sql(query,db)
     
@@ -133,7 +145,7 @@ def checkCaseBasedFromInbox(): #okay
             elif (tempStr.find("manualreset"))> 0:
                 health= 9
             else:
-                health= 3
+                health= 4
             globaldf.set_value(i, 'health_case', health)        
             
 def storehealthData():
@@ -142,14 +154,12 @@ def storehealthData():
     db, cur = dbio.SenslopeDBConnect('local')    
     columns= ['logger_id','batv1', 'batv2', 'signal', 'model']
     siteHealthdf = pd.DataFrame(columns=columns)
-    print globaldf
+
     for i in range (0, len(globaldf)):
         if (globaldf.health_case.loc[i] > 20 and globaldf.health_case.loc[i] < 25):
             lgr_name= str(globaldf.name.loc[i])
             logger_id= int(globaldf.logger_id.loc[i])
             logger_model= int(globaldf.model_id[i])
-            
-            print lgr_name
 
             if (logger_model > 1 and logger_model < 10):
                 query = '''SELECT avg(batv1),avg(batv2),avg(csq) from ''' + lgr_name + 'w'+ ''' order by timestamp desc limit 48'''
@@ -180,14 +190,16 @@ def storehealthData():
     
             siteHealthdf.set_value(i, 'model', logger_model)
             siteHealthdf.set_value(i, 'logger_id', logger_id)
-    print globaldf
     return siteHealthdf
 
 def healthCaseGenerator(siteHealthdf):
     global globaldf
     print siteHealthdf
-    health= 4
-    for i in range (0, len(siteHealthdf)):
+
+    health= 3
+    
+    for i in range (0, len(globaldf)):
+        print i
         try:
             ver = int (siteHealthdf.model.loc[i])
             batv1= float(siteHealthdf.batv1.loc[i])
@@ -195,28 +207,25 @@ def healthCaseGenerator(siteHealthdf):
             signal= float(siteHealthdf.signal.loc[i])
             logger_id= str(siteHealthdf.logger_id.loc[i])
             logger_model= int(siteHealthdf.model.loc[i])
-            
+            # print "PUMASOK!!!!!!! "
             # baka walang laman :()
 
             if (globaldf.health_case.loc[i] == 21): #no carrier/ cannot be reached    
+                print "no carrier"
                 if (logger_model > 1 and logger_model < 10): #arq
                     if (batv1 < 3.3 and batv2 < 3.3):
                         health = 12
                     elif (signal<10):
                         health = 14
                     else:
-                        # network ata sira
                         health= 3
                 
-                # if (logger_model > 26 and logger_model < 35): #gateway
-                # if naka off na gateway
                 if (logger_model > 9 and logger_model < 18):
                     if (batv1< 13):
                         health= 12
                     elif (signal<10):
                         health = 14
                     else:
-                        # network ata sira
                         health= 3
 
             elif (globaldf.health_case.loc[i] == 22): #busy/ binaba
@@ -226,55 +235,55 @@ def healthCaseGenerator(siteHealthdf):
                     health= 12
                 elif (logger_model > 17 and logger_model < 27): #regular    (walang case ng mababang csq dito)
                     health=11
-                # (di ko machenes kung nagana pa yung iba)
-
+                else:
+                    health= 3
+                
             elif (globaldf.health_case.loc[i] == 23): #no answer/ ringing
-                # (process-- text and command etc)                             
-                health =3
+                if (logger_model > 1 and logger_model < 10): #arq
+                    health = 11
+                elif (batv1 < 13):
+                    health=12
+                elif (logger_model > 17 and logger_model < 27): 
+                    health =11                     
+                else: #yung mahaba
+                    health =3
             elif (globaldf.health_case.loc[i] == 24): #no dialtone
                 health=3
-
-
-            # if (logger_model > 1 and logger_model < 10): #arq
-            #     if (signal < 10):
-            #         health = 14
-            #     elif (batv1 < 3.3 and batv2 < 3.3):
-            #         health = 12
-            # elif (logger_model > 9 and logger_model < 35 ): #ver3
-            #     if (signal > 90):
-            #         health = 14
-            #     elif (batv1 < 12):
-            #         health = 25
-            # else:
-            #     health= 4
-            # globaldf.set_value(i, 'health_case', health)
-
+            else:
+                health=3
+            globaldf.set_value(i, 'health_case', health)
         except KeyError, e:
             print ""  
     return 0
     
 def gsmStatus(): #ibaaaaang approach
     timeNow= dt.today()
-    global globaldf 
+    lgrdf= readDataframe()
+    # global lgrdf 
     gsmio.gsmInit('call')
-    for i in range (0,len(globaldf)):
-        if (globaldf.health_case.loc[i] == 3): #3 na yung chinecheck
-            s_number= str(globaldf.sim_num.loc[i])
-            t= time.strftime('%Y-%m-%d %H:%M:%S')
-            s_number= s_number.replace("63","0",1)
-            print s_number
-            q= gsmio.callSite(s_number).replace("\r\n","")        
-            if (q== "NO CARRIER"):
-                health= 21
-            elif (q== "BUSY" ):
-                health= 22
-            elif(q== "NO ANSWER"):
-                health= 23
-            elif(q== "NO DIALTONE"):
-                health= 24
-            globaldf.set_value(i, 'health_case', health)  
-
-
+    for i in range (0,len(lgrdf)):
+        if (lgrdf.health_case.loc[i] == 4): #3 na yung chinecheck
+            if (int(lgrdf.model_id.loc[i])>9 and int(lgrdf.model_id.loc[i])<18): #kapag router, wag na tawagan (?)
+                print "not calling routers"
+            else:
+                s_number= str(lgrdf.sim_num.loc[i])
+                s_id= int(lgrdf.logger_id.loc[i])
+                t= time.strftime('%Y-%m-%d %H:%M:%S')
+                s_number= s_number.replace("63","0",1)
+                print s_number
+                q= gsmio.callSite(s_number).replace("\r\n","")        
+                if (q== "NO CARRIER"):
+                    health= 21
+                elif (q== "BUSY" ):
+                    health= 22
+                elif(q== "NO ANSWER"):
+                    health= 23
+                elif(q== "NO DIALTONE"):
+                    health= 24
+                else:
+                    health= 4
+                lgrdf.set_value(i, 'health_case', health)  
+                encodeCase(timeNow, s_id, health)
 def updatedeadSites():
     db, cur = dbio.SenslopeDBConnect('local') 
     query= "SELECT logger_id FROM senslopedb.loggers where date_deactivated IS NOT NULL"
@@ -306,7 +315,7 @@ def caseDescription(health):
     elif (health == 10):
         return "Date only"
     elif (health == 11):
-        return "-"
+        return "Ask LEWC to reset logger"
     elif (health == 12):
         return "Low battery"
     elif (health == 13):
@@ -375,14 +384,14 @@ def printloggerStatus():
             f.write('\n')
             
             title= "For Maintenance Loggers (Status: " + str(j) +"): " + str(co) + "\n" 
-            print title
+            # print title
             f.write(title)
             descr=  caseDescription(j) + "\n" 
             f.write(descr)
             
             for i in range (0,len(globaldf)):             
                 if (globaldf.health_case.loc[i] == j):
-                    print globaldf.name.loc[i]                
+                    # print globaldf.name.loc[i]                
                     f.write(str(globaldf.name.loc[i]))
                     f.write(" ")       
         except KeyError, e:
@@ -394,9 +403,16 @@ def printloggerStatus():
 
 def encodeDataFrame(inputdf):
     print inputdf
-    print setNames(inputdf), c("a","b")
+    # print setNames(inputdf), c("a","b")
+    
+    timeNow= dt.today()
+    
+    for i in range (0, len(inputdf)):
+        # lgr_name= str (inputdf.name.loc[i])
+        logger_id= int(globaldf.logger_id.loc[i])
+        health= int(globaldf.health_case[i])
+        encodeCase(timeNow, logger_id, health)
 
-    # timeNow= dt.today()
     # toLogHealthcols = ['logger_id','health_Case', 'ts', 'ts_updated']
     
     # INSERT INTO logger_health (logger_id,health_case,ts, timestamp) VALUES (1,1,1),(2,2,3),(3,9,3),(4,10,12)
@@ -407,9 +423,9 @@ def encodeDataFrame(inputdf):
 def main():
     func = sys.argv[1] 
     if func == 'loggerstatus':
-        # global globaldf
+        global globaldf
         printloggerStatus()
-        # encodeDataFrame(globaldf)
+        encodeDataFrame(globaldf)
     elif func == 'checknetstat':
         print 'check net stat'
         gsmStatus()
