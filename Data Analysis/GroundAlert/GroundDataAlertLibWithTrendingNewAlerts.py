@@ -153,7 +153,7 @@ def get_ground_df(start = '',end = '',site=None):
     query = query + 'WHERE timestamp > "{}"'.format(start)
     
     if end:
-        query = query + ' AND timestamp < "{}"'.format(end)
+        query = query + ' AND timestamp <= "{}"'.format(end)
     if site != None:
         query = query + ' AND site_id = "{}"'.format(site)
     

@@ -3,11 +3,13 @@ from datetime import datetime as dt
 import cfgfileio as cfg
 import subprocess, time
 
-def getTimeFromSms(text):
+def getTimeFromSms(text,date_str):
   # timetxt = ""
   hm = "\d{1,2}"
   sep = " *:+ *"
   day = " *[AP]\.*M\.*"
+
+  print "printing text", text
   
   time_format_dict = {
       hm + sep + hm + day : "%I:%M%p",
@@ -31,10 +33,11 @@ def getTimeFromSms(text):
   
   # sanity check
   time_val = dt.strptime(time_str,"%H:%M:%S").time()
-  if time_val > dt.now().time():
-    raise ValueError
-  elif time_val > dt.strptime("18:00:00","%H:%M:%S").time() or time_val < dt.strptime("05:00:00","%H:%M:%S").time(): 
-    raise ValueError
+  dt_val = dt.strptime(date_str+time_str,"%Y-%m-%d%H:%M:%S")
+  if dt_val > dt.now():
+    raise IOError
+  elif time_val > dt.strptime("19:00:00","%H:%M:%S").time() or time_val < dt.strptime("04:00:00","%H:%M:%S").time(): 
+    raise IOError
 
   return time_str
 
@@ -70,7 +73,7 @@ def getDateFromSms(text):
 
   date_val = dt.strptime(date_str,"%Y-%m-%d")
   if date_val > dt.now():
-    raise ValueError
+    raise IOError
       
   return date_str
 
@@ -105,12 +108,16 @@ def getGndMeas(text):
     print "Date: " + date_str
   except ValueError:
     raise ValueError(c.reply.faildateen)
-  
+  except IOError:
+    raise ValueError(c.reply.failooben)
+    
   try:
-    time_str = getTimeFromSms(data_field)
+    time_str = getTimeFromSms(data_field, date_str)
     print "Time: " + time_str
   except ValueError:
     raise ValueError(c.reply.failtimeen)
+  except IOError:
+    raise ValueError(c.reply.failooben)
   
   # get all the measurement pairs
   meas_pattern = "(?<= )[A-Z] *\d{1,3}\.*\d{0,2} *C*M"
@@ -170,6 +177,15 @@ def getGndMeas(text):
   p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, stderr=subprocess.STDOUT)
   
   return gnd_records
+
+
+def test():
+
+  ret = getGndMeas("ROUTINE CAR MAR 11 2017 11:10AM E 91CM F 83CM G 57.5CM H 111CM UMUULAN JUNJUNMLUAR")
+
+
+if __name__ == "__main__":
+    test()
   
 
   

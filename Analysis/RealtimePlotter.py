@@ -38,7 +38,7 @@ def compute_colpos(window, config, monitoring_vel, num_nodes, seg_len, fixpoint=
 
     mask = monitoring_vel['ts'].isin(colposdates)
     colpos_df = monitoring_vel[mask][['ts', 'id', 'xz', 'xy']]
-    colpos_df['x'] = np.sqrt(seg_len**2 + np.power(colpos_df['xz'], 2) + np.power(colpos_df['xy'], 2))
+    colpos_df['x'] = np.sqrt(seg_len**2 - np.power(colpos_df['xz'], 2) - np.power(colpos_df['xy'], 2))
     colpos_df['x'] = colpos_df['x'].fillna(seg_len)
     
     if column_fix == 'top':

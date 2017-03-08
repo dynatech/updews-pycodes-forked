@@ -15,24 +15,22 @@ del path
 import SomsRangeFilter 
 import ConvertSomsRaw as CSR
     
-#site = sys.argv[1]
-#fdate = sys.argv[2]
-#tdate = sys.argv[3]
-#nid = sys.argv[4]
-#mode = sys.argv[5]
+#site = "mngsa"
+#fdate = "2016-12-28"
+#tdate = "2016-12-29"
+#mode = '1'
 
-site = 'mngsa'
-fdate = '2016-12-28'
-tdate = '2016-12-29'
-nid = '4'
-mode = '1'
+site = sys.argv[1]
+fdate = sys.argv[2]
+tdate = sys.argv[3]
+mode = sys.argv[4]
 
 if mode == '0':
-   df = CSR.getsomsrawdata(column=site,gid=int(nid),fdate=fdate,tdate=tdate,if_multi = False)
+   df = CSR.getsomsrawdata(column=site, fdate=fdate, tdate=tdate, if_multi=True )
 else:
-   df = CSR.getsomscaldata(column=site,gid=int(nid),fdate=fdate,tdate=tdate,is_debug= False,if_multi = False)
+   df = CSR.getsomscaldata(column=site, fdate=fdate, tdate=tdate ,is_debug= False,if_multi = True)
 
-df_filt = SomsRangeFilter.f_outlier(df,site,int(nid),int(mode))
+df_filt = SomsRangeFilter.f_outlier(df,site,int(mode))
 dfajson = df_filt.reset_index().to_json(orient='records',date_format='iso')
 dfajson = dfajson.replace("T"," ").replace("Z","").replace(".000","")
 print dfajson

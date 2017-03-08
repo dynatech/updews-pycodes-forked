@@ -20,7 +20,7 @@ import querySenslopeDb as qs
 #column = raw_input('Enter column name: ')
 #gid = int(raw_input('Enter id: '))
 
-def getsomsrawdata(column="", gid=0, fdate="", tdate=""):
+def getsomsrawdata(column="", gid=0, fdate="", tdate="", if_multi=False ):
     ''' 
         only for landslide sensors v2 and v3
         output:  sraw = series of unfiltered SOMS data (raw) of a specific node of the defined column 
@@ -33,6 +33,7 @@ def getsomsrawdata(column="", gid=0, fdate="", tdate=""):
     v3=[ 'lpasa','lpasb','laysa','laysb','imesb','barsc','messb','imusc','oslsc',
          'mngsa','gaasa','gaasb','hinsa','hinsb','talsa' ]
     df = pd.DataFrame(columns=['sraw', 'scal'])
+    sraw = pd.DataFrame()
 #    print 'getsomsdata: ' + column + ',' + str(gid)
     try:
         df = qs.GetSomsData(siteid=column+'m', fromTime=fdate, toTime=tdate, targetnode=gid)
@@ -45,19 +46,37 @@ def getsomsrawdata(column="", gid=0, fdate="", tdate=""):
 
     if column.upper() in v2:
         if column.upper()=='NAGSA':
-            sraw =(((8000000/(df.mval1[(df.msgid==21)]))-(8000000/(df.mval2[(df.msgid==21)])))*4)/10
+		 if if_multi:
+			df = df[(df.msgid == 21)]	
+			sraw['mval1'] =(((8000000/(df.mval1))-(8000000/(df.mval2)))*4)/10
+			sraw['id'] = df[['id']]
+			
+		 else:
+			sraw['mval'] =(((8000000/(df.mval1[(df.msgid==21)]))-(8000000/(df.mval2[(df.msgid==21)])))*4)/10
+			 		
         else:
-            sraw =(((20000000/(df.mval1[(df.msgid==111)]))-(20000000/(df.mval2[(df.msgid==111)])))*4)/10           
-
+		if if_multi:
+			df = df[(df.msgid == 111)]
+			sraw['mval1'] =(((20000000/(df.mval1))-(20000000/(df.mval2)))*4)/10    
+			sraw['id'] = df[['id']]
+		else:
+			sraw['mval1'] =(((20000000/(df.mval1[(df.msgid==111)]))-(20000000/(df.mval2[(df.msgid==111)])))*4)/10 
+			
     elif column.lower() in v3: # if version 3
-        sraw=df.mval1[(df.msgid==110)]
+        if if_multi:
+		df = df[(df.msgid == 110)]
+		sraw = df[['id','mval1']]
+        else:
+		df = df[(df.msgid==110)]
+		sraw = df[['mval1']]
+		
     else:
         sraw=pd.Series()
         pass
     
     return sraw
 
-def getsomscaldata(column="", gid=0, fdate="", tdate=""):
+def getsomscaldata(column="", gid=0, fdate="", tdate="",is_debug= False, if_multi = False):
     ''' 
         only for landslide sensors v2 and v3
         output:  df = series of unfiltered SOMS data (calibrated/normalized) of a specific node of the defined column 
@@ -80,18 +99,27 @@ def getsomscaldata(column="", gid=0, fdate="", tdate=""):
     elif column.lower() in v3: # if version 3
             msgid = 113
     else:
-        print 'No data available for ' + column.upper()
-        return df  
+	  if (is_debug == True):
+	        print 'No data available for ' + column.upper()
+	        return df  
+	  else:
+              return df
         
     try:
         df = qs.GetSomsData(siteid=column+'m', fromTime=fdate, toTime=tdate, targetnode=gid, msgid=msgid)
-        df.index=df.ts        
-        df = df[['id','mval1']]
+        df.index=df.ts      
+        if if_multi:
+	        df = df[['id','mval1']]
+        else:
+		  df= df[['mval1']]
 	          
 	   
 								
     except:
-        print 'No data available for ' + column.upper()
-        return df  
+        if (is_debug == True):
+	        print 'No data available for ' + column.upper()
+	        return df  
+        else:
+              return df
 
     return df

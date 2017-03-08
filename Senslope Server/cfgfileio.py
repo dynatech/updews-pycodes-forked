@@ -49,6 +49,7 @@ class config:
 		self.serialio.baudrate = cfg.getint("Serial","baudrate")
 		self.serialio.globeport = cfg.get("Serial","globeport")
 		self.serialio.smartport = cfg.get("Serial","smartport")
+		self.serialio.callport = cfg.get("Serial","callport")
 		self.serialio.timeout = cfg.getint("Serial","timeout")
 
 		self.gsmio = Container()
@@ -69,7 +70,8 @@ class config:
 		self.reply.failmeasen = cfg.get("ReplyMessages","failmeasen")
 		self.reply.failweaen = cfg.get("ReplyMessages","failweaen")
 		self.reply.failobven = cfg.get("ReplyMessages","failobven")
-		
+		self.reply.failooben = cfg.get("ReplyMessages","failooben")
+
 		self.fileio = Container()
 		self.fileio.allalertsfile = cfg.get("FileIO","allalertsfile")
 		self.fileio.eqprocfile = cfg.get("FileIO","eqprocfile")
@@ -80,6 +82,7 @@ class config:
 		self.fileio.gndalert1 = cfg.get("FileIO","gndalert1")
 		self.fileio.gndalert2 = cfg.get("FileIO","gndalert2")
 		self.fileio.gndalert3 = cfg.get("FileIO","gndalert3")
+		self.fileio.monitoringoutputdir = cfg.get("FileIO","monitoringoutputdir")
 		
 		
 		self.simprefix = Container()

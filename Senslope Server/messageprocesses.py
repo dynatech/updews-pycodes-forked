@@ -232,12 +232,12 @@ def ProcessColumn(line,txtdatetime,sender):
         msgdatetime = txtdatetime
 
     # col_list = cfg.get("Misc","AdjustColumnTimeOf").split(',')
-    if msgtable == 'PUGB':
-        msgdatetime = txtdatetime
-        print "date & time adjusted " + msgdatetime
-    else:
-        msgdatetime = dt.strptime(msgdatetime,'%y%m%d%H%M').strftime('%Y-%m-%d %H:%M:00')
-        print 'date & time no change'
+    # if msgtable == 'PUGB':
+    #     msgdatetime = txtdatetime
+    #     print "date & time adjusted " + msgdatetime
+    # else:
+    #     msgdatetime = dt.strptime(msgdatetime,'%y%m%d%H%M').strftime('%Y-%m-%d %H:%M:00')
+    #     print 'date & time no change'
         
     dlen = len(msgdata) #checks if data length is divisible by 15
     #print 'data length: %d' %dlen
@@ -408,8 +408,8 @@ def ProcessEarthquake(msg):
     datetimestr = datestr + ' ' + timestr
     
     #find magnitude
-    if re.search("((?<=M[SB]\=)|(?<=MLV\=))\d+\.\d+(?= )",line):
-        magstr = re.search("((?<=M[SB]\=)|(?<=MLV\=))\d+\.\d+(?= )",line).group(0)
+    if re.search("((?<=M[SBLVOW]\=)|(?<=M\=)|(?<=MLV\=))\d+\.\d+(?= )",line):
+        magstr = re.search("((?<=M[SBLVOW]\=)|(?<=M\=)|(?<=MLV\=))\d+\.\d+(?= )",line).group(0)
     else:
         print ">> No magnitude string recognized"
         magstr = 'NULL'
@@ -422,15 +422,15 @@ def ProcessEarthquake(msg):
         depthstr = 'NULL'
 
     #find latitude
-    if re.search("\d+\.\d+(?=N)",line):
-        latstr = re.search("\d+\.\d+(?=N)",line).group(0)
+    if re.search("\d+[\.\:]\d+(?=N)",line):
+        latstr = re.search("\d+[\.\:]\d+(?=N)",line).group(0)
     else:
         print ">> No latitude string recognized"
         latstr = 'NULL'
 
     #find longitude
-    if re.search("\d+\.\d+(?=E)",line):
-        longstr = re.search("\d+\.\d+(?=E)",line).group(0)
+    if re.search("\d+[\.\:]\d+(?=E)",line):
+        longstr = re.search("\d+[\.\:]\d+(?=E)",line).group(0)
     else:
         print ">> No longitude string recognized"
         longstr = 'NULL'
