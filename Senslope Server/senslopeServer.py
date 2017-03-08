@@ -11,6 +11,7 @@ import SomsServerParser as SSP
 import math
 import cfgfileio as cfg
 import memcache
+import argparse
 mc = memcache.Client(['127.0.0.1:11211'],debug=0)
 
 if cfg.config().mode.script_mode == 'gsmserver':
@@ -64,7 +65,7 @@ def logRuntimeStatus(script_name,status):
                 values ('%s','%s','%s')
                 """ %(logtimestamp,script_name,status)
     
-    dbio.commitToDb(query, 'logRuntimeStatus', cfg.config().mode.logtoinstance)
+    dbio.commitToDb(query, 'logRuntimeStatus')
        
 def SendAlertGsm(network,alertmsg):
     c = cfg.config()
@@ -253,7 +254,7 @@ def writeAlertToDb(alertmsg):
 
     print query
 
-    dbio.commitToDb(query,'writeAlertToDb','LOCAL')
+    dbio.commitToDb(query,'writeAlertToDb')
 
 def saveToCache(key,value):
     mc.set(key,value)
@@ -278,7 +279,7 @@ def deleteMessagesfromGSM():
     except ValueError:
         print '>> Error deleting messages'
 
-def simulateGSM():
+def simulateGSM(network):
     print "Simulating GSM"
     
     db, cur = dbio.SenslopeDBConnect('sandbox')
@@ -287,7 +288,7 @@ def simulateGSM():
 
     try:
         query = """select sms_id, timestamp, sim_num, sms_msg from smsinbox
-            where web_flag != '0' limit 10""" 
+            where web_flag != '0' and web_flag != '-1' limit 1000""" 
     
         a = cur.execute(query)
         out = []
@@ -298,9 +299,12 @@ def simulateGSM():
         print '9.',
         time.sleep(20)
 
-    print smsinbox_sms
+    # print smsinbox_sms
 
     logger_contacts = getLoggerContacts()
+
+    gsm_ids = getGsmIDs()
+    gsm_id = gsm_ids[network]
     
     query = "insert into smsinbox_loggers (ts_received,contact_id,sms_msg,read_status,gsm_id) values "
 
@@ -316,25 +320,24 @@ def simulateGSM():
             continue
         sms_msg = m[3]
         read_status = 0
-        gsm_id = 1
-
+        
         query += "('%s',%d,'%s',%d,%d)," % (ts_received,contact_id,sms_msg,read_status,gsm_id)
         sms_id_ok.append(m[0])
 
     query = query[:-1]
-    print query
+    # print query
 
-    dbio.commitToDb(query,'simulateGSM','sandbox')
+    dbio.commitToDb(query,'simulateGSM')
 
     if len(sms_id_ok)>0:
         sms_id_ok = str(sms_id_ok).replace("L","")[1:-1]
         query = "update smsinbox set web_flag = '0' where sms_id in (%s);" % (sms_id_ok)
-        dbio.commitToDb(query,'simulateGSM','sandbox')
+        dbio.commitToDb(query,'simulateGSM')
 
     if len(sms_id_unk)>0:
         sms_id_unk = str(sms_id_unk).replace("L","")[1:-1]
-        query = "update smsinbox set web_flag = '-1' where sms_id in (%s);" % (repr(sms_id_unk))
-        dbio.commitToDb(query,'simulateGSM','sandbox')
+        query = "update smsinbox set web_flag = '-1' where sms_id in (%s);" % (sms_id_unk)
+        dbio.commitToDb(query,'simulateGSM')
     
     sys.exit()
         
@@ -346,8 +349,8 @@ def RunSenslopeServer(network):
     global checkIfActive 
     checkIfActive = True
 
-    if cfg.config().gsmio.sim_gsm == True:
-        simulateGSM()
+    if network == 'simulate':
+        simulateGSM(network)
         sys.exit()
 
     try:
@@ -359,8 +362,8 @@ def RunSenslopeServer(network):
         logRuntimeStatus(network,"com port error")
         raise ValueError(">> Error: no com port found")
             
-    dbio.createTable("runtimelog","runtime",cfg.config().mode.logtoinstance)
-    logRuntimeStatus(network,"startup",)
+    # dbio.createTable("runtimelog","runtime",cfg.config().mode.logtoinstance)
+    # logRuntimeStatus(network,"startup",)
     
     # dbio.createTable('smsinbox','smsinbox',cfg.config().mode.logtoinstance)
     # dbio.createTable('smsoutbox','smsoutbox',cfg.config().mode.logtoinstance)
@@ -411,14 +414,32 @@ def RunSenslopeServer(network):
             print '>> Error in parsing mesages: Error unknown'
             gsmio.resetGsm()
 
-def main():
-    network = sys.argv[1].upper()
+def getGsmIDs():
+    ids = mc.get('gsmids')
+    if ids == None:
+        query = "select * from gsm_modules"
+        gsm_modules = dbio.querydatabase(query,'getGsmIds')
 
-    if network[0:5] not in ['GLOBE','SMART']:
+        ids = dict() 
+        for gsm_id,name,num in gsm_modules:
+            ids[name] = gsm_id
+
+        mc.set('gsm_ids',ids)
+
+    return ids
+
+def main():
+    network = sys.argv[1].lower()
+
+    gsm_ids = getGsmIDs()
+    print gsm_ids.keys()
+
+    if network not in gsm_ids.keys():
         print ">> Error in network selection", network
         sys.exit()
     
     RunSenslopeServer(network)
+    sys.exit()
 
 if __name__ == '__main__':
     while True:

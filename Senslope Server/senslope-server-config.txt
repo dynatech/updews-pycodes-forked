@@ -1,9 +1,9 @@
 [Hosts]
 local = 127.0.0.1
-senslope = 192.168.1.103
-dynaslope = 192.168.1.102
-gsm = 192.168.1.100
-sandbox = 192.168.1.105
+senslope = 192.168.150.124
+dynaslope = 192.168.150.129
+gsm = 192.168.150.127
+sandbox = 192.168.150.128
 
 [Db]
 password = senslope

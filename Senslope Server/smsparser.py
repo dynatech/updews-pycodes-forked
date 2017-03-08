@@ -12,6 +12,8 @@ import queryserverinfo as qsi
 import lockscript as lock
 import alertmessaging as amsg
 import memcache
+import lockscript
+import gsmSerialio as gsmio
 mc = memcache.Client(['127.0.0.1:11211'],debug=0)
 
 def updateLastMsgReceivedTable(txtdatetime,name,sim_num,msg):
@@ -69,7 +71,10 @@ def twoscomp(hexstr):
     else:
         return num
 
-def ProcTwoAccelColData(msg,sender,txtdatetime):
+def ProcTwoAccelColData(sms):
+    msg = sms.data
+    sender = sms.simnum
+    txtdatetime = sms.dt
     
     if len(msg.split(",")) == 3:
         print ">> Editing old data format"
@@ -209,14 +214,19 @@ def WriteSomsDataToDb(dlist,msgtime):
     
     dbio.commitToDb(query, 'WriteSomsDataToDb')
     
-def PreProcessColumnV1(data):
+def PreProcessColumnV1(sms):
+    data = sms.data
     data = data.replace("DUE","")
     data = data.replace(",","*")
     data = data.replace("/","")
     data = data[:-2]
     return data
     
-def ProcessColumn(line,txtdatetime,sender):
+def ProcessColumn(sms):
+    line = sms.data
+    txtdatetime = sms.dt
+    sender = sms.simnum
+
     msgtable = line[0:4]
     print 'SITE: ' + msgtable
     ##msgdata = line[5:len(line)-11] #data is 6th char, last 10 char are date
@@ -329,8 +339,10 @@ def ProcessColumn(line,txtdatetime,sender):
         print '\n>>Error: Unknown'
         return
 
-def ProcessPiezometer(line,sender):    
+def ProcessPiezometer(sms):    
     #msg = message
+    line = sms.data
+    sender = sms.simnum
     print 'Piezometer data: ' + line
     try:
     #PUGBPZ*13173214*1511091800 
@@ -492,9 +504,11 @@ def ProcessEarthquake(msg):
     return True
 
 
-def ProcessARQWeather(line,sender):
+def ProcessARQWeather(sms):
     
     #msg = message
+    line = sms.data
+    sender = sms.simnum
 
     print 'ARQ Weather data: ' + line
 
@@ -558,7 +572,10 @@ def ProcessARQWeather(line,sender):
            
     print 'End of Process ARQ weather data'
     
-def ProcessRain(line,sender):
+def ProcessRain(sms):
+
+    line = sms.data
+    sender = sms.simnum
     
     #msg = message
     line = re.sub("[^A-Z0-9,\/:\.\-]","",line)
@@ -604,16 +621,16 @@ def ProcessRain(line,sender):
         return
 
     try:
-        dbio.commitToDb(query, 'ProcesRain','sandbox')
+        dbio.commitToDb(query, 'ProcesRain')
     except MySQLdb.ProgrammingError:
         print query[:-2]
-        dbio.commitToDb(query[:-2]+')', 'ProcessRain','sandbox')
+        dbio.commitToDb(query[:-2]+')', 'ProcessRain')
         
     print 'End of Process weather data'
 
-def ProcessStats(line,txtdatetime):
+def ProcessStats(msg):
 
-    print 'Site status: ' + line
+    print 'Site status: ' + msg.data
     
     try:
         msgtable = "stats"
@@ -701,15 +718,21 @@ def SpawnAlertGen(sitename):
         mc.set('alertgenlist',alertgenlist)    
 
 
-def ProcessAllMessages(allmsgs,network):
+def ParseAllMessages(args,allmsgs=[]):
     c = cfg.config()
     read_success_list = []
     read_fail_list = []
 
+    print "table:", args.table
+
     cur_num = 0
+
+    if allmsgs==[]:
+        print 'Error: No message to Parse'
+        sys.exit()
     
-    try:
-        while allmsgs:
+    while allmsgs:
+        try:
             isMsgProcSuccess = True
             print '\n\n*******************************************************'
             #gets per text message
@@ -720,11 +743,11 @@ def ProcessAllMessages(allmsgs,network):
             msgname = checkNameOfNumber(msg.simnum)
             ##### Added for V1 sensors removes unnecessary characters pls see function PreProcessColumnV1(data)
             if re.search("\*FF",msg.data):
-                ProcessPiezometer(msg.data, msg.simnum)
+                ProcessPiezometer(msg)
             # elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*\d+T?$",msg.data):
             elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*.*",msg.data):
-               msg.data = PreProcessColumnV1(msg.data)
-               ProcessColumn(msg.data,msg.dt,msg.simnum)
+               msg.data = PreProcessColumnV1(msg)
+               ProcessColumn(msg)
             elif re.search("EQINFO",msg.data.upper()):
                 isMsgProcSuccess = ProcessEarthquake(msg)
             elif re.search("^PSIR ",msg.data.upper()):
@@ -735,7 +758,7 @@ def ProcessAllMessages(allmsgs,network):
                 isMsgProcSuccess = amsg.processAckToAlert(msg)   
             elif re.search("^ *(R(O|0)*U*TI*N*E )|(EVE*NT )", msg.data.upper()):
                 try:
-                    gm = gndmeas.getGndMeas(msg.data)
+                    gm = gndmeas.getGndMeas(msg)
                     RecordGroundMeasurements(gm)
                     # server.WriteOutboxMessageToDb("READ-SUCCESS: \n" + msg.data,c.smsalert.communitynum)
                     server.WriteOutboxMessageToDb(c.reply.successen, msg.simnum)
@@ -751,12 +774,12 @@ def ProcessAllMessages(allmsgs,network):
                   
             elif re.search("^[A-Z]{4,5}\*[xyabcXYABC]\*[A-F0-9]+\*[0-9]+T?$",msg.data):
                 try:
-                    dlist = ProcTwoAccelColData(msg.data,msg.simnum,msg.dt)
+                    dlist = ProcTwoAccelColData(msg)
                     if dlist:
                         if len(dlist[0][0]) == 6:
-                            WriteSomsDataToDb(dlist,msg.dt)
+                            WriteSomsDataToDb(dlist,msg)
                         else:
-                            WriteTwoAccelDataToDb(dlist,msg.dt)
+                            WriteTwoAccelDataToDb(dlist,msg)
                 except IndexError:
                     print "\n\n>> Error: Possible data type error"
                     print msg.data
@@ -764,17 +787,17 @@ def ProcessAllMessages(allmsgs,network):
                     print ">> Value error detected"
             elif re.search("[A-Z]{4}\*[A-F0-9]+\*[0-9]+$",msg.data):
                 #ProcessColumn(msg.data)
-                ProcessColumn(msg.data,msg.dt,msg.simnum)
+                ProcessColumn(msg)
             #check if message is from rain gauge
             # elif re.search("^\w{4},[\d\/:,]+,[\d,\.]+$",msg.data):
             elif re.search("^\w{4},[\d\/:,]+",msg.data):
-                ProcessRain(msg.data,msg.simnum)
+                ProcessRain(msg)
             elif re.search(r'(\w{4})[-](\d{1,2}[.]\d{02}),(\d{01}),(\d{1,2})/(\d{1,2}),#(\d),(\d),(\d{1,2}),(\d)[*](\d{10})',msg.data):
-                ProcessStats(msg.data,msg.dt)
+                ProcessStats(msg)
             elif re.search("ARQ\+[0-9\.\+/\- ]+$",msg.data):
-                ProcessARQWeather(msg.data,msg.simnum)
+                ProcessARQWeather(msg)
             elif msg.data.split('*')[0] == 'COORDINATOR' or msg.data.split('*')[0] == 'GATEWAY':
-                isMsgProcSuccess = ProcessCoordinatorMsg(msg.data, msg.simnum)
+                isMsgProcSuccess = ProcessCoordinatorMsg(msg)
             elif re.search("^MANUAL RESET",msg.data):
                 server.WriteOutboxMessageToDb("SENSORPOLL SENSLOPE", msg.simnum)
                 isMsgProcSuccess = True
@@ -791,11 +814,12 @@ def ProcessAllMessages(allmsgs,network):
                 read_fail_list.append(msg.num)
     # method for updating the read_status all messages that have been processed
     # so that they will not be processed again in another run
-    except:
-        # print all the traceback routine so that the error can be traced
-        print (traceback.format_exc())
-        print ">> Setting message read_status to fatal error"
-        dbio.setReadStatus("FATAL ERROR",cur_num)
+        except:
+            # print all the traceback routine so that the error can be traced
+            print (traceback.format_exc())
+            print ">> Setting message read_status to fatal error"
+            dbio.setReadStatus(cur_num, read_status=-1, table = args.table)
+            continue
         
     return read_success_list, read_fail_list
     
@@ -877,35 +901,63 @@ def test():
     
     # ProcessARQWeather(msg_test,simnum)
     # print checkNameOfNumber('639111111')
+
+def getArguments():
+    parser = argparse.ArgumentParser(description="Run SMS parser\n smsparser [-options]")
+    parser.add_argument("-db", "--dbhost", help="host name (check senslope-server-config.txt")
+    parser.add_argument("-t", "--table", help="smsinbox table")
+    parser.add_argument("-m", "--mode", help="mode to run")
+    parser.add_argument("-g", "--gsm", help="gsm name")
+    parser.add_argument("-s", "--status", help="inbox/outbox status",type=int)
+    parser.add_argument("-l", "--messagelimit", help="maximum number of messages to process at a time",type=int)
+    
+    try:
+        args = parser.parse_args()
+
+        if args.status == None:
+            args.status = 0
+        if args.messagelimit == None:
+            args.messagelimit = 200
+        return args        
+    except IndexError:
+        print '>> Error in parsing arguments'
+        error = parser.format_help()
+        print error
+        sys.exit()
+
     
 
 def main():
+    lockscript.get_lock('smsparser')
 
-    lockscript.get_lock('processmessages')
-            
+    args = getArguments()
+
+    print args.messagelimit
+
     # dbio.createTable("runtimelog","runtime")
     # logRuntimeStatus("procfromdb","startup")
 
     # force backup
     while True:
-        allmsgs = dbio.getAllSmsFromDb("UNREAD")
-        # if len(allmsgs) > 0:
-        #     msglist = []
-        #     for item in allmsgs:
-        #         smsItem = gsmio.sms(item[0], str(item[2]), str(item[3]), str(item[1]))
-        #         msglist.append(smsItem)
-        #     allmsgs = msglist
+        allmsgs = dbio.getAllSmsFromDb(host=args.dbhost,table=args.table,read_status=args.status,limit=args.messagelimit)
+        
+        if len(allmsgs) > 0:
+            msglist = []
+            for item in allmsgs:
+                smsItem = gsmio.sms(item[0], str(item[2]), str(item[3]), str(item[1]))
+                msglist.append(smsItem)
+            allmsgs = msglist
 
-        #     read_success_list, read_fail_list = ProcessAllMessages(allmsgs,"procfromdb")
+            read_success_list, read_fail_list = ParseAllMessages(args,allmsgs)
 
-        #     # dbio.setReadStatus("READ-SUCCESS",read_success_list)
-        #     # dbio.setReadStatus("READ-FAIL",read_fail_list)
-        #     sleeptime = 5
-        # else:
-        #     server.logRuntimeStatus("procfromdb","alive")
-        #     print dt.today().strftime("\nServer active as of %A, %B %d, %Y, %X")
-        #     return
-        #     # time.sleep(sleeptime)
+            dbio.setReadStatus(read_success_list, read_status=1,table=args.table)
+            dbio.setReadStatus(read_fail_list, read_status=-1,table=args.table)
+            # sleeptime = 5
+        else:
+            # server.logRuntimeStatus("procfromdb","alive")
+            print dt.today().strftime("\nServer active as of %A, %B %d, %Y, %X")
+            return
+            # time.sleep(sleeptime)
         sys.exit()
 
 if __name__ == "__main__":

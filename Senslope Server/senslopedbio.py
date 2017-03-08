@@ -81,23 +81,29 @@ def createTable(table_name, type, instance='local'):
         
     db.close()
 
-def setReadStatus(read_status,sms_id_list):
-    db, cur = SenslopeDBConnect('gsm')
+def setReadStatus(sms_id_list,read_status=0,table='',instance='local'):
     
-    print type(sms_id_list)
+    if table == '':
+        print "Error: Empty table"
+        return
+
+    db, cur = SenslopeDBConnect(instance)
+    
+    # print type(sms_id_list)
 
     if type(sms_id_list) is list:
         if len(sms_id_list) == 0:
             return
         else:
-            where_clause = "where sms_id in (%s)" % (str(sms_id_list)[1:-1].replace("L",""))
+            where_clause = "where inbox_id in (%s)" % (str(sms_id_list)[1:-1].replace("L",""))
     elif type(sms_id_list) is long:
-        where_clause = "where sms_id = %d" % (sms_id_list)
+        where_clause = "where inbox_id = %d" % (sms_id_list)
     else:
         print ">> Unknown type"        
-    query = "update %s.smsinbox set read_status = '%s' %s" % (gsmdbinstance.name, read_status, where_clause)
+    query = "update smsinbox_%s set read_status = %d %s" % (table, read_status, where_clause)
     
-    commitToDb(query,"setReadStatus", instance='GSM')
+    # print query
+    commitToDb(query,"setReadStatus")
     
 def setSendStatus(send_status,sms_id_list):
     db, cur = SenslopeDBConnect('gsm')
@@ -115,15 +121,28 @@ def setSendStatus(send_status,sms_id_list):
     now = dt.today().strftime("%Y-%m-%d %H:%M:%S")
 
     query = "update %s.smsoutbox set send_status = '%s', timestamp_sent ='%s' %s " % (gsmdbinstance.name, send_status, now, where_clause)
-    commitToDb(query,"setSendStatus", instance='GSM')
+    commitToDb(query,"setSendStatus", instance='sandbox')
     
-def getAllSmsFromDb(read_status):
-    db, cur = SenslopeDBConnect('gsm')
+def getAllSmsFromDb(host='local',read_status=0,table='loggers',limit=200):
+    db, cur = SenslopeDBConnect(host)
+
+    if table == 'loggers':
+        tbl_contacts = 'logger_contacts'
+    else:
+        print 'Error: unknown table', table
+        return
     
     while True:
         try:
-            query = """select sms_id, timestamp, sim_num, sms_msg from %s.smsinbox
-                where read_status = '%s' limit 200""" % (gsmdbinstance.name, read_status)
+            query = """select inbox_id,ts_received,sim_num,sms_msg from
+                        (
+                        select inbox_id,ts_received,contact_id,sms_msg from smsinbox_%s 
+                        where read_status = %d limit %d
+                        ) as t1
+                        inner join (
+                        select contact_id, sim_num from %s
+                        ) as t2
+                        on t1.contact_id = t2.contact_id""" % (table,read_status,limit,tbl_contacts)
         
             a = cur.execute(query)
             out = []
