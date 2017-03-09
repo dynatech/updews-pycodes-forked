@@ -53,21 +53,25 @@ def activeSites():
         logger_model= int(globaldf.model_id[i])
         case= int(globaldf.health_case[i])
 
-        if (logger_model < 27):    
-            res= checkLastActive(lgr_name)
+        if (logger_model <35 and logger_model > 26):    
+            # lgr_name= 
+            lgr_name = lgr_name[:3] + "w"
+            print lgr_name
             
-            if (case > 5 and case <20):
-                if (res == 1 or res==20):
-                    globaldf.set_value(i, 'health_case', res)
-                else:
-                    globaldf.set_value(i, 'health_case', case)
-            elif (case > 20 and case <25):
-                globaldf.set_value(i, 'health_case', case)
-            elif (case== 4):
-                globaldf.set_value(i, 'health_case', case)
-            else:
+        res= checkLastActive(lgr_name)
+        if (case > 5 and case <20):
+            if (res == 1 or res==20):
                 globaldf.set_value(i, 'health_case', res)
-                
+            else:
+                globaldf.set_value(i, 'health_case', case)
+        elif (case > 20 and case <25):
+            globaldf.set_value(i, 'health_case', case)
+        elif (case== 4):
+            globaldf.set_value(i, 'health_case', case)
+        else:
+            globaldf.set_value(i, 'health_case', res)
+    
+            
 def checkLastActive(lgr_name):
     db, cur = dbio.SenslopeDBConnect('local')
     query = """select timestamp from """ + lgr_name + """ order by timestamp desc limit 1 """
@@ -195,12 +199,12 @@ def storehealthData():
 
 def healthCaseGenerator(siteHealthdf):
     global globaldf
-    print siteHealthdf
+    # print siteHealthdf
 
     health= 3
     
     for i in range (0, len(globaldf)):
-        print i
+        # print i
         try:
             ver = int (siteHealthdf.model.loc[i])
             batv1= float(siteHealthdf.batv1.loc[i])
@@ -212,7 +216,7 @@ def healthCaseGenerator(siteHealthdf):
             # baka walang laman :()
 
             if (globaldf.health_case.loc[i] == 21): #no carrier/ cannot be reached    
-                print "no carrier"
+                # print "no carrier"
                 if (logger_model > 1 and logger_model < 10): #arq
                     if (batv1 < 3.3 and batv2 < 3.3):
                         health = 12
@@ -355,7 +359,7 @@ def printloggerStatus():
     
     globaldf.sort_values(['name'], ascending=[True],inplace = True)
     globaldf.index = range(0,len(globaldf))
-    print globaldf
+    # print globaldf
 
     timeNow =  dt.today()
     
@@ -407,11 +411,9 @@ def printloggerStatus():
     f.close
 
 def encodeDataFrame(inputdf):
-    print inputdf
     timeNow= dt.today()
     
     for i in range (0, len(inputdf)):
-        # lgr_name= str (inputdf.name.loc[i])
         logger_id= int(globaldf.logger_id.loc[i])
         health= int(globaldf.health_case[i])
         encodeCase(timeNow, logger_id, health)
@@ -460,7 +462,7 @@ def activeSoms():
         lgr_name= lgr_name + 'm'
         
         res= checkLastActive(lgr_name)
-        somsdf.set_value(i, 'model_id', res)    
+        somsdf.set_value(i, 'model_id', res)  
     return somsdf
 
 def activePiezo():
@@ -480,8 +482,6 @@ def activePiezo():
         if (res == 50):
             lgr_name= lgr_name + 'pz'  
             res= checkLastActive(lgr_name)
-        else:
-            print ""
             
         piezodf.set_value(i, 'model_id', res)    
    
@@ -561,7 +561,7 @@ def writeStatus(f, sensortype, df):
     f.write(str(count[2])) 
     f.write("\n")    
     for i in range (0,len(df)):
-        if (df.model_id.loc[i] == 2):
+        if (df.model_id.loc[i] == 50):
             f.write(str(df.name.loc[i]))
             f.write(" ")
 
