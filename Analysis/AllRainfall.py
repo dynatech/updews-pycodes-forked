@@ -68,7 +68,9 @@ def main(site='', Print=True):
     summary = siterainprops.apply(RA.main, end=end, s=s)
     summary = summary.reset_index(drop=True).set_index('site')[['1D cml', 'half of 2yr max', '3D cml', '2yr max', 'DataSource', 'alert', 'advisory']]
     summary[['1D cml', 'half of 2yr max', '3D cml', '2yr max']] = np.round(summary[['1D cml', 'half of 2yr max', '3D cml', '2yr max']], 1)
-    summary_json = summary.reset_index().to_json(orient="records")
+    summary_json = summary.reset_index()
+    summary_json['ts'] = str(end)
+    summary_json = summary_json.to_json(orient="records")
 
     if Print == True:
         if s.io.PrintSummaryAlert:
@@ -87,6 +89,6 @@ def main(site='', Print=True):
 
 if __name__ == "__main__":
     start_time = datetime.now()
-    main()
+    json = main(Print=False)
     print "runtime = ", datetime.now()-start_time
 
