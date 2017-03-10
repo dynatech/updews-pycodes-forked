@@ -575,6 +575,18 @@ def syncStartUp(host, port, batchRows=200):
     ws.close()
 
 
+def interfaceUpdateTableOfWSS(host=None, port=None, schema=None, table=None, batchRows=1000):
+    if (host == None) or (port == None) or (schema == None) or (table == None):
+        print "Error (%s): Please check your input values for host, port, schema or table" % (common.whoami())
+        return -1
+
+    url = "ws://%s:%s/" % (host, port)
+    ws = create_connection(url)
+
+    # Update the selected database table from the selected schema
+    updateTableOfWSS(ws, schema, table, batchRows)
+
+
 def updateTableOfWSS(ws, schema, table, batchRows=200):
     # Check if table target exists on WSS
     doesExist = masyncGD.findTableExistence(ws, schema, table)
