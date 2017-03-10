@@ -101,7 +101,7 @@ def getAllSMSoutbox(send_status='SENT',limit=20):
             AND timestamp_written IS NOT NULL 
             AND timestamp_sent IS NOT NULL 
             ORDER BY sms_id ASC LIMIT %d""" % (send_status, limit)
-            
+        
         print query
         result = qpi.GetDBResultset(query)
         return result
@@ -268,10 +268,21 @@ def formatReceivedGSMtext(timestamp, sender, message):
     jsonText = """{"type":"smsrcv","timestamp":"%s","sender":"%s","msg":"%s"}""" % (timestamp, sender, message)
     return jsonText    
     
-#No filtering yet for special characters
-def formatAckSentGSMtext(ts_written, ts_sent, recipient):
-    jsonText = """{"type":"ackgsm","timestamp_written":"%s","timestamp_sent":"%s","recipients":"%s"}""" % (ts_written, ts_sent, recipient)
-    return jsonText   
+# Use acktype:
+#       success - for messages that were successfully sent by the GSM
+#       fail - for messages that that were NOT sent by the GSM
+# No filtering yet for special characters
+def formatAckGSMtext(acktype, ts_written, ts_sent, recipient):
+    if acktype == "success":
+        type_msg = "ackgsm"
+    elif acktype == "fail":
+        type_msg = "failgsm"
+    else:
+        type_msg = "invalid"
+    
+    jsonText = """{"type":"%s","timestamp_written":"%s","timestamp_sent":"%s","recipients":"%s"}""" % (type_msg, ts_written, ts_sent, recipient)
+    
+    return jsonText
 
 def sendDataToDEWS(msg, port=None):
     host = "www.dewslandslide.com"
@@ -304,20 +315,29 @@ def sendReceivedGSMtoDEWS(timestamp, sender, message, port=None):
 # Send an acknowledgement message to DEWS Web Socket Server
 #   to let it know that the message has been sent already by the GSM
 def sendAckSentGSMtoDEWS(ts_written, ts_sent, recipient, port=None):
-    jsonText = formatAckSentGSMtext(ts_written, ts_sent, recipient)
+    # jsonText = formatAckSentGSMtext(ts_written, ts_sent, recipient)
+    jsonText = formatAckGSMtext("success", ts_written, ts_sent, recipient)
+    success = sendDataToDEWS(jsonText, port)
+    return success
+
+# Send an acknowledgement fail message to DEWS Web Socket Server
+#   to let it know that the message failed on GSM level
+def sendAckFailedGSMtoDEWS(ts_written, ts_sent, recipient, port=None):
+    # jsonText = formatAckFailedGSMtext(ts_written, ts_sent, recipient)
+    jsonText = formatAckGSMtext("fail", ts_written, ts_sent, recipient)
     success = sendDataToDEWS(jsonText, port)
     return success
 
 # Send smsinbox messages to the Web Socket Server
 # This is mostly used for contingency purposes only
-def sendBatchReceivedGSMtoDEWS(host="www.codesword.com", port=5050, limit=20):
+def sendBatchReceivedGSMtoDEWS(host="www.dewslandslide.com", port=5050, limit=20):
     #Load smsinbox messages with web_flag = 'W' and read_status = 'READ-SUCCESS'
     allmsgs = getAllSMSinbox('W','READ-SUCCESS',limit)
 
     #Return if no messages were found
     if len(allmsgs) == 0:
         print "No smsinbox messages for batch sending"
-        return
+        return 1
 
     try:
         #Connect to the web socket server
@@ -353,19 +373,45 @@ def sendBatchReceivedGSMtoDEWS(host="www.codesword.com", port=5050, limit=20):
         
         #returns -1 on failure to send data
         return -1
-    
 
-# Send Acknowledgement for ALL outbox sms with send_status "SEND"
+
+# Send ALL SMS inbox messages to DEWS (non-sensor data)
+#   This will be spawned by the GSM Server Scripts
+def sendAllSmsInboxToDEWS(host="www.dewslandslide.com", port=5050):
+    status = 0
+    while (status == 0):
+        status = sendBatchReceivedGSMtoDEWS(host, port, 100)
+
+    if (status == 1):
+        print "No more smsinbox messages left"
+    elif (status == -1):
+        print "Error: Please check your internet connection"
+
+
+# Send Acknowledgement for ALL outbox sms that were sent successfully or failed
 #   to DEWS Web Socket Server
-def sendAllAckSentGSMtoDEWS(host="www.dewslandslide.com", port=5050, limit=20):
-# def sendAllAckSentGSMtoDEWS(host="54.166.60.233", port=5050, limit=20):
-    #Load all sms messages with "SENT" status
-    allmsgs = getAllSMSoutbox('SENT',limit)
+# Acknowledgement Types:
+#   success - for messages successfully sent by the GSM
+#   fail - for messages that were NOT sent by the GSM
+def sendBatchAckGSMtoDEWS(host="www.dewslandslide.com", port=5050, acktype="success", limit=20):
+    #Configure send status info from acknowledgement type
+    if acktype == "success":
+        send_status = "SENT"
+        new_send_status = send_status + "-WSS"
+    elif acktype == "fail":
+        send_status = "FAIL"
+        new_send_status = send_status + "-WSS"
+    else:
+        print "Error: Unknown Acknowledgement Message Type"
+        return -2
+    
+    #Load all sms messages with <acktype> status
+    allmsgs = getAllSMSoutbox(send_status,limit)
 
     #Return if no messages were found
     if len(allmsgs) == 0:
-        print "No smsoutbox messages for acknowledgement"
-        return
+        print "No smsoutbox messages for gsm failed acknowledgement"
+        return 1
 
     try:     
         #Connect to the web socket server  
@@ -383,7 +429,7 @@ def sendAllAckSentGSMtoDEWS(host="www.dewslandslide.com", port=5050, limit=20):
             print "id:%s, ts_written:%s, ts_sent:%s, sim_num:%s" % (sms_id, ts_written, ts_sent, sim_num)
 
             #send acknowledgement message
-            jsonAckText = formatAckSentGSMtext(ts_written, ts_sent, sim_num)
+            jsonAckText = formatAckGSMtext(acktype, ts_written, ts_sent, sim_num)
             ws.send(jsonAckText)
             acklist.append(sms_id)
 
@@ -392,7 +438,7 @@ def sendAllAckSentGSMtoDEWS(host="www.dewslandslide.com", port=5050, limit=20):
         print "Successfully closed WSS connection"
 
         #Change the send status to "SENT-WSS" for successful sending
-        setSendStatus("SENT-WSS",acklist)
+        setSendStatus(new_send_status, acklist)
         
         #returns 0 on successful sending of data
         return 0
@@ -401,6 +447,23 @@ def sendAllAckSentGSMtoDEWS(host="www.dewslandslide.com", port=5050, limit=20):
         
         #returns -1 on failure to send data
         return -1
+
+
+# Send ALL SMS inbox messages to DEWS (non-sensor data)
+#   This will be spawned by the GSM Server Scripts
+def sendAllAckGSMToDEWS(host="www.dewslandslide.com", port=5050, batching_size=100):
+    status = 0
+
+    while (status == 0):
+        status_gsm_success_ack = sendBatchAckGSMtoDEWS(host, port, "success", batching_size)
+        status_gsm_fail_ack = sendBatchAckGSMtoDEWS(host, port, "fail", batching_size)
+        status = status_gsm_success_ack and status_gsm_fail_ack
+
+    if (status == 1):
+        print "No more smsoutbox messages left"
+    elif (status == -1):
+        print "Error: Please check your internet connection"
+
 
 #Connect to WebSocket Server and attempt to reconnect when disconnected
 #Receive and process messages as well
