@@ -30,9 +30,9 @@ curOS = platform.system()
 
 #import MySQLdb according to the OS
 if curOS == "Windows":
-    import MySQLdb
+    import MySQLdb as mysqlDriver
 elif curOS == "Linux":
-    import pymysql as MySQLdb
+    import pymysql as mysqlDriver
 
 #####################Defining important local functions
 def up_one(p):
@@ -40,6 +40,16 @@ def up_one(p):
     #OUTPUT: Parent directory
     out = os.path.abspath(os.path.join(p, '..'))
     return out  
+
+
+def CreateMarkerAlerts(Hostdb,Userdb,Passdb,Namedb):
+    db = mysqlDriver.connect(host = Hostdb, user = Userdb, passwd = Passdb)
+    cur = db.cursor()
+    
+    cur.execute("USE {}".format(Namedb))
+    cur.execute("CREATE TABLE IF NOT EXISTS {}(ma_id INT(11) AUTO_INCREMENT, ts TIMESTAMP, site_code VARCHAR(3),marker_name VARCHAR(10),displacement FLOAT, time_delta FLOAT, alert VARCHAR(3), PRIMARY KEY (ma_id))".format('marker_alerts'))
+    db.commit()
+    db.close()
 
 def RoundTime(date_time):
     date_time = pd.to_datetime(date_time)
@@ -126,6 +136,25 @@ def uptoDB_gndmeas_alerts(df,df2):
     engine=create_engine('mysql://'+Userdb+':'+Passdb+'@'+Hostdb+':3306/'+Namedb)
     df3.to_sql(name = 'gndmeas_new_alerts', con = engine, if_exists = 'append', schema = Namedb, index = True)
 
+def uptoDB_marker_alerts(df,df2):
+    #INPUT: Dataframe containing all alerts df, previous alert data frame df2
+    #OUTPUT: Writes to sql all ground measurement related alerts database
+        
+    #Merges the two data frame according to site and alerts
+    df3 = pd.merge(df.reset_index(),df2.reset_index(),how = 'left',on = ['site_code','marker_name','alert'])
+    df3 = df3[df3.ts_y.isnull()]
+    df3 = df3[['ts_x','site_code','marker_name','displacement_x','time_delta_x','alert']]
+    df3.columns = ['ts','site_code','marker_name','displacement','time_delta','alert']
+    
+    #Delete possible duplicates or nd alert    
+    df3_group = df3.groupby(['site_code','marker_name','ts'])
+    df3_group.apply(del_new_db_data)
+    
+    df3 = df3.set_index('ts')
+    
+    engine=create_engine('mysql://'+Userdb+':'+Passdb+'@'+Hostdb+':3306/'+Namedb)
+    df3.to_sql(name = 'marker_alerts_new', con = engine, if_exists = 'append', schema = Namedb, index = True)
+
 
 
 def get_latest_ground_df(site=None,end = None):
@@ -164,6 +193,7 @@ def crack_eval(df,out_folder,end):
     #OUTPUT: crack alert according to protocol table
 
     #Impose the validity of the groundmeasurement
+    out_df = pd.Series()
     df = df[df.timestamp <= end]
     df.sort_values('timestamp',inplace = True)
     try:
@@ -220,8 +250,19 @@ def crack_eval(df,out_folder,end):
         print 'Timestamp error for '+' '.join(list(np.concatenate((df.site_id.values,df.crack_id.values))))
         crack_alert = 'nd'
     
+    try:
+        abs_disp = np.abs(df.meas.iloc[-1]-df.meas.iloc[-2])
+        time_delta = (df.timestamp.iloc[-1]  - df.timestamp.iloc[-2]) / np.timedelta64(1,'h')
+    except:
+        abs_disp = None
+        time_delta = None
+        
+    
     print crack_alert
-    return crack_alert
+    out_df['crack_alerts'] = crack_alert
+    out_df['displacement'] = abs_disp
+    out_df['time_delta'] = time_delta
+    return out_df
 
 def site_eval(df):
     #INPUT: Dataframe containing crack alerts
@@ -429,6 +470,15 @@ def GetPreviousAlert(end):
         df = pd.DataFrame(columns = ['timestamp','site','alert','cracks'])
     return df
 
+def GetPreviousAlertNewDB(end):
+    try:
+        query = 'SELECT * FROM senslopedb.marker_alerts_new WHERE timestamp = "{}"'.format(end)
+        df = GetDBDataFrame(query)
+    except:
+        df = pd.DataFrame(columns = ['ts','site_code','marker_name','displacement','time_delta','alert'])
+    return df
+
+
 def FixMesData(df):
     if df.site_id.values[0] == 'mes':
         if df.crack_id.values[0] in ['A','B','C','D','E','F']:
@@ -446,6 +496,16 @@ def del_data(df):
     cur.execute(query)
     db.commit()
     db.close()
+
+def del_new_db_data(df):
+    #INPUT: Data frame of site and timestamp by groupby
+    #Deletes the row at gndmeas_alerts table of [site] at time [end]            
+    db, cur = SenslopeDBConnect(Namedb)
+    query = "DELETE FROM senslopedb.marker_alerts_new WHERE ts = '{}' AND site_code = '{}' AND marker_name = '{}'".format(pd.to_datetime(str(df.ts.values[0])),str(df.site_code.values[0]),str(df.marker_name.values[0]))
+    cur.execute(query)
+    db.commit()
+    db.close()
+
 
 def GenerateGroundDataAlert(site=None,end=None):
     if site == None and end == None:
@@ -497,7 +557,7 @@ def GenerateGroundDataAlert(site=None,end=None):
     df = df.groupby(['site_id','crack_id']).apply(FixMesData)    
     
     #Step 2: Evaluate the alerts per crack
-    crack_alerts = df.groupby(['site_id','crack_id']).apply(crack_eval,print_out_path2,end).reset_index(name = 'crack_alerts')
+    crack_alerts = df.groupby(['site_id','crack_id']).apply(crack_eval,print_out_path2,end).reset_index()
     
     #Step 3: Evaluate alerts per site
     site_alerts = crack_alerts.groupby(['site_id']).apply(site_eval).reset_index()    
@@ -507,14 +567,24 @@ def GenerateGroundDataAlert(site=None,end=None):
     ground_alert_release['timestamp'] = end
     ground_alert_release.columns = ['site','alert','cracks','timestamp']
     ground_alert_release = ground_alert_release.set_index(['timestamp'])
-            
+    
     print ground_alert_release
     
+    #### Set df for new db release
+    new_db_release = crack_alerts[crack_alerts.crack_alerts != 'nd']
+    new_db_release['ts'] = end    
+    new_db_release.columns = ['site_code','marker_name','alert','time_delta','displacement','ts']
+    new_db_release.set_index(['ts'],inplace = True)
     #Step 5: Upload the results to the gndmeas_alerts database
     
     ##Get the previous alert database
     ground_alert_previous = GetPreviousAlert(end)
     uptoDB_gndmeas_alerts(ground_alert_release,ground_alert_previous)
+    
+    marker_alerts_previous = GetPreviousAlertNewDB(end)
+    uptoDB_marker_alerts(new_db_release,marker_alerts_previous)
+    
+    
     
     #Step 6: Upload to site_level_alert        
     ground_site_level = ground_alert_release.reset_index()
