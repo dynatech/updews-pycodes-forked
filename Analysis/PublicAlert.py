@@ -84,7 +84,7 @@ def SitePublicAlert(PublicAlert, window):
     # dataframe of all alerts
     validity_site_alert = site_alert.sort('updateTS', ascending = False)
     # dataframe of all alerts for the past 4hrs
-    site_alert = site_alert.loc[site_alert.updateTS >= RoundTime(window.end) - timedelta(hours=4)]
+    site_alert = site_alert.loc[site_alert.updateTS >= window.end - timedelta(hours=4)]
 
     # public alert
     public_PrevAlert = validity_site_alert.loc[validity_site_alert.source == 'public']['alert'].values[0]
@@ -120,7 +120,7 @@ def SitePublicAlert(PublicAlert, window):
     elif 'r1' in site_alert['alert'].values or 'e1' in site_alert['alert'].values or 'd1' in site_alert['alert'].values \
             or 'l2' in site_alert['alert'].values or 'l3' in site_alert['alert'].values \
             or 'L2' in site_alert['alert'].values  or 'L3' in site_alert['alert'].values:
-        start_monitor = RoundTime(window.end) - timedelta(hours=4)
+        start_monitor = window.end - timedelta(hours=4)
         if 'l3' in site_alert['alert'].values or 'L3' in site_alert['alert'].values:
             print 'Public Alert- A3'
         if 'l2' in site_alert['alert'].values or 'L2' in site_alert['alert'].values:
@@ -213,7 +213,7 @@ def SitePublicAlert(PublicAlert, window):
         sensor_site = 'messb%'
     if site == 'msu':
         sensor_site = 'mesta%'
-    query = "SELECT * FROM ( SELECT * FROM senslopedb.column_level_alert WHERE site LIKE '%s' AND updateTS >= '%s' ORDER BY timestamp DESC) AS sub GROUP BY site" %(sensor_site, RoundTime(window.end) - timedelta(hours=4))
+    query = "SELECT * FROM ( SELECT * FROM senslopedb.column_level_alert WHERE site LIKE '%s' AND updateTS >= '%s' ORDER BY timestamp DESC) AS sub GROUP BY site" %(sensor_site, window.end - timedelta(hours=4))
     sensor_alertDF = q.GetDBDataFrame(query)
     nonNDsensor = sensor_alertDF[sensor_alertDF.alert != 'ND']
     if len(sensor_alertDF) != 0:
@@ -225,12 +225,12 @@ def SitePublicAlert(PublicAlert, window):
     
     # latest rain alert within 4hrs
     try:
-        rain_alert = site_alert.loc[(site_alert.source == 'rain') & (site_alert.updateTS >= RoundTime(window.end) - timedelta(hours=4))]['alert'].values[0]
+        rain_alert = site_alert.loc[(site_alert.source == 'rain') & (site_alert.updateTS >= window.end - timedelta(hours=4))]['alert'].values[0]
     except:
         rain_alert = 'nd'
     
     #surficial data presence
-    ground_alert = validity_site_alert.loc[(validity_site_alert.source == 'ground')&(validity_site_alert.updateTS >= RoundTime(window.end) - timedelta(hours=4))]
+    ground_alert = validity_site_alert.loc[(validity_site_alert.source == 'ground')&(validity_site_alert.updateTS >= window.end - timedelta(hours=4))]
     if len(ground_alert) != 0:
         ground_alert = 'g'
     else:
@@ -242,7 +242,7 @@ def SitePublicAlert(PublicAlert, window):
         SG_alert = site_alert
 
     # str; "list" of LLMC ground/sensor alert for the past 4hrs
-    list_ground_alerts = ','.join(SG_alert.loc[SG_alert.timestamp >= RoundTime(window.end) - timedelta(hours=4)]['alert'].values)
+    list_ground_alerts = ','.join(SG_alert.loc[SG_alert.timestamp >= window.end - timedelta(hours=4)]['alert'].values)
 
     #Public Alert A3
     if 'L3' in SG_alert['alert'].values or 'l3' in SG_alert['alert'].values or 'A3' in validity_site_alert['alert'].values:
@@ -647,7 +647,7 @@ def SitePublicAlert(PublicAlert, window):
             w.write('')
             
     #sms alert for l0t
-    groundTS = RoundTime(window.end) - timedelta(hours=4)
+    groundTS = window.end - timedelta(hours=4)
     l0t_alert = validity_site_alert.loc[(validity_site_alert.alert == 'l0t') & (validity_site_alert.updateTS >= groundTS)]
     if len(l0t_alert) != 0:
         l0talert = site + ':l0t:ground'
