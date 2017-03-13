@@ -183,62 +183,6 @@ def PushDBDataFrame(df,table_name):
     db.commit()
     db.close()
 
-
-#GetRawAccelData(siteid = "", fromTime = "", maxnode = 40): 
-#    retrieves raw data from the database table specified by parameters
-#    
-#    Parameters:
-#        siteid: str
-#            sitename or column name of the sensor column
-#        fromTime: str 
-#            starting time of the query that needs to be retrieved
-#        maxnode: int, default 40
-#            maximum node expected from this particular sensor column. Used
-#            to remove extraneous node ids which may not belong to the sensor column
-#            
-#    Returns:
-#        df: dataframe object 
-#            dataframe object of the result set 
-#def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid = 32, targetnode = -1, batt=0):
-#
-#    if not siteid:
-#        raise ValueError('no site id entered')
-#    
-#    if printtostdout:
-#        PrintOut('Querying database ...')
-#    # added getting battery data (v2&v3)
-#    if batt == 1:
-#        query = "select timestamp,id,xvalue,yvalue,zvalue,batt from senslopedb.%s " % (siteid) 
-#    else:
-#        query = "select timestamp,id,xvalue,yvalue,zvalue from senslopedb.%s " % (siteid) 
-#
-#    if not fromTime:
-#        fromTime = "2010-01-01"
-#        
-#    query = query + " where timestamp >= '%s'" % fromTime
-#    
-#    if toTime != '':
-#        query = query + " and timestamp <= '%s'" % toTime
-#
-#    if len(siteid) == 5:
-#        query = query + " and msgid in (%s,%s-21)" % (str(msgid), str(msgid));
-#    
-#    if targetnode <= 0:
-#        query = query + " and id >= 1 and id <= %s ;" % (str(maxnode))
-#    else:
-#        query = query + " and id = %s;" % (targetnode)
-#    
-#    PrintOut(query)
-#    
-#    df =  GetDBDataFrame(query)
-#    if batt == 1:
-#        df.columns = ['ts','id','x','y','z','v']
-#    else:
-#        df.columns = ['ts','id','x','y','z']
-#    # change ts column to datetime
-#    df.ts = pd.to_datetime(df.ts)
-#    
-#    return df
 def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid = 32, targetnode ="", batt=0):
     if not siteid:
         raise ValueError('no site id entered')
@@ -620,49 +564,6 @@ def GetLastGoodDataFromDb(col):
     
     return df
     
-#GetSingleLGDPM
-#   This function returns the last good data prior to the monitoring window
-#   Inputs:
-#       site (e.g. sinb, mamb, agbsb)
-#       node (e.g. 1,2...15...30)
-#       startTS (e.g. 2016-04-25 15:00:00, 2016-02-01 05:00:00, 
-#                YYYY-MM-DD HH:mm:SS)
-#   Output:
-#       returns the dataframe for the last good data prior to the monitoring window
-    
-#def GetSingleLGDPM(site, node, startTS):
-#    query = "SELECT timestamp, id, xvalue, yvalue, zvalue"
-#    if len(site) == 5:
-#        query = query + ", msgid"
-#    query = query + " from %s WHERE id = %s and timestamp < '%s' " % (site, node, startTS)
-#    if len(site) == 5:
-#        query = query + "and (msgid = 32 or msgid = 11) "
-##        query = query + "ORDER BY timestamp DESC LIMIT 2"
-##    else:
-#    query = query + "ORDER BY timestamp DESC LIMIT 240"
-#    
-#    lgdpm = GetDBDataFrame(query)
-#
-##    if len(site) == 5:
-##        if len(set(lgdpm.timestamp)) == 1:
-##            lgdpm.loc[(lgdpm.msgid == 11) | (lgdpm.msgid == 32)]
-##        else:
-##            try:
-##                lgdpm = lgdpm.loc[lgdpm.timestamp == lgdpm.timestamp[0]]
-##            except:
-##                print 'no data for node ' + str(node) + ' of ' + site
-#    
-#    if len(site) == 5:
-#        lgdpm.columns = ['ts','id','x','y','z', 'msgid']
-#    else:
-#        lgdpm.columns = ['ts','id','x','y','z']
-#    lgdpm = lgdpm[['ts', 'id', 'x', 'y', 'z']]
-#
-#    lgdpm = filterSensorData.applyFilters(lgdpm)
-#    lgdpm = lgdpm.sort_index(ascending = False)[0:1]
-#    
-#    return lgdpm
-    
 #PushLastGoodData(df,name):
 #    writes a dataframe of the last good data to the database table lastgooddata
 #    
@@ -691,50 +592,6 @@ def PushLastGoodData(df,name):
     cur.execute(query)
     db.commit()
     db.close()
-    
-#GenerateLastGoodData():
-#    cycles through the whole list of sensor columns and writes the evaluated 
-#    last good data set to the database    
-#def GenerateLastGoodData():
-#    
-#    db = mysqlDriver.connect(host = Hostdb, user = Userdb, passwd = Passdb)
-#    cur = db.cursor()
-#    #cur.execute("CREATE DATABASE IF NOT EXISTS %s" %nameDB)
-#    
-#    #Separated the consecutive drop table and create table in one query in
-#    #   order to fix "commands out of sync" error
-#    query = "DROP TABLE IF EXISTS `senslopedb`.`lastgooddata`;"
-#    cur.execute(query)
-#    
-#    query = """ CREATE TABLE  `senslopedb`.`lastgooddata` (
-#          `name` varchar(8) NOT NULL DEFAULT '',
-#          `id` int(11) NOT NULL DEFAULT '0',
-#          `timestamp` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
-#          `xvalue` int(11) DEFAULT NULL,
-#          `yvalue` int(11) DEFAULT NULL,
-#          `zvalue` int(11) DEFAULT NULL,
-#          PRIMARY KEY (`name`,`id`)
-#          ); """
-#    cur.execute(query)
-#    
-#    db.close()
-#    
-#    slist = GetSensorList()
-#    
-#    for s in slist:
-#        print s.name, s.nos
-#        
-#        df = GetRawAccelData(siteid=s.name,maxnode=s.nos)
-#        df = filterSensorData.applyFilters(df,True,True,False)         
-#        
-#        dflgd = GetLastGoodData(df,s.nos,True)
-#        del df           
-#          
-#        try:
-#            PushLastGoodData(dflgd,s.name)
-#        except (AttributeError,TypeError):
-#            PrintOut("Error. Empty database")
-
             
 # import values from config file
 configFile = "server-config.txt"
@@ -765,7 +622,7 @@ except:
     #sensitive info like db access credentials must not be viewed using a browser
     #print "No file named: %s. Trying Default Configuration" % (configFile)
 #    Hostdb = "127.0.0.1"    
-    Hostdb = "192.168.1.100"
+    Hostdb = "192.168.150.127"
     Userdb = "root"
     Passdb = "senslope"
     Namedb = "senslopedb"

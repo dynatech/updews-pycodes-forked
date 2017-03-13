@@ -14,4 +14,4 @@ days = sys.argv[3]
 #site = 'mngsa'
 #tdate = '2016-08-01'
 #days = '1d'
-data = htmap.heatmap(site, '2016-08-01 00:00:00' , t_win = days)
+data = htmap.heatmap(site, tdate , t_win = days)
