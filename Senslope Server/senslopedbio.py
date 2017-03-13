@@ -1,4 +1,4 @@
-import ConfigParser, MySQLdb, time, sys
+import ConfigParser, MySQLdb, time, sys, argparse
 from datetime import datetime as dt
 import cfgfileio as cfg
 
@@ -121,7 +121,7 @@ def setSendStatus(send_status,sms_id_list):
     now = dt.today().strftime("%Y-%m-%d %H:%M:%S")
 
     query = "update %s.smsoutbox set send_status = '%s', timestamp_sent ='%s' %s " % (gsmdbinstance.name, send_status, now, where_clause)
-    commitToDb(query,"setSendStatus", instance='sandbox')
+    # commitToDb(query,"setSendStatus", instance='sandbox')
     
 def getAllSmsFromDb(host='local',read_status=0,table='loggers',limit=200):
     db, cur = SenslopeDBConnect(host)
@@ -186,7 +186,7 @@ def getLoggerNames(logger_type="all",instance="local"):
     elif logger_type == 'rain':
         query = "SELECT `logger_name` from `loggers` where `model_id` in (SELECT `model_id` FROM `logger_models` where `has_rain`=1 or `logger_type`='arq') and `logger_name` is not null"
     else:
-        query = "SELECT distinct(tsm_name) FROM senslopedb.tsm_sensors;"
+        query = "SELECT distinct(tsm_name) FROM tsm_sensors;"
 
     print query 
     result_set = querydatabase(query,"createSensorColumnTables",instance)
@@ -222,9 +222,9 @@ def createLoggerTables(logger_type='all',instance="local"):
     elif logger_type == 'piezo':
         for n in logger_names:
             query += """CREATE TABLE IF NOT EXISTS `piezo_%s` (
-                      `data_id` INT UNSIGNED NOT NULL,
+                      `data_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
                       `ts` TIMESTAMP NULL DEFAULT NULL,
-                      `frequency_shift` SMALLINT UNSIGNED NULL DEFAULT NULL,
+                      `frequency_shift` DECIMAL(6,2) UNSIGNED NULL DEFAULT NULL,
                       `temperature` FLOAT NULL DEFAULT NULL,
                       PRIMARY KEY (`data_id`),
                       UNIQUE INDEX `unique1` (`ts` ASC))
@@ -233,7 +233,7 @@ def createLoggerTables(logger_type='all',instance="local"):
     elif logger_type == 'rain':
         for n in logger_names:
             query +=  """CREATE TABLE IF NOT EXISTS `rain_%s` (
-                      `data_id` INT NOT NULL AUTO_INCREMENT,
+                      `data_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
                       `ts` TIMESTAMP NULL,
                       `rain` FLOAT NULL DEFAULT NULL,
                       `temperature` FLOAT NULL DEFAULT NULL,
@@ -245,7 +245,7 @@ def createLoggerTables(logger_type='all',instance="local"):
                       UNIQUE INDEX `unique1` (`ts` ASC))
                     ENGINE = InnoDB;\n\n""" % (n)
     
-    else:
+    elif logger_type == 'tilt':
         for n in logger_names:
             query += """CREATE TABLE IF NOT EXISTS `tilt_%s` (
               `data_id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -261,15 +261,20 @@ def createLoggerTables(logger_type='all',instance="local"):
             ENGINE = InnoDB
             DEFAULT CHARACTER SET = utf8;\n\n""" % (n)
 
+    else:
+        print 'Error: No create info for logger type', logger_type
+        return
+
     print query
 
     cur.execute(query)
     db.close()
 
-def commitToDb(query, identifier, instance='local'):
+def commitToDb(query, identifier, last_insert=False, instance='local'):
     db, cur = SenslopeDBConnect(instance)
 
     # print query
+    b=''
     
     try:
         retry = 0
@@ -277,6 +282,11 @@ def commitToDb(query, identifier, instance='local'):
             try:
                 a = cur.execute(query)
                 # db.commit()
+                b = ''
+                if last_insert:
+                    b = cur.execute('select last_insert_id()')
+                    b = cur.fetchall()
+
                 if a:
                     db.commit()
                     break
@@ -298,10 +308,11 @@ def commitToDb(query, identifier, instance='local'):
         print '>> Error: Writing to database', identifier
     except MySQLdb.IntegrityError:
         print '>> Warning: Duplicate entry detected', identifier
-    # except:
-        # print '>> Unexpected error in writing to database query', query, 'from', identifier
+    except:
+        print '>> Unexpected error in writing to database query', query, 'from', identifier
     finally:
         db.close()
+        return b
 
 def querydatabase(query, identifier, instance='local'):
     db, cur = SenslopeDBConnect(instance)
@@ -343,15 +354,57 @@ def checkNumberIfExists(simnumber,table='community'):
 
     return identity
 
+def getArguments():
+    parser = argparse.ArgumentParser(description="senslopedbio\n senslopedbio [-options]")
+    parser.add_argument("-t", "--test", help="run test function",action="store_true")
+    parser.add_argument("-c", "--createtables", help="run test function")    
+    
+    try:
+        args = parser.parse_args()
+        return args
+    except IndexError:
+        print '>> Error in parsing arguments'
+        error = parser.format_help()
+        print error
+        sys.exit()
+
+def main():
+    args = getArguments()
+
+    if args.test:
+        test()
+        sys.exit()
+
+    if args.createtables:
+        tables_to_create = args.createtables.split(",")
+        for t in tables_to_create:
+            try:
+                createLoggerTables(t,'sandbox')
+            except:
+                print 'Warning: No table info for', t
+    else:
+        print 'No tables to create'
+
+    return
+
 # for test codes    
 def test():
+    args = getArguments()
+
+    if args.createtables:
+        print args.createtables
+    else:
+        print 'Will not create tables'
+
     # dropTsmSensorTables("backup")
     # createSomsTables("backup")
     # createTTables("backup")
     # createTsmSensorTables("backup")
     # createTsmSensorTables("backup")
-    createLoggerTables("rain","sandbox")
+    # createLoggerTables("piezo","sandbox")
+
+    print 
     return
 
 if __name__ == "__main__":
-    test()
+    main()

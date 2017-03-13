@@ -110,8 +110,8 @@ def WriteRawSmsToDb(msglist,sensor_nums):
 
 def WriteEQAlertMessageToDb(alertmsg):
     c = cfg.config()
-    WriteOutboxMessageToDb(alertmsg,c.smsalert.globenum)
-    WriteOutboxMessageToDb(alertmsg,c.smsalert.smartnum)
+    # WriteOutboxMessageToDb(alertmsg,c.smsalert.globenum)
+    # WriteOutboxMessageToDb(alertmsg,c.smsalert.smartnum)
 
 def getGsmId(number):
     smart_prefixes = getAllowedPrefixes('SMART')
@@ -131,16 +131,28 @@ def getGsmId(number):
         print '>> Prefix', num_prefix, 'cannot be sent'
         return -1
 
-def WriteOutboxMessageToDb(message,recepients,send_status='UNSENT'):
+def WriteOutboxMessageToDb(table='',message='',recepients='',send_status='UNSENT'):
+    if table == '':
+        print "Error: No table indicated"
+        return
+
+    tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
+    query = "insert into smsoutbox_%s (ts_written,sms_msg,source) VALUES ('%s','%s','central')" % (table,tsw,message)
+    print query
+
+    last_insert = dbio.commitToDb(query,'WriteOutboxMessageToDb',last_insert=True)[0][0]
+
+    print 'Last insert:', last_insert 
+
     for r in recepients.split(","):
         gsm_id = getGsmId(r)
         if gsm_id == -1:
             continue
         else:
-            query = "INSERT INTO smsoutbox (timestamp_written,recepients,sms_msg,send_status,gsm_id) VALUES "
+            query = "INSERT INTO smsoutbox_%s_status (timestamp_written,recepients,sms_msg,send_status,gsm_id) VALUES "
             tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
             query += "('%s','%s','%s','%s','%s')" % (tsw,r,message,send_status,gsm_id)
-            print query
+            # print query
             dbio.commitToDb(query, "WriteOutboxMessageToDb", 'gsm')
     
 def CheckAlertMessages():
@@ -236,7 +248,7 @@ def getLoggerContacts():
         ON t1.sim_num = t2.sim_num 
             AND (t1.date_activated < t2.date_activated 
             OR (t1.date_activated = t2.date_activated AND t1.contact_id < t2.contact_id)) 
-    WHERE t2.sim_num IS NULL """
+    WHERE t2.sim_num IS NULL and t1.sim_num is not null"""
 
     # print querys
 
@@ -414,7 +426,7 @@ def RunSenslopeServer(network):
             print '>> Error in parsing mesages: Error unknown'
             gsmio.resetGsm()
 
-def getGsmIDs():
+def getGsmModules():
     ids = mc.get('gsmids')
     if ids == None:
         query = "select * from gsm_modules"
@@ -431,7 +443,7 @@ def getGsmIDs():
 def main():
     network = sys.argv[1].lower()
 
-    gsm_ids = getGsmIDs()
+    gsm_ids = getGsmModules()
     print gsm_ids.keys()
 
     if network not in gsm_ids.keys():

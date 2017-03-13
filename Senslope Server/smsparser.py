@@ -318,8 +318,8 @@ def ProcessColumn(sms):
         query_tilt = query_tilt[:-1]
         query_soms = query_soms[:-1]
 
-        print query_tilt
-        print query_soms
+        # print query_tilt
+        # print query_soms
         
         # print query
 
@@ -349,17 +349,26 @@ def ProcessPiezometer(sms):
         linesplit = line.split('*')
         msgname = linesplit[0].lower()
         msgname = re.sub("due","",msgname)
-        msgname = msgname + 'pz'
-        print 'msg_name: ' + msgname        
+        msgname = re.sub("pz","",msgname)
+        msgname = re.sub("ff","",msgname)
+        
+        print 'msg_name: ' + msgname
         data = linesplit[1]
-        msgid = int(('0x'+data[:4]), 16)
-        p1 = int(('0x'+data[4:6]), 16)*100
-        p2 = int(('0x'+data[6:8]), 16)
-        p3 = int(('0x'+data[8:10]), 16)*.01
+        data = re.sub("F","",data)        
+        
+        print "data:", data
+
+        # msgid = int(('0x'+data[:4]), 16)
+        # p1 = int(('0x'+data[4:6]), 16)*100
+        # p2 = int(('0x'+data[6:8]), 16)
+        # p3 = int(('0x'+data[8:10]), 16)*.01
+        p1 = int(('0x'+data[:2]), 16)*100
+        p2 = int(('0x'+data[2:4]), 16)
+        p3 = int(('0x'+data[4:6]), 16)*.01
         piezodata = p1+p2+p3
         
-        t1 = int(('0x'+data[10:12]), 16)
-        t2 = int(('0x'+data[12:14]), 16)*.01
+        t1 = int(('0x'+data[6:8]), 16)
+        t2 = int(('0x'+data[8:10]), 16)*.01
         tempdata = t1+t2
         try:
             txtdatetime = dt.strptime(linesplit[2],'%y%m%d%H%M%S').strftime('%Y-%m-%d %H:%M:00')
@@ -375,10 +384,10 @@ def ProcessPiezometer(sms):
         return      
 
         # try:
-    dbio.createTable(str(msgname), "piezo")
+    # dbio.createTable(str(msgname), "piezo")
     try:
-      query = """INSERT INTO %s(timestamp, name, msgid, freq, temp ) VALUES ('%s','%s', %s, %s, %s )""" %(msgname,txtdatetime,msgname, str(msgid), str(piezodata), str(tempdata))
-        
+      query = """INSERT INTO piezo_%s (ts, frequency_shift, temperature ) VALUES ('%s', %s, %s)""" %(msgname,txtdatetime,str(piezodata), str(tempdata))
+      # print query
         # print query
     except ValueError:
         print '>> Error writing query string.', 
@@ -393,7 +402,7 @@ def ProcessEarthquake(msg):
     print "Processing earthquake data"
     print line
 
-    dbio.createTable('earthquake', 'earthquake')
+    # dbio.createTable('earthquake', 'earthquake')
 
     #find date
     if re.search("\d{1,2}\w+201[6789]",line):
@@ -490,7 +499,10 @@ def ProcessEarthquake(msg):
         print ">> No issuer string recognized"
         issuerstr = 'NULL'
 
-    query = "INSERT INTO senslopedb.earthquake (timestamp, mag, depth, lat, longi, dist, heading, municipality, province, issuer) VALUES ('%s',%s,%s,%s,%s,%s,'%s','%s','%s','%s') ON DUPLICATE KEY UPDATE mag=mag, depth=depth, lat=lat, longi=longi, dist=dist, heading=heading, municipality=municipality, province=province, issuer=issuer;" % (datetimestr,magstr,depthstr,latstr,longstr,diststr,headstr,munistr,provistr,issuerstr)
+    query = """INSERT INTO earthquake_events (ts, magnitude, depth, latitude, longitude, critical_distance, reporter) \
+        VALUES ('%s',%s,%s,%s,%s,%s,'%s') ON DUPLICATE KEY UPDATE \
+        magnitude=magnitude, depth=depth, latitude=latitude, longitude=longitude, critical_distance=critical_distance, \
+        reporter=reporter;""" % (datetimestr,magstr,depthstr,latstr,longstr,diststr,issuerstr)
 
     print query
 
@@ -499,7 +511,7 @@ def ProcessEarthquake(msg):
     dbio.commitToDb(query, 'earthquake')
 
     # subprocess.Popen(["python",cfg.config().fileio.eqprocfile])
-    p = subprocess.Popen("python "+cfg.config().fileio.eqprocfile, stdout=subprocess.PIPE, shell=True, stderr=subprocess.STDOUT)
+    # p = subprocess.Popen("python "+cfg.config().fileio.eqprocfile, stdout=subprocess.PIPE, shell=True, stderr=subprocess.STDOUT)
 
     return True
 
@@ -563,7 +575,7 @@ def ProcessARQWeather(sms):
     try:
         query = """INSERT INTO rain_%s (ts,rain,temperature,humidity,battery1,battery2,csq)
         VALUES ('%s',%s,%s,%s,%s,%s,%s)""" % (msgname,txtdatetime,rain,temp,hum,batv1,batv2,csq)
-        print query
+        # print query
     except ValueError:
         print '>> Error writing query string.', 
         return
@@ -615,7 +627,7 @@ def ProcessRain(sms):
 
     try:
         query = """INSERT INTO rain_%s (ts,rain,csq) VALUES ('%s',%s,%s)""" %(msgtable.lower(),txtdatetime,rain,csq)
-        print query            
+        # print query            
     except:
         print '>> Error writing weather data to database. ' +  line
         return
@@ -623,7 +635,7 @@ def ProcessRain(sms):
     try:
         dbio.commitToDb(query, 'ProcesRain')
     except MySQLdb.ProgrammingError:
-        print query[:-2]
+        # print query[:-2]
         dbio.commitToDb(query[:-2]+')', 'ProcessRain')
         
     print 'End of Process weather data'
@@ -687,7 +699,7 @@ def CheckMessageSource(msg):
     if identity:
         smsmsg = "From: %s %s of %s\n" % (identity[0][1],identity[0][0],identity[0][2])
         smsmsg += msg.data
-        server.WriteOutboxMessageToDb(smsmsg,c.smsalert.communitynum)
+        # server.WriteOutboxMessageToDb(smsmsg,c.smsalert.communitynum)
         return
     elif dbio.checkNumberIfExists(msg.simnum,'dewsl'):
         print ">> From senslope staff"
@@ -742,7 +754,7 @@ def ParseAllMessages(args,allmsgs=[]):
                          
             msgname = checkNameOfNumber(msg.simnum)
             ##### Added for V1 sensors removes unnecessary characters pls see function PreProcessColumnV1(data)
-            if re.search("\*FF",msg.data):
+            if re.search("\*FF",msg.data) or re.search("PZ\*",msg.data):
                 ProcessPiezometer(msg)
             # elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*\d+T?$",msg.data):
             elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*.*",msg.data):
@@ -761,16 +773,17 @@ def ParseAllMessages(args,allmsgs=[]):
                     gm = gndmeas.getGndMeas(msg)
                     RecordGroundMeasurements(gm)
                     # server.WriteOutboxMessageToDb("READ-SUCCESS: \n" + msg.data,c.smsalert.communitynum)
-                    server.WriteOutboxMessageToDb(c.reply.successen, msg.simnum)
+                    # server.WriteOutboxMessageToDb(c.reply.successen, msg.simnum)
                 except ValueError as e:
                     print str(e)
                     errortype = re.search("(WEATHER|DATE|TIME|GROUND MEASUREMENTS|NAME)", str(e).upper()).group(0)
                     print ">> Error in manual ground measurement SMS", errortype
 
-                    server.WriteOutboxMessageToDb("READ-FAIL: (%s)\n%s" % (errortype,msg.data),c.smsalert.communitynum)
-                    server.WriteOutboxMessageToDb(str(e), msg.simnum)
+                    # server.WriteOutboxMessageToDb("READ-FAIL: (%s)\n%s" % (errortype,msg.data),c.smsalert.communitynum)
+                    # server.WriteOutboxMessageToDb(str(e), msg.simnum)
                 except:
-                    server.WriteOutboxMessageToDb("READ-FAIL: (Unhandled) \n" + msg.data,c.smsalert.communitynum)
+                    pass
+                    # server.WriteOutboxMessageToDb("READ-FAIL: (Unhandled) \n" + msg.data,c.smsalert.communitynum)
                   
             elif re.search("^[A-Z]{4,5}\*[xyabcXYABC]\*[A-F0-9]+\*[0-9]+T?$",msg.data):
                 try:
@@ -799,7 +812,7 @@ def ParseAllMessages(args,allmsgs=[]):
             elif msg.data.split('*')[0] == 'COORDINATOR' or msg.data.split('*')[0] == 'GATEWAY':
                 isMsgProcSuccess = ProcessCoordinatorMsg(msg)
             elif re.search("^MANUAL RESET",msg.data):
-                server.WriteOutboxMessageToDb("SENSORPOLL SENSLOPE", msg.simnum)
+                # server.WriteOutboxMessageToDb("SENSORPOLL SENSLOPE", msg.simnum)
                 isMsgProcSuccess = True
             else:
                 print '>> Unrecognized message format: '
@@ -876,7 +889,7 @@ def ProcessCoordinatorMsg(coordsms, num):
             
             query = query[:-2]
 
-            print query
+            # print query
             
             dbio.commitToDb(query, 'ProcessCoordinatorMsg')
 
@@ -910,6 +923,8 @@ def getArguments():
     parser.add_argument("-g", "--gsm", help="gsm name")
     parser.add_argument("-s", "--status", help="inbox/outbox status",type=int)
     parser.add_argument("-l", "--messagelimit", help="maximum number of messages to process at a time",type=int)
+    parser.add_argument("-r", "--runtest", help="run test function",action="store_true")
+    
     
     try:
         args = parser.parse_args()
@@ -925,17 +940,26 @@ def getArguments():
         print error
         sys.exit()
 
-    
+
+def test():
+    sms = "EQInfo1: 08Feb2017 09:35AM Ms=2.2 D=23km 16.04N, 119.95E or 13km S15W of Alaminos City(Pangasinan) <NMD>"
+    smsItem = gsmio.sms('', '', sms, '')
+    ProcessEarthquake(smsItem)
+   
 
 def main():
     lockscript.get_lock('smsparser')
 
     args = getArguments()
 
-    print args.messagelimit
-
     # dbio.createTable("runtimelog","runtime")
     # logRuntimeStatus("procfromdb","startup")
+
+    if args.runtest:
+        test()
+        sys.exit()
+
+    print 'SMS Parser'
 
     # force backup
     while True:
@@ -962,3 +986,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    
