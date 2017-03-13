@@ -20,7 +20,7 @@ class dbInstance:
 
 # def SenslopeDBConnect():
 # Definition: Connect to senslopedb in mysql
-def SenslopeDBConnect(host):
+def SenslopeDBConnect(host='local'):
     dbc = dbInstance(host)
 
     while True:
@@ -185,8 +185,11 @@ def getLoggerNames(logger_type="all",instance="local"):
         query = "SELECT `logger_name` from `loggers` where `model_id` in (SELECT `model_id` FROM `logger_models` where `has_piezo`=1) and `logger_name` is not null"
     elif logger_type == 'rain':
         query = "SELECT `logger_name` from `loggers` where `model_id` in (SELECT `model_id` FROM `logger_models` where `has_rain`=1 or `logger_type`='arq') and `logger_name` is not null"
-    else:
+    elif logger_type == 'tilt':
         query = "SELECT distinct(tsm_name) FROM tsm_sensors;"
+    else:
+        print 'Error: No info for logger type', logger_type
+        return
 
     print query 
     result_set = querydatabase(query,"createSensorColumnTables",instance)

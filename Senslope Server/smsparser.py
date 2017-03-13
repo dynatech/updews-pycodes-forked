@@ -810,7 +810,7 @@ def ParseAllMessages(args,allmsgs=[]):
             elif re.search("ARQ\+[0-9\.\+/\- ]+$",msg.data):
                 ProcessARQWeather(msg)
             elif msg.data.split('*')[0] == 'COORDINATOR' or msg.data.split('*')[0] == 'GATEWAY':
-                isMsgProcSuccess = ProcessCoordinatorMsg(msg)
+                isMsgProcSuccess = ProcessGatewayMsg(msg)
             elif re.search("^MANUAL RESET",msg.data):
                 # server.WriteOutboxMessageToDb("SENSORPOLL SENSLOPE", msg.simnum)
                 isMsgProcSuccess = True
@@ -856,19 +856,31 @@ def RecordManualWeather(mw_text):
     query = "INSERT IGNORE INTO manualweather (timestamp, meas_type, site_id, observer_name, weatherdesc) VALUES " + mw_text
     
     dbio.commitToDb(query, 'RecordManualWeather')
+
+
+def getRouterIDs():
+    db, cur = dbio.SenslopeDBConnect()
+
+    query = "SELECT `logger_id`,`logger_name` from `loggers` where `model_id` in (SELECT `model_id` FROM `logger_models` where `logger_type`='router') and `logger_name` is not null"
+
+    nums = dbio.querydatabase(query,'getRouterIDs','sandbox')
+    nums = {key: value for (value, key) in nums}
+
+    return nums
         
-def ProcessCoordinatorMsg(coordsms, num):
-
+def ProcessGatewayMsg(msg):
     print ">> Coordinator message received"
-    print coordsms
+    print msg.data
     
-    dbio.createTable("coordrssi","coordrssi")
+    # dbio.createTable("coordrssi","coordrssi")
 
-    coordsms = re.sub("(?<=,)(?=(,|$))","NULL",coordsms)
+    routers = getRouterIDs()
+    
+    msg.data = re.sub("(?<=,)(?=(,|$))","NULL",msg.data)
     
     try:
-        datafield = coordsms.split('*')[1]
-        timefield = coordsms.split('*')[2]
+        datafield = msg.data.split('*')[1]
+        timefield = msg.data.split('*')[2]
         timestamp = dt.strptime(timefield,"%y%m%d%H%M%S").strftime("%Y-%m-%d %H:%M:%S")
         
         smstype = datafield.split(',')[0]
@@ -879,19 +891,16 @@ def ProcessCoordinatorMsg(coordsms, num):
             print rssi_string
             # format is
             # <router name>,<rssi value>,...
-            query = "INSERT IGNORE INTO coordrssi (timestamp, site_name, router_name, rssi_val) VALUES ("
+            query = "INSERT IGNORE INTO router_rssi (ts, logger_id, rssi_val) VALUES "
             tuples = re.findall("[A-Z]+,\d+",rssi_string)
             for item in tuples:
-                query += "'" + timestamp + "',"
-                query += "'" + site_name + "',"
-                query += "'" + item.split(',')[0] + "',"
-                query += item.split(',')[1] + "),("
-            
-            query = query[:-2]
+                query += "('%s',%d,%s)," % (timestamp,routers[item.split(',')[0].lower()],item.split(',')[1] )
+                
+            query = query[:-1]
 
-            # print query
+            print query
             
-            dbio.commitToDb(query, 'ProcessCoordinatorMsg')
+            dbio.commitToDb(query, 'ProcessGatewayMsg')
 
             return True
         else:
@@ -899,21 +908,9 @@ def ProcessCoordinatorMsg(coordsms, num):
     except IndexError:
         print "IndexError: list index out of range"
         return False
-    except:
-        print ">> Unknown Error", coordsms
-        return False
-
-# for test codes    
-def test():
-    msg_test = "MARW,02/01/17,10:15:05,0,000,000,1.5,14.00,10"
-    simnum = '639175837453'
-    ProcessRain(msg_test,simnum)
-    
-    # msg_test = "ARQ+0+0+4.174+4.219+0.0666+5.179+0.121+1100+26+-40.0+-4.6+750+170201/100155"
-    # simnum = "639173270515"
-    
-    # ProcessARQWeather(msg_test,simnum)
-    # print checkNameOfNumber('639111111')
+    # except:
+    #     print ">> Unknown Error", msg.data
+    #     return False
 
 def getArguments():
     parser = argparse.ArgumentParser(description="Run SMS parser\n smsparser [-options]")
@@ -924,7 +921,7 @@ def getArguments():
     parser.add_argument("-s", "--status", help="inbox/outbox status",type=int)
     parser.add_argument("-l", "--messagelimit", help="maximum number of messages to process at a time",type=int)
     parser.add_argument("-r", "--runtest", help="run test function",action="store_true")
-    
+    parser.add_argument("-b", "--bypasslock", help="bypass lock script function",action="store_true")
     
     try:
         args = parser.parse_args()
@@ -942,15 +939,16 @@ def getArguments():
 
 
 def test():
-    sms = "EQInfo1: 08Feb2017 09:35AM Ms=2.2 D=23km 16.04N, 119.95E or 13km S15W of Alaminos City(Pangasinan) <NMD>"
+    sms = "GATEWAY*RSSI,PEP,PEPTA,70,12.50,PEPSB,77,0.00,PEPTC,97*170201120506"
     smsItem = gsmio.sms('', '', sms, '')
-    ProcessEarthquake(smsItem)
-   
+    # ProcessEarthquake(smsItem)
+    ProcessGatewayMsg(smsItem)
 
 def main():
-    lockscript.get_lock('smsparser')
-
     args = getArguments()
+
+    if not args.bypasslock:
+        lockscript.get_lock('smsparser')
 
     # dbio.createTable("runtimelog","runtime")
     # logRuntimeStatus("procfromdb","startup")
