@@ -82,7 +82,7 @@ def onethree_val_writer(rainfall):
     
     return one,three
         
-def summary_writer(r,datasource,twoyrmax,halfmax,rainfall):
+def summary_writer(r,datasource,twoyrmax,halfmax,rainfall,end):
 
     ##DESCRIPTION:
     ##inserts data to summary
@@ -105,6 +105,13 @@ def summary_writer(r,datasource,twoyrmax,halfmax,rainfall):
     if one>=halfmax or three>=twoyrmax:
         ralert='r1'
         advisory='Start/Continue monitoring'
+        engine = create_engine('mysql://'+q.Userdb+':'+q.Passdb+'@'+q.Hostdb+':3306/'+q.Namedb)
+        if one >= halfmax:
+            df = pd.DataFrame({'ts': [end], 'site_id': [r], 'rain_source': [datasource], 'rain_alert': ['r1a'], 'cumulative': [one], 'threshold': [round(halfmax,2)]})
+            df.to_sql(name = 'rain_alerts', con = engine, if_exists = 'append', schema = q.Namedb, index = False)
+        if three>=twoyrmax:
+            df = pd.DataFrame({'ts': [end], 'site_id': [r], 'rain_source': [datasource], 'rain_alert': ['r1b'], 'cumulative': [three], 'threshold': [round(twoyrmax,2)]})
+            df.to_sql(name = 'rain_alerts', con = engine, if_exists = 'append', schema = q.Namedb, index = False)        
     #no data
     elif one==None or math.isnan(one):
         ralert='nd'
@@ -154,12 +161,12 @@ def RainfallAlert(siterainprops, end, s):
             #from rain_senslope, plots and alerts are processed
             rainfall = GetResampledData(rain_senslope, offsetstart, start, end)
             datasource = rain_senslope
-            summary = summary_writer(name,datasource,twoyrmax,halfmax,rainfall)
+            summary = summary_writer(name,datasource,twoyrmax,halfmax,rainfall,end)
                     
         else:
             #alerts are processed if senslope rain gauge data is updated
             datasource = rain_arq
-            summary = summary_writer(name,datasource,twoyrmax,halfmax,rainfall)
+            summary = summary_writer(name,datasource,twoyrmax,halfmax,rainfall,end)
 
     except:
         try:
@@ -167,13 +174,13 @@ def RainfallAlert(siterainprops, end, s):
             col = [RG1, RG2, RG3]
             rainfall, r = GetUnemptyOtherRGdata(col, offsetstart, start, end)
             datasource = r
-            summary = summary_writer(name,datasource,twoyrmax,halfmax,rainfall)
+            summary = summary_writer(name,datasource,twoyrmax,halfmax,rainfall,end)
         except:
             #if no data for all rain gauge
             rainfall = pd.DataFrame({'ts': [end], 'rain': [np.nan]})
             rainfall = rainfall.set_index('ts')
             datasource="No Alert! No ASTI/SENSLOPE Data"
-            summary = summary_writer(name,datasource,twoyrmax,halfmax,rainfall)
+            summary = summary_writer(name,datasource,twoyrmax,halfmax,rainfall,end)
             
     return summary
 
