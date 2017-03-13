@@ -56,6 +56,16 @@ def SensorAlertLst(df, lst):
     if sensor_alert not in lst:
         lst += [sensor_alert]
 
+def SensorTrigger(df):
+    sensor_tech = []
+    for i in df['site'].values:
+        col_df = df[df.site == i]
+        if len(col_df) == 1:
+            sensor_tech += ['%s (node %s)' %(i.upper(), df['id'].values[0])]
+        else:
+            sensor_tech += ['%s (nodes %s)' %(i.upper(), ','.join(df['id'].values))]
+    return ','.join(sensor_tech)
+
 def SitePublicAlert(PublicAlert, window):
     site = PublicAlert['site'].values[0]
     print site
@@ -206,7 +216,65 @@ def SitePublicAlert(PublicAlert, window):
         retriggerTS = []
         source = ''
         print 'Public Alert- A0'
+
+    #technical info for bulletin release
+    tech_info = []
+    retriggers = pd.DataFrame(retriggerTS)
+    #rainfall technical info
+    try:
+        rain_techTS = retriggers[retriggers.retrigger == 'r1']['timestamp'].values[0]
+        query = "SELECT * FROM senslopedb.rain_alerts where ts = '%s' and site_id = '%s'" %(rain_techTS, site)
+        rain_tech_df = q.GetDBDataFrame(query)
+        if 'r1a' in rain_tech_df['rain_alert'].values and 'r1b' in rain_tech_df['rain_alert'].values:
+            r1a = rain_tech_df[rain_tech_df.rain_alert == 'r1a']
+            r1b = rain_tech_df[rain_tech_df.rain_alert == 'r1b']
+            rain_tech = '1-day and 3-day cumulative rainfall (%s mm and %s mm) exceeded threshold (%s mm and %s mm)' %(r1a['cumulative'].values[0], r1b['cumulative'].values[0], r1a['threshold'].values[0], r1b['threshold'].values[0])
+        elif 'r1a' in rain_tech_df['rain_alert'].values:
+            r1a = rain_tech_df[rain_tech_df.rain_alert == 'r1a']
+            rain_tech = '1-day cumulative rainfall (%s mm) exceeded threshold (%s mm)' %(r1a['cumulative'].values[0], r1a['threshold'].values[0])
+        else:
+            r1b = rain_tech_df[rain_tech_df.rain_alert == 'r1b']
+            rain_tech = '3-day cumulative rainfall (%s mm) exceeded threshold (%s mm)' %(r1b['cumulative'].values[0], r1b['threshold'].values[0])
+        tech_info += [{'rain_tech': rain_tech}]
+    except:
+        pass
     
+    #surficial ground technical info
+    try:
+        ground_techTS = retriggers[(retriggers.retrigger == 'l2')|(retriggers.retrigger == 'l3')]['timestamp'].values[0]
+        query = "SELECT * FROM senslopedb.marker_alerts where ts = '%s' and site_code = '%s' and alert != 'l0'" %(ground_techTS, site)
+        ground_tech_df = q.GetDBDataFrame(query)
+        ground_tech = []
+        for i in set(ground_tech_df['marker_name'].values):
+            ground_tech += ['Crack %s: %s cm difference in %s hours' %(ground_tech_df['marker_name'].values[0], ground_tech_df['displacement'].values[0], np.round(ground_tech_df['time_delta'].values[0], 0))]
+        ground_tech = ','.join(ground_tech)
+        tech_info += [{'ground_tech': ground_tech}]
+    except:
+        pass
+
+    #subsurface technical info
+    try:
+        sensor_techTS = retriggers[(retriggers.retrigger == 'L2')|(retriggers.retrigger == 'L3')]['timestamp'].values[0]
+        query = "SELECT * FROM senslopedb.node_level_alert where timestamp = '%s' and site like '%s'" %(sensor_techTS, site+'%')
+        sensor_tech_df = q.GetDBDataFrame(query)
+        both_trigger = sensor_tech_df[(sensor_tech_df.disp_alert == 1)&(sensor_tech_df.vel_alert == 1)]
+        disp_trigger = sensor_tech_df[(sensor_tech_df.disp_alert == 1)&(sensor_tech_df.vel_alert == 0)]
+        vel_trigger = sensor_tech_df[(sensor_tech_df.disp_alert == 0)&(sensor_tech_df.vel_alert == 1)]
+        sensor_tech = []
+        if len(both_trigger) != 0:
+            dispvel_tech = SensorTrigger(both_trigger)
+            sensor_tech += ['%s exceeded displacement and velocity threshold' %(dispvel_tech)]
+        if len(disp_trigger) != 0:
+            disp_tech = SensorTrigger(disp_trigger)
+            sensor_tech += ['%s exceeded displacement threshold' %(disp_tech)]
+        if len(vel_trigger) != 0:
+            vel_tech = SensorTrigger(vel_trigger)
+            sensor_tech += ['%s exceeded velocity threshold' %(vel_tech)]
+        sensor_tech = ';'.join(sensor_tech)
+        tech_info += [{'sensor_tech': sensor_tech}]
+    except:
+        pass
+
     # latest column alert within 3hrs
     sensor_site = site + '%'
     if site == 'msl':
@@ -585,9 +653,9 @@ def SitePublicAlert(PublicAlert, window):
     
     nonND_alert = site_alert.loc[(site_alert.source != 'public')&(site_alert.source != 'internal')].dropna()
     if len(nonND_alert) != 0:
-        PublicAlert.loc[alert_index] = [pd.to_datetime(str(nonND_alert.sort('updateTS', ascending = False)['updateTS'].values[0])), PublicAlert['site'].values[0], 'public', public_alert, window.end, alert_source, internal_alert, validity, sensor_alert, rain_alert, ground_alert, retriggerTS]
+        PublicAlert.loc[alert_index] = [pd.to_datetime(str(nonND_alert.sort('updateTS', ascending = False)['updateTS'].values[0])), PublicAlert['site'].values[0], 'public', public_alert, window.end, alert_source, internal_alert, validity, sensor_alert, rain_alert, ground_alert, retriggerTS, tech_info]
     else:
-        PublicAlert.loc[alert_index] = [window.end, PublicAlert['site'].values[0], 'public', public_alert, window.end, alert_source, internal_alert, validity, sensor_alert, rain_alert, ground_alert, retriggerTS]
+        PublicAlert.loc[alert_index] = [window.end, PublicAlert['site'].values[0], 'public', public_alert, window.end, alert_source, internal_alert, validity, sensor_alert, rain_alert, ground_alert, retriggerTS, tech_info]
         
     InternalAlert = PublicAlert.loc[PublicAlert.site == site][['timestamp', 'site', 'internal_alert', 'updateTS']]
     InternalAlert['source'] = 'internal'
@@ -680,12 +748,12 @@ def main():
     window,config = rtw.getwindow()
     
     props = q.GetRainProps('rain_props')
-    PublicAlert = pd.DataFrame({'timestamp': [window.end]*len(props), 'site': props['name'].values, 'source': ['public']*len(props), 'alert': [np.nan]*len(props), 'updateTS': [window.end]*len(props), 'palert_source': [np.nan]*len(props), 'internal_alert': [np.nan]*len(props), 'validity': [np.nan]*len(props), 'sensor_alert': [[]]*len(props), 'rain_alert': [np.nan]*len(props), 'ground_alert': [np.nan]*len(props), 'retriggerTS': [[]]*len(props)})
-    PublicAlert = PublicAlert[['timestamp', 'site', 'source', 'alert', 'updateTS', 'palert_source', 'internal_alert', 'validity', 'sensor_alert', 'rain_alert', 'ground_alert', 'retriggerTS']]
+    PublicAlert = pd.DataFrame({'timestamp': [window.end]*len(props), 'site': props['name'].values, 'source': ['public']*len(props), 'alert': [np.nan]*len(props), 'updateTS': [window.end]*len(props), 'palert_source': [np.nan]*len(props), 'internal_alert': [np.nan]*len(props), 'validity': [np.nan]*len(props), 'sensor_alert': [[]]*len(props), 'rain_alert': [np.nan]*len(props), 'ground_alert': [np.nan]*len(props), 'retriggerTS': [[]]*len(props), 'tech_info': [[]]*len(props)})
+    PublicAlert = PublicAlert[['timestamp', 'site', 'source', 'alert', 'updateTS', 'palert_source', 'internal_alert', 'validity', 'sensor_alert', 'rain_alert', 'ground_alert', 'retriggerTS', 'tech_info']]
 
     Site_Public_Alert = PublicAlert.groupby('site')
     PublicAlert = Site_Public_Alert.apply(SitePublicAlert, window=window)
-    PublicAlert = PublicAlert[['timestamp', 'site', 'alert', 'palert_source', 'internal_alert', 'validity', 'sensor_alert', 'rain_alert', 'ground_alert', 'retriggerTS']]
+    PublicAlert = PublicAlert[['timestamp', 'site', 'alert', 'palert_source', 'internal_alert', 'validity', 'sensor_alert', 'rain_alert', 'ground_alert', 'retriggerTS', 'tech_info']]
     PublicAlert = PublicAlert.rename(columns = {'palert_source': 'source'})
     PublicAlert = PublicAlert.sort_values(['alert', 'site'], ascending = [False, True])
     
