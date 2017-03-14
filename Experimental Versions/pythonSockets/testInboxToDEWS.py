@@ -11,5 +11,7 @@ port = 5050
 # host = "www.dewslandslide.com"
 host = "sandbox"
 
-# Send 100 messages from smsinbox to the websocket server at a time
+# Send ALL messages from smsinbox to the websocket server
+# 	messages with web_flag = 'W' and read_status = 'READ-SUCCESS'
+# 	Other inbox messages are ignored
 dsll.sendAllSmsInboxToDEWS(host, port)

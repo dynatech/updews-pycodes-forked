@@ -1,6 +1,7 @@
 import os
 from datetime import datetime, timedelta, date, time
 import numpy as np
+import pandas as pd
 
 import querySenslopeDb as q
 import rainconfig as cfg
@@ -11,7 +12,7 @@ import RainfallPlot as RP
 ##      TIME FUNCTIONS                                    ##    
 ############################################################
 
-def get_rt_window(rt_window_length,roll_window_length):
+def get_rt_window(rt_window_length,roll_window_length,end=datetime.now()):
     
     ##INPUT:
     ##rt_window_length; float; length of real-time monitoring window in days
@@ -20,7 +21,7 @@ def get_rt_window(rt_window_length,roll_window_length):
     ##end, start, offsetstart; datetimes; dates for the end, start and offset-start of the real-time monitoring window 
 
     ##set current time as endpoint of the interval
-    end=datetime.now()
+    end = pd.to_datetime(end)
 
     ##round down current time to the nearest HH:00 or HH:30 time value
     end_Year=end.year
@@ -42,7 +43,7 @@ def get_rt_window(rt_window_length,roll_window_length):
 
 ################################     MAIN     ################################
 
-def main(site='', Print=True):
+def main(site='', Print=True, end=datetime.now()):
 
     output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
     
@@ -54,7 +55,7 @@ def main(site='', Print=True):
             os.makedirs(output_path+s.io.RainfallPlotsPath)
 
     #1. setting monitoring window
-    end, start, offsetstart = get_rt_window(s.io.rt_window_length,s.io.roll_window_length)
+    end, start, offsetstart = get_rt_window(s.io.rt_window_length,s.io.roll_window_length, end=end)
     tsn=end.strftime("%Y-%m-%d_%H-%M-%S")
     
     #rainprops containing noah id and threshold
@@ -89,6 +90,6 @@ def main(site='', Print=True):
 
 if __name__ == "__main__":
     start_time = datetime.now()
-    json = main(Print=False)
+    main()
     print "runtime = ", datetime.now()-start_time
 

@@ -410,7 +410,7 @@ def sendBatchAckGSMtoDEWS(host="www.dewslandslide.com", port=5050, acktype="succ
 
     #Return if no messages were found
     if len(allmsgs) == 0:
-        print "No smsoutbox messages for gsm failed acknowledgement"
+        print "No smsoutbox messages for gsm %s acknowledgement" % (acktype)
         return 1
 
     try:     
@@ -457,6 +457,9 @@ def sendAllAckGSMToDEWS(host="www.dewslandslide.com", port=5050, batching_size=1
     while (status == 0):
         status_gsm_success_ack = sendBatchAckGSMtoDEWS(host, port, "success", batching_size)
         status_gsm_fail_ack = sendBatchAckGSMtoDEWS(host, port, "fail", batching_size)
+    
+        print "success ack: %s, fail ack: %s" % (status_gsm_success_ack, status_gsm_fail_ack)        
+        
         status = status_gsm_success_ack and status_gsm_fail_ack
 
     if (status == 1):
