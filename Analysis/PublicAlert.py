@@ -60,10 +60,11 @@ def SensorTrigger(df):
     sensor_tech = []
     for i in df['site'].values:
         col_df = df[df.site == i]
+        col_df['id'] = col_df['id'].apply(lambda x: str(x))
         if len(col_df) == 1:
-            sensor_tech += ['%s (node %s)' %(i.upper(), df['id'].values[0])]
+            sensor_tech += ['%s (node %s)' %(i.upper(), col_df['id'].values[0])]
         else:
-            sensor_tech += ['%s (nodes %s)' %(i.upper(), ','.join(df['id'].values))]
+            sensor_tech += ['%s (nodes %s)' %(i.upper(), ','.join(col_df['id'].values))]
     return ','.join(sensor_tech)
 
 def SitePublicAlert(PublicAlert, window):
@@ -255,11 +256,14 @@ def SitePublicAlert(PublicAlert, window):
     #subsurface technical info
     try:
         sensor_techTS = retriggers[(retriggers.retrigger == 'L2')|(retriggers.retrigger == 'L3')]['timestamp'].values[0]
-        query = "SELECT * FROM senslopedb.node_level_alert where timestamp = '%s' and site like '%s'" %(sensor_techTS, site+'%')
+        query = "SELECT * FROM senslopedb.node_level_alert where timestamp >= '%s' and timestamp <= '%s' and site like '%s' order by timestamp desc" %(pd.to_datetime(sensor_techTS)-timedelta(hours=2), sensor_techTS, site+'%')
         sensor_tech_df = q.GetDBDataFrame(query)
         both_trigger = sensor_tech_df[(sensor_tech_df.disp_alert == 1)&(sensor_tech_df.vel_alert == 1)]
+        both_trigger = both_trigger.drop_duplicates(['site', 'id'])
         disp_trigger = sensor_tech_df[(sensor_tech_df.disp_alert == 1)&(sensor_tech_df.vel_alert == 0)]
+        disp_trigger = disp_trigger.drop_duplicates(['site', 'id'])
         vel_trigger = sensor_tech_df[(sensor_tech_df.disp_alert == 0)&(sensor_tech_df.vel_alert == 1)]
+        vel_trigger = vel_trigger.drop_duplicates(['site', 'id'])
         sensor_tech = []
         if len(both_trigger) != 0:
             dispvel_tech = SensorTrigger(both_trigger)
