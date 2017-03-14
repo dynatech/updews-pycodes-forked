@@ -124,14 +124,16 @@ def getGsmId(number):
         return -1
 
     if num_prefix in smart_prefixes:
-        return 'SMART'
+        return 3
+        # return 'SMART'
     elif num_prefix in globe_prefixes:
-        return 'GLOBE'
+        return 2
+        # return 'GLOBE'
     else:
         print '>> Prefix', num_prefix, 'cannot be sent'
         return -1
 
-def WriteOutboxMessageToDb(table='',message='',recepients='',send_status='UNSENT'):
+def WriteOutboxMessageToDb(table='users',message='',recepients=''):
     if table == '':
         print "Error: No table indicated"
         return
@@ -142,18 +144,25 @@ def WriteOutboxMessageToDb(table='',message='',recepients='',send_status='UNSENT
 
     last_insert = dbio.commitToDb(query,'WriteOutboxMessageToDb',last_insert=True)[0][0]
 
-    print 'Last insert:', last_insert 
+    print 'Last insert:', last_insert
 
+    logger_mobile = getLoggerContacts()
+
+    query = "INSERT INTO smsoutbox_%s_status (outbox_id,mobile_id,gsm_id) VALUES " % (table[:-1])
+            
     for r in recepients.split(","):
         gsm_id = getGsmId(r)
         if gsm_id == -1:
             continue
         else:
-            query = "INSERT INTO smsoutbox_%s_status (timestamp_written,recepients,sms_msg,send_status,gsm_id) VALUES "
             tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
-            query += "('%s','%s','%s','%s','%s')" % (tsw,r,message,send_status,gsm_id)
+            print last_insert, logger_mobile[r], tsw, gsm_id
+            query += "(%d,%d,%d)," % (last_insert,logger_mobile[r],gsm_id)
             # print query
-            dbio.commitToDb(query, "WriteOutboxMessageToDb", 'gsm')
+    
+    query = query[:-1]
+    print query        
+    dbio.commitToDb(query, "WriteOutboxMessageToDb")
     
 def CheckAlertMessages():
     c = cfg.config()
@@ -181,54 +190,59 @@ def getAllowedPrefixes(network):
 
     return extended_prefix_list
     
-def SendMessagesFromDb(network,limit=10):
+def SendMessagesFromDb(table='users',send_status=0,gsm_id=0,limit=10):
     c = cfg.config()
-    if not c.mode.sendmsg:
-        return
-    allmsgs = dbio.getAllOutboxSmsFromDb("UNSENT",network,limit)
+    # if not c.mode.sendmsg:
+    #     return
+    allmsgs = dbio.getAllOutboxSmsFromDb(table,send_status,gsm_id,limit)
     if len(allmsgs) <= 0:
         # print ">> No messages in outbox"
         return
     
     print ">> Sending messagess from db"
+
+    for m in allmsgs:
+        print m
         
-    msglist = []
-    for item in allmsgs:
-        smsItem = gsmio.sms(item[0], str(item[2]), str(item[3]), str(item[1]))
-        msglist.append(smsItem)
-    allmsgs = msglist
+    # msglist = []
+    # for item in allmsgs:
+    #     smsItem = gsmio.sms(item[0], str(item[2]), str(item[3]), str(item[1]))
+    #     msglist.append(smsItem)
+    # allmsgs = msglist
+    
+    # success_list = []
+    # fail_list = []
 
-    send_success_list = []
-    fail_success_list = []
+    # allowed_prefixes = getAllowedPrefixes(network)
+    # # cycle through all messages
+    # for msg in allmsgs:
+    #     # get recepient numbers in list
+    #     recepient_list = msg.simnum.split(",")
+    #     # for num in recepient_list:
+    #     try:
+    #         num_prefix = re.match("^ *((0)|(63))9\d\d",num).group()
+    #         num_prefix = num_prefix.strip()
+    #     except:
+    #         continue
+    #         # check if recepient number in allowed prefixed list    
+    #     if num_prefix in allowed_prefixes:
+    #         ret = gsmio.sendMsg(msg.data,num.strip(),simulate=True)
 
-    allowed_prefixes = getAllowedPrefixes(network)
-    # cycle through all messages
-    for msg in allmsgs:
-        # get recepient numbers in list
-        recepient_list = msg.simnum.split(",")
-        for num in recepient_list:
-            try:
-                num_prefix = re.match("^ *((0)|(63))9\d\d",num).group()
-                num_prefix = num_prefix.strip()
-            except:
-                continue
-            # check if recepient number in allowed prefixed list    
-            if num_prefix in allowed_prefixes:
-                ret = gsmio.sendMsg(msg.data,num.strip())
-                if ret == 0:
-                    send_success_list.append(msg.num)
-                else:
-                    fail_success_list.append(msg.num)
-            else:
-                print "Number not in prefix list", num_prefix
+    #         if ret:
+    #             send_stat = 1
+    #             send_status.append((msg.num,0))
+    #         else:
+    #             send_status.append(msg.num)
+    #     else:
+    #         print "Number not in prefix list", num_prefix
 
-    dbio.setSendStatus("FAIL",fail_success_list)
-    dbio.setSendStatus("SENT",send_success_list)
+    # dbio.setSendStatus("FAIL",fail_success_list)
+    # dbio.setSendStatus("SENT",send_success_list)
 
     #Get all outbox messages with send_status "SENT" and attempt to send
     #   chatterbox acknowledgements
     #   send_status will be changed to "SENT-WSS" if successful
-    dsll.sendAllAckSentGSMtoDEWS()    
+    # dsll.sendAllAckSentGSMtoDEWS()    
     
 def getSensorNumbers():
     querys = "SELECT sim_num from site_column_sim_nums"
@@ -242,12 +256,12 @@ def getSensorNumbers():
 def getLoggerContacts():
 
     query = """ 
-    SELECT t1.contact_id,t1.sim_num 
-    FROM logger_contacts AS t1 
-    LEFT OUTER JOIN logger_contacts AS t2 
+    SELECT t1.mobile_id,t1.sim_num 
+    FROM logger_mobile AS t1 
+    LEFT OUTER JOIN logger_mobile AS t2 
         ON t1.sim_num = t2.sim_num 
             AND (t1.date_activated < t2.date_activated 
-            OR (t1.date_activated = t2.date_activated AND t1.contact_id < t2.contact_id)) 
+            OR (t1.date_activated = t2.date_activated AND t1.mobile_id < t2.mobile_id)) 
     WHERE t2.sim_num IS NULL and t1.sim_num is not null"""
 
     # print querys
@@ -313,19 +327,22 @@ def simulateGSM(network):
 
     # print smsinbox_sms
 
-    logger_contacts = getLoggerContacts()
+    logger_mobile = getLoggerContacts()
+    # print logger_mobile
 
-    gsm_ids = getGsmIDs()
-    gsm_id = gsm_ids[network]
+    # gsm_ids = getGsmIDs()
+    # gsm_id = 1gsm_ids[network]
+    gsm_id = 1
     
-    query = "insert into smsinbox_loggers (ts_received,contact_id,sms_msg,read_status,gsm_id) values "
+    query = "insert into smsinbox_loggers (ts_received,mobile_id,sms_msg,read_status,gsm_id) values "
 
+    print smsinbox_sms
     sms_id_ok = []
     sms_id_unk = []
     for m in smsinbox_sms:
         ts_received = m[1]
         try:
-            contact_id = logger_contacts[m[2]]
+            mobile_id = logger_mobile[m[2]]
         except KeyError:
             print 'Unknown number', m[2]
             sms_id_unk.append(m[0])
@@ -333,20 +350,20 @@ def simulateGSM(network):
         sms_msg = m[3]
         read_status = 0
         
-        query += "('%s',%d,'%s',%d,%d)," % (ts_received,contact_id,sms_msg,read_status,gsm_id)
+        query += "('%s',%d,'%s',%d,%d)," % (ts_received,mobile_id,sms_msg,read_status,gsm_id)
         sms_id_ok.append(m[0])
 
     query = query[:-1]
     # print query
-
-    dbio.commitToDb(query,'simulateGSM')
-
+    
     if len(sms_id_ok)>0:
+        dbio.commitToDb(query,'simulateGSM')
         sms_id_ok = str(sms_id_ok).replace("L","")[1:-1]
         query = "update smsinbox set web_flag = '0' where sms_id in (%s);" % (sms_id_ok)
         dbio.commitToDb(query,'simulateGSM')
 
     if len(sms_id_unk)>0:
+        print sms_id_unk
         sms_id_unk = str(sms_id_unk).replace("L","")[1:-1]
         query = "update smsinbox set web_flag = '-1' where sms_id in (%s);" % (sms_id_unk)
         dbio.commitToDb(query,'simulateGSM')

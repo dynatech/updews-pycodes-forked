@@ -42,7 +42,7 @@ def checkNameOfNumber(number):
     while True:
         try:
             query = """select logger_name from loggers where 
-                logger_id = (select logger_id from logger_contacts 
+                logger_id = (select logger_id from logger_mobile 
                 where sim_num = '%s' order by date_activated desc limit 1) """ % (number)
                 
             a = cur.execute(query)
@@ -939,10 +939,12 @@ def getArguments():
 
 
 def test():
-    sms = "GATEWAY*RSSI,PEP,PEPTA,70,12.50,PEPSB,77,0.00,PEPTC,97*170201120506"
-    smsItem = gsmio.sms('', '', sms, '')
-    # ProcessEarthquake(smsItem)
-    ProcessGatewayMsg(smsItem)
+    # sms = "GATEWAY*RSSI,PEP,PEPTA,70,12.50,PEPSB,77,0.00,PEPTC,97*170201120506"
+    # smsItem = gsmio.sms('', '', sms, '')
+    # # ProcessEarthquake(smsItem)
+    # ProcessGatewayMsg(smsItem)
+    # server.WriteOutboxMessageToDb("loggers","test kjasdhfkjdsh","639499942319,639176763531,639499942313,639175940773")
+    server.SendMessagesFromDb(table='loggers',send_status=5,gsm_id=3)
 
 def main():
     args = getArguments()

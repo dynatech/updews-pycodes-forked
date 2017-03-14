@@ -127,7 +127,7 @@ def getAllSmsFromDb(host='local',read_status=0,table='loggers',limit=200):
     db, cur = SenslopeDBConnect(host)
 
     if table == 'loggers':
-        tbl_contacts = 'logger_contacts'
+        tbl_contacts = 'logger_mobile'
     else:
         print 'Error: unknown table', table
         return
@@ -136,13 +136,13 @@ def getAllSmsFromDb(host='local',read_status=0,table='loggers',limit=200):
         try:
             query = """select inbox_id,ts_received,sim_num,sms_msg from
                         (
-                        select inbox_id,ts_received,contact_id,sms_msg from smsinbox_%s 
+                        select inbox_id,ts_received,mobile_id,sms_msg from smsinbox_%s 
                         where read_status = %d limit %d
                         ) as t1
                         inner join (
-                        select contact_id, sim_num from %s
+                        select mobile_id, sim_num from %s
                         ) as t2
-                        on t1.contact_id = t2.contact_id""" % (table,read_status,limit,tbl_contacts)
+                        on t1.mobile_id = t2.mobile_id""" % (table,read_status,limit,tbl_contacts)
         
             a = cur.execute(query)
             out = []
@@ -154,17 +154,19 @@ def getAllSmsFromDb(host='local',read_status=0,table='loggers',limit=200):
             print '9.',
             time.sleep(20)
             
-def getAllOutboxSmsFromDb(send_status,network,limit=10):
-    # db, cur = SenslopeDBConnect('gsm')
-    
+def getAllOutboxSmsFromDb(table='users',send_status=0,gsm_id=0,limit=10):
     while True:
         try:
-            db, cur = SenslopeDBConnect('gsm')
-            query = """select sms_id, timestamp_written, recepients, sms_msg from %s.smsoutbox
-                where send_status like '%s%s%s' and gsm_id = '%s' limit %d""" % (gsmdbinstance.name,'%',send_status,'%',network,limit)
+            db, cur = SenslopeDBConnect()
+            query = """select t1.stat_id,t1.outbox_id,t1.mobile_id,t1.gsm_id from smsoutbox_%s_status as t1
+                        inner join (select * from smsoutbox_%s) as t2
+                        on t1.outbox_id = t2.outbox_id
+                        where t1.send_status < %d
+                        and t1.gsm_id = %d
+                        limit %d """ % (table[:-1],table,send_status,gsm_id,limit)
                 # where send_status = '%s' and gsm_id = '%s' limit %d""" % (gsmdbinstance.name,send_status,network,limit)
                 
-            # print query
+            print query
             a = cur.execute(query)
             out = []
             if a:
@@ -311,11 +313,11 @@ def commitToDb(query, identifier, last_insert=False, instance='local'):
         print '>> Error: Writing to database', identifier
     except MySQLdb.IntegrityError:
         print '>> Warning: Duplicate entry detected', identifier
-    except:
-        print '>> Unexpected error in writing to database query', query, 'from', identifier
-    finally:
-        db.close()
-        return b
+    # except:
+    #     print '>> Unexpected error in writing to database query', query[0:100], 'from', identifier
+    # finally:
+    #     db.close()
+    #     return b
 
 def querydatabase(query, identifier, instance='local'):
     db, cur = SenslopeDBConnect(instance)
@@ -406,7 +408,7 @@ def test():
     # createTsmSensorTables("backup")
     # createLoggerTables("piezo","sandbox")
 
-    print 
+    # print 
     return
 
 if __name__ == "__main__":

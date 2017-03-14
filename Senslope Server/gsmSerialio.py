@@ -6,6 +6,7 @@ from messaging.sms import SmsDeliver as smsdeliver
 from messaging.sms import SmsSubmit as smssubmit
 import cfgfileio as cfg
 import argparse
+from random import random
 
 if cfg.config().mode.script_mode == 'gsmserver':
     import RPi.GPIO as GPIO
@@ -114,8 +115,8 @@ def gsmcmd(cmd):
     except serial.SerialException:
         print "NO SERIAL COMMUNICATION (gsmcmd)"
         # RunSenslopeServer(gsm_network)
-        
-def sendMsg(msg, number):
+
+def sendMsg(msg, number, simulate=False):
     """
     Sends a command 'cmd' to GSM Module
     Returns the reply of the module
@@ -123,6 +124,10 @@ def sendMsg(msg, number):
     """
     # under development
     # return
+    # simulate sending success
+    # False => sucess
+    if simulate:
+        return random() < 0.15
 
     try:
         pdulist = smssubmit(number,msg).to_pdu()
