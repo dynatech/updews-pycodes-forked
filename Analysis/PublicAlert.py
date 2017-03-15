@@ -37,7 +37,10 @@ def alert_toDB(df, table_name, window, source):
     
     query = "SELECT * FROM senslopedb.%s WHERE site = '%s' AND source = '%s' AND updateTS <= '%s' ORDER BY timestamp DESC LIMIT 1" %(table_name, df.site.values[0], source, window.end)
     
-    df2 = q.GetDBDataFrame(query)
+    try:
+        df2 = q.GetDBDataFrame(query)
+    except:
+        df2 = pd.DataFrame()        
     
     if len(df2) == 0 or df2['alert'].values[0] != df['alert'].values[0]:
         engine = create_engine('mysql://'+q.Userdb+':'+q.Passdb+'@'+q.Hostdb+':3306/'+q.Namedb)
