@@ -15,10 +15,10 @@ del path
 import SomsRangeFilter 
 import ConvertSomsRaw as CSR
     
-#site = "mngsa"
-#fdate = "2016-12-28"
-#tdate = "2016-12-29"
-#mode = '1'
+#site = "laysa"
+#fdate = "2016-01-28"
+#tdate = "2017-12-29"
+#mode = '0'
 
 site = sys.argv[1]
 fdate = sys.argv[2]
