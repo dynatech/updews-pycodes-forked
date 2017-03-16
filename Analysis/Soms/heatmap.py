@@ -96,7 +96,7 @@ def heatmap(col, t_timestamp, t_win = '1d'):
            return 'v1'                     
 				
 	
-#site = sys.argv[1]
-#tdate = sys.argv[2]
-#days = sys.argv[3]
-#heatmap(site, tdate, t_win = days)
+site = sys.argv[1]
+tdate = sys.argv[2]
+days = sys.argv[3]
+heatmap(site, tdate, t_win = days)
