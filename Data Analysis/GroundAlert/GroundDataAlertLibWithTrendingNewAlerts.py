@@ -153,7 +153,7 @@ def uptoDB_marker_alerts(df,df2):
     df3 = df3.set_index('ts')
     
     engine=create_engine('mysql://'+Userdb+':'+Passdb+'@'+Hostdb+':3306/'+Namedb)
-    df3.to_sql(name = 'marker_alerts_new', con = engine, if_exists = 'append', schema = Namedb, index = True)
+    df3.to_sql(name = 'marker_alerts', con = engine, if_exists = 'append', schema = Namedb, index = True)
 
 
 
@@ -256,9 +256,7 @@ def crack_eval(df,out_folder,end):
     except:
         abs_disp = None
         time_delta = None
-        
-    
-    print crack_alert
+            
     out_df['crack_alerts'] = crack_alert
     out_df['displacement'] = abs_disp
     out_df['time_delta'] = time_delta
@@ -282,11 +280,10 @@ def site_eval(df):
     else:
         site_alert = 'nd'
     
-    print crack_alerts
     #Determine which crack has an l2 or l3 alert
     mask = np.logical_or(np.logical_or(crack_alerts == 'l3', crack_alerts == 'l2'),crack_alerts == 'l0t')
     cracks_to_check = df.crack_id.values[mask]
-    print cracks_to_check
+
     return pd.Series([site_alert,', '.join(list(cracks_to_check))], index = ['site_alert','cracks_to_check'])
 
 def PlotSite(df,tsn,print_out_path):
@@ -449,10 +446,8 @@ def check_trending(df,out_folder,plot = False):
 
         tsn = pd.to_datetime(df.timestamp.values[-1]).strftime("%Y-%m-%d_%H-%M-%S")
         out_filename = out_folder + '{} {} {}'.format(tsn,str(df.site_id.values[0]),str(df.crack_id.values[0]))
-        print out_filename        
         plt.savefig(out_filename,facecolor='w', edgecolor='w',orientation='landscape',mode='w',bbox_inches = 'tight')
         
-        print cur_a, a_t_up, a_t_down
     if (cur_a <= a_t_up and cur_a >= a_t_down):
         #Reject alert if v and a have opposite signs
         if v_n[-1]*a_n[-1] >= 0:
@@ -472,7 +467,7 @@ def GetPreviousAlert(end):
 
 def GetPreviousAlertNewDB(end):
     try:
-        query = 'SELECT * FROM senslopedb.marker_alerts_new WHERE timestamp = "{}"'.format(end)
+        query = 'SELECT * FROM senslopedb.marker_alerts WHERE timestamp = "{}"'.format(end)
         df = GetDBDataFrame(query)
     except:
         df = pd.DataFrame(columns = ['ts','site_code','marker_name','displacement','time_delta','alert'])
@@ -495,13 +490,21 @@ def del_data(df):
     query = "DELETE FROM senslopedb.gndmeas_new_alerts WHERE timestamp = '{}' AND site = '{}'".format(pd.to_datetime(str(df.timestamp.values[0])),str(df.site.values[0]))
     cur.execute(query)
     db.commit()
-    db.close()
+
+    try:
+        query = "SELECT MAX(ma_id) FROM marker_alerts"
+        max_id = GetDBDataFrame(query)['MAX(ma_id)'].values[0]
+        query = "ALTER TABLE marker_alerts AUTO_INCREMENT = {}".format(max_id)
+        cur.execute(query)
+        db.commit()
+    except:
+        db.close()
 
 def del_new_db_data(df):
     #INPUT: Data frame of site and timestamp by groupby
     #Deletes the row at gndmeas_alerts table of [site] at time [end]            
     db, cur = SenslopeDBConnect(Namedb)
-    query = "DELETE FROM senslopedb.marker_alerts_new WHERE ts = '{}' AND site_code = '{}' AND marker_name = '{}'".format(pd.to_datetime(str(df.ts.values[0])),str(df.site_code.values[0]),str(df.marker_name.values[0]))
+    query = "DELETE FROM senslopedb.marker_alerts WHERE ts = '{}' AND site_code = '{}' AND marker_name = '{}'".format(pd.to_datetime(str(df.ts.values[0])),str(df.site_code.values[0]),str(df.marker_name.values[0]))
     cur.execute(query)
     db.commit()
     db.close()
@@ -510,7 +513,7 @@ def del_new_db_data(df):
 def GenerateGroundDataAlert(site=None,end=None):
     if site == None and end == None:
         site, end = sys.argv[1].lower()[:3],sys.argv[2].lower()    
-    print site,end
+
     start_time = datetime.now()
     #Monitoring output directory
     path2 = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -573,7 +576,7 @@ def GenerateGroundDataAlert(site=None,end=None):
     #### Set df for new db release
     new_db_release = crack_alerts[crack_alerts.crack_alerts != 'nd']
     new_db_release['ts'] = end    
-    new_db_release.columns = ['site_code','marker_name','alert','time_delta','displacement','ts']
+    new_db_release.columns = ['site_code','marker_name','alert','displacement','time_delta','ts']
     new_db_release.set_index(['ts'],inplace = True)
     #Step 5: Upload the results to the gndmeas_alerts database
     
@@ -592,7 +595,6 @@ def GenerateGroundDataAlert(site=None,end=None):
     
     df_for_db = ground_site_level[['timestamp','site','source','alert']]    
     df_for_db.dropna()
-    print df_for_db    
     
     site_DBdf = df_for_db.groupby('site')
     site_DBdf.apply(alert_toDB,end)    
@@ -609,7 +611,7 @@ def GenerateGroundDataAlert(site=None,end=None):
     site_data_to_plot.apply(PlotSite,tsn,print_out_path)
     
     end_time = datetime.now()
-#    print "time = ",end_time-start_time
+    print "time = ",end_time-start_time
 ################## #Stand by Functionalities
 
 #    if PrintGAlert:

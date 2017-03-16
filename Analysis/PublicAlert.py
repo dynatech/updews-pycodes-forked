@@ -37,7 +37,10 @@ def alert_toDB(df, table_name, window, source):
     
     query = "SELECT * FROM senslopedb.%s WHERE site = '%s' AND source = '%s' AND updateTS <= '%s' ORDER BY timestamp DESC LIMIT 1" %(table_name, df.site.values[0], source, window.end)
     
-    df2 = q.GetDBDataFrame(query)
+    try:
+        df2 = q.GetDBDataFrame(query)
+    except:
+        df2 = pd.DataFrame()        
     
     if len(df2) == 0 or df2['alert'].values[0] != df['alert'].values[0]:
         engine = create_engine('mysql://'+q.Userdb+':'+q.Passdb+'@'+q.Hostdb+':3306/'+q.Namedb)
@@ -60,10 +63,11 @@ def SensorTrigger(df):
     sensor_tech = []
     for i in df['site'].values:
         col_df = df[df.site == i]
+        col_df['id'] = col_df['id'].apply(lambda x: str(x))
         if len(col_df) == 1:
-            sensor_tech += ['%s (node %s)' %(i.upper(), df['id'].values[0])]
+            sensor_tech += ['%s (node %s)' %(i.upper(), col_df['id'].values[0])]
         else:
-            sensor_tech += ['%s (nodes %s)' %(i.upper(), ','.join(df['id'].values))]
+            sensor_tech += ['%s (nodes %s)' %(i.upper(), ','.join(col_df['id'].values))]
     return ','.join(sensor_tech)
 
 def SitePublicAlert(PublicAlert, window):
@@ -252,14 +256,33 @@ def SitePublicAlert(PublicAlert, window):
     except:
         pass
 
+    #earthquake technical info
+    try:
+        eq_techTS = retriggers[retriggers.retrigger == 'e1']['timestamp'].values[0]
+        query = "SELECT ea.site_id, ea.distance, eq.mag, eq.lat, eq.longi, eq.critdist, eq.province \
+            FROM earthquake_alerts as ea left join earthquake as eq on ea.eq_id = eq.e_id \
+            where site_id = '%s' and timestamp = '%s' order by eq_id desc limit 1" %(site, eq_techTS)
+        eq_tech_df = q.GetDBDataFrame(query)
+        eq_tech = [{'magnitude': np.round(eq_tech_df['mag'].values[0], 1)}, {'latitude': np.round(eq_tech_df['lat'].values[0], 2)}, {'longitude': np.round(eq_tech_df['longi'].values[0], 2)}]
+        if eq_tech_df['province'].values[0].lower() != 'null':
+            eq_tech += [{'info': str(np.round(eq_tech_df['distance'].values[0], 2)) + ' km away from earthquake at ' + eq_tech_df['province'].values[0].lower() + ' (inside critical radius of ' + str(np.round(eq_tech_df['critdist'].values[0], 2)) + ' km)'}]
+        else:
+            eq_tech += [{'info': str(np.round(eq_tech_df['distance'].values[0], 2)) + ' km away from earthquake epicenter (inside critical radius of ' + str(np.round(eq_tech_df['critdist'].values[0], 2)) + ' km)'}]
+        tech_info += [{'eq_tech': eq_tech}]
+    except:
+        pass
+
     #subsurface technical info
     try:
         sensor_techTS = retriggers[(retriggers.retrigger == 'L2')|(retriggers.retrigger == 'L3')]['timestamp'].values[0]
-        query = "SELECT * FROM senslopedb.node_level_alert where timestamp = '%s' and site like '%s'" %(sensor_techTS, site+'%')
+        query = "SELECT * FROM senslopedb.node_level_alert where timestamp >= '%s' and timestamp <= '%s' and site like '%s' order by timestamp desc" %(pd.to_datetime(sensor_techTS)-timedelta(hours=2), sensor_techTS, site+'%')
         sensor_tech_df = q.GetDBDataFrame(query)
         both_trigger = sensor_tech_df[(sensor_tech_df.disp_alert == 1)&(sensor_tech_df.vel_alert == 1)]
+        both_trigger = both_trigger.drop_duplicates(['site', 'id'])
         disp_trigger = sensor_tech_df[(sensor_tech_df.disp_alert == 1)&(sensor_tech_df.vel_alert == 0)]
+        disp_trigger = disp_trigger.drop_duplicates(['site', 'id'])
         vel_trigger = sensor_tech_df[(sensor_tech_df.disp_alert == 0)&(sensor_tech_df.vel_alert == 1)]
+        vel_trigger = vel_trigger.drop_duplicates(['site', 'id'])
         sensor_tech = []
         if len(both_trigger) != 0:
             dispvel_tech = SensorTrigger(both_trigger)

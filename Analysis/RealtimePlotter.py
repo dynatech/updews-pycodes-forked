@@ -29,6 +29,11 @@ def compute_depth(colpos_dfts):
     colpos_dfts['x'] = cumsum_df.x.values
     return np.round(colpos_dfts, 4)
 
+def adjust_depth(colpos_dfts, max_depth):
+    depth = max_depth - max(colpos_dfts['x'].values)
+    colpos_dfts['x'] = colpos_dfts['x'] + depth
+    return colpos_dfts
+
 def compute_colpos(window, config, monitoring_vel, num_nodes, seg_len, fixpoint=''):
     if fixpoint == '':
         column_fix = config.io.column_fix
@@ -59,6 +64,12 @@ def compute_colpos(window, config, monitoring_vel, num_nodes, seg_len, fixpoint=
     colposdf = colposdf.sort('id', ascending = True)
     colpos_dfts = colposdf.groupby('ts')
     colposdf = colpos_dfts.apply(compute_depth)
+    
+    if column_fix == 'bottom':
+        max_depth = max(colposdf['x'].values)
+        colposdfts = colposdf.groupby('ts')
+        colposdf = colposdfts.apply(adjust_depth, max_depth=max_depth)
+    
     colposdf['x'] = colposdf['x'].apply(lambda x: -x)
     
     return colposdf
