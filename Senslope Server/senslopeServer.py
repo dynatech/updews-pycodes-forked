@@ -253,16 +253,23 @@ def getSensorNumbers():
 
     return nums
 
-def getLoggerContacts():
+def getMobileSimNums(table):
 
-    query = """ 
-    SELECT t1.mobile_id,t1.sim_num 
-    FROM logger_mobile AS t1 
-    LEFT OUTER JOIN logger_mobile AS t2 
-        ON t1.sim_num = t2.sim_num 
-            AND (t1.date_activated < t2.date_activated 
-            OR (t1.date_activated = t2.date_activated AND t1.mobile_id < t2.mobile_id)) 
-    WHERE t2.sim_num IS NULL and t1.sim_num is not null"""
+    if table == 'loggers':
+        query = """ 
+        SELECT t1.mobile_id,t1.sim_num 
+        FROM logger_mobile AS t1 
+        LEFT OUTER JOIN logger_mobile AS t2 
+            ON t1.sim_num = t2.sim_num 
+                AND (t1.date_activated < t2.date_activated 
+                OR (t1.date_activated = t2.date_activated AND t1.mobile_id < t2.mobile_id)) 
+        WHERE t2.sim_num IS NULL and t1.sim_num is not null"""
+    elif table == 'users':
+        query = "select mobile_id,sim_num from user_mobile"
+    else:
+        print 'Error: table', table
+        sys.exit()
+
 
     # print querys
 
@@ -305,7 +312,7 @@ def deleteMessagesfromGSM():
     except ValueError:
         print '>> Error deleting messages'
 
-def simulateGSM(network):
+def simulateGSM(network='simulate'):
     print "Simulating GSM"
     
     db, cur = dbio.SenslopeDBConnect('sandbox')
@@ -314,7 +321,7 @@ def simulateGSM(network):
 
     try:
         query = """select sms_id, timestamp, sim_num, sms_msg from smsinbox
-            where web_flag != '0' and web_flag != '-1' limit 1000""" 
+            where web_flag not in ('0','-1') limit 1000"""
     
         a = cur.execute(query)
         out = []
@@ -327,50 +334,64 @@ def simulateGSM(network):
 
     # print smsinbox_sms
 
-    logger_mobile = getLoggerContacts()
+    logger_mobile_sim_nums = getMobileSimNums('loggers')
+    user_mobile_sim_nums = getMobileSimNums('users')
     # print logger_mobile
 
     # gsm_ids = getGsmIDs()
     # gsm_id = 1gsm_ids[network]
     gsm_id = 1
+    loggers_count = 0
+    users_count = 0
     
-    query = "insert into smsinbox_loggers (ts_received,mobile_id,sms_msg,read_status,gsm_id) values "
+    query_loggers = "insert into smsinbox_loggers (ts_received,mobile_id,sms_msg,read_status,gsm_id) values "
+    query_users = "insert into smsinbox_users (ts_received,mobile_id,sms_msg,read_status,gsm_id) values "
 
     print smsinbox_sms
     sms_id_ok = []
     sms_id_unk = []
     for m in smsinbox_sms:
         ts_received = m[1]
-        try:
-            mobile_id = logger_mobile[m[2]]
-        except KeyError:
+        sms_msg = m[3]
+        read_status = 0  
+
+        if m[2] in logger_mobile_sim_nums.keys():
+            query_loggers += "('%s',%d,'%s',%d,%d)," % (ts_received,logger_mobile_sim_nums[m[2]],sms_msg,read_status,gsm_id)
+            loggers_count += 1
+        elif m[2] in user_mobile_sim_nums.keys():
+            query_users += "('%s',%d,'%s',%d,%d)," % (ts_received,user_mobile_sim_nums[m[2]],sms_msg,read_status,gsm_id)
+            users_count += 1
+        else:
             print 'Unknown number', m[2]
             sms_id_unk.append(m[0])
             continue
-        sms_msg = m[3]
-        read_status = 0
         
-        query += "('%s',%d,'%s',%d,%d)," % (ts_received,mobile_id,sms_msg,read_status,gsm_id)
         sms_id_ok.append(m[0])
 
-    query = query[:-1]
+    query_loggers = query_loggers[:-1]
+    query_users = query_users[:-1]
+    
     # print query
     
     if len(sms_id_ok)>0:
-        dbio.commitToDb(query,'simulateGSM')
+        if loggers_count > 0:
+            dbio.commitToDb(query_loggers,'simulateGSM')
+        if users_count > 0:
+            dbio.commitToDb(query_users,'simulateGSM')
+        
         sms_id_ok = str(sms_id_ok).replace("L","")[1:-1]
         query = "update smsinbox set web_flag = '0' where sms_id in (%s);" % (sms_id_ok)
         dbio.commitToDb(query,'simulateGSM')
 
     if len(sms_id_unk)>0:
-        print sms_id_unk
+        # print sms_id_unk
         sms_id_unk = str(sms_id_unk).replace("L","")[1:-1]
         query = "update smsinbox set web_flag = '-1' where sms_id in (%s);" % (sms_id_unk)
         dbio.commitToDb(query,'simulateGSM')
     
     sys.exit()
         
-def RunSenslopeServer(network):
+def RunSenslopeServer(network='simulate',table='loggers'):
     minute_of_last_alert = dt.now().minute
     timetosend = 0
     lastAlertMsgSent = ''
@@ -443,6 +464,30 @@ def RunSenslopeServer(network):
             print '>> Error in parsing mesages: Error unknown'
             gsmio.resetGsm()
 
+def getArguments():
+    parser = argparse.ArgumentParser(description="Run SMS server [-options]")
+    parser.add_argument("-t", "--table", help="smsinbox table (loggers or users)")
+    parser.add_argument("-n", "--network", help="network name (smart/globe/simulate)")
+    # parser.add_argument("-g", "--gsm", help="gsm name")
+    # parser.add_argument("-s", "--status", help="inbox/outbox status",type=int)
+    # parser.add_argument("-l", "--messagelimit", help="maximum number of messages to process at a time",type=int)
+    # parser.add_argument("-r", "--runtest", help="run test function",action="store_true")
+    # parser.add_argument("-b", "--bypasslock", help="bypass lock script function",action="store_true")
+    
+    try:
+        args = parser.parse_args()
+
+        # if args.status == None:
+        #     args.status = 0
+        # if args.messagelimit == None:
+        #     args.messagelimit = 200
+        return args        
+    except IndexError:
+        print '>> Error in parsing arguments'
+        error = parser.format_help()
+        print error
+        sys.exit()
+
 def getGsmModules():
     ids = mc.get('gsmids')
     if ids == None:
@@ -458,7 +503,8 @@ def getGsmModules():
     return ids
 
 def main():
-    network = sys.argv[1].lower()
+    args = getArguments()
+    network = args.network
 
     gsm_ids = getGsmModules()
     print gsm_ids.keys()
