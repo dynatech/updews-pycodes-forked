@@ -114,7 +114,7 @@ def summary_writer(r,datasource,twoyrmax,halfmax,rainfall,end,write_alert):
         ralert='r0'
         advisory='---'
 
-    if (write_alert and end.time() in [time(3,30), time(7,30), time(11,30), time(16,30), time(20,30), time(23,30)]) or ralert == 'r1':
+    if (write_alert and end.time() in [time(3,30), time(7,30), time(11,30), time(15,30), time(19,30), time(23,30)]) or ralert == 'r1':
         engine = create_engine('mysql://'+q.Userdb+':'+q.Passdb+'@'+q.Hostdb+':3306/'+q.Namedb)
         if ralert == 'r0':
             df = pd.DataFrame({'ts': [end]*2, 'site_id': [r]*2, 'rain_source': [datasource]*2, 'rain_alert': ['r0a', 'r0b'], 'cumulative': [one, three], 'threshold': [round(halfmax,2), round(twoyrmax,2)]})
