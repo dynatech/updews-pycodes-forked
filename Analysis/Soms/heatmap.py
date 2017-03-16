@@ -96,3 +96,4 @@ def heatmap(col, t_timestamp, t_win = '1d'):
 		print dfjson
 				
 			
+heatmap('mngsa', '2016-03-03', t_win = '1d')
