@@ -129,4 +129,4 @@ site = sys.argv[1]
 fdate = sys.argv[2]
 
 
-getsomscaldata(column="", fdate="", tdate="", if_multi = False)
+getsomscaldata(column=site, fdate=fdate, tdate="", if_multi = False)
