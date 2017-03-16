@@ -317,6 +317,13 @@ def SitePublicAlert(PublicAlert, window):
     # latest rain alert within 4hrs
     try:
         rain_alert = site_alert.loc[(site_alert.source == 'rain') & (site_alert.updateTS >= window.end - timedelta(hours=4))]['alert'].values[0]
+        if public_PrevAlert != 'A0' and rain_alert == 'r0':
+            query = "SELECT * FROM senslopedb.rain_alerts where site_id = '%s' and ts <= '%s' order by ts desc limit 2" %(site, window.end)
+            rain_alert_df = q.GetDBDataFrame(query)
+            if rain_alert_df['cumulative'].values[0]/rain_alert_df['threshold'].values[0] > 0.75 or rain_alert_df['cumulative'].values[1]/rain_alert_df['threshold'].values[1] > 0.75:
+                extend_rain_alert = True
+            else:
+                extend_rain_alert = False
     except:
         rain_alert = 'nd'
     
@@ -370,7 +377,7 @@ def SitePublicAlert(PublicAlert, window):
             # both ground and sensor triggered
             if alert_source == 'both ground and sensor':
                 # with data
-                if ('L' in list_ground_alerts or len(nonNDsensor) != 0) and 'l' in list_ground_alerts:
+                if ('L' in list_ground_alerts or len(nonNDsensor) != 0) and 'l' in list_ground_alerts and not extend_rain_alert:
                     internal_alert = 'A0'
                     public_alert = 'A0'
                     alert_source = '-'
@@ -391,7 +398,7 @@ def SitePublicAlert(PublicAlert, window):
             # sensor triggered
             elif alert_source == 'sensor':
                 # with data
-                if 'L' in list_ground_alerts or len(nonNDsensor) != 0:
+                if 'L' in list_ground_alerts or len(nonNDsensor) != 0 and not extend_rain_alert:
                     internal_alert = 'A0'
                     public_alert = 'A0'
                     alert_source = '-'
@@ -412,7 +419,7 @@ def SitePublicAlert(PublicAlert, window):
             # ground triggered
             else:
                 # with data
-                if 'l' in list_ground_alerts:
+                if 'l' in list_ground_alerts and not extend_rain_alert:
                     internal_alert = 'A0'
                     public_alert = 'A0'
                     alert_source = '-'
@@ -496,7 +503,7 @@ def SitePublicAlert(PublicAlert, window):
             # both ground and sensor triggered
             if alert_source == 'both ground and sensor':
                 # with data
-                if ('L' in list_ground_alerts or len(nonNDsensor) != 0) and 'l' in list_ground_alerts:
+                if ('L' in list_ground_alerts or len(nonNDsensor) != 0) and 'l' in list_ground_alerts and not extend_rain_alert:
                     internal_alert = 'A0'
                     public_alert = 'A0'
                     alert_source = '-'
@@ -528,7 +535,7 @@ def SitePublicAlert(PublicAlert, window):
             # sensor triggered
             elif alert_source == 'sensor':
                 # with data
-                if 'L' in list_ground_alerts or len(nonNDsensor) != 0:
+                if 'L' in list_ground_alerts or len(nonNDsensor) != 0 and not extend_rain_alert:
                     internal_alert = 'A0'
                     public_alert = 'A0'
                     alert_source = '-'
@@ -549,7 +556,7 @@ def SitePublicAlert(PublicAlert, window):
             # ground triggered
             elif alert_source == 'ground':
                 # with data
-                if 'l' in list_ground_alerts:
+                if 'l' in list_ground_alerts and not extend_rain_alert:
                     internal_alert = 'A0'
                     public_alert = 'A0'
                     alert_source = '-'
@@ -596,7 +603,7 @@ def SitePublicAlert(PublicAlert, window):
         # end of A1 validity if with data with no significant mov't
         else:
             # with ground data
-            if 'L' in list_ground_alerts or 'l' in list_ground_alerts or len(nonNDsensor) != 0:
+            if 'L' in list_ground_alerts or 'l' in list_ground_alerts or len(nonNDsensor) != 0 and not extend_rain_alert:
                 # if nd rainfall alert                
                 if rain_alert == 'nd':
                     query = "SELECT * FROM senslopedb.site_level_alert WHERE site = '%s' AND source = 'rain' ORDER BY TIMESTAMP DESC LIMIT 2" %site

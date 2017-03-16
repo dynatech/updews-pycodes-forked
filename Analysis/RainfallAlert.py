@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import timedelta, time
 import pandas as pd
 import numpy as np
 import math
@@ -82,7 +82,7 @@ def onethree_val_writer(rainfall):
     
     return one,three
         
-def summary_writer(r,datasource,twoyrmax,halfmax,rainfall,end):
+def summary_writer(r,datasource,twoyrmax,halfmax,rainfall,end,write_alert):
 
     ##DESCRIPTION:
     ##inserts data to summary
@@ -105,13 +105,6 @@ def summary_writer(r,datasource,twoyrmax,halfmax,rainfall,end):
     if one>=halfmax or three>=twoyrmax:
         ralert='r1'
         advisory='Start/Continue monitoring'
-        engine = create_engine('mysql://'+q.Userdb+':'+q.Passdb+'@'+q.Hostdb+':3306/'+q.Namedb)
-        if one >= halfmax:
-            df = pd.DataFrame({'ts': [end], 'site_id': [r], 'rain_source': [datasource], 'rain_alert': ['r1a'], 'cumulative': [one], 'threshold': [round(halfmax,2)]})
-            df.to_sql(name = 'rain_alerts', con = engine, if_exists = 'append', schema = q.Namedb, index = False)
-        if three>=twoyrmax:
-            df = pd.DataFrame({'ts': [end], 'site_id': [r], 'rain_source': [datasource], 'rain_alert': ['r1b'], 'cumulative': [three], 'threshold': [round(twoyrmax,2)]})
-            df.to_sql(name = 'rain_alerts', con = engine, if_exists = 'append', schema = q.Namedb, index = False)        
     #no data
     elif one==None or math.isnan(one):
         ralert='nd'
@@ -120,6 +113,29 @@ def summary_writer(r,datasource,twoyrmax,halfmax,rainfall,end):
     else:
         ralert='r0'
         advisory='---'
+
+    if (write_alert and end.time() in [time(3,30), time(7,30), time(11,30), time(16,30), time(20,30), time(23,30)]) or ralert == 'r1':
+        engine = create_engine('mysql://'+q.Userdb+':'+q.Passdb+'@'+q.Hostdb+':3306/'+q.Namedb)
+        if ralert == 'r0':
+            df = pd.DataFrame({'ts': [end]*2, 'site_id': [r]*2, 'rain_source': [datasource]*2, 'rain_alert': ['r0a', 'r0b'], 'cumulative': [one, three], 'threshold': [round(halfmax,2), round(twoyrmax,2)]})
+            try:
+                df.to_sql(name = 'rain_alerts', con = engine, if_exists = 'append', schema = q.Namedb, index = False)
+            except:
+                pass
+        else:
+            if one >= halfmax:
+                df = pd.DataFrame({'ts': [end], 'site_id': [r], 'rain_source': [datasource], 'rain_alert': ['r1a'], 'cumulative': [one], 'threshold': [round(halfmax,2)]})
+                try:
+                    df.to_sql(name = 'rain_alerts', con = engine, if_exists = 'append', schema = q.Namedb, index = False)
+                except:
+                    pass
+            if three>=twoyrmax:
+                df = pd.DataFrame({'ts': [end], 'site_id': [r], 'rain_source': [datasource], 'rain_alert': ['r1b'], 'cumulative': [three], 'threshold': [round(twoyrmax,2)]})
+                try:
+                    df.to_sql(name = 'rain_alerts', con = engine, if_exists = 'append', schema = q.Namedb, index = False)        
+                except:
+                    pass
+
 
     summary = pd.DataFrame({'site': [r], '1D cml': [one], 'half of 2yr max': [round(halfmax,2)], '3D cml': [three], '2yr max': [round(twoyrmax,2)], 'DataSource': [datasource], 'alert': [ralert], 'advisory': [advisory]})
     
@@ -146,7 +162,15 @@ def RainfallAlert(siterainprops, end, s):
     
     start = end - timedelta(s.io.roll_window_length)
     offsetstart = start - timedelta(hours=0.5)
-        
+
+    query = "SELECT * FROM senslopedb.site_level_alert where site = '%s' and source in ('public') order by timestamp desc limit 1" %name
+    df = q.GetDBDataFrame(query)
+    currAlert = df['alert'].values[0]
+    if currAlert != 'A0':
+        write_alert = True
+    else:
+        write_alert = False
+
     try:
         if rain_arq == None:
             rain_timecheck = pd.DataFrame()
@@ -161,12 +185,12 @@ def RainfallAlert(siterainprops, end, s):
             #from rain_senslope, plots and alerts are processed
             rainfall = GetResampledData(rain_senslope, offsetstart, start, end)
             datasource = rain_senslope
-            summary = summary_writer(name,datasource,twoyrmax,halfmax,rainfall,end)
+            summary = summary_writer(name,datasource,twoyrmax,halfmax,rainfall,end,write_alert)
                     
         else:
             #alerts are processed if senslope rain gauge data is updated
             datasource = rain_arq
-            summary = summary_writer(name,datasource,twoyrmax,halfmax,rainfall,end)
+            summary = summary_writer(name,datasource,twoyrmax,halfmax,rainfall,end,write_alert)
 
     except:
         try:
@@ -174,13 +198,13 @@ def RainfallAlert(siterainprops, end, s):
             col = [RG1, RG2, RG3]
             rainfall, r = GetUnemptyOtherRGdata(col, offsetstart, start, end)
             datasource = r
-            summary = summary_writer(name,datasource,twoyrmax,halfmax,rainfall,end)
+            summary = summary_writer(name,datasource,twoyrmax,halfmax,rainfall,end,write_alert)
         except:
             #if no data for all rain gauge
             rainfall = pd.DataFrame({'ts': [end], 'rain': [np.nan]})
             rainfall = rainfall.set_index('ts')
             datasource="No Alert! No ASTI/SENSLOPE Data"
-            summary = summary_writer(name,datasource,twoyrmax,halfmax,rainfall,end)
+            summary = summary_writer(name,datasource,twoyrmax,halfmax,rainfall,end,write_alert)
             
     return summary
 
