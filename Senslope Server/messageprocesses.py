@@ -479,7 +479,8 @@ def ProcessEarthquake(msg):
     dbio.commitToDb(query, 'earthquake')
 
     # subprocess.Popen(["python",cfg.config().fileio.eqprocfile])
-    p = subprocess.Popen("python "+cfg.config().fileio.eqprocfile, stdout=subprocess.PIPE, shell=True, stderr=subprocess.STDOUT)
+    exec_line = "~/anaconda2/bin/python %s > ~/scriptlogs/earthquakescript.txt 2>&1" % (cfg.config().fileio.eqprocfile)
+    p = subprocess.Popen(exec_line, stdout=subprocess.PIPE, shell=True, stderr=subprocess.STDOUT)
 
     return True
 
