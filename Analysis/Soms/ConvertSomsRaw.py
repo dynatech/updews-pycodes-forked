@@ -127,6 +127,7 @@ def getsomscaldata(column="", gid=0, fdate="", tdate="", if_multi = False):
 
 site = sys.argv[1]
 fdate = sys.argv[2]
+tdate = sys.argv[3]
 
 
-getsomscaldata(column=site, fdate=fdate, tdate="", if_multi = False)
+print getsomscaldata(column=site, fdate=fdate, tdate=tdate, if_multi = False)
