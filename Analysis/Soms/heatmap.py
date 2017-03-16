@@ -95,5 +95,8 @@ def heatmap(col, t_timestamp, t_win = '1d'):
 		dfjson = df_merge.to_json(orient='records' , double_precision=0)
 		print dfjson
 				
-			
-heatmap('mngsa', '2016-03-03', t_win = '1d')
+	
+site = sys.argv[1]
+tdate = sys.argv[2]
+days = sys.argv[3]		
+heatmap(site, tdate, t_win = days)
