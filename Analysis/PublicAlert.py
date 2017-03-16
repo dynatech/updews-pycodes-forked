@@ -256,6 +256,22 @@ def SitePublicAlert(PublicAlert, window):
     except:
         pass
 
+    #earthquake technical info
+    try:
+        eq_techTS = retriggers[retriggers.retrigger == 'e1']['timestamp'].values[0]
+        query = "SELECT ea.site_id, ea.distance, eq.mag, eq.lat, eq.longi, eq.critdist, eq.province \
+            FROM earthquake_alerts as ea left join earthquake as eq on ea.eq_id = eq.e_id \
+            where site_id = '%s' and timestamp = '%s' order by eq_id desc limit 1" %(site, eq_techTS)
+        eq_tech_df = q.GetDBDataFrame(query)
+        eq_tech = [{'magnitude': np.round(eq_tech_df['mag'].values[0], 1)}, {'latitude': np.round(eq_tech_df['lat'].values[0], 2)}, {'longitude': np.round(eq_tech_df['longi'].values[0], 2)}]
+        if eq_tech_df['province'].values[0].lower() != 'null':
+            eq_tech += [{'info': str(np.round(eq_tech_df['distance'].values[0], 2)) + ' km away from earthquake at ' + eq_tech_df['province'].values[0].lower() + ' (inside critical radius of ' + str(np.round(eq_tech_df['critdist'].values[0], 2)) + ' km)'}]
+        else:
+            eq_tech += [{'info': str(np.round(eq_tech_df['distance'].values[0], 2)) + ' km away from earthquake epicenter (inside critical radius of ' + str(np.round(eq_tech_df['critdist'].values[0], 2)) + ' km)'}]
+        tech_info += [{'eq_tech': eq_tech}]
+    except:
+        pass
+
     #subsurface technical info
     try:
         sensor_techTS = retriggers[(retriggers.retrigger == 'L2')|(retriggers.retrigger == 'L3')]['timestamp'].values[0]
