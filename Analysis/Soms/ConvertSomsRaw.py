@@ -76,7 +76,7 @@ def getsomsrawdata(column="", gid=0, fdate="", tdate="", if_multi=False ):
     
     return sraw
 
-def getsomscaldata(column="", gid=0, fdate="", tdate="",is_debug= False, if_multi = False):
+def getsomscaldata(column="", gid=0, fdate="", tdate="", if_multi = False):
     ''' 
         only for landslide sensors v2 and v3
         output:  df = series of unfiltered SOMS data (calibrated/normalized) of a specific node of the defined column 
@@ -99,27 +99,28 @@ def getsomscaldata(column="", gid=0, fdate="", tdate="",is_debug= False, if_mult
     elif column.lower() in v3: # if version 3
             msgid = 113
     else:
-	  if (is_debug == True):
-	        print 'No data available for ' + column.upper()
-	        return df  
-	  else:
-              return df
+#	  if (is_debug == True):
+#	        print 'No data available for ' + column.upper()
+#	        return df  
+#	  else:
+        return df
         
-    try:
-        df = qs.GetSomsData(siteid=column+'m', fromTime=fdate, toTime=tdate, targetnode=gid, msgid=msgid)
-        df.index=df.ts      
-        if if_multi:
+#    try:
+    df = qs.GetSomsData(siteid=column+'m', fromTime=fdate, toTime=tdate, targetnode=gid, msgid=msgid)
+    df.index=df.ts      
+    if if_multi:
 	        df = df[['id','mval1']]
-        else:
+    else:
 		  df= df[['mval1']]
 	          
 	   
 								
-    except:
-        if (is_debug == True):
-	        print 'No data available for ' + column.upper()
-	        return df  
-        else:
-              return df
+#    except:
+        
+#        if (is_debug == True):
+#	        print 'No data available for ' + column.upper()
+#	        return df  
+#        else:
+#              return df
 
     return df

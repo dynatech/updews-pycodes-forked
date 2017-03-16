@@ -32,7 +32,7 @@ from datetime import timedelta
 #t_timestamp = raw_input('target date (ex. 2017-01-01): ').lower()
 #t_win = raw_input('select monitoring window[1d, 3d, 30d]: ').lower()
 
-def heatmap(col, t_timestamp, t_win = '1d', is_debug = False):
+def heatmap(col, t_timestamp, t_win = '1d'):
 	
 	df_merge = pd.DataFrame()
 	smin=0; smax=255;mini = 0; maxi = 1300
@@ -63,7 +63,7 @@ def heatmap(col, t_timestamp, t_win = '1d', is_debug = False):
 		node = qs.GetDBDataFrame(query)
 		for node_num in range (1,int(node.num_nodes[0])+1):
 			
-			df = CSR.getsomscaldata(col,node_num,f_timestamp,t_timestamp, is_debug = False,if_multi = True)
+			df = CSR.getsomscaldata(col,node_num,f_timestamp,t_timestamp, if_multi = True)
 			if (df.empty == True):
 				print df
 			
