@@ -125,8 +125,8 @@ def getsomscaldata(column="", gid=0, fdate="", tdate="", if_multi = False):
 
     return df
 
-site = sys.argv[1]
-fdate = sys.argv[2]
-
-
-getsomscaldata(column=site, fdate=fdate, tdate="", if_multi = False)
+#site = sys.argv[1]
+#fdate = sys.argv[2]
+#
+#
+#getsomscaldata(column=site, fdate=fdate, tdate="", if_multi = False)

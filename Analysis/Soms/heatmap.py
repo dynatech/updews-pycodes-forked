@@ -53,9 +53,9 @@ def heatmap(col, t_timestamp, t_win = '1d'):
 	f_timestamp = pd.to_datetime(pd.to_datetime(t_timestamp) - timedelta(hours = timew))	
 	t_timestamp = pd.to_datetime(pd.to_datetime(t_timestamp) + timedelta(minutes = 30))
 	
-	if (len(col)<=4):
-		print df_merge
-	else:
+	
+         
+	if(len(col)>4):
 		
 	
 		query = "select num_nodes from senslopedb.site_column_props where name = '%s'" %col
@@ -64,10 +64,8 @@ def heatmap(col, t_timestamp, t_win = '1d'):
 		for node_num in range (1,int(node.num_nodes[0])+1):
 			
 			df = CSR.getsomscaldata(col,node_num,f_timestamp,t_timestamp, if_multi = True)
-			if (df.empty == True):
-				print df
 			
-			else:
+			if (df.empty == False):
 				df = df.reset_index()
 				df.ts=pd.to_datetime(df.ts)
 			
@@ -94,9 +92,11 @@ def heatmap(col, t_timestamp, t_win = '1d'):
 		
 		dfjson = df_merge.to_json(orient='records' , double_precision=0)
 		print dfjson
+	else:
+           return 'v1'                     
 				
 	
 site = sys.argv[1]
 tdate = sys.argv[2]
-days = sys.argv[3]		
+days = sys.argv[3]
 heatmap(site, tdate, t_win = days)
