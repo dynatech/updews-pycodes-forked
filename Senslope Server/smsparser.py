@@ -37,7 +37,7 @@ def updateSimNumTable(name,sim_num,date_activated):
     dbio.commitToDb(query, 'updateSimNumTable')
 
 def checkNameOfNumber(number):
-    db, cur = dbio.SenslopeDBConnect('sandbox')
+    db, cur = dbio.SenslopeDBConnect()
     
     while True:
         try:
@@ -205,6 +205,7 @@ def WriteSomsDataToDb(dlist,msgtime):
     query = """INSERT IGNORE INTO soms_%s (ts,node_id,type_num,mval1,mval2) VALUES """ % (str(dlist[0][0].lower()))
     
     print "site_name", str(dlist[0][0])
+    
     for item in dlist:            
         timetowrite = str(item[1])
         query = query + """('%s',%s,%s,%s,%s),""" % (timetowrite,str(item[2]),str(item[3]),str(item[4]),str(item[5]))
@@ -580,7 +581,7 @@ def ProcessARQWeather(sms):
         print '>> Error writing query string.', 
         return
 
-    dbio.commitToDb(query, 'ProcessARQWeather',"sandbox")
+    dbio.commitToDb(query, 'ProcessARQWeather')
            
     print 'End of Process ARQ weather data'
     
@@ -753,6 +754,7 @@ def ParseAllMessages(args,allmsgs=[]):
             cur_num = msg.num
                          
             msgname = checkNameOfNumber(msg.simnum)
+            
             ##### Added for V1 sensors removes unnecessary characters pls see function PreProcessColumnV1(data)
             if re.search("\*FF",msg.data) or re.search("PZ\*",msg.data):
                 ProcessPiezometer(msg)
@@ -789,7 +791,7 @@ def ParseAllMessages(args,allmsgs=[]):
                 try:
                     dlist = ProcTwoAccelColData(msg)
                     if dlist:
-                        if len(dlist[0][0]) == 6:
+                        if len(dlist[0]) < 7:
                             WriteSomsDataToDb(dlist,msg)
                         else:
                             WriteTwoAccelDataToDb(dlist,msg)
@@ -863,7 +865,7 @@ def getRouterIDs():
 
     query = "SELECT `logger_id`,`logger_name` from `loggers` where `model_id` in (SELECT `model_id` FROM `logger_models` where `logger_type`='router') and `logger_name` is not null"
 
-    nums = dbio.querydatabase(query,'getRouterIDs','sandbox')
+    nums = dbio.querydatabase(query,'getRouterIDs')
     nums = {key: value for (value, key) in nums}
 
     return nums
@@ -939,13 +941,9 @@ def getArguments():
 
 
 def test():
-    # sms = "GATEWAY*RSSI,PEP,PEPTA,70,12.50,PEPSB,77,0.00,PEPTC,97*170201120506"
-    # smsItem = gsmio.sms('', '', sms, '')
-    # # ProcessEarthquake(smsItem)
-    # ProcessGatewayMsg(smsItem)
-    # server.WriteOutboxMessageToDb("loggers","test kjasdhfkjdsh","639499942319,639176763531,639499942313,639175940773")
-    server.SendMessagesFromDb(table='loggers',send_status=5,gsm_id=3)
-
+    sms = ""
+    msg = gsmio.sms('', '', sms, '')
+    
 def main():
     args = getArguments()
 
