@@ -19,9 +19,9 @@ import pandas as pd
 import ConvertSomsRaw as CSR
 import querySenslopeDb as qs
 from datetime import timedelta
-#col = 'imesb'
-#t_timestamp='2016-03-01 08:00'
-#t_win = '1d'
+#site = 'imesb'
+#tdate='2016-03-01 08:00'
+#days = '30d'
 #is_debug = True
 #for a in range(1,17,1):
 
@@ -39,20 +39,24 @@ def heatmap(col, t_timestamp, t_win = '1d'):
 	
 	
 	if (t_win == '1d'):
+		for_base = 0         
 		timew = 24
-		interval = '30Min'
+		interval = '30T'
 	elif (t_win == '3d'):
+		for_base = 0      
 		timew = 72
-		interval = '90Min'
+		interval = '120T'
 	elif (t_win == '30d'):
+		for_base = int(tdate[11]+tdate[12])      
 		timew = 720
-		interval = '1D'
+		interval = '24H'
 	else:
 		print "invalid monitoring window"
 	
 	f_timestamp = pd.to_datetime(pd.to_datetime(t_timestamp) - timedelta(hours = timew))	
 	t_timestamp = pd.to_datetime(pd.to_datetime(t_timestamp) + timedelta(minutes = 30))
 	
+    
 	
          
 	if(len(col)>4):
@@ -74,7 +78,7 @@ def heatmap(col, t_timestamp, t_win = '1d'):
 			
 				df=df[((df<1300) == True) & ((df>0)==True)] 
 				df['cval'] = df['mval1'].apply(lambda x:(x- mini) * smax / (maxi) + smin)
-				dfrs =pd.rolling_mean(df.resample(interval), window=3, min_periods=1)   #mean for one day (dataframe)
+				dfrs =pd.rolling_mean(df.resample(interval, base= for_base), window=3, min_periods=1)   #mean for one day (dataframe)
 			
 				if 'mval1' in df.columns:				
 					dfrs = dfrs.drop('mval1', axis=1)
@@ -96,7 +100,14 @@ def heatmap(col, t_timestamp, t_win = '1d'):
            return 'v1'                     
 				
 	
+
+#site = sys.argv[1]
+#tdate = sys.argv[2]
+#days = sys.argv[3]
+
+
 site = sys.argv[1]
 tdate = sys.argv[2]
-days = sys.argv[3]
+days = sys.argv[3].replace("T"," ")	
+
 heatmap(site, tdate, t_win = days)

@@ -15,7 +15,7 @@ del path
 import SomsRangeFilter 
 import ConvertSomsRaw as CSR
     
-#site = "laysa"
+#site = "agbsb"
 #fdate = "2016-01-28"
 #tdate = "2017-12-29"
 #mode = '0'
@@ -28,7 +28,7 @@ mode = sys.argv[4]
 if mode == '0':
    df = CSR.getsomsrawdata(column=site, fdate=fdate, tdate=tdate, if_multi=True )
 else:
-   df = CSR.getsomscaldata(column=site, fdate=fdate, tdate=tdate ,is_debug= False,if_multi = True)
+   df = CSR.getsomscaldata(column=site, fdate=fdate, tdate=tdate ,if_multi = True)
 
 df_filt = SomsRangeFilter.f_outlier(df,site,int(mode))
 dfajson = df_filt.reset_index().to_json(orient='records',date_format='iso')
