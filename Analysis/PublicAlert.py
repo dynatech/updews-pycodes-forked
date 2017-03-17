@@ -317,10 +317,10 @@ def SitePublicAlert(PublicAlert, window):
     # latest rain alert within 4hrs
     try:
         rain_alert = site_alert.loc[(site_alert.source == 'rain') & (site_alert.updateTS >= window.end - timedelta(hours=4))]['alert'].values[0]
-        if public_PrevAlert != 'A0' and rain_alert == 'r0':
-            query = "SELECT * FROM senslopedb.rain_alerts where site_id = '%s' and ts <= '%s' order by ts desc limit 2" %(site, window.end)
+        if public_PrevAlert != 'A0' and rain_alert == 'r0' and window.end.time() in [time(3,30), time(7,30), time(11,30), time(15,30), time(19,30), time(23,30)]:
+            query = "SELECT * FROM senslopedb.rain_alerts where site_id = '%s' and ts = '%s'" %(site, window.end)
             rain_alert_df = q.GetDBDataFrame(query)
-            if rain_alert_df['cumulative'].values[0]/rain_alert_df['threshold'].values[0] > 0.75 or rain_alert_df['cumulative'].values[1]/rain_alert_df['threshold'].values[1] > 0.75:
+            if len(rain_alert_df) != 0:
                 extend_rain_alert = True
             else:
                 extend_rain_alert = False
@@ -384,10 +384,12 @@ def SitePublicAlert(PublicAlert, window):
                 # without data
                 else:
                     # within 3 days of 4hr-extension
-                    if RoundTime(window.end) - validity < timedelta(3):
+                    if (RoundTime(window.end) - validity < timedelta(3)) or  extend_rain_alert:
                         validity = RoundTime(window.end)
                         internal_alert = 'A3-SG' + other_alerts
                         public_alert = 'A3'
+                        if extend_rain_alert:
+                            rain_alert = 'rx'
                         
                     else:
                         public_alert = 'A0'
@@ -405,10 +407,12 @@ def SitePublicAlert(PublicAlert, window):
                 # without data
                 else:
                     # within 3 days of 4hr-extension
-                    if RoundTime(window.end) - validity < timedelta(3):
+                    if (RoundTime(window.end) - validity < timedelta(3)) or  extend_rain_alert:
                         validity = RoundTime(window.end)
                         internal_alert = 'A3-S' + other_alerts
                         public_alert = 'A3'
+                        if extend_rain_alert:
+                            rain_alert = 'rx'
                         
                     else:
                         public_alert = 'A0'
@@ -426,10 +430,12 @@ def SitePublicAlert(PublicAlert, window):
                 # without data
                 else:
                     # within 3 days of 4hr-extension
-                    if RoundTime(window.end) - validity < timedelta(3):
+                    if (RoundTime(window.end) - validity < timedelta(3)) or extend_rain_alert:
                         validity = RoundTime(window.end)
                         internal_alert = 'A3-G' + other_alerts
                         public_alert = 'A3'
+                        if extend_rain_alert:
+                            rain_alert = 'rx'
                         
                     else:
                         public_alert = 'A0'
@@ -510,7 +516,7 @@ def SitePublicAlert(PublicAlert, window):
                 # without data
                 else:
                     # within 3 days of 4hr-extension
-                    if RoundTime(window.end) - validity < timedelta(3):
+                    if (RoundTime(window.end) - validity < timedelta(3)) or extend_rain_alert:
                         validity = RoundTime(window.end)
                         if ('L' not in list_ground_alerts and len(nonNDsensor) == 0) and 'l' not in list_ground_alerts:
                             internal_alert = 'A2-s0g0' + other_alerts
@@ -525,7 +531,9 @@ def SitePublicAlert(PublicAlert, window):
                                 internal_alert += 'g0'
                             internal_alert += other_alerts
                         public_alert = 'A2'
-                        
+                        if extend_rain_alert:
+                            rain_alert = 'rx'
+
                     else:
                         public_alert = 'A0'
                         alert_source = '-'
@@ -542,11 +550,13 @@ def SitePublicAlert(PublicAlert, window):
                 # without data
                 else:
                     # within 3 days of 4hr-extension
-                    if RoundTime(window.end) - validity < timedelta(3):
+                    if (RoundTime(window.end) - validity < timedelta(3)) or extend_rain_alert:
                         validity = RoundTime(window.end)
                         internal_alert = 'A2-s0' + other_alerts
                         public_alert = 'A2'
-                        
+                        if extend_rain_alert:
+                            rain_alert = 'rx'
+
                     else:
                         public_alert = 'A0'
                         alert_source = '-'
@@ -563,11 +573,13 @@ def SitePublicAlert(PublicAlert, window):
                 # without data
                 else:
                     # within 3 days of 4hr-extension
-                    if RoundTime(window.end) - validity < timedelta(3):
+                    if (RoundTime(window.end) - validity < timedelta(3)) or extend_rain_alert:
                         validity = RoundTime(window.end)
                         internal_alert = 'A2-g0' + other_alerts
                         public_alert = 'A2'
-                        
+                        if extend_rain_alert:
+                            rain_alert = 'rx'
+                            
                     else:
                         public_alert = 'A0'
                         alert_source = '-'
@@ -644,7 +656,7 @@ def SitePublicAlert(PublicAlert, window):
             # without ground data
             else:
                 # within 3 days of 4hr-extension
-                if RoundTime(window.end) - validity < timedelta(3):
+                if (RoundTime(window.end) - validity < timedelta(3)):
                     validity = RoundTime(window.end)
                     public_alert = 'A1'
 
@@ -659,7 +671,10 @@ def SitePublicAlert(PublicAlert, window):
                     alert_source = ','.join(RED_source)
         
                     internal_alert = 'ND-' + other_alerts
-
+                    
+                    if extend_rain_alert:
+                            rain_alert = 'rx'
+                            
                 else:
                     public_alert = 'A0'
                     alert_source = '-'
