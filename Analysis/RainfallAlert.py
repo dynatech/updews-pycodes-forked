@@ -170,12 +170,15 @@ def RainfallAlert(siterainprops, end, s):
     start = end - timedelta(s.io.roll_window_length)
     offsetstart = start - timedelta(hours=0.5)
 
-    query = "SELECT * FROM senslopedb.site_level_alert where site = '%s' and source in ('public') order by timestamp desc limit 1" %name
-    df = q.GetDBDataFrame(query)
-    currAlert = df['alert'].values[0]
-    if currAlert != 'A0':
-        write_alert = True
-    else:
+    try:
+        query = "SELECT * FROM senslopedb.site_level_alert where site = '%s' and source in ('public') order by timestamp desc limit 1" %name
+        df = q.GetDBDataFrame(query)
+        currAlert = df['alert'].values[0]
+        if currAlert != 'A0':
+            write_alert = True
+        else:
+            write_alert = False
+    except:
         write_alert = False
 
     try:
