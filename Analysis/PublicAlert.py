@@ -61,7 +61,7 @@ def SensorAlertLst(df, lst):
 
 def SensorTrigger(df):
     sensor_tech = []
-    for i in df['site'].values:
+    for i in set(df['site'].values):
         col_df = df[df.site == i]
         col_df['id'] = col_df['id'].apply(lambda x: str(x))
         if len(col_df) == 1:
