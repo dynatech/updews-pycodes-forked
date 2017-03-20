@@ -316,8 +316,8 @@ def commitToDb(query, identifier, last_insert=False, instance='local'):
     # except:
     #     print '>> Unexpected error in writing to database query', query[0:100], 'from', identifier
     # finally:
-    #     db.close()
-    #     return b
+    db.close()
+    return b
 
 def querydatabase(query, identifier, instance='local'):
     db, cur = SenslopeDBConnect(instance)

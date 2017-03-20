@@ -136,6 +136,7 @@ def getGsmId(number):
 def WriteOutboxMessageToDb(table='users',message='',recepients=''):
     if table == '':
         print "Error: No table indicated"
+        raise ValueError
         return
 
     tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
@@ -146,7 +147,11 @@ def WriteOutboxMessageToDb(table='users',message='',recepients=''):
 
     print 'Last insert:', last_insert
 
-    logger_mobile = getLoggerContacts()
+    table_mobile = getMobileSimNums(table)
+
+    print table_mobile
+
+    print 'mobile numbers'
 
     query = "INSERT INTO smsoutbox_%s_status (outbox_id,mobile_id,gsm_id) VALUES " % (table[:-1])
             
@@ -156,8 +161,8 @@ def WriteOutboxMessageToDb(table='users',message='',recepients=''):
             continue
         else:
             tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
-            print last_insert, logger_mobile[r], tsw, gsm_id
-            query += "(%d,%d,%d)," % (last_insert,logger_mobile[r],gsm_id)
+            print last_insert, table_mobile[r], tsw, gsm_id
+            query += "(%d,%d,%d)," % (last_insert,table_mobile[r],gsm_id)
             # print query
     
     query = query[:-1]
@@ -256,6 +261,11 @@ def getSensorNumbers():
 def getMobileSimNums(table):
 
     if table == 'loggers':
+
+        logger_mobile_sim_nums = mc.get('logger_mobile_sim_nums')
+        if logger_mobile_sim_nums:
+            return logger_mobile_sim_nums
+
         query = """ 
         SELECT t1.mobile_id,t1.sim_num 
         FROM logger_mobile AS t1 
@@ -264,17 +274,30 @@ def getMobileSimNums(table):
                 AND (t1.date_activated < t2.date_activated 
                 OR (t1.date_activated = t2.date_activated AND t1.mobile_id < t2.mobile_id)) 
         WHERE t2.sim_num IS NULL and t1.sim_num is not null"""
+
+        nums = dbio.querydatabase(query,'getMobilesimnums','sandbox')
+        nums = {key: value for (value, key) in nums}
+
+        logger_mobile_sim_nums = nums
+        mc.set("logger_mobile_sim_nums",logger_mobile_sim_nums)
+
     elif table == 'users':
+
+        user_mobile_sim_nums = mc.get('user_mobile_sim_nums')
+        if user_mobile_sim_nums:
+            return user_mobile_sim_nums
+        
         query = "select mobile_id,sim_num from user_mobile"
+
+        nums = dbio.querydatabase(query,'getMobilesimnums','sandbox')
+        nums = {key: value for (value, key) in nums}
+
+        user_mobile_sim_nums = nums
+        mc.set("user_mobile_sim_nums",user_mobile_sim_nums)
+
     else:
         print 'Error: table', table
         sys.exit()
-
-
-    # print querys
-
-    nums = dbio.querydatabase(query,'getSensorNumbers','sandbox')
-    nums = {key: value for (value, key) in nums}
 
     return nums
 
@@ -333,7 +356,6 @@ def simulateGSM(network='simulate'):
         time.sleep(20)
 
     # print smsinbox_sms
-
     logger_mobile_sim_nums = getMobileSimNums('loggers')
     user_mobile_sim_nums = getMobileSimNums('users')
     # print logger_mobile
