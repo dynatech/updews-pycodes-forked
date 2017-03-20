@@ -126,8 +126,8 @@ def setSendStatus(send_status,sms_id_list):
 def getAllSmsFromDb(host='local',read_status=0,table='loggers',limit=200):
     db, cur = SenslopeDBConnect(host)
 
-    if table == 'loggers':
-        tbl_contacts = 'logger_mobile'
+    if table in ['loggers','users']:
+        tbl_contacts = '%s_mobile' % table[:-1]
     else:
         print 'Error: unknown table', table
         return

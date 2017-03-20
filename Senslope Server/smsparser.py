@@ -500,10 +500,10 @@ def ProcessEarthquake(msg):
         print ">> No issuer string recognized"
         issuerstr = 'NULL'
 
-    query = """INSERT INTO earthquake_events (ts, magnitude, depth, latitude, longitude, critical_distance, reporter) \
+    query = """INSERT INTO earthquake_events (ts, magnitude, depth, latitude, longitude, critical_distance, issuer) \
         VALUES ('%s',%s,%s,%s,%s,%s,'%s') ON DUPLICATE KEY UPDATE \
         magnitude=magnitude, depth=depth, latitude=latitude, longitude=longitude, critical_distance=critical_distance, \
-        reporter=reporter;""" % (datetimestr,magstr,depthstr,latstr,longstr,diststr,issuerstr)
+        issuer=issuer;""" % (datetimestr,magstr,depthstr,latstr,longstr,diststr,issuerstr)
 
     print query
 
@@ -714,6 +714,7 @@ def CheckMessageSource(msg):
 
 def SpawnAlertGen(sitename):
     # spawn alert alert_gens
+    return
 
     alertgenlist = mc.get('alertgenlist')
 
@@ -948,7 +949,7 @@ def main():
     args = getArguments()
 
     if not args.bypasslock:
-        lockscript.get_lock('smsparser')
+        lockscript.get_lock('smsparser %s' % args.table)
 
     # dbio.createTable("runtimelog","runtime")
     # logRuntimeStatus("procfromdb","startup")
