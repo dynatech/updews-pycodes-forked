@@ -320,6 +320,8 @@ def SitePublicAlert(PublicAlert, window):
                 extend_rain_alert = True
             else:
                 extend_rain_alert = False
+        else:
+            extend_rain_alert = False
     except:
         extend_rain_alert = False
         rain_alert = 'nd'
