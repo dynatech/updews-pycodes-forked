@@ -86,10 +86,6 @@ def SitePublicAlert(PublicAlert, window):
         query += "or site = 'pob' "
     elif site == 'tga':
         query += "or site = 'tag' "
-    elif site == 'msl':
-        query += "or site = 'mes' "
-    elif site == 'msu':
-        query += "or site = 'mes' "
     query += ") ORDER BY timestamp DESC) AS sub GROUP BY source)"
 
     # dataframe of *
@@ -299,12 +295,12 @@ def SitePublicAlert(PublicAlert, window):
         pass
 
     # latest column alert within 3hrs
-    sensor_site = site + '%'
+    sensor_site = site
     if site == 'msl':
-        sensor_site = 'messb%'
+        sensor_site = 'messb|msl'
     if site == 'msu':
-        sensor_site = 'mesta%'
-    query = "SELECT * FROM ( SELECT * FROM senslopedb.column_level_alert WHERE site LIKE '%s' AND updateTS >= '%s' ORDER BY timestamp DESC) AS sub GROUP BY site" %(sensor_site, window.end - timedelta(hours=4))
+        sensor_site = 'mesta|msu'
+    query = "SELECT * FROM ( SELECT * FROM senslopedb.column_level_alert WHERE site REGEXP '%s' AND updateTS >= '%s' ORDER BY timestamp DESC) AS sub GROUP BY site" %(sensor_site, window.end - timedelta(hours=4))
     sensor_alertDF = q.GetDBDataFrame(query)
     nonNDsensor = sensor_alertDF[sensor_alertDF.alert != 'ND']
     if len(sensor_alertDF) != 0:
