@@ -321,6 +321,7 @@ def SitePublicAlert(PublicAlert, window):
             else:
                 extend_rain_alert = False
     except:
+        extend_rain_alert = False
         rain_alert = 'nd'
     
     #surficial data presence
