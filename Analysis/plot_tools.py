@@ -437,24 +437,97 @@ def getRTS(rts_file,site,start,end,filter_data = True):
 ############################################################################################
 
 ############################ PARASANON SEP 16 TO SEP 21 EVENT ##################################
+#
+#
+##############################
+##user input
+#start = pd.to_datetime('2017-01-01 00:00:00')
+#end = pd.to_datetime('2017-03-01 00:00:00')
+#
+#rainsite = 'dadtbw'
+#groundsite = 'ina'
+##############################
+##get data
+#
+#rain = getrain(rainsite,start,end)
+#ground = getGroundDF(groundsite,start,end)
+#rts = getRTS('rts3.csv',groundsite.upper(),start,end)
+#
+#
+#
+#
+##############################
+## set up axes and plot
+##cmap = sns.blend_palette(['yellow','red','green','blue','purple'],len(nodelist)+5)
+#fig=plt.figure()
+#ax1 = fig.add_subplot(311)
+#ax2 = fig.add_subplot(312, sharex=ax1)
+#ax3 = fig.add_subplot(313, sharex=ax1)
+#
+##############################
+##actual plotting
+#
+#plotGround(ax1,ground)
+#plotRain(rain,rainsite,ax2)
+#plotRTS(ax3,rts)
+#
+##plotSingleEvent([ax1,ax2],pd.to_datetime('2016-09-16 09:58'),'red','l2')
+##plotSingleEvent([ax1,ax2],pd.to_datetime('2016-09-27 07:05'),'red','l3')
+##plotSingleEvent([ax1,ax2],pd.to_datetime('2016-10-14 09:24'),'red','l2')
+##plotSingleEvent([ax1,ax2],pd.to_datetime('2016-10-21 11:05'),'red','l2')
+##plotSingleEvent([ax1,ax2],pd.to_datetime('2016-10-25 11:50'),'red','l2')
+##plotSingleEvent([ax1,ax2],pd.to_datetime('2016-10-30 11:28'),'red','l2')
+##plotSingleEvent([ax1,ax2],pd.to_datetime('2016-11-04 08:46'),'red','l3')
+##plotSingleEvent([ax1,ax2],pd.to_datetime('2016-11-04 19:00'),'red','r1')
+##
+##plotSingleEvent([ax1,ax2],pd.to_datetime('2016-09-21 12:00'),'blue','A0')
+##plotSingleEvent([ax1,ax2],pd.to_datetime('2016-10-11 12:00'),'blue','A0')
+##plotSingleEvent([ax1,ax2],pd.to_datetime('2016-10-17 16:00'),'blue','A0')
+##plotSingleEvent([ax1,ax2],pd.to_datetime('2016-10-22 16:00'),'blue','A0')
+##plotSingleEvent([ax1,ax2],pd.to_datetime('2016-10-28 12:00'),'blue','A0')
+##plotSingleEvent([ax1,ax2],pd.to_datetime('2016-11-02 16:00'),'blue','A0')
+##plotSingleEvent([ax1,ax2],pd.to_datetime('2016-11-11 08:00'),'blue','A0')
+#
+#ax1.grid(True)
+#ax2.grid(True)
+#ax3.grid(True)
+#
+#ax1.xaxis_date()
+#ax1.xaxis.set_major_locator(pltdate.DayLocator(interval=30))
+#ax1.xaxis.set_major_formatter(pltdate.DateFormatter('%b %d'))
+#
+##############################
+#
+#fig.subplots_adjust(top=0.85, hspace=0.4)
+#fig.set_figheight(10)
+#fig.set_figwidth(15)
+#fig.suptitle("{} Event Timeline from {} to {}".format(groundsite.title(),start.date().strftime("%B %d, %Y"),end.date().strftime("%B %d, %Y")),fontsize=20)
+#plt.savefig('C:\Users\Win8\Documents\Dynaslope\Data Analysis\updews-pycodes\Analysis\\'+groundsite+' event '+str(start.date())+' to '+str(end.date())+' x y z.png',
+#                dpi=400, facecolor='w', edgecolor='w',orientation='portrait',mode='w')
+#
+############################################################################################
+
+############################ dad long plot ##################################
 
 
 #############################
 #user input
 start = pd.to_datetime('2016-01-01 00:00:00')
-end = pd.to_datetime('2016-12-13 12:00:00')
+end = pd.to_datetime('2017-03-07 15:00:00')
 
-rainsite = 'inatbw'
-groundsite = 'ina'
+colname1 = 'mcasb'
+
+rainsite = 'mcataw'
+groundsite = 'mca'
 #############################
 #get data
+sens1 = getSensor(start,end,colname1)
+#nodelist = range(1,int(sens.id.max()))
+nodelist1 = [7,8,9,10,11]
 
+sens1_group = sens1.groupby('id').get_group
 rain = getrain(rainsite,start,end)
 ground = getGroundDF(groundsite,start,end)
-rts = getRTS('rts3.csv',groundsite.upper(),start,end)
-
-
-
 
 #############################
 # set up axes and plot
@@ -467,30 +540,27 @@ ax3 = fig.add_subplot(313, sharex=ax1)
 #############################
 #actual plotting
 
-plotGround(ax1,ground)
-plotRain(rain,rainsite,ax2)
-plotRTS(ax3,rts)
+#plotCml_xz(sens,ax1,colname)
+plotZeroedNodes_xz(nodelist1,sens1_group,ax1,colname1)
 
-#plotSingleEvent([ax1,ax2],pd.to_datetime('2016-09-16 09:58'),'red','l2')
-#plotSingleEvent([ax1,ax2],pd.to_datetime('2016-09-27 07:05'),'red','l3')
-#plotSingleEvent([ax1,ax2],pd.to_datetime('2016-10-14 09:24'),'red','l2')
-#plotSingleEvent([ax1,ax2],pd.to_datetime('2016-10-21 11:05'),'red','l2')
-#plotSingleEvent([ax1,ax2],pd.to_datetime('2016-10-25 11:50'),'red','l2')
-#plotSingleEvent([ax1,ax2],pd.to_datetime('2016-10-30 11:28'),'red','l2')
-#plotSingleEvent([ax1,ax2],pd.to_datetime('2016-11-04 08:46'),'red','l3')
-#plotSingleEvent([ax1,ax2],pd.to_datetime('2016-11-04 19:00'),'red','r1')
-#
-#plotSingleEvent([ax1,ax2],pd.to_datetime('2016-09-21 12:00'),'blue','A0')
-#plotSingleEvent([ax1,ax2],pd.to_datetime('2016-10-11 12:00'),'blue','A0')
-#plotSingleEvent([ax1,ax2],pd.to_datetime('2016-10-17 16:00'),'blue','A0')
-#plotSingleEvent([ax1,ax2],pd.to_datetime('2016-10-22 16:00'),'blue','A0')
-#plotSingleEvent([ax1,ax2],pd.to_datetime('2016-10-28 12:00'),'blue','A0')
-#plotSingleEvent([ax1,ax2],pd.to_datetime('2016-11-02 16:00'),'blue','A0')
-#plotSingleEvent([ax1,ax2],pd.to_datetime('2016-11-11 08:00'),'blue','A0')
+
+#plotZeroedNodes_xy(nodelist1,sens1_group,ax2,colname1)
+#plotZeroedNodes_xy(nodelist2,sens2_group,ax2,colname2)
+
+plotGround(ax2,ground)
+plotRain(rain,rainsite,ax3)
+
+#plotSingleEvent([ax1,ax2,ax3, ax4, ax5],pd.to_datetime('2016-08-15 06:00'),'red','r1')
+#plotSingleEvent([ax1,ax2,ax3, ax4, ax5],pd.to_datetime('2016-08-15 07:00'),'red','l2')
+#plotSingleEvent([ax1,ax2,ax3, ax4, ax5],pd.to_datetime('2016-08-16 08:30'),'red','L2')
+#plotSingleEvent([ax1,ax2,ax3, ax4, ax5],pd.to_datetime('2016-08-17 01:30'),'red','L3')
+#plotSingleEvent([ax1,ax2,ax3, ax4, ax5],pd.to_datetime('2016-08-17 13:00'),'red','l3')
+
 
 ax1.grid(True)
 ax2.grid(True)
 ax3.grid(True)
+
 
 ax1.xaxis_date()
 ax1.xaxis.set_major_locator(pltdate.DayLocator(interval=30))
@@ -499,10 +569,10 @@ ax1.xaxis.set_major_formatter(pltdate.DateFormatter('%b %d'))
 #############################
 
 fig.subplots_adjust(top=0.85, hspace=0.4)
-fig.set_figheight(10)
-fig.set_figwidth(15)
-fig.suptitle("{} Event Timeline from {} to {}".format(groundsite.title(),start.date().strftime("%B %d, %Y"),end.date().strftime("%B %d, %Y")),fontsize=20)
-plt.savefig('C:\Users\Win8\Documents\Dynaslope\Data Analysis\updews-pycodes\Analysis\\'+groundsite+' event '+str(start.date())+' to '+str(end.date())+' x y z.png',
-                dpi=400, facecolor='w', edgecolor='w',orientation='portrait',mode='w')
+fig.set_figheight(16)
+fig.set_figwidth(11)
+fig.suptitle("MacArthur Event Timeline from %s to %s" % (start.date(),end.date()),fontsize=20)
+#plt.savefig('D:\Documents\DYNA\NIGSCON2016\\'+groundsite+' event '+str(start.date())+' to '+str(end.date())+'.png',
+#                dpi=400, facecolor='w', edgecolor='w',orientation='portrait',mode='w')
 
 ###########################################################################################

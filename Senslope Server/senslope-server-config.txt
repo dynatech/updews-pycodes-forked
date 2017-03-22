@@ -45,7 +45,7 @@ FailObvEN = Error! You did not put your name on the text message.  Please check 
 
 [FileIO]
 allalertsfile = /home/dynaslope/Desktop/updews-pycodes/Analysis/GSMAlert.txt
-eqprocfile = /home/dynaslope/Desktop/updews-pycodes/Data\ Analysis/eq_alert_gen.py
+eqprocfile = /home/dynaslope/Desktop/updews-pycodes/Analysis/eq_alert_gen.py
 querylatestreportoutput = /home/dynaslope/Desktop/query_latest_report_output.txt
 alertgenscript = /home/dynaslope/Desktop/updews-pycodes/Analysis/alertgen.py
 alertanalysisscript = /home/dynaslope/Desktop/updews-pycodes/Analysis/AlertAnalysis.py
