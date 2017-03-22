@@ -123,7 +123,7 @@ def summary_writer(r,datasource,twoyrmax,halfmax,rainfall,end,write_alert):
                     df.to_sql(name = 'rain_alerts', con = engine, if_exists = 'append', schema = q.Namedb, index = False)
                 except:
                     pass
-            if three>=twoyrmax:
+            if three>=twoyrmax*0.75:
                 df = pd.DataFrame({'ts': [end], 'site_id': [r], 'rain_source': [datasource], 'rain_alert': ['rxb'], 'cumulative': [three], 'threshold': [round(twoyrmax,2)]})
                 try:
                     df.to_sql(name = 'rain_alerts', con = engine, if_exists = 'append', schema = q.Namedb, index = False)        
@@ -170,12 +170,15 @@ def RainfallAlert(siterainprops, end, s):
     start = end - timedelta(s.io.roll_window_length)
     offsetstart = start - timedelta(hours=0.5)
 
-    query = "SELECT * FROM senslopedb.site_level_alert where site = '%s' and source in ('public') order by timestamp desc limit 1" %name
-    df = q.GetDBDataFrame(query)
-    currAlert = df['alert'].values[0]
-    if currAlert != 'A0':
-        write_alert = True
-    else:
+    try:
+        query = "SELECT * FROM senslopedb.site_level_alert where site = '%s' and source in ('public') order by timestamp desc limit 1" %name
+        df = q.GetDBDataFrame(query)
+        currAlert = df['alert'].values[0]
+        if currAlert != 'A0':
+            write_alert = True
+        else:
+            write_alert = False
+    except:
         write_alert = False
 
     try:

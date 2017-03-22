@@ -61,7 +61,7 @@ def SensorAlertLst(df, lst):
 
 def SensorTrigger(df):
     sensor_tech = []
-    for i in df['site'].values:
+    for i in set(df['site'].values):
         col_df = df[df.site == i]
         col_df['id'] = col_df['id'].apply(lambda x: str(x))
         if len(col_df) == 1:
@@ -222,7 +222,7 @@ def SitePublicAlert(PublicAlert, window):
         print 'Public Alert- A0'
 
     #technical info for bulletin release
-    tech_info = []
+    tech_info = {}
     retriggers = pd.DataFrame(retriggerTS)
     #rainfall technical info
     try:
@@ -239,7 +239,7 @@ def SitePublicAlert(PublicAlert, window):
         else:
             r1b = rain_tech_df[rain_tech_df.rain_alert == 'r1b']
             rain_tech = '3-day cumulative rainfall (%s mm) exceeded threshold (%s mm)' %(r1b['cumulative'].values[0], r1b['threshold'].values[0])
-        tech_info += [{'rain_tech': rain_tech}]
+        tech_info['rain_tech'] = rain_tech
     except:
         pass
     
@@ -252,7 +252,7 @@ def SitePublicAlert(PublicAlert, window):
         for i in set(ground_tech_df['marker_name'].values):
             ground_tech += ['Crack %s: %s cm difference in %s hours' %(ground_tech_df['marker_name'].values[0], ground_tech_df['displacement'].values[0], np.round(ground_tech_df['time_delta'].values[0], 0))]
         ground_tech = ','.join(ground_tech)
-        tech_info += [{'ground_tech': ground_tech}]
+        tech_info['ground_tech'] = ground_tech
     except:
         pass
 
@@ -263,12 +263,12 @@ def SitePublicAlert(PublicAlert, window):
             FROM earthquake_alerts as ea left join earthquake as eq on ea.eq_id = eq.e_id \
             where site_id = '%s' and timestamp = '%s' order by eq_id desc limit 1" %(site, eq_techTS)
         eq_tech_df = q.GetDBDataFrame(query)
-        eq_tech = [{'magnitude': np.round(eq_tech_df['mag'].values[0], 1)}, {'latitude': np.round(eq_tech_df['lat'].values[0], 2)}, {'longitude': np.round(eq_tech_df['longi'].values[0], 2)}]
+        eq_tech = {'magnitude': np.round(eq_tech_df['mag'].values[0], 1), 'latitude': np.round(eq_tech_df['lat'].values[0], 2), 'longitude': np.round(eq_tech_df['longi'].values[0], 2)}
         if eq_tech_df['province'].values[0].lower() != 'null':
-            eq_tech += [{'info': str(np.round(eq_tech_df['distance'].values[0], 2)) + ' km away from earthquake at ' + eq_tech_df['province'].values[0].lower() + ' (inside critical radius of ' + str(np.round(eq_tech_df['critdist'].values[0], 2)) + ' km)'}]
+            eq_tech['info'] = str(np.round(eq_tech_df['distance'].values[0], 2)) + ' km away from earthquake at ' + eq_tech_df['province'].values[0].lower() + ' (inside critical radius of ' + str(np.round(eq_tech_df['critdist'].values[0], 2)) + ' km)'
         else:
-            eq_tech += [{'info': str(np.round(eq_tech_df['distance'].values[0], 2)) + ' km away from earthquake epicenter (inside critical radius of ' + str(np.round(eq_tech_df['critdist'].values[0], 2)) + ' km)'}]
-        tech_info += [{'eq_tech': eq_tech}]
+            eq_tech['tech_info'] = str(np.round(eq_tech_df['distance'].values[0], 2)) + ' km away from earthquake epicenter (inside critical radius of ' + str(np.round(eq_tech_df['critdist'].values[0], 2)) + ' km)'
+        tech_info['eq_tech'] = eq_tech
     except:
         pass
 
@@ -294,7 +294,7 @@ def SitePublicAlert(PublicAlert, window):
             vel_tech = SensorTrigger(vel_trigger)
             sensor_tech += ['%s exceeded velocity threshold' %(vel_tech)]
         sensor_tech = ';'.join(sensor_tech)
-        tech_info += [{'sensor_tech': sensor_tech}]
+        tech_info['sensor_tech'] = sensor_tech
     except:
         pass
 
@@ -793,7 +793,7 @@ def main():
     window,config = rtw.getwindow()
     
     props = q.GetRainProps('rain_props')
-    PublicAlert = pd.DataFrame({'timestamp': [window.end]*len(props), 'site': props['name'].values, 'source': ['public']*len(props), 'alert': [np.nan]*len(props), 'updateTS': [window.end]*len(props), 'palert_source': [np.nan]*len(props), 'internal_alert': [np.nan]*len(props), 'validity': [np.nan]*len(props), 'sensor_alert': [[]]*len(props), 'rain_alert': [np.nan]*len(props), 'ground_alert': [np.nan]*len(props), 'retriggerTS': [[]]*len(props), 'tech_info': [[]]*len(props)})
+    PublicAlert = pd.DataFrame({'timestamp': [window.end]*len(props), 'site': props['name'].values, 'source': ['public']*len(props), 'alert': [np.nan]*len(props), 'updateTS': [window.end]*len(props), 'palert_source': [np.nan]*len(props), 'internal_alert': [np.nan]*len(props), 'validity': [np.nan]*len(props), 'sensor_alert': [[]]*len(props), 'rain_alert': [np.nan]*len(props), 'ground_alert': [np.nan]*len(props), 'retriggerTS': [[]]*len(props), 'tech_info': [{}]*len(props)})
     PublicAlert = PublicAlert[['timestamp', 'site', 'source', 'alert', 'updateTS', 'palert_source', 'internal_alert', 'validity', 'sensor_alert', 'rain_alert', 'ground_alert', 'retriggerTS', 'tech_info']]
 
     Site_Public_Alert = PublicAlert.groupby('site')

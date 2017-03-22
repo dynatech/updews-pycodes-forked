@@ -25,7 +25,7 @@ for dirpath, dirnames, filenames in os.walk(RainfallPlotsPath):
     for file in filenames:
         curpath = os.path.join(dirpath, file)
         file_modified = datetime.fromtimestamp(os.path.getmtime(curpath))
-        if datetime.now() - file_modified > timedelta(days = 10):
+        if datetime.now() - file_modified > timedelta(days = 3):
             os.remove(curpath)
 
 for dirpath, dirnames, filenames in os.walk(OutputFilePath):
