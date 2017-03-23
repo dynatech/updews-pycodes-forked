@@ -1,4 +1,7 @@
 import ConfigParser, os, serial
+import memcache
+
+
 
 # USAGE
 # 
@@ -98,10 +101,11 @@ class config:
 		self.io.active_lgr_limit = cfg.getint("io","active_lgr_limit")
 		
 
-def test():
-	c = config()
-	print c.dbhost["gsm"]
+def main():
+	sc = config()
+	mc = memcache.Client(['127.0.0.1:11211'],debug=0)
+	mc.set('sc',sc)
 	return
 
 if __name__ == "__main__":
-    test()
+    main()
