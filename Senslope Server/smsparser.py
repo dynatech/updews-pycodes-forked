@@ -584,6 +584,11 @@ def ProcessARQWeather(sms):
     dbio.commitToDb(query, 'ProcessARQWeather')
            
     print 'End of Process ARQ weather data'
+
+def checkLoggerModel(logger_name):
+    query = "SELECT model_id FROM senslopedb.loggers where logger_name = '%s'" % logger_name
+
+    return dbio.querydatabase(query,'checkloggermodel')[0][0]
     
 def ProcessRain(sms):
 
@@ -603,7 +608,14 @@ def ProcessRain(sms):
 
     try:
     
-        msgtable = line.split(",")[0][:-1]+'G'
+        logger_name = checkNameOfNumber(sender)
+        logger_model = checkLoggerModel(logger_name)
+        print logger_name,logger_model
+        if logger_model in [23,24,25,26]:
+            msgtable = logger_name
+        else:
+            msgtable = line.split(",")[0][:-1]+'G'
+        # msgtable = checkNameOfNumber(sender)
         msgdatetime = re.search("\d{02}\/\d{02}\/\d{02},\d{02}:\d{02}:\d{02}",line).group(0)
 
         txtdatetime = dt.strptime(msgdatetime,'%m/%d/%y,%H:%M:%S')

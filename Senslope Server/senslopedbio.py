@@ -319,7 +319,7 @@ def commitToDb(query, identifier, last_insert=False, instance='local'):
     db.close()
     return b
 
-def querydatabase(query, identifier, instance='local'):
+def querydatabase(query, identifier='', instance='local'):
     db, cur = SenslopeDBConnect(instance)
     a = ''
     try:
