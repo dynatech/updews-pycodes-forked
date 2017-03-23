@@ -735,7 +735,7 @@ def SitePublicAlert(PublicAlert, window):
 
         #node_level_alert
         if 'sensor' in alert_source:
-            query = "SELECT * FROM senslopedb.node_level_alert WHERE site LIKE '%s' AND timestamp >= '%s' ORDER BY timestamp DESC" %(sensor_site,start_monitor)
+            query = "SELECT * FROM senslopedb.node_level_alert WHERE site REGEXP '%s' AND timestamp >= '%s' ORDER BY timestamp DESC" %(sensor_site,start_monitor)
             allnode_alertDF = q.GetDBDataFrame(query)
             column_name = set(allnode_alertDF['site'].values)
             colnode_source = []
