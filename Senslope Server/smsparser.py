@@ -945,6 +945,8 @@ def getArguments():
             args.status = 0
         if args.messagelimit == None:
             args.messagelimit = 200
+        if args.dbhost == None:
+            args.dbhost = 'local'
         return args        
     except IndexError:
         print '>> Error in parsing arguments'
