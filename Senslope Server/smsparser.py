@@ -827,7 +827,7 @@ def ParseAllMessages(args,allmsgs=[]):
             elif msg.data.split('*')[0] == 'COORDINATOR' or msg.data.split('*')[0] == 'GATEWAY':
                 isMsgProcSuccess = ProcessGatewayMsg(msg)
             elif re.search("^MANUAL RESET",msg.data):
-                # server.WriteOutboxMessageToDb("SENSORPOLL SENSLOPE", msg.simnum)
+                server.WriteOutboxMessageToDb("SENSORPOLL SENSLOPE", msg.simnum,'loggers')
                 isMsgProcSuccess = True
             else:
                 print '>> Unrecognized message format: '

@@ -133,7 +133,7 @@ def getGsmId(number):
         print '>> Prefix', num_prefix, 'cannot be sent'
         return -1
 
-def WriteOutboxMessageToDb(table='users',message='',recepients=''):
+def WriteOutboxMessageToDb(message='',recepients='',table='users'):
     if table == '':
         print "Error: No table indicated"
         raise ValueError
@@ -141,17 +141,10 @@ def WriteOutboxMessageToDb(table='users',message='',recepients=''):
 
     tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
     query = "insert into smsoutbox_%s (ts_written,sms_msg,source) VALUES ('%s','%s','central')" % (table,tsw,message)
-    print query
-
+    
     last_insert = dbio.commitToDb(query,'WriteOutboxMessageToDb',last_insert=True)[0][0]
 
-    print 'Last insert:', last_insert
-
     table_mobile = getMobileSimNums(table)
-
-    print table_mobile
-
-    print 'mobile numbers'
 
     query = "INSERT INTO smsoutbox_%s_status (outbox_id,mobile_id,gsm_id) VALUES " % (table[:-1])
             
@@ -201,49 +194,53 @@ def SendMessagesFromDb(table='users',send_status=0,gsm_id=0,limit=10):
     #     return
     allmsgs = dbio.getAllOutboxSmsFromDb(table,send_status,gsm_id,limit)
     if len(allmsgs) <= 0:
-        # print ">> No messages in outbox"
+        print ">> No messages in outbox"
         return
     
     print ">> Sending messagess from db"
 
     for m in allmsgs:
         print m
+
+    table_mobile = getMobileSimNums(table)
+    inv_table_mobile = {v: k for k, v in table_mobile.iteritems()}
+    # print inv_table_mobile
         
-    # msglist = []
-    # for item in allmsgs:
-    #     smsItem = gsmio.sms(item[0], str(item[2]), str(item[3]), str(item[1]))
-    #     msglist.append(smsItem)
-    # allmsgs = msglist
+    msglist = []
+    for stat_id,mobile_id,sms_msg in allmsgs:
+        smsItem = gsmio.sms(stat_id, inv_table_mobile[mobile_id], sms_msg, '')
+        msglist.append(smsItem)
+    allmsgs = msglist
     
-    # success_list = []
-    # fail_list = []
-
-    # allowed_prefixes = getAllowedPrefixes(network)
+    status_list = []
+    
+    allowed_prefixes = getAllowedPrefixes('globe')
     # # cycle through all messages
-    # for msg in allmsgs:
-    #     # get recepient numbers in list
-    #     recepient_list = msg.simnum.split(",")
-    #     # for num in recepient_list:
-    #     try:
-    #         num_prefix = re.match("^ *((0)|(63))9\d\d",num).group()
-    #         num_prefix = num_prefix.strip()
-    #     except:
-    #         continue
-    #         # check if recepient number in allowed prefixed list    
-    #     if num_prefix in allowed_prefixes:
-    #         ret = gsmio.sendMsg(msg.data,num.strip(),simulate=True)
+    for msg in allmsgs:
+        try:
+            num_prefix = re.match("^ *((0)|(63))9\d\d",msg.simnum).group()
+            num_prefix = num_prefix.strip()
+        except:
+            print 'Error getting prefix', msg.simnum
+            continue
+            # check if recepient number in allowed prefixed list    
+        if num_prefix in allowed_prefixes:
+            ret = gsmio.sendMsg(msg.data,msg.simnum.strip(),simulate=True)
 
-    #         if ret:
-    #             send_stat = 1
-    #             send_status.append((msg.num,0))
-    #         else:
-    #             send_status.append(msg.num)
-    #     else:
-    #         print "Number not in prefix list", num_prefix
+            today = dt.today().strftime("%Y-%m-%d %H:%M:%S")
+            if ret:
+                send_stat = 1
+                stat = msg.num,1,today
+            else:
+                stat = msg.num,5,today
 
-    # dbio.setSendStatus("FAIL",fail_success_list)
-    # dbio.setSendStatus("SENT",send_success_list)
+            status_list.append(stat)
+            
+        else:
+            print "Number not in prefix list", num_prefix
 
+    dbio.setSendStatus(table,status_list)
+    
     #Get all outbox messages with send_status "SENT" and attempt to send
     #   chatterbox acknowledgements
     #   send_status will be changed to "SENT-WSS" if successful

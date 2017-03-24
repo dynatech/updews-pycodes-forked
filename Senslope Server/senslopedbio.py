@@ -105,23 +105,18 @@ def setReadStatus(sms_id_list,read_status=0,table='',instance='local'):
     # print query
     commitToDb(query,"setReadStatus")
     
-def setSendStatus(send_status,sms_id_list):
+def setSendStatus(table,status_list):
     db, cur = SenslopeDBConnect('gsm')
     
-    if type(sms_id_list) is list:
-        if len(sms_id_list) == 0:
-            return
-        else:
-            where_clause = "where sms_id in (%s)" % (str(sms_id_list)[1:-1].replace("L",""))
-    elif type(sms_id_list) is long:
-        where_clause = "where sms_id = %d" % (sms_id_list)
-    query = "update %s.smsoutbox set send_status = '%s' %s" % (gsmdbinstance.name, send_status, where_clause)
-    print query
-        
-    now = dt.today().strftime("%Y-%m-%d %H:%M:%S")
+    query = "insert into smsoutbox_%s_status (stat_id, send_status, ts_sent) values " % (table[:-1])
 
-    query = "update %s.smsoutbox set send_status = '%s', timestamp_sent ='%s' %s " % (gsmdbinstance.name, send_status, now, where_clause)
-    # commitToDb(query,"setSendStatus", instance='sandbox')
+    for stat_id, send_status, ts_sent in status_list:
+        query += "(%d,%d,'%s')," % (stat_id, send_status, ts_sent)
+
+    query = query[:-1]
+    query += " on duplicate key update stat_id=values(stat_id), send_status=send_status+values(send_status),ts_sent=values(ts_sent)"
+    
+    commitToDb(query,"setSendStatus")
     
 def getAllSmsFromDb(host='local',read_status=0,table='loggers',limit=200):
     db, cur = SenslopeDBConnect(host)
@@ -154,11 +149,11 @@ def getAllSmsFromDb(host='local',read_status=0,table='loggers',limit=200):
             print '9.',
             time.sleep(20)
             
-def getAllOutboxSmsFromDb(table='users',send_status=0,gsm_id=0,limit=10):
+def getAllOutboxSmsFromDb(table='users',send_status=5,gsm_id=5,limit=10):
     while True:
         try:
             db, cur = SenslopeDBConnect()
-            query = """select t1.stat_id,t1.outbox_id,t1.mobile_id,t1.gsm_id from smsoutbox_%s_status as t1
+            query = """select t1.stat_id,t1.mobile_id,t2.sms_msg from smsoutbox_%s_status as t1
                         inner join (select * from smsoutbox_%s) as t2
                         on t1.outbox_id = t2.outbox_id
                         where t1.send_status < %d
