@@ -14,6 +14,7 @@ import alertmessaging as amsg
 import memcache
 import lockscript
 import gsmSerialio as gsmio
+import surficialparser as surfp
 mc = memcache.Client(['127.0.0.1:11211'],debug=0)
 
 def updateLastMsgReceivedTable(txtdatetime,name,sim_num,msg):
@@ -741,7 +742,27 @@ def SpawnAlertGen(sitename):
         print "Adding", sitename, "to alert gen list"
         alertgenlist.insert(0, sitename.lower())
         mc.set('alertgenlist',[])
-        mc.set('alertgenlist',alertgenlist)    
+        mc.set('alertgenlist',alertgenlist)
+
+def ProcessSurficialObservation(msg):
+    c = cfg.config()
+    try:
+        obv = surfp.parseSurficialSms(msg.data)
+        mo_id = surfp.UpdateSurficialObservations(obv)
+        surfp.UpdateSurficialData(obv,mo_id)
+        server.WriteOutboxMessageToDb("READ-SUCCESS: \n" + msg.data,c.smsalert.communitynum,'users')
+        server.WriteOutboxMessageToDb(c.reply.successen, msg.simnum,'users')
+        
+    except ValueError as e:
+        print str(e)
+        errortype = re.search("(WEATHER|DATE|TIME|GROUND MEASUREMENTS|NAME)", str(e).upper()).group(0)
+        print ">> Error in manual ground measurement SMS", errortype
+
+        server.WriteOutboxMessageToDb("READ-FAIL: (%s)\n%s" % (errortype,msg.data),c.smsalert.communitynum,'users')
+        server.WriteOutboxMessageToDb(str(e), msg.simnum,'users')
+    except:
+        # pass
+        server.WriteOutboxMessageToDb("READ-FAIL: (Unhandled) \n" + msg.data,c.smsalert.communitynum,'users')
 
 
 def ParseAllMessages(args,allmsgs=[]):
@@ -784,22 +805,7 @@ def ParseAllMessages(args,allmsgs=[]):
             elif re.search("^ACK \d+ .+",msg.data.upper()):
                 isMsgProcSuccess = amsg.processAckToAlert(msg)   
             elif re.search("^ *(R(O|0)*U*TI*N*E )|(EVE*NT )", msg.data.upper()):
-                try:
-                    gm = gndmeas.getGndMeas(msg)
-                    RecordGroundMeasurements(gm)
-                    # server.WriteOutboxMessageToDb("READ-SUCCESS: \n" + msg.data,c.smsalert.communitynum)
-                    # server.WriteOutboxMessageToDb(c.reply.successen, msg.simnum)
-                except ValueError as e:
-                    print str(e)
-                    errortype = re.search("(WEATHER|DATE|TIME|GROUND MEASUREMENTS|NAME)", str(e).upper()).group(0)
-                    print ">> Error in manual ground measurement SMS", errortype
-
-                    # server.WriteOutboxMessageToDb("READ-FAIL: (%s)\n%s" % (errortype,msg.data),c.smsalert.communitynum)
-                    # server.WriteOutboxMessageToDb(str(e), msg.simnum)
-                except:
-                    pass
-                    # server.WriteOutboxMessageToDb("READ-FAIL: (Unhandled) \n" + msg.data,c.smsalert.communitynum)
-                  
+                ProcessSurficialObservation(msg)                  
             elif re.search("^[A-Z]{4,5}\*[xyabcXYABC]\*[A-F0-9]+\*[0-9]+T?$",msg.data):
                 try:
                     dlist = ProcTwoAccelColData(msg)
