@@ -84,8 +84,11 @@ def parseSurficialSms(text):
     obv['data_source'] = 'SMS'
     obv['observer_name'] = observer_name
 
-    df_sites = mc.get('df_sites')
-    site_id = df_sites[df_sites.site_code == sms_list[1].lower()].site_id.values[0]
+    site_code = sms_list[1].lower()
+    # df_sites = mc.get('df_sites')
+    # site_id = df_sites[df_sites.site_code == sms_list[1].lower()].site_id.values[0]
+    sites_dict = mc.get('sites_dict')
+    site_id = sites_dict['site_id'][site_code]
     obv['site_id'] = site_id
     # marker_obervations= "("+ ts + ","+  meas_type +","+ observer_name +","+ str(reliability)+ ","+weather+","+data_source+ "," +site_code+ ")"
     
@@ -178,10 +181,10 @@ def getDateFromSms(text):
         if date_str_search:
             date_str = date_str_search.group(0)
             date_str = re.sub("[^A-Z0-9]","",date_str)
-        if len(date_str) < 6:
-            date_str = date_str + cur_year 
-        date_str = dt.strptime(date_str,date_format_dict[fmt]).strftime("%Y-%m-%d")
-        break
+            if len(date_str) < 6:
+                date_str = date_str + cur_year 
+            date_str = dt.strptime(date_str,date_format_dict[fmt]).strftime("%Y-%m-%d")
+            break
 
     date_val = dt.strptime(date_str,"%Y-%m-%d")
     if date_val > dt.now():
@@ -255,7 +258,7 @@ def UpdateSurficialObservations(obv):
    
     # check if entry is duplicate
     if mo_id == 0:
-        print 'Duplicate entry'
+        # print 'Duplicate entry'
         query = 'SELECT marker_observations.mo_id FROM marker_observations WHERE '\
                 'ts = "{}" and site_id = "{}"'.format(obv['ts'],obv['site_id'])    
         mo_id = dbio.querydatabase(query,'uso')[0][0]
@@ -276,7 +279,7 @@ def UpdateSurficialData(obv, mo_id):
         query= 'INSERT INTO marker_data(marker_id,measurement,mo_id) '\
         'VALUES({},{},{}) ON DUPLICATE KEY UPDATE MEASUREMENT = {}'.format(marker_id, data_records[marker_name], mo_id, data_records[marker_name])
 
-        print query
+        # print query
         dbio.commitToDb(query,'usd')
 
     db.close()

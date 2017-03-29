@@ -53,7 +53,7 @@ FailDateEN = Error! There is a problem with your DATE format. Please check your 
 FailTimeEN = Error! There is a problem with your TIME format. Please check your SMS and try again.
 FailMeasEN = Error! There is a problem with your ground measurements format.  Please check your SMS and try again.
 FailWeaEN = Error! There is no weather information sent.  Please check your SMS and try again.
-FailObvEN = Error! You did not put your name on the text message.  Please check your SMS and try again.
+FailObvEN = Error! You did not put your name on the text message. Please check your SMS and try again.
 
 [FileIO]
 allalertsfile = /home/dynaslope/Desktop/updews-pycodes/Analysis/GSMAlert.txt
@@ -69,7 +69,7 @@ gndalert3 = /home/dynaslope/Desktop/updews-pycodes/Data\ Analysis/GroundAlert/Ge
 
 [simprefix]
 smart = 00,07,08,09,10,11,12,14,18,19,20,21,22,23,24,25,28,29,30,31,32,33,34,38,39,40,42,43,44,46,47,48,49,50,89,98,99
-globe = 05,06,15,16,17,25,26,27,35,36,37,45,75,77,78,79,94,95,96,97 
+globe = 05,06,15,16,17,25,26,27,35,36,37,45,56,75,77,78,79,94,95,96,97 
 
 [mode]
 script_mode = procmsg

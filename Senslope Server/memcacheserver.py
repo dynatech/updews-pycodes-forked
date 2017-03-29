@@ -4,6 +4,7 @@ import pandas as pd
 import pandas.io.sql as psql
 import memcache
 import cfgfileio as cfg
+from datetime import datetime as dt
 
 #GetDBDataFrame(query): queries a specific sensor data table and returns it as
 #    a python dataframe format
@@ -37,7 +38,13 @@ def setMysqlTables(mc):
 	print 'Setting dataframe tables to memory'
 	for key in tables:
 		print "%s," % (key),
-		mc.set('df_'+key,GetDBDataFrame("select * from %s;" % key))
+		df = GetDBDataFrame("select * from %s;" % key)
+		mc.set('df_'+key,df)
+
+		# special configuration
+		if key == 'sites':
+			mc.set(key+'_dict',df.set_index('site_code').to_dict())
+
 	print ' ... done'
 
 def setServerConfig(mc):
@@ -48,7 +55,8 @@ def setServerConfig(mc):
 	
 
 def main():
-	print "Connecting to memcache client ...",
+	print dt.today().strftime('%Y-%m-%d %H:%M:%S')	
+	print "Connecting to memcache client ...", 
 	mc = memcache.Client(['127.0.0.1:11211'],debug=0)
 	print 'done'
 
