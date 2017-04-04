@@ -8,8 +8,8 @@ Created on Wed Jul 07 13:59:18 2016
 import dewsSocketLeanLib as dsll
 
 port = 5050
-# host = "www.dewslandslide.com"
-host = "sandbox"
+host = "www.dewslandslide.com"
+#host = "sandbox"
 
 # Send ALL Acknowledgment messages of smsoutbox to the websocket server
 # 	Messages included here have "send_status" values of:
