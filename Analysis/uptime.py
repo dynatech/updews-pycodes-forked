@@ -1,6 +1,7 @@
 import pandas as pd
 from datetime import datetime
 import querySenslopeDb as q
+import numpy as np
 
 def uptime(upts, df):
     up_index = upts.index[0]
