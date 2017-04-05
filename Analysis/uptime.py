@@ -6,7 +6,7 @@ import numpy as np
 def uptime(upts, df):
     up_index = upts.index[0]
     updf = df[(df.timestamp <= upts['ts'].values[0])&(df.updateTS >= upts['ts'].values[0])]
-    if len(updf) == 0:
+    if len(updf) <= 25:
         upts.loc[upts.index == up_index, ['status']] = 'down'
     else:
         upts.loc[upts.index == up_index, ['status']] = 'up'
@@ -27,11 +27,11 @@ def main(start, end):
     
     percent_up = 100 - (100. * len(pub_uptime[pub_uptime.status == 'down'])/len(pub_uptime))
     
-    return percent_up
+    return percent_up, pub_uptime, df
 
 if __name__ == '__main__':
     start = datetime.now()
-    percent_up = main(start = '2017-01-01', end='2017-04-01')
+    percent_up, pub_uptime, df = main(start = '2017-01-01', end='2017-04-01')
     print '\n\n'
     print 'alert uptime = ' + str(np.round(percent_up, 2)) + '%'
     print '\n\n'
