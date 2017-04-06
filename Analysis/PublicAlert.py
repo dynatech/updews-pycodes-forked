@@ -731,11 +731,27 @@ def SitePublicAlert(PublicAlert, window):
     if extend_nd_rain:
         internal_alert = internal_alert.replace('R', 'R0')
     
+    palert_source = []
+    try:
+        if 's' in internal_alert.lower():
+            palert_source += ['sensor']
+        if 'g' in internal_alert.lower():
+            palert_source += ['ground']
+        if 'r' in internal_alert.lower():
+            palert_source += ['rain']
+        if 'e' in internal_alert.lower():
+            palert_source += ['eq']
+        if 'd' in internal_alert.lower():
+            palert_source += ['on demand']
+    except:
+        pass
+    palert_source = ','.join(palert_source)
+    
     nonND_alert = site_alert.loc[(site_alert.source != 'public')&(site_alert.source != 'internal')].dropna()
     if len(nonND_alert) != 0:
-        PublicAlert.loc[alert_index] = [pd.to_datetime(str(nonND_alert.sort('updateTS', ascending = False)['updateTS'].values[0])), PublicAlert['site'].values[0], 'public', public_alert, window.end, internal_alert, validity, sensor_alert, rain_alert, ground_alert, retriggerTS, tech_info]
+        PublicAlert.loc[alert_index] = [pd.to_datetime(str(nonND_alert.sort('updateTS', ascending = False)['updateTS'].values[0])), PublicAlert['site'].values[0], 'public', public_alert, window.end, palert_source, internal_alert, validity, sensor_alert, rain_alert, ground_alert, retriggerTS, tech_info]
     else:
-        PublicAlert.loc[alert_index] = [window.end, PublicAlert['site'].values[0], 'public', public_alert, window.end, internal_alert, validity, sensor_alert, rain_alert, ground_alert, retriggerTS, tech_info]
+        PublicAlert.loc[alert_index] = [window.end, PublicAlert['site'].values[0], 'public', public_alert, window.end, palert_source, internal_alert, validity, sensor_alert, rain_alert, ground_alert, retriggerTS, tech_info]
         
     InternalAlert = PublicAlert.loc[PublicAlert.site == site][['timestamp', 'site', 'internal_alert', 'updateTS']]
     InternalAlert['source'] = 'internal'
@@ -828,12 +844,13 @@ def main():
     window,config = rtw.getwindow()
     
     props = q.GetRainProps('rain_props')
-    PublicAlert = pd.DataFrame({'timestamp': [window.end]*len(props), 'site': props['name'].values, 'source': ['public']*len(props), 'alert': [np.nan]*len(props), 'updateTS': [window.end]*len(props), 'internal_alert': [np.nan]*len(props), 'validity': [np.nan]*len(props), 'sensor_alert': [[]]*len(props), 'rain_alert': [np.nan]*len(props), 'ground_alert': [np.nan]*len(props), 'retriggerTS': [[]]*len(props), 'tech_info': [{}]*len(props)})
-    PublicAlert = PublicAlert[['timestamp', 'site', 'source', 'alert', 'updateTS', 'internal_alert', 'validity', 'sensor_alert', 'rain_alert', 'ground_alert', 'retriggerTS', 'tech_info']]
+    PublicAlert = pd.DataFrame({'timestamp': [window.end]*len(props), 'site': props['name'].values, 'source': ['public']*len(props), 'alert': [np.nan]*len(props), 'updateTS': [window.end]*len(props), 'palert_source': [np.nan]*len(props), 'internal_alert': [np.nan]*len(props), 'validity': [np.nan]*len(props), 'sensor_alert': [[]]*len(props), 'rain_alert': [np.nan]*len(props), 'ground_alert': [np.nan]*len(props), 'retriggerTS': [[]]*len(props), 'tech_info': [{}]*len(props)})
+    PublicAlert = PublicAlert[['timestamp', 'site', 'source', 'alert', 'updateTS', 'palert_source', 'internal_alert', 'validity', 'sensor_alert', 'rain_alert', 'ground_alert', 'retriggerTS', 'tech_info']]
 
     Site_Public_Alert = PublicAlert.groupby('site')
     PublicAlert = Site_Public_Alert.apply(SitePublicAlert, window=window)
-    PublicAlert = PublicAlert[['timestamp', 'site', 'alert', 'internal_alert', 'validity', 'sensor_alert', 'rain_alert', 'ground_alert', 'retriggerTS', 'tech_info']]
+    PublicAlert = PublicAlert[['timestamp', 'site', 'alert', 'internal_alert', 'palert_source', 'validity', 'sensor_alert', 'rain_alert', 'ground_alert', 'retriggerTS', 'tech_info']]
+    PublicAlert = PublicAlert.rename(columns = {'palert_source': 'source'})
     PublicAlert = PublicAlert.sort_values(['alert', 'site'], ascending = [False, True])
     
     PublicAlert.to_csv('PublicAlert.txt', header=True, index=None, sep='\t', mode='w')
