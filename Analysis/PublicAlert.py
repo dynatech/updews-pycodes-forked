@@ -200,20 +200,8 @@ def SitePublicAlert(PublicAlert, window):
             except:
                 continue
         
-        source = []
-        if 'L2' in SG_alert['alert'].values or 'L3' in SG_alert['alert'].values:
-            source += ['sensor']
-        if 'l2' in SG_alert['alert'].values or 'l3' in SG_alert['alert'].values:
-            source += ['ground']
-        if 'R' in other_alerts:
-            source += ['rain']
-        if 'E' in other_alerts:
-            source += ['eq']
-        if 'D' in other_alerts:
-            source += ['on demand']
     except:
         retriggerTS = []
-        source = ''
         print 'Public Alert- A0'
 
     #technical info for bulletin release
@@ -311,6 +299,7 @@ def SitePublicAlert(PublicAlert, window):
         sensor_alert = []
     
     # latest rain alert within 4hrs
+    extend_nd_rain = False
     try:
         rain_alert = site_alert.loc[(site_alert.source == 'rain') & (site_alert.updateTS >= window.end - timedelta(hours=4))]['alert'].values[0]
         if public_PrevAlert != 'A0':
@@ -351,96 +340,167 @@ def SitePublicAlert(PublicAlert, window):
         # A3 is still valid
         if validity > window.end + timedelta(hours=0.5):
             public_alert = 'A3'
-            # evaluates which triggers A3
+            # both ground and sensor triggered
             if ('L3' in SG_alert['alert'].values or 'L2' in SG_alert['alert'].values) and ('l3' in SG_alert['alert'].values or 'l2' in SG_alert['alert'].values):
-                alert_source = 'both ground and sensor'
                 internal_alert = 'A3-SG' + other_alerts
+            # sensor triggered
             elif 'L3' in SG_alert['alert'].values:
-                alert_source = 'sensor'
                 internal_alert = 'A3-S' + other_alerts
+            # ground triggered
             elif 'l3' in SG_alert['alert'].values:
-                alert_source = 'ground'
                 internal_alert = 'A3-G' + other_alerts
             
         # end of A3 validity
-        else:
-            
-            # evaluates which triggers A3
-            if ('L3' in SG_alert['alert'].values or 'L2' in SG_alert['alert'].values) and ('l3' in SG_alert['alert'].values or 'l2' in SG_alert['alert'].values):
-                alert_source = 'both ground and sensor'
-            elif 'L3' in SG_alert['alert'].values:
-                alert_source = 'sensor'
-            elif 'l3' in SG_alert['alert'].values:
-                alert_source = 'ground'
-
+        else:          
             # both ground and sensor triggered
-            if alert_source == 'both ground and sensor':
+            if ('L3' in SG_alert['alert'].values or 'L2' in SG_alert['alert'].values) and ('l3' in SG_alert['alert'].values or 'l2' in SG_alert['alert'].values):
                 # with data
-                if ('L' in list_ground_alerts or len(nonNDsensor) != 0) and 'l' in list_ground_alerts and not extend_rain_alert:
-                    internal_alert = 'A0'
-                    public_alert = 'A0'
-                    alert_source = '-'
+                if ('L' in list_ground_alerts or len(nonNDsensor) != 0) and 'l' in list_ground_alerts:
+                    #if rainfall above 75%
+                    if extend_rain_alert:
+                        public_alert = 'A3'
+                        internal_alert = 'A3-SG' + other_alerts
+                        validity = RoundTime(window.end)
+                        rain_alert = 'rx'
+                    else:
+                        # if nd rainfall alert                
+                        if rain_alert == 'nd':
+                            query = "SELECT * FROM senslopedb.site_level_alert WHERE site = '%s' AND source = 'rain' ORDER BY TIMESTAMP DESC LIMIT 2" %site
+                            rain_alertDF = q.GetDBDataFrame(query)
+                            # if rainfall alert is nd from r1
+                            if rain_alertDF['alert'].values[1] == 'r1':
+                                # within 1-day cap of 4H extension for nd
+                                if RoundTime(window.end) - validity < timedelta(1):
+                                    public_alert = 'A3'
+                                    internal_alert = 'A3-SG' + other_alerts   
+                                    validity = RoundTime(window.end)
+                                    extend_nd_rain = True
+                                # end of 1-day cap of 4H extension for nd
+                                else:
+                                    public_alert = 'A0'
+                                    internal_alert = 'A0'
+                                    validity = '-'
+                            else:
+                                public_alert = 'A0'
+                                internal_alert = 'A0'
+                                validity = '-'
+                        else:
+                            public_alert = 'A0'
+                            internal_alert = 'A0'
+                            validity = '-'
                 # without data
                 else:
                     # within 3 days of 4hr-extension
                     if (RoundTime(window.end) - validity < timedelta(3)) or  extend_rain_alert:
-                        validity = RoundTime(window.end)
-                        internal_alert = 'A3-SG' + other_alerts
                         public_alert = 'A3'
+                        internal_alert = 'A3-SG' + other_alerts
+                        validity = RoundTime(window.end)
                         if extend_rain_alert:
-                            rain_alert = 'rx'
-                        
+                            rain_alert = 'rx'     
                     else:
                         public_alert = 'A0'
-                        alert_source = '-'
-                        validity = '-'
-                        internal_alert = 'ND'            
+                        internal_alert = 'ND' 
+                        validity = '-'                        
 
             # sensor triggered
-            elif alert_source == 'sensor':
+            elif 'L3' in SG_alert['alert'].values:
                 # with data
-                if ('L' in list_ground_alerts or len(nonNDsensor) != 0) and not extend_rain_alert:
-                    internal_alert = 'A0'
-                    public_alert = 'A0'
-                    alert_source = '-'
+                if 'L' in list_ground_alerts or len(nonNDsensor) != 0:
+                    #if rainfall above 75%
+                    if extend_rain_alert:
+                        public_alert = 'A3'
+                        internal_alert = 'A3-S' + other_alerts
+                        validity = RoundTime(window.end)
+                        rain_alert = 'rx'
+                    else:
+                        # if nd rainfall alert                
+                        if rain_alert == 'nd':
+                            query = "SELECT * FROM senslopedb.site_level_alert WHERE site = '%s' AND source = 'rain' ORDER BY TIMESTAMP DESC LIMIT 2" %site
+                            rain_alertDF = q.GetDBDataFrame(query)
+                            # if rainfall alert is nd from r1
+                            if rain_alertDF['alert'].values[1] == 'r1':
+                                # within 1-day cap of 4H extension for nd
+                                if RoundTime(window.end) - validity < timedelta(1):
+                                    public_alert = 'A3'
+                                    internal_alert = 'A3-S' + other_alerts   
+                                    validity = RoundTime(window.end)
+                                    extend_nd_rain = True
+                                # end of 1-day cap of 4H extension for nd
+                                else:
+                                    public_alert = 'A0'
+                                    internal_alert = 'A0'
+                                    validity = '-'
+                            else:
+                                public_alert = 'A0'
+                                internal_alert = 'A0'
+                                validity = '-'
+                        else:
+                            public_alert = 'A0'
+                            internal_alert = 'A0'
+                            validity = '-'
                 # without data
                 else:
                     # within 3 days of 4hr-extension
                     if (RoundTime(window.end) - validity < timedelta(3)) or  extend_rain_alert:
-                        validity = RoundTime(window.end)
-                        internal_alert = 'A3-S' + other_alerts
                         public_alert = 'A3'
+                        internal_alert = 'A3-S' + other_alerts
+                        validity = RoundTime(window.end)
                         if extend_rain_alert:
-                            rain_alert = 'rx'
-                        
+                            rain_alert = 'rx'                  
                     else:
                         public_alert = 'A0'
-                        alert_source = '-'
                         validity = '-'
                         internal_alert = 'ND'
 
             # ground triggered
-            else:
+            elif 'l3' in SG_alert['alert'].values:
                 # with data
-                if 'l' in list_ground_alerts and not extend_rain_alert:
-                    internal_alert = 'A0'
-                    public_alert = 'A0'
-                    alert_source = '-'
+                if 'l' in list_ground_alerts:
+                    #if rainfall above 75%
+                    if extend_rain_alert:
+                        public_alert = 'A3'
+                        internal_alert = 'A3-G' + other_alerts
+                        validity = RoundTime(window.end)
+                        rain_alert = 'rx'
+                    else:
+                        # if nd rainfall alert                
+                        if rain_alert == 'nd':
+                            query = "SELECT * FROM senslopedb.site_level_alert WHERE site = '%s' AND source = 'rain' ORDER BY TIMESTAMP DESC LIMIT 2" %site
+                            rain_alertDF = q.GetDBDataFrame(query)
+                            # if rainfall alert is nd from r1
+                            if rain_alertDF['alert'].values[1] == 'r1':
+                                # within 1-day cap of 4H extension for nd
+                                if RoundTime(window.end) - validity < timedelta(1):
+                                    public_alert = 'A3'
+                                    internal_alert = 'A3-G' + other_alerts   
+                                    validity = RoundTime(window.end)
+                                    extend_nd_rain = True
+                                # end of 1-day cap of 4H extension for nd
+                                else:
+                                    public_alert = 'A0'
+                                    internal_alert = 'A0'
+                                    validity = '-'
+                            else:
+                                public_alert = 'A0'
+                                internal_alert = 'A0'
+                                validity = '-'
+                        else:
+                            public_alert = 'A0'
+                            internal_alert = 'A0'
+                            validity = '-'
                 # without data
                 else:
                     # within 3 days of 4hr-extension
                     if (RoundTime(window.end) - validity < timedelta(3)) or extend_rain_alert:
-                        validity = RoundTime(window.end)
-                        internal_alert = 'A3-G' + other_alerts
                         public_alert = 'A3'
+                        internal_alert = 'A3-G' + other_alerts
+                        validity = RoundTime(window.end)
                         if extend_rain_alert:
-                            rain_alert = 'rx'
-                        
+                            rain_alert = 'rx' 
                     else:
                         public_alert = 'A0'
-                        alert_source = '-'
-                        validity = '-'
                         internal_alert = 'ND'
+                        validity = '-'
 
         # replace S or G by s or g if L2 or l2 triggered only
         if 'S' in internal_alert:
@@ -461,9 +521,8 @@ def SitePublicAlert(PublicAlert, window):
         if validity > window.end + timedelta(hours=0.5):
             public_alert = 'A2'
 
-            # evaluates which triggers A2
+            # both ground and sensor triggered
             if 'L2' in SG_alert['alert'].values and 'l2' in SG_alert['alert'].values:
-                alert_source = 'both ground and sensor'
                 if ('L' in list_ground_alerts or len(nonNDsensor) != 0) and 'l' in list_ground_alerts:
                     internal_alert = 'A2-sg' + other_alerts
                 else:
@@ -479,16 +538,16 @@ def SitePublicAlert(PublicAlert, window):
                         else:
                             internal_alert += 'g0'
                         internal_alert += other_alerts
-
-                    
+            
+            # sensor triggered
             elif 'L2' in SG_alert['alert'].values:
-                alert_source = 'sensor'
                 if 'L' in list_ground_alerts or len(nonNDsensor) != 0:
                     internal_alert = 'A2-s' + other_alerts
                 else:
                     internal_alert = 'A2-s0' + other_alerts
+                    
+            # ground triggered
             elif 'l2' in SG_alert['alert'].values:
-                alert_source = 'ground'
                 if 'l' in list_ground_alerts:
                     internal_alert = 'A2-g' + other_alerts
                 else:
@@ -497,26 +556,25 @@ def SitePublicAlert(PublicAlert, window):
         # end of A2 validity if with data with no significant mov't
         else:
     
-            # evaluates which triggers A2
-            if 'L2' in SG_alert['alert'].values and 'l2' in SG_alert['alert'].values:
-                alert_source = 'both ground and sensor'
-            elif 'L2' in SG_alert['alert'].values:
-                alert_source = 'sensor'
-            elif 'l2' in SG_alert['alert'].values:
-                alert_source = 'ground'
-
             # both ground and sensor triggered
-            if alert_source == 'both ground and sensor':
+            if 'L2' in SG_alert['alert'].values and 'l2' in SG_alert['alert'].values:
                 # with data
-                if (('L' in list_ground_alerts or len(nonNDsensor) != 0) and 'l' in list_ground_alerts) and not extend_rain_alert:
-                    internal_alert = 'A0'
-                    public_alert = 'A0'
-                    alert_source = '-'
+                if ('L' in list_ground_alerts or len(nonNDsensor) != 0) and 'l' in list_ground_alerts:
+                    #if rainfall above 75%
+                    if extend_rain_alert:
+                        public_alert = 'A2'
+                        internal_alert = 'A2-sg' + other_alerts
+                        validity = RoundTime(window.end)
+                        rain_alert = 'rx'
+                    else:
+                        public_alert = 'A0'
+                        internal_alert = 'A0'
+                        validity = '-'
                 # without data
                 else:
                     # within 3 days of 4hr-extension
                     if (RoundTime(window.end) - validity < timedelta(3)) or extend_rain_alert:
-                        validity = RoundTime(window.end)
+                        public_alert = 'A2'
                         if ('L' not in list_ground_alerts and len(nonNDsensor) == 0) and 'l' not in list_ground_alerts:
                             internal_alert = 'A2-s0g0' + other_alerts
                         else:
@@ -529,61 +587,71 @@ def SitePublicAlert(PublicAlert, window):
                             else:
                                 internal_alert += 'g0'
                             internal_alert += other_alerts
-                        public_alert = 'A2'
+                        validity = RoundTime(window.end)
                         if extend_rain_alert:
                             rain_alert = 'rx'
-
                     else:
                         public_alert = 'A0'
-                        alert_source = '-'
-                        validity = '-'
                         internal_alert = 'ND'
+                        validity = '-'
 
             # sensor triggered
-            elif alert_source == 'sensor':
+            elif 'L2' in SG_alert['alert'].values:
                 # with data
-                if 'L' in list_ground_alerts or len(nonNDsensor) != 0 and not extend_rain_alert:
-                    internal_alert = 'A0'
-                    public_alert = 'A0'
-                    alert_source = '-'
+                if 'L' in list_ground_alerts or len(nonNDsensor) != 0:
+                    #if rainfall above 75%
+                    if extend_rain_alert:
+                        public_alert = 'A2'
+                        internal_alert = 'A2-s' + other_alerts
+                        validity = RoundTime(window.end)
+                        rain_alert = 'rx'
+                    else:
+                        public_alert = 'A0'
+                        internal_alert = 'A0'
+                        validity = '-'
                 # without data
                 else:
                     # within 3 days of 4hr-extension
                     if (RoundTime(window.end) - validity < timedelta(3)) or extend_rain_alert:
-                        validity = RoundTime(window.end)
-                        internal_alert = 'A2-s0' + other_alerts
                         public_alert = 'A2'
+                        internal_alert = 'A2-s0' + other_alerts
+                        validity = RoundTime(window.end)
                         if extend_rain_alert:
                             rain_alert = 'rx'
 
                     else:
                         public_alert = 'A0'
-                        alert_source = '-'
-                        validity = '-'
                         internal_alert = 'ND'
-
+                        validity = '-'
+                        
             # ground triggered
-            elif alert_source == 'ground':
+            elif 'l2' in SG_alert['alert'].values:
                 # with data
-                if 'l' in list_ground_alerts and not extend_rain_alert:
-                    internal_alert = 'A0'
-                    public_alert = 'A0'
-                    alert_source = '-'
+                if 'l' in list_ground_alerts:
+                    #if rainfall above 75%
+                    if extend_rain_alert:
+                        public_alert = 'A2'
+                        internal_alert = 'A2-g' + other_alerts
+                        validity = RoundTime(window.end)
+                        rain_alert = 'rx'
+                    else:
+                        public_alert = 'A0'
+                        internal_alert = 'A0'
+                        validity = '-'
                 # without data
                 else:
                     # within 3 days of 4hr-extension
                     if (RoundTime(window.end) - validity < timedelta(3)) or extend_rain_alert:
-                        validity = RoundTime(window.end)
-                        internal_alert = 'A2-g0' + other_alerts
                         public_alert = 'A2'
+                        internal_alert = 'A2-g0' + other_alerts
+                        validity = RoundTime(window.end)
                         if extend_rain_alert:
                             rain_alert = 'rx'
                             
                     else:
                         public_alert = 'A0'
-                        alert_source = '-'
-                        validity = '-'
                         internal_alert = 'ND'
+                        validity = '-'
 
     #Public ALert A1
     elif 'r1' in site_alert['alert'].values or 'e1' in site_alert['alert'].values or 'd1' in site_alert['alert'].values or 'A1' in validity_site_alert['alert'].values:
@@ -594,17 +662,6 @@ def SitePublicAlert(PublicAlert, window):
         # A1 is still valid
         if validity > window.end + timedelta(hours=0.5):
             public_alert = 'A1'
-            
-            # identifies which triggered A1
-            RED_source = []
-            if 'R' in other_alerts:
-                RED_source += ['rain']
-            if 'E' in other_alerts:
-                RED_source += ['eq']
-            if 'D' in other_alerts:
-                RED_source += ['on demand']
-            alert_source = ','.join(RED_source)
-
             # identifies if with ground data
             if 'L' in list_ground_alerts or 'l' in list_ground_alerts or len(nonNDsensor) != 0:
                 internal_alert = 'A1-' + other_alerts
@@ -614,92 +671,71 @@ def SitePublicAlert(PublicAlert, window):
         # end of A1 validity if with data with no significant mov't
         else:
             # with ground data
-            if ('L' in list_ground_alerts or 'l' in list_ground_alerts or len(nonNDsensor) != 0) and not extend_rain_alert:
-                # if nd rainfall alert                
-                if rain_alert == 'nd':
-                    query = "SELECT * FROM senslopedb.site_level_alert WHERE site = '%s' AND source = 'rain' ORDER BY TIMESTAMP DESC LIMIT 2" %site
-                    rain_alertDF = q.GetDBDataFrame(query)
-                    # if rainfall alert is nd from r1
-                    if rain_alertDF['alert'].values[1] == 'r1':
-                        # within 1-day cap of 4H extension for nd
-                        if RoundTime(window.end) - validity < timedelta(1):
-                            validity = RoundTime(window.end)
-                            public_alert = 'A1'
-                            # identifies which triggered A1
-                            RED_source = []
-                            if 'R' in other_alerts:
-                                RED_source += ['rain']
-                            if 'E' in other_alerts:
-                                RED_source += ['eq']
-                            if 'D' in other_alerts:
-                                RED_source += ['on demand']
-                            alert_source = ','.join(RED_source)
-                            internal_alert = 'A1-' + other_alerts   
-                        # end of 1-day cap of 4H extension for nd
+            if 'L' in list_ground_alerts or 'l' in list_ground_alerts or len(nonNDsensor) != 0:
+                #if rainfall above 75%
+                if extend_rain_alert:
+                    public_alert = 'A1'
+                    internal_alert = 'A1-' + other_alerts
+                    validity = RoundTime(window.end)
+                    rain_alert = 'rx'
+                else:
+                    # if nd rainfall alert                
+                    if rain_alert == 'nd':
+                        query = "SELECT * FROM senslopedb.site_level_alert WHERE site = '%s' AND source = 'rain' ORDER BY TIMESTAMP DESC LIMIT 2" %site
+                        rain_alertDF = q.GetDBDataFrame(query)
+                        # if rainfall alert is nd from r1
+                        if rain_alertDF['alert'].values[1] == 'r1':
+                            # within 1-day cap of 4H extension for nd
+                            if RoundTime(window.end) - validity < timedelta(1):
+                                public_alert = 'A1'
+                                internal_alert = 'A1-' + other_alerts   
+                                validity = RoundTime(window.end)
+                                extend_nd_rain = True
+                            # end of 1-day cap of 4H extension for nd
+                            else:
+                                public_alert = 'A0'
+                                internal_alert = 'A0'
+                                validity = '-'
                         else:
                             public_alert = 'A0'
-                            alert_source = '-'
-                            validity = '-'
                             internal_alert = 'A0'
+                            validity = '-'
                     else:
-                        internal_alert = 'A0'
                         public_alert = 'A0'
-                        alert_source = '-'
+                        internal_alert = 'A0'
                         validity = '-'
-                else:
-                    internal_alert = 'A0'
-                    public_alert = 'A0'
-                    alert_source = '-'
-                    validity = '-'
             
             # without ground data
             else:
                 # within 3 days of 4hr-extension
                 if (RoundTime(window.end) - validity < timedelta(3)) or extend_rain_alert:
-                    validity = RoundTime(window.end)
-                    public_alert = 'A1'
-
-                    # identifies which triggered A1
-                    RED_source = []
-                    if 'R' in other_alerts:
-                        RED_source += ['rain']
-                    if 'E' in other_alerts:
-                        RED_source += ['eq']
-                    if 'D' in other_alerts:
-                        RED_source += ['on demand']
-                    alert_source = ','.join(RED_source)
-        
+                    public_alert = 'A1'        
                     internal_alert = 'ND-' + other_alerts
-                    
+                    validity = RoundTime(window.end)
                     if extend_rain_alert:
-                            rain_alert = 'rx'
-                            
+                            rain_alert = 'rx'        
                 else:
                     public_alert = 'A0'
-                    alert_source = '-'
-                    validity = '-'
                     internal_alert = 'ND'
-    
+                    validity = '-'
     #Public Alert A0
     else:
-        alert_source = '-'
         public_alert = 'A0'
-        validity = '-'
         if 'L' in list_ground_alerts or 'l' in list_ground_alerts or len(nonNDsensor) != 0:
             internal_alert = 'A0'
         else:
             internal_alert = 'ND'
+        validity = '-'
      
     alert_index = PublicAlert.loc[PublicAlert.site == site].index[0]
-    alert_source = ','.join(source)
-    if rain_alert == 'nd' and 'R' in internal_alert:
+    if extend_nd_rain:
         internal_alert = internal_alert.replace('R', 'R0')
     
     nonND_alert = site_alert.loc[(site_alert.source != 'public')&(site_alert.source != 'internal')].dropna()
     if len(nonND_alert) != 0:
-        PublicAlert.loc[alert_index] = [pd.to_datetime(str(nonND_alert.sort('updateTS', ascending = False)['updateTS'].values[0])), PublicAlert['site'].values[0], 'public', public_alert, window.end, alert_source, internal_alert, validity, sensor_alert, rain_alert, ground_alert, retriggerTS, tech_info]
+        PublicAlert.loc[alert_index] = [pd.to_datetime(str(nonND_alert.sort('updateTS', ascending = False)['updateTS'].values[0])), PublicAlert['site'].values[0], 'public', public_alert, window.end, internal_alert, validity, sensor_alert, rain_alert, ground_alert, retriggerTS, tech_info]
     else:
-        PublicAlert.loc[alert_index] = [window.end, PublicAlert['site'].values[0], 'public', public_alert, window.end, alert_source, internal_alert, validity, sensor_alert, rain_alert, ground_alert, retriggerTS, tech_info]
+        PublicAlert.loc[alert_index] = [window.end, PublicAlert['site'].values[0], 'public', public_alert, window.end, internal_alert, validity, sensor_alert, rain_alert, ground_alert, retriggerTS, tech_info]
         
     InternalAlert = PublicAlert.loc[PublicAlert.site == site][['timestamp', 'site', 'internal_alert', 'updateTS']]
     InternalAlert['source'] = 'internal'
@@ -734,7 +770,7 @@ def SitePublicAlert(PublicAlert, window):
             GSMAlert = PublicAlert.loc[PublicAlert.site == site][['site', 'alert', 'palert_source']]        
 
         #node_level_alert
-        if 'sensor' in alert_source:
+        if 's' in internal_alert or 'S' in internal_alert:
             query = "SELECT * FROM senslopedb.node_level_alert WHERE site REGEXP '%s' AND timestamp >= '%s' ORDER BY timestamp DESC" %(sensor_site,start_monitor)
             allnode_alertDF = q.GetDBDataFrame(query)
             column_name = set(allnode_alertDF['site'].values)
@@ -792,13 +828,12 @@ def main():
     window,config = rtw.getwindow()
     
     props = q.GetRainProps('rain_props')
-    PublicAlert = pd.DataFrame({'timestamp': [window.end]*len(props), 'site': props['name'].values, 'source': ['public']*len(props), 'alert': [np.nan]*len(props), 'updateTS': [window.end]*len(props), 'palert_source': [np.nan]*len(props), 'internal_alert': [np.nan]*len(props), 'validity': [np.nan]*len(props), 'sensor_alert': [[]]*len(props), 'rain_alert': [np.nan]*len(props), 'ground_alert': [np.nan]*len(props), 'retriggerTS': [[]]*len(props), 'tech_info': [{}]*len(props)})
-    PublicAlert = PublicAlert[['timestamp', 'site', 'source', 'alert', 'updateTS', 'palert_source', 'internal_alert', 'validity', 'sensor_alert', 'rain_alert', 'ground_alert', 'retriggerTS', 'tech_info']]
+    PublicAlert = pd.DataFrame({'timestamp': [window.end]*len(props), 'site': props['name'].values, 'source': ['public']*len(props), 'alert': [np.nan]*len(props), 'updateTS': [window.end]*len(props), 'internal_alert': [np.nan]*len(props), 'validity': [np.nan]*len(props), 'sensor_alert': [[]]*len(props), 'rain_alert': [np.nan]*len(props), 'ground_alert': [np.nan]*len(props), 'retriggerTS': [[]]*len(props), 'tech_info': [{}]*len(props)})
+    PublicAlert = PublicAlert[['timestamp', 'site', 'source', 'alert', 'updateTS', 'internal_alert', 'validity', 'sensor_alert', 'rain_alert', 'ground_alert', 'retriggerTS', 'tech_info']]
 
     Site_Public_Alert = PublicAlert.groupby('site')
     PublicAlert = Site_Public_Alert.apply(SitePublicAlert, window=window)
-    PublicAlert = PublicAlert[['timestamp', 'site', 'alert', 'palert_source', 'internal_alert', 'validity', 'sensor_alert', 'rain_alert', 'ground_alert', 'retriggerTS', 'tech_info']]
-    PublicAlert = PublicAlert.rename(columns = {'palert_source': 'source'})
+    PublicAlert = PublicAlert[['timestamp', 'site', 'alert', 'internal_alert', 'validity', 'sensor_alert', 'rain_alert', 'ground_alert', 'retriggerTS', 'tech_info']]
     PublicAlert = PublicAlert.sort_values(['alert', 'site'], ascending = [False, True])
     
     PublicAlert.to_csv('PublicAlert.txt', header=True, index=None, sep='\t', mode='w')
