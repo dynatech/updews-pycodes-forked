@@ -28,13 +28,6 @@ class columnArray:
         self.seglen = segment_length
         self.collength = col_length
 
-class rainArray:
-    def __init__(self, name, max_rain_2year, rain_senslope, rain_arq):
-        self.name = name
-        self.twoyrmx = max_rain_2year
-        self.oldsite = rain_senslope
-        self.newsite = rain_arq
-
 class coordsArray:
     def __init__(self, name, lat, lon, barangay):
         self.name = name
@@ -180,61 +173,7 @@ def PushDBDataFrame(df,table_name):
     except:
         print 'already in db'
 
-#GetRawAccelData(siteid = "", fromTime = "", maxnode = 40): 
-#    retrieves raw data from the database table specified by parameters
-#    
-#    Parameters:
-#        siteid: str
-#            sitename or column name of the sensor column
-#        fromTime: str 
-#            starting time of the query that needs to be retrieved
-#        maxnode: int, default 40
-#            maximum node expected from this particular sensor column. Used
-#            to remove extraneous node ids which may not belong to the sensor column
-#            
-#    Returns:
-#        df: dataframe object 
-#            dataframe object of the result set 
-#def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid = 32, targetnode = -1, batt=0):
-#
-#    if not siteid:
-#        raise ValueError('no site id entered')
-#    
-#    if printtostdout:
-#        PrintOut('Querying database ...')
-#    # added getting battery data (v2&v3)
-#    if batt == 1:
-#        query = "select timestamp,id,xvalue,yvalue,zvalue,batt from senslopedb.%s " % (siteid) 
-#    else:
-#        query = "select timestamp,id,xvalue,yvalue,zvalue from senslopedb.%s " % (siteid) 
-#
-#    if not fromTime:
-#        fromTime = "2010-01-01"
-#        
-#    query = query + " where timestamp >= '%s'" % fromTime
-#    
-#    if toTime != '':
-#        query = query + " and timestamp <= '%s'" % toTime
-#
-#    if len(siteid) == 5:
-#        query = query + " and msgid in (%s,%s-21)" % (str(msgid), str(msgid));
-#    
-#    if targetnode <= 0:
-#        query = query + " and id >= 1 and id <= %s ;" % (str(maxnode))
-#    else:
-#        query = query + " and id = %s;" % (targetnode)
-#    
-#    PrintOut(query)
-#    
-#    df =  GetDBDataFrame(query)
-#    if batt == 1:
-#        df.columns = ['ts','id','x','y','z','v']
-#    else:
-#        df.columns = ['ts','id','x','y','z']
-#    # change ts column to datetime
-#    df.ts = pd.to_datetime(df.ts)
-#    
-#    return df
+
 def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid = "", targetnode ="", batt=0, voltf=False, returndb=True):
     if not siteid:
         raise ValueError('no site id entered')
@@ -369,63 +308,6 @@ def GetSOMSRaw(siteid = "", fromTime = "", toTime = "", msgid="", targetnode = "
 
     return df
     
-#GetRawRainData(siteid = "", fromTime = "", maxnode = 40): 
-#    retrieves raw data from the database table specified by parameters
-#    
-#    Parameters:
-#        siteid: str
-#            sitename or column name of the sensor column
-#        fromTime: str 
-#            starting time of the query that needs to be retrieved
-#            
-#    Returns:
-#        df: dataframe object 
-#            dataframe object of the result set 
-def GetRawRainData(siteid = "", fromTime = "", toTime=""):
-
-    if not siteid:
-        raise ValueError('no site id entered')
-    
-    oldsite = []
-    newsite = []
-    rainlist = GetRainList()
-    for s in rainlist:
-        oldsite += [s.oldsite]
-        newsite += [s.newsite]
-    
-    try:    
-        if siteid in oldsite:
-        
-            query = "select timestamp, rain from senslopedb.%s " % (siteid)
-            
-        elif siteid in newsite:
-        
-            query = "select timestamp, r15m from senslopedb.%s " % (siteid)
-            
-        else:
-            
-            query = "select timestamp, rval from senslopedb.%s " % (siteid)
-        
-        if not fromTime:
-            fromTime = "2010-01-01"
-            
-        query = query + " where timestamp > '%s'" % fromTime
-        
-        if toTime:
-            query = query + " and timestamp < '%s'" % toTime
-    
-        query = query + " order by timestamp"
-    
-        df =  GetDBDataFrame(query)
-        
-        df.columns = ['ts','rain']
-        # change ts column to datetime
-        df.ts = pd.to_datetime(df.ts)
-        
-        return df
-        
-    except UnboundLocalError:
-        print 'No ' + siteid + ' table in SQL'
     
 
 def GetCoordsList():
@@ -454,25 +336,6 @@ def GetCoordsList():
 #        sensorlist: list
 #            list of columnArray (see class definition above)
 
-#def GetSensorList():
-#    try:
-#        db, cur = SenslopeDBConnect(Namedb)
-#        cur.execute("use "+ Namedb)
-#        
-#        query = 'SELECT name, num_nodes, seg_length, col_length FROM site_column_props'
-#        
-#        df = psql.read_sql(query, db)
-#        
-#        # make a sensor list of columnArray class functions
-#        sensors = []
-#        for s in range(len(df)):
-#            if df.name[s] == 'mcatb' or df.name[s] == 'messb':
-#                continue
-#            s = columnArray(df.name[s],df.num_nodes[s],df.seg_length[s],df.col_length[s])
-#            sensors.append(s)
-#        return sensors
-#    except:
-#        raise ValueError('Could not get sensor list from database')
 def GetSensorList(site=''):
     if site == '':
         try:
@@ -544,70 +407,6 @@ def GetNodeStatus(statusid = 1):
         raise ValueError('Could not get sensor list from database')
 
 
-#GetRainList():
-#    returns a list of columnArray objects from the database tables
-#    
-#    Returns:
-#        sensorlist: list
-#            list of columnArray (see class definition above)
-def GetRainList():
-    try:
-        db, cur = SenslopeDBConnect(Namedb)
-        cur.execute("use "+ Namedb)
-        
-        query = 'SELECT name, max_rain_2year, rain_senslope, rain_arq FROM site_rain_props'
-        
-        df = psql.read_sql(query, db)
-        
-        # make a sensor list of columnArray class functions
-        sensors = []
-        for s in range(len(df)):
-            s = rainArray(df.name[s],df.max_rain_2year[s],df.rain_senslope[s],df.rain_arq[s])
-            sensors.append(s)
-            
-        return sensors
-    except:
-        raise ValueError('Could not get sensor list from database')
-
-#GetRainNOAHList():
-#    returns an array of NOAH rain gauge IDs from the database tables
-def GetRainNOAHList():
-    try:
-        db, cur = SenslopeDBConnect(Namedb)
-        cur.execute("use "+ Namedb)
-        
-        query = 'SELECT * FROM rain_props'
-        
-        df = GetDBDataFrame(query)
-
-        RG1 = list(df[(df['RG1'].str.contains('rain_noah_', case=False) == True)]['RG1'].values)
-        RG2 = list(df[(df['RG2'].str.contains('rain_noah_', case=False) == True)]['RG2'].values)
-        RG3 = list(df[(df['RG3'].str.contains('rain_noah_', case=False) == True)]['RG3'].values)
-        RG = RG1 + RG2 + RG3
-
-        df = pd.DataFrame({'RG': RG})
-        df['RG'] = df.RG.apply(lambda x: int(x[len('rain_noah_'):len(x)]))
-        
-        noahlist = sorted(set(df['RG'].values))
-        
-        return noahlist
-
-    except:
-        raise ValueError('Could not get sensor list from database')
-
-def GetRainProps(table_name='site_rain_props'):
-    try:
-        db, cur = SenslopeDBConnect(Namedb)
-        cur.execute("use "+ Namedb)
-        
-        query = 'SELECT * FROM %s' %table_name
-        
-        df = psql.read_sql(query, db)
-        
-        return df
-    except:
-        raise ValueError('Could not get sensor list from database')
-        
 #GetLastGoodData(df, nos, fillMissing=False):
 #    evaluates the last good data from the input df
 #    
