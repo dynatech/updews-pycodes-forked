@@ -4,7 +4,7 @@ import querydb as q
 from sqlalchemy import create_engine
 
 def SiteCoord():
-    query = "select site_id, latitude, longitude from loggers where logger_name not like '%s'" %'mes%'
+    query = "select site_id, latitude, longitude from loggers"
     df = q.GetDBDataFrame(query)
     df = df.dropna()
     df = df.drop_duplicates('site_id')
@@ -16,6 +16,33 @@ def AllRGCoord():
     df = q.GetDBDataFrame(query)
     return df
 
+def create_rainfall_priorities():
+    db, cur = q.SenslopeDBConnect(q.Namedb)
+    
+    query = "CREATE TABLE `senslopedb`.`rainfall_priorities` ("
+    query += "  `priority_id` SMALLINT(5) UNSIGNED NOT NULL AUTO_INCREMENT,"
+    query += "  `rain_id` SMALLINT(5) UNSIGNED NOT NULL,"
+    query += "  `site_id` TINYINT(3) UNSIGNED NOT NULL,"
+    query += "  `distance` DECIMAL(5,2) UNSIGNED NOT NULL,"
+    query += "  PRIMARY KEY (`priority_id`),"
+    query += "  INDEX `fk_rainfall_priorities_sites1_idx` (`site_id` ASC),"
+    query += "  INDEX `fk_rainfall_priorities_rain_gauges1_idx` (`rain_id` ASC),"
+    query += "  UNIQUE INDEX `uq_rainfall_priorities` (`site_id` ASC, `rain_id` ASC),"
+    query += "  CONSTRAINT `fk_rainfall_priorities_sites1`"
+    query += "    FOREIGN KEY (`site_id`)"
+    query += "    REFERENCES `senslopedb`.`sites` (`site_id`)"
+    query += "    ON DELETE CASCADE"
+    query += "    ON UPDATE CASCADE,"
+    query += "  CONSTRAINT `fk_rainfall_priorities_rain_gauges1`"
+    query += "    FOREIGN KEY (`rain_id`)"
+    query += "    REFERENCES `senslopedb`.`rainfall_gauges` (`rain_id`)"
+    query += "    ON DELETE CASCADE"
+    query += "    ON UPDATE CASCADE)"
+    
+    cur.execute(query)
+    db.commit()
+    db.close()
+
 def to_MySQL(df, engine):
 #    gauge_name = df['gauge_name'].values[0]
     site_id = df['site_id'].values[0]
@@ -26,7 +53,7 @@ def to_MySQL(df, engine):
         rain_id = df['rain_id'].values[0]
         distance = df['distance'].values[0]
         query = "SELECT * FROM %s WHERE site_id = %s and rain_id = %s" %('rainfall_priorities', site_id, rain_id)
-        priority_id = q.GetDBDataFrame(query).priority_id[0]
+        priority_id = q.GetDBDataFrame(query)['priority_id'].values[0]
         db, cur = q.SenslopeDBConnect(q.Namedb)
         query = "UPDATE %s SET distance = %s WHERE priority_id = %s" %('rainfall_priorities', distance, priority_id)
         cur.execute(query)
@@ -66,6 +93,10 @@ def main():
     nearest_rg = site_coord.apply(Distance, rg_coord=rg_coord)
     nearest_rg['distance'] = np.round(nearest_rg.distance,2)
     
+    if q.DoesTableExist('rainfall_priorities') == False:
+        #Create a NOAH table if it doesn't exist yet
+        create_rainfall_priorities()
+
     engine = create_engine('mysql://'+q.Userdb+':'+q.Passdb+'@'+q.Hostdb+':3306/'+q.Namedb)
     nearest_rg = nearest_rg.reset_index(drop=True)
     nearest_rg['priority_id'] = range(len(nearest_rg))
