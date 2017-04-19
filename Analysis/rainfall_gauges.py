@@ -10,7 +10,7 @@ def create_rainfall_gauges():
     
     db, cur = q.SenslopeDBConnect(q.Namedb)
     
-    query = "CREATE TABLE `senslopedb`.`rainfall_gauges` ("
+    query = "CREATE TABLE `rainfall_gauges` ("
     query += "  `rain_id` SMALLINT(5) UNSIGNED NOT NULL AUTO_INCREMENT,"
     query += "  `gauge_name` VARCHAR(5) NOT NULL,"
     query += "  `data_source` VARCHAR(8) NOT NULL,"

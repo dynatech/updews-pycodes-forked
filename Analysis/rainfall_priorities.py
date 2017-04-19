@@ -19,7 +19,7 @@ def AllRGCoord():
 def create_rainfall_priorities():
     db, cur = q.SenslopeDBConnect(q.Namedb)
     
-    query = "CREATE TABLE `senslopedb`.`rainfall_priorities` ("
+    query = "CREATE TABLE `rainfall_priorities` ("
     query += "  `priority_id` SMALLINT(5) UNSIGNED NOT NULL AUTO_INCREMENT,"
     query += "  `rain_id` SMALLINT(5) UNSIGNED NOT NULL,"
     query += "  `site_id` TINYINT(3) UNSIGNED NOT NULL,"
@@ -30,12 +30,12 @@ def create_rainfall_priorities():
     query += "  UNIQUE INDEX `uq_rainfall_priorities` (`site_id` ASC, `rain_id` ASC),"
     query += "  CONSTRAINT `fk_rainfall_priorities_sites1`"
     query += "    FOREIGN KEY (`site_id`)"
-    query += "    REFERENCES `senslopedb`.`sites` (`site_id`)"
+    query += "    REFERENCES `sites` (`site_id`)"
     query += "    ON DELETE CASCADE"
     query += "    ON UPDATE CASCADE,"
     query += "  CONSTRAINT `fk_rainfall_priorities_rain_gauges1`"
     query += "    FOREIGN KEY (`rain_id`)"
-    query += "    REFERENCES `senslopedb`.`rainfall_gauges` (`rain_id`)"
+    query += "    REFERENCES `rainfall_gauges` (`rain_id`)"
     query += "    ON DELETE CASCADE"
     query += "    ON UPDATE CASCADE)"
     

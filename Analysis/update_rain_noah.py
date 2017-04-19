@@ -85,12 +85,12 @@ def createNOAHTable(gauge_name):
     #Create table for noahid before proceeding with the download
     query = "CREATE TABLE `%s` (" %gauge_name
     query += "  `data_id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,"
-    query += "  `ts` TIMESTAMP NULL,"
-    query += "  `rain` FLOAT NULL DEFAULT NULL,"
-    query += "  `temperature` FLOAT NULL DEFAULT NULL,"
-    query += "  `humidity` FLOAT NULL DEFAULT NULL,"
-    query += "  `battery1` FLOAT NULL DEFAULT NULL,"
-    query += "  `battery2` FLOAT NULL DEFAULT NULL,"
+    query += "  `ts` TIMESTAMP NOT NULL,"
+    query += "  `rain` DECIMAL(4,1) NOT NULL,"
+    query += "  `temperature` DECIMAL(3,1) NULL DEFAULT NULL,"
+    query += "  `humidity` DECIMAL(3,1) NULL DEFAULT NULL,"
+    query += "  `battery1` DECIMAL(4,3) NULL DEFAULT NULL,"
+    query += "  `battery2` DECIMAL(4,3) NULL DEFAULT NULL,"
     query += "  `csq` TINYINT(3) NULL DEFAULT NULL,"
     query += "  PRIMARY KEY (`data_id`),"
     query += "  UNIQUE INDEX `ts_UNIQUE` (`ts` ASC))"
@@ -146,14 +146,13 @@ def UpdateSingleTable(noah_gauges):
     print "    End timestamp: %s" % (endTS)
     
     #Download data for noahid
-    UpdateTableData(noah_id, gauge_name, latestTS, endTS, noah_gauges)    
+    UpdateTableData(noah_id, gauge_name, latestTS, endTS, noah_gauges)
 
 def main():
     #get the list of rainfall NOAH rain gauge IDs
     gauges = r.rainfall_gauges()
     gauges = gauges[gauges.gauge_name.str.contains('noah')].drop_duplicates('gauge_name')
     gauges['dev_id'] = ','.join(gauges.gauge_name).replace('rain_noah_', '').split(',')
-    gauges = gauges[gauges.dev_id.isin(['557', '1255', '1258'])]#, '450', '1381', '1556', '735', '107'])]
     noah_gauges = gauges.groupby('gauge_name')    
     noah_gauges.apply(UpdateSingleTable)
     
