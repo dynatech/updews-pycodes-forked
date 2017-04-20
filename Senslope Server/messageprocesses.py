@@ -236,8 +236,8 @@ def ProcessColumn(line,txtdatetime,sender):
     #     msgdatetime = txtdatetime
     #     print "date & time adjusted " + msgdatetime
     # else:
-    #     msgdatetime = dt.strptime(msgdatetime,'%y%m%d%H%M').strftime('%Y-%m-%d %H:%M:00')
-    #     print 'date & time no change'
+    msgdatetime = dt.strptime(msgdatetime,'%y%m%d%H%M').strftime('%Y-%m-%d %H:%M:00')
+    # print 'date & time no change'
         
     dlen = len(msgdata) #checks if data length is divisible by 15
     #print 'data length: %d' %dlen
