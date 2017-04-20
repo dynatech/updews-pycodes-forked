@@ -6,6 +6,7 @@ import sys
 
 import rtwindow as rtw
 import querySenslopeDb as q
+import alertgen as a
 
 def RoundTime(date_time):
     # rounds time to 4/8/12 AM/PM
@@ -68,6 +69,10 @@ def SensorTrigger(df):
         else:
             sensor_tech += ['%s (nodes %s)' %(i.upper(), ','.join(sorted(col_df['id'].values)))]
     return ','.join(sensor_tech)
+
+def alertgen(df):
+    name = df['name'].values[0]
+    a.main(name, end_mon=True)
 
 def SitePublicAlert(PublicAlert, window):
     site = PublicAlert['site'].values[0]
@@ -825,6 +830,12 @@ def SitePublicAlert(PublicAlert, window):
             writeAlertToDb('l0t_alert.txt')
             with open('l0t_alert.txt', 'w') as w:
                 w.write('')
+
+    if public_CurrAlert == 'A0' and public_PrevAlert != public_CurrAlert:
+        query = "SELECT * FROM senslopedb.site_column_props where name REGEXP '%s'" %sensor_site
+        df = q.GetDBDataFrame(query)
+        logger_df = df.groupby('name')
+        logger_df.apply(alertgen)
 
     return PublicAlert
 
