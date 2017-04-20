@@ -118,7 +118,7 @@ def GetResampledData(gauge_name, offsetstart, start, end):
     rainfall = GetRawRainData(gauge_name, fromTime=offsetstart, toTime=end)
     rainfall = rainfall.set_index('ts')
     rainfall = rainfall.loc[rainfall['rain']>=0]
-    print gauge_name, '\n', rainfall
+
     try:
         if rainfall.index[-1] <= end-timedelta(1):
             return pd.DataFrame()
@@ -128,7 +128,7 @@ def GetResampledData(gauge_name, offsetstart, start, end):
             blankdf=pd.DataFrame({'ts': [end], 'rain': [0]})
             blankdf=blankdf.set_index('ts')
             rainfall=rainfall.append(blankdf)
-        rainfall=rainfall.resample('30min',how='sum', label='right')
+        rainfall=rainfall.resample('30min').sum()
         rainfall=rainfall[(rainfall.index>=start)]
         rainfall=rainfall[(rainfall.index<=end)]    
         return rainfall
@@ -169,12 +169,12 @@ def onethree_val_writer(rainfall):
     ##one, three; float; cumulative sum for one day and three days
 
     #getting the rolling sum for the last24 hours
-    rainfall2=pd.rolling_sum(rainfall,48,min_periods=1)
-    rainfall2=np.round(rainfall2,4)
+    rainfall2 = rainfall.rolling(min_periods=1,window=48,center=False).sum()
+    rainfall2 = np.round(rainfall2,4)
     
     #getting the rolling sum for the last 3 days
-    rainfall3=pd.rolling_sum(rainfall,144,min_periods=1)
-    rainfall3=np.round(rainfall3,4)
+    rainfall3 = rainfall.rolling(min_periods=1,window=144,center=False).sum()
+    rainfall3 = np.round(rainfall3,4)
 
             
     one = float(rainfall2.rain[-1:])
@@ -281,6 +281,7 @@ def main(rain_props, end, s):
         rainfall = pd.DataFrame({'ts': [end], 'rain': [np.nan]})
         rainfall = rainfall.set_index('ts')
         gauge_name="No Alert! No ASTI/SENSLOPE Data"
+        rain_id="No Alert! No ASTI/SENSLOPE Data"
         summary = summary_writer(site_id,gauge_name,rain_id,twoyrmax,halfmax,rainfall,end,write_alert)
 
     if q.DoesTableExist('site_alerts') == False:
