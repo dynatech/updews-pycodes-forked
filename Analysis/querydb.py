@@ -21,13 +21,14 @@ elif curOS == "Linux":
 # Scripts for connecting to local database
 # Needs config file: server-config.txt
 
-class columnArray:
-    def __init__(self, name, number_of_segments, segment_length, col_length):
-        self.name = name
+class loggerArray:
+    def __init__(self, site_id, logger_id, tsm_name, number_of_segments, segment_length):
+        self.site_id = site_id
+        self.logger_id = logger_id
+        self.tsm_name = tsm_name
         self.nos = number_of_segments
         self.seglen = segment_length
-        self.collength = col_length
-
+        
 class coordsArray:
     def __init__(self, name, lat, lon, barangay):
         self.name = name
@@ -329,58 +330,43 @@ def GetCoordsList():
     except:
         raise ValueError('Could not get sensor list from database')
 
-#GetSensorList():
-#    returns a list of columnArray objects from the database tables
-#    
-#    Returns:
-#        sensorlist: list
-#            list of columnArray (see class definition above)
+#loggerArrayList():
+#    transforms dataframe TSMdf to list of loggerArray
+def loggerArrayList(TSMdf):
+    return loggerArray(TSMdf['site_id'].values[0], TSMdf['logger_id'].values[0], TSMdf['tsm_name'].values[0], TSMdf['number_of_segments'].values[0], TSMdf['segment_length'].values[0])
 
-def GetSensorList(site=''):
-    if site == '':
+#GetTSMList():
+#    returns a list of loggerArray objects from the database tables
+def GetTSMList(tsm_name='', end=dtm.now()):
+    if tsm_name == '':
         try:
-            db, cur = SenslopeDBConnect(Namedb)
-            cur.execute("use "+ Namedb)
+            query = "SELECT site_id, logger_id, tsm_name, number_of_segments, segment_length, date_activated"
+            query += " FROM senslopedb.tsm_sensors WHERE (date_deactivated > '%s' OR date_deactivated IS NULL)" %end
+            df = GetDBDataFrame(query)
+            df = df.sort_values(['logger_id', 'date_activated'], ascending=[True, False])
+            df = df.drop_duplicates('logger_id')
             
-            query = 'SELECT name, num_nodes, seg_length, col_length FROM site_column_props'
-            
-            df = psql.read_sql(query, db)
-            
-            # make a sensor list of columnArray class functions
-            sensors = []
-            for s in range(len(df)):
-                if df.name[s] == 'mcatb' or df.name[s] == 'messb':
-                    continue
-                s = columnArray(df.name[s],df.num_nodes[s],df.seg_length[s],df.col_length[s])
-                sensors.append(s)
+            # make a sensor list of loggerArray class functions
+            TSMdf = df.groupby('logger_id', as_index=False)
+            sensors = TSMdf.apply(loggerArrayList)
             return sensors
         except:
             raise ValueError('Could not get sensor list from database')
     else:
-            db, cur = SenslopeDBConnect(Namedb)
-            cur.execute("use "+ Namedb)
+        try:
+            query = "SELECT site_id, logger_id, tsm_name, number_of_segments, segment_length, date_activated"
+            query += " FROM senslopedb.tsm_sensors WHERE (date_deactivated > '%s' OR date_deactivated IS NULL)" %end
+            query += " AND tsm_name = '%s'" %tsm_name
+            df = GetDBDataFrame(query)
+            df = df.sort_values(['logger_id', 'date_activated'], ascending=[True, False])
+            df = df.drop_duplicates('logger_id')
             
-            query = "SELECT name, num_nodes, seg_length, col_length FROM site_column_props WHERE name LIKE '%"
-            query = query + str(site) + "%'"
-            df = psql.read_sql(query, db)
-            sensors = []
-            s = columnArray(df.name[0],df.num_nodes[0],df.seg_length[0],df.col_length[0])
-            sensors.append(s)
+            # make a sensor list of loggerArray class functions
+            TSMdf = df.groupby('logger_id', as_index=False)
+            sensors = TSMdf.apply(loggerArrayList)
             return sensors
-
-def GetSensorDF():
-    try:
-        #db, cur = SenslopeDBConnect(Namedb)
-        #cur.execute("use "+ Namedb)
-        
-        query = 'SELECT name, num_nodes, seg_length, col_length FROM site_column_props'
-        
-        #df = psql.read_sql(query, db)
-        
-        df = GetDBDataFrame(query)
-        return df
-    except:
-        raise ValueError('Could not get sensor list from database')
+        except:
+            raise ValueError('Could not get sensor list from database')
 
 #returns list of non-working nodes from the node status table
 #function will only return the latest entry per site per node with
@@ -573,7 +559,7 @@ def GenerateLastGoodData():
     
     db.close()
     
-    slist = GetSensorList()
+    slist = GetTSMList()
     
     for s in slist:
         print s.name, s.nos
@@ -632,10 +618,4 @@ except:
     xmax = 1200
     mlowlim = 2000
     muplim = 4000
-    islimval = True   
-
-
-
-
-
-
+    islimval = True
