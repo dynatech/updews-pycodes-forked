@@ -96,7 +96,7 @@ def SitePublicAlert(PublicAlert, window):
     site_alert = q.GetDBDataFrame(query)
     
     # dataframe of all alerts
-    validity_site_alert = site_alert.sort('updateTS', ascending = False)
+    validity_site_alert = site_alert.sort_values('updateTS', ascending = False)
     # dataframe of all alerts for the past 4hrs
     site_alert = site_alert.loc[site_alert.updateTS >= window.end - timedelta(hours=4)]
 
@@ -143,7 +143,7 @@ def SitePublicAlert(PublicAlert, window):
             print 'Public Alert- A1'
 
     try:
-        new_ground_alert = validity_site_alert.loc[validity_site_alert.source == 'ground'].sort('timestamp', ascending=False)
+        new_ground_alert = validity_site_alert.loc[validity_site_alert.source == 'ground'].sort_values('timestamp', ascending=False)
         if validity_site_alert.loc[validity_site_alert.source == 'public']['alert'].values[0] == 'A0' and new_ground_alert['alert'].values[0] in ['l2', 'l3']:
             alertTS = pd.to_datetime(new_ground_alert['timestamp'].values[0])
             
@@ -747,7 +747,7 @@ def SitePublicAlert(PublicAlert, window):
             palert_source += ['rain']
         if 'e' in internal_alert.lower():
             palert_source += ['eq']
-        if 'd' in internal_alert.lower():
+        if 'd' in internal_alert.lower().replace('nd', ''):
             palert_source += ['on demand']
     except:
         pass
@@ -755,7 +755,7 @@ def SitePublicAlert(PublicAlert, window):
     
     nonND_alert = site_alert.loc[(site_alert.source != 'public')&(site_alert.source != 'internal')].dropna()
     if len(nonND_alert) != 0:
-        PublicAlert.loc[alert_index] = [pd.to_datetime(str(nonND_alert.sort('updateTS', ascending = False)['updateTS'].values[0])), PublicAlert['site'].values[0], 'public', public_alert, window.end, palert_source, internal_alert, validity, sensor_alert, rain_alert, ground_alert, retriggerTS, tech_info]
+        PublicAlert.loc[alert_index] = [pd.to_datetime(str(nonND_alert.sort_values('updateTS', ascending = False)['updateTS'].values[0])), PublicAlert['site'].values[0], 'public', public_alert, window.end, palert_source, internal_alert, validity, sensor_alert, rain_alert, ground_alert, retriggerTS, tech_info]
     else:
         PublicAlert.loc[alert_index] = [window.end, PublicAlert['site'].values[0], 'public', public_alert, window.end, palert_source, internal_alert, validity, sensor_alert, rain_alert, ground_alert, retriggerTS, tech_info]
         
@@ -780,10 +780,10 @@ def SitePublicAlert(PublicAlert, window):
     if public_CurrAlert != 'A0' and public_PrevAlert != public_CurrAlert:
         
         if public_CurrAlert == 'A3':
-            smsAlertSource = SG_alert[(SG_alert['alert'] == 'l3')|(SG_alert['alert'] == 'L3')]
+            smsAlertSource = SG_alert[(SG_alert['alert'] == 'l3')|(SG_alert['alert'] == 'L3')].sort_values('updateTS', ascending=False)
             smsAlertSource = smsAlertSource['source'].values[0]
         elif public_CurrAlert == 'A2':
-            smsAlertSource = SG_alert[(SG_alert['alert'] == 'l2')|(SG_alert['alert'] == 'L2')]
+            smsAlertSource = SG_alert[(SG_alert['alert'] == 'l2')|(SG_alert['alert'] == 'L2')].sort_values('updateTS', ascending=False)
             smsAlertSource = smsAlertSource['source'].values[0]
         
         try:
