@@ -697,6 +697,8 @@ def SpawnAlertGen(sitename):
         mc.set('alertgenlist',[])
         mc.set('alertgenlist',alertgenlist)    
 
+def invokeProcessInBgnd(exec_line):
+    p = subprocess.Popen(exec_line, stdout=subprocess.PIPE, shell=True, stderr=subprocess.STDOUT)
 
 def ProcessAllMessages(allmsgs,network):
     c = cfg.config()
@@ -754,6 +756,7 @@ def ProcessAllMessages(allmsgs,network):
                             WriteSomsDataToDb(dlist,msg.dt)
                         else:
                             WriteTwoAccelDataToDb(dlist,msg.dt)
+                            invokeProcessInBgnd("python ~/masynckaiser/client/bin/invoke-masync-CtoS-single.py %s" % dlist[0][0])
                 except IndexError:
                     print "\n\n>> Error: Possible data type error"
                     print msg.data
