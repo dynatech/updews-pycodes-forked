@@ -299,7 +299,7 @@ def write_site_alert(site, window):
     return output
 
 
-def main(name='', end=datetime.now()):
+def main(name='', end=datetime.now(), end_mon=False):
     if name == '':
         name = sys.argv[1].lower()
     
@@ -353,7 +353,7 @@ def main(name='', end=datetime.now()):
     public_alert = q.GetDBDataFrame(query)
     if public_alert.alert.values[0] != 'A0':
         plot_time = ['07:30:00', '19:30:00']
-        if str(window.end.time()) in plot_time:
+        if str(window.end.time()) in plot_time or end_mon:
             plotter.main(monitoring, window, config, plotvel_start=window.end-timedelta(hours=3), plotvel_end=window.end, realtime=False)
     elif RoundTime(pd.to_datetime(public_alert.timestamp.values[0])) == RoundTime(window.end):
         plotter.main(monitoring, window, config, plotvel_start=window.end-timedelta(hours=3), plotvel_end=window.end, realtime=False)
