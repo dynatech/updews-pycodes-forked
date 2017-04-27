@@ -1,13 +1,7 @@
-#import MySQLdb
 import ConfigParser
-from datetime import datetime as dtm
-from datetime import timedelta as tda
-import re
+from datetime import datetime, timedelta
 import pandas.io.sql as psql
 import pandas as pd
-import numpy as np
-import StringIO
-import filterSensorData
 import platform
 from sqlalchemy import create_engine
 
@@ -22,9 +16,9 @@ elif curOS == "Linux":
 # Needs config file: server-config.txt
 
 class loggerArray:
-    def __init__(self, site_id, logger_id, tsm_name, number_of_segments, segment_length):
+    def __init__(self, site_id, tsm_id, tsm_name, number_of_segments, segment_length):
         self.site_id = site_id
-        self.logger_id = logger_id
+        self.tsm_id = tsm_id
         self.tsm_name = tsm_name
         self.nos = number_of_segments
         self.seglen = segment_length
@@ -63,89 +57,8 @@ def DoesTableExist(table_name):
     else:
         db.close()
         return False
-
-    
-
-def GetLatestTimestamp(nameDb, table):
-    db = mysqlDriver.connect(host = Hostdb, user = Userdb, passwd = Passdb)
-    cur = db.cursor()
-    #cur.execute("CREATE DATABASE IF NOT EXISTS %s" %nameDB)
-    try:
-        cur.execute("select max(timestamp) from %s.%s" %(nameDb,table))
-    except:
-        print "Error in getting maximum timestamp"
-
-    a = cur.fetchall()
-    if a:
-        return a[0][0]
-    else: 
-        return ''
         
-def GetLatestTimestamp2(table_name):
-    db, cur = SenslopeDBConnect(Namedb)
-    cur.execute("use "+ Namedb)
-    cur.execute("SHOW TABLES LIKE '%s'" %table_name)    
-
-    try:
-        cur.execute("SELECT max(timestamp) FROM %s" %(table_name))
-    except:
-        print "Error in getting maximum timestamp"
-
-    a = cur.fetchall()
-    if a:
-        return a[0][0]
-    else: 
-        return ''
-		
-def CreateAccelTable(table_name, nameDB):
-    db = mysqlDriver.connect(host = Hostdb, user = Userdb, passwd = Passdb)
-    cur = db.cursor()
-    #cur.execute("CREATE DATABASE IF NOT EXISTS %s" %nameDB)
-    cur.execute("USE %s"%nameDB)
-    cur.execute("CREATE TABLE IF NOT EXISTS %s(timestamp datetime, id int, xvalue int, yvalue int, zvalue int, mvalue int, PRIMARY KEY (timestamp, id))" %table_name)
-    db.close()
-
-def CreateColAlertsTable(table_name, nameDB):
-    db = mysqlDriver.connect(host = Hostdb, user = Userdb, passwd = Passdb)
-    cur = db.cursor()
-
-    cur.execute("USE %s"%nameDB)
-    
-    query = "DROP TABLE IF EXISTS `senslopedb`.%s;" %table_name
-    cur.execute(query)
-    
-    cur.execute("CREATE TABLE IF NOT EXISTS %s(sitecode varchar(8), timestamp datetime, id int, alerts varchar(8), PRIMARY KEY (sitecode, timestamp, id))" %table_name)
-    db.close()
-	
-#GetDBResultset(query): executes a mysql like code "query"
-#    Parameters:
-#        query: str
-#             mysql like query code
-#    Returns:
-#        resultset: str
-#             result value of the query made
-def GetDBResultset(query):
-    a = ''
-    try:
-        db, cur = SenslopeDBConnect(Namedb)
-
-        a = cur.execute(query)
-
-        db.close()
-    except:
-        PrintOut("Exception detected")
-
-    if a:
-        return cur.fetchall()
-    else:
-        return ""
-        
-#execute query without expecting a return
-#used different name
-def ExecuteQuery(query):
-    GetDBResultset(query)
-        
-#GetDBDataFrame(query): queries a specific sensor data table and returns it as
+#GetDBDataFrame(query): queries a specific data table and returns it as
 #    a python dataframe format
 #    Parameters:
 #        query: str
@@ -157,10 +70,6 @@ def GetDBDataFrame(query):
     try:
         db, cur = SenslopeDBConnect(Namedb)
         df = psql.read_sql(query, db)
-        # df.columns = ['ts','id','x','y','z','m']
-        # change ts column to datetime
-        # df.ts = pd.to_datetime(df.ts)
-
         db.close()
         return df
     except KeyboardInterrupt:
@@ -175,39 +84,39 @@ def PushDBDataFrame(df,table_name):
         print 'already in db'
 
 
-def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid = "", targetnode ="", batt=0, voltf=False, returndb=True):
-    if not siteid:
+def GetRawAccelData(tsm_name = "", fromTime = "", toTime = "", msgid = "", targetnode ="", batt=0, voltf=False, returndb=True):
+    if not tsm_name:
         raise ValueError('no site id entered')
         
     if printtostdout:
         PrintOut('Querying database ...')
 
-    if (len(siteid) == 5):
+    if (len(tsm_name) == 5):
         query ="""Select ts,'%s' as 'name',node_id,xval,yval,zval,batt from 
                 (SELECT ts,'%s' as 'name',times.node_id,xval,yval,zval,batt,type_num, accel_number, voltage_max, voltage_min
-                 from (select * from tilt_%s""" %(siteid,siteid,siteid)
+                 from (select * from tilt_%s""" %(tsm_name,tsm_name,tsm_name)
         if not fromTime:
             fromTime = "2010-01-01"
-        query = query + " WHERE ts>='%s'" %fromTime
+        query += " WHERE ts>='%s'" %fromTime
         
         if toTime != '':
-            toTime = pd.to_datetime(toTime)+tda(hours=0.5)
+            toTime = pd.to_datetime(toTime)+timedelta(hours=0.5)
             toTime_query =  " AND ts <= '%s'" %toTime
         else:
             toTime_query = ''
             
-        query = query + toTime_query + ") times"
+        query += toTime_query + ") times"
         
         targetnode_query=""" inner join (select accelerometers.node_id, voltage_min, voltage_max, accel_number from accelerometers
                             inner join tsm_sensors on tsm_sensors.tsm_id = accelerometers.tsm_id 
-                            where tsm_name = '%s') nodes""" %siteid
+                            where tsm_name = '%s') nodes""" %tsm_name
         if targetnode!='':
             targetnode_query=""" inner join (select accelerometers.node_id, voltage_min, voltage_max, accel_number from accelerometers
                                 inner join tsm_sensors on tsm_sensors.tsm_id = accelerometers.tsm_id 
-                                where tsm_name = '%s' and node_id=%d) nodes""" %(siteid,targetnode)
-        query = query + targetnode_query
+                                where tsm_name = '%s' and node_id=%d) nodes""" %(tsm_name,targetnode)
+        query += targetnode_query
                 
-        query= query + " on times.node_id = nodes.node_id) raw"
+        query += " on times.node_id = nodes.node_id) raw"
 
         volt_query=''
         if voltf:
@@ -216,39 +125,39 @@ def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid
         if msgid in (11,12,32,33):
             query =query+ " where type_num=%d" %msgid + volt_query
         else:
-            query= query + " where (raw.accel_number = 1 and type_num in (11,32)" + volt_query+")"
-            query= query + " or (raw.accel_number = 2 and type_num in (12,33) " + volt_query +")"
+            query += " where (raw.accel_number = 1 and type_num in (11,32)" + volt_query+")"
+            query += " or (raw.accel_number = 2 and type_num in (12,33) " + volt_query +")"
 
 
-    elif (len(siteid) == 4):
+    elif (len(tsm_name) == 4):
         query ="""Select ts,'%s' as 'name',node_id,xval,yval,zval from 
                 (SELECT ts,'%s' as 'name',times.node_id,xval,yval,zval
-                 from (select * from tilt_%s""" %(siteid,siteid,siteid)
+                 from (select * from tilt_%s""" %(tsm_name,tsm_name,tsm_name)
         if not fromTime:
             fromTime = "2010-01-01"
-        query = query + " WHERE ts>='%s'" %fromTime
+        query += " WHERE ts>='%s'" %fromTime
         
         if toTime != '':
-            toTime = pd.to_datetime(toTime)+tda(hours=0.5)
+            toTime = pd.to_datetime(toTime)+timedelta(hours=0.5)
             toTime_query =  " AND ts <= '%s'" %toTime
         else:
             toTime_query = ''
             
-        query = query + toTime_query + ") times"
+        query += toTime_query + ") times"
         
         targetnode_query=""" inner join (select accelerometers.node_id from accelerometers
                             inner join tsm_sensors on tsm_sensors.tsm_id = accelerometers.tsm_id 
-                            where tsm_name = '%s') nodes""" %siteid
+                            where tsm_name = '%s') nodes""" %tsm_name
         if targetnode!='':
             targetnode_query=""" inner join (select accelerometers.node_id from accelerometers
                                 inner join tsm_sensors on tsm_sensors.tsm_id = accelerometers.tsm_id 
-                                where tsm_name = '%s' and node_id=%d) nodes""" %(siteid,targetnode)
-        query = query + targetnode_query
+                                where tsm_name = '%s' and node_id=%d) nodes""" %(tsm_name,targetnode)
+        query += targetnode_query
         
-        query= query + " on times.node_id = nodes.node_id) raw"
+        query += " on times.node_id = nodes.node_id) raw"
 
     if returndb:
-        if (len(siteid) == 5):
+        if (len(tsm_name) == 5):
             df =  GetDBDataFrame(query)
 
             if (batt == 1):                
@@ -281,17 +190,17 @@ def GetSOMSRaw(siteid = "", fromTime = "", toTime = "", msgid="", targetnode = "
         fromTime = "2010-01-01"
     
         
-    query = query + " where ts > '%s'" %fromTime
+    query += " where ts > '%s'" %fromTime
     
     if toTime:
-        query = query + " and ts < '%s'" %toTime
+        query += " and ts < '%s'" %toTime
     
     
     if targetnode:
-        query = query + " and node_id = '%s'" %targetnode
+        query += " and node_id = '%s'" %targetnode
     
     if msgid:
-        query = query + " and msid = '%s'" %msgid
+        query += " and msid = '%s'" %msgid
         
     df =  GetDBDataFrame(query)
     
@@ -333,14 +242,14 @@ def GetCoordsList():
 #loggerArrayList():
 #    transforms dataframe TSMdf to list of loggerArray
 def loggerArrayList(TSMdf):
-    return loggerArray(TSMdf['site_id'].values[0], TSMdf['logger_id'].values[0], TSMdf['tsm_name'].values[0], TSMdf['number_of_segments'].values[0], TSMdf['segment_length'].values[0])
+    return loggerArray(TSMdf['site_id'].values[0], TSMdf['tsm_id'].values[0], TSMdf['tsm_name'].values[0], TSMdf['number_of_segments'].values[0], TSMdf['segment_length'].values[0])
 
 #GetTSMList():
 #    returns a list of loggerArray objects from the database tables
-def GetTSMList(tsm_name='', end=dtm.now()):
+def GetTSMList(tsm_name='', end=datetime.now()):
     if tsm_name == '':
         try:
-            query = "SELECT site_id, logger_id, tsm_name, number_of_segments, segment_length, date_activated"
+            query = "SELECT site_id, logger_id, tsm_id, tsm_name, number_of_segments, segment_length, date_activated"
             query += " FROM senslopedb.tsm_sensors WHERE (date_deactivated > '%s' OR date_deactivated IS NULL)" %end
             df = GetDBDataFrame(query)
             df = df.sort_values(['logger_id', 'date_activated'], ascending=[True, False])
@@ -354,7 +263,7 @@ def GetTSMList(tsm_name='', end=dtm.now()):
             raise ValueError('Could not get sensor list from database')
     else:
         try:
-            query = "SELECT site_id, logger_id, tsm_name, number_of_segments, segment_length, date_activated"
+            query = "SELECT site_id, logger_id, tsm_id, tsm_name, number_of_segments, segment_length, date_activated"
             query += " FROM senslopedb.tsm_sensors WHERE (date_deactivated > '%s' OR date_deactivated IS NULL)" %end
             query += " AND tsm_name = '%s'" %tsm_name
             df = GetDBDataFrame(query)
@@ -371,94 +280,27 @@ def GetTSMList(tsm_name='', end=dtm.now()):
 #returns list of non-working nodes from the node status table
 #function will only return the latest entry per site per node with
 #"Not OK" status
-def GetNodeStatus(statusid = 1):
-    if statusid == 1:
+def GetNodeStatus(tsm_id, status=1):
+    if status == 1:
         status = "Not OK"
-    elif statusid == 2:
+    elif status == 2:
         status = "Use with Caution"
-    elif statusid == 3:
+    elif status == 3:
         status = "Special Case"
     
     try:
-        query = 'SELECT ns1.site, ns1.node, ns1.status FROM node_status ns1 '
-        query += 'WHERE ns1.post_id = '
-        query += '(SELECT max(ns2.post_id) FROM node_status ns2 '
-        query += 'WHERE ns2.site = ns1.site AND ns2.node = ns1.node) '
-        query += 'AND ns1.status = "%s" ' % (status)
-        query += 'order by site asc, node asc'
-        
+        query = "SELECT DISTINCT node_id FROM ("
+        query += " SELECT a.node_id FROM"
+        query += " accelerometer_status as s"
+        query += " left join accelerometers as a"
+        query += " on s.accel_id = a.accel_id"
+        query += " where tsm_id = %s" %tsm_id
+        query += " and status = '%s'" %status
+        query += " ) AS sub"
         df = GetDBDataFrame(query)
-        return df
+        return df['node_id'].values
     except:
-        raise ValueError('Could not get sensor list from database')
-
-
-#GetLastGoodData(df, nos, fillMissing=False):
-#    evaluates the last good data from the input df
-#    
-#    Parameters:
-#        df: dataframe object
-#            input dataframe object where the last good data is to be evaluated
-#        nos: int
-#            number of segments of a sensor column
-#        fillMissing: boolean, default False
-#            True: fills in the missing sensor node data that is not present from
-#                the evaluated dataframe input df based on the nos value. The filled
-#                data is data for a perfect vertical line
-#            False: evaluated dataframe is returned without filled nodes
-#        
-#    Returns:
-#        dflgd: dataframe object
-#            dataframe object of the resulting last good data
-def GetLastGoodData(df, nos, fillMissing=False):
-    if df.empty:
-        print "Error: Empty dataframe inputted"
-        return
-    # groupby id first
-    dfa = df.groupby('id')
-    # extract the latest timestamp per id, drop the index
-    dfa =  dfa.apply(lambda x: x[x.ts==x.ts.max()]).reset_index(level=1,drop=True)
-
-    if fillMissing:
-        # below are routines to handle nodes that have no data whatsoever
-        # create a list of missing nodes       
-        missing = [i for i in range(1,nos+1) if i not in dfa.id.unique()]
-    
-        # create a dataframe with default values
-        x = np.array([[dfa.ts.min(),1,1023,0,0,]])   
-        x = np.repeat(x,len(missing),axis=0)
-        dfd = pd.DataFrame(x, columns=['ts','id','x','y','z'])
-        # change their ids to the missing ids
-        dfd.id = pd.Series(missing)
-        # append to the lgd datframe
-        dflgd = dfa.append(dfd).sort(['id']).reset_index(level=1,drop=True)
-    else:
-        dflgd = dfa.sort(['id']).reset_index(level=1,drop=True)
-        
-#    print dflgd
-    
-    return dflgd
-    
-#GetLastGoodDataFromDb(col):
-#    queries the database table of the previously generated last good data
-#    
-#    Parameters:
-#        col: str
-#            sensor column name
-#        ext: str
-#            more query options
-#            
-#    Returns:
-#        df: dataframe object
-#            dataframe object of the resultset
-def GetLastGoodDataFromDb(col):
-    df = GetDBDataFrame("""SELECT timestamp, id, xvalue, yvalue, zvalue FROM
-                        senslopedb.lastgooddata l where name='%s';""" % (col))
-    df.columns = ['ts','id','x','y','z']
-    # change ts column to datetime
-    df.ts = pd.to_datetime(df.ts)
-    
-    return df
+        raise ValueError('Could not get node status from database')
     
 #GetSingleLGDPM
 #   This function returns the last good data prior to the monitoring window
@@ -470,110 +312,18 @@ def GetLastGoodDataFromDb(col):
 #   Output:
 #       returns the dataframe for the last good data prior to the monitoring window
     
-def GetSingleLGDPM(site, node, startTS):
-    query = "SELECT timestamp,id, xvalue, yvalue, zvalue"
-    if len(site) == 5:
-        query = query + ", msgid"
-    query = query + " from %s WHERE id = %s and timestamp < '%s' " % (site, node, startTS)
-    if len(site) == 5:
-        query = query + "and (msgid = 32 or msgid = 11) "
-#        query = query + "ORDER BY timestamp DESC LIMIT 2"
-#    else:
-    query = query + "ORDER BY timestamp DESC LIMIT 240"
-    lgdpm = GetDBDataFrame(query)
-    lgdpm['name'] = site 
-
-#    if len(site) == 5:
-#        if len(set(lgdpm.timestamp)) == 1:
-#            lgdpm.loc[(lgdpm.msgid == 11) | (lgdpm.msgid == 32)]
-#        else:
-#            try:
-#                lgdpm = lgdpm.loc[lgdpm.timestamp == lgdpm.timestamp[0]]
-#            except:
-#                print 'no data for node ' + str(node) + ' of ' + site
+def GetSingleLGDPM(tsm_name, node_id, startTS):
+    query = "SELECT ts,node_id, xval, yval, zval "
+    query += "FROM %s WHERE node_id IN (%s) AND ts < '%s' AND ts >= '%s' " %('tilt_'+tsm_name, ','.join(map(str, node_id)), startTS, startTS-timedelta(3))
+    if len(tsm_name) == 5:
+        query += "and (type_num = 32 or type_num = 11) "        
+    query += "ORDER BY ts DESC"
     
-    if len(site) == 5:
-        lgdpm.columns = ['ts','id','x','y','z', 'msgid','name']
-    else:
-        lgdpm.columns = ['ts','id','x','y','z','name']
-    lgdpm = lgdpm[['ts', 'id', 'x', 'y', 'z','name']]
+    lgdpm = GetDBDataFrame(query)   
+    lgdpm.columns = ['ts','id','x','y','z']        
+    lgdpm['name'] = tsm_name
 
-    lgdpm = filterSensorData.applyFilters(lgdpm)
-    lgdpm = lgdpm.sort_index(ascending = False)[0:1]
-    
     return lgdpm
-    
-#PushLastGoodData(df,name):
-#    writes a dataframe of the last good data to the database table lastgooddata
-#    
-#    Parameters:
-#        df: dataframe object
-#            dataframe object of the last good data to be written
-#        name: str
-#            sensor column name
-def PushLastGoodData(df,name):
-    db, cur = SenslopeDBConnect(Namedb)
-    
-    df['name'] = [name]*len(df)
-    df = df[['name','id','ts','x','y','z']]
-        
-    q = StringIO.StringIO()
-    df.to_csv(q,header=False, index=False,sep=',',line_terminator='),(')
-    query = '(' + q.getvalue()
-    query = query[:-2]    
-    query = re.sub(r"[a-z]{4,5}",lambda x: '"' + x.group(0) + '"',query) 
-    query = re.sub(r"[0-9\-\s:]{19}",lambda x: '"' + x.group(0) + '"',query)
-    
-    query = """INSERT INTO %s.lastgooddata (name,id,timestamp,xvalue,yvalue,zvalue) 
-                VALUES %s ON DUPLICATE KEY UPDATE timestamp=values(timestamp),  
-                xvalue=values(xvalue), yvalue=values(yvalue), zvalue=values(zvalue)""" %(Namedb,query)    
-    
-    cur.execute(query)
-    db.commit()
-    db.close()
-    
-#GenerateLastGoodData():
-#    cycles through the whole list of sensor columns and writes the evaluated 
-#    last good data set to the database    
-def GenerateLastGoodData():
-    
-    db = mysqlDriver.connect(host = Hostdb, user = Userdb, passwd = Passdb)
-    cur = db.cursor()
-    #cur.execute("CREATE DATABASE IF NOT EXISTS %s" %nameDB)
-    
-    #Separated the consecutive drop table and create table in one query in
-    #   order to fix "commands out of sync" error
-    query = "DROP TABLE IF EXISTS `senslopedb`.`lastgooddata`;"
-    cur.execute(query)
-    
-    query = """ CREATE TABLE  `senslopedb`.`lastgooddata` (
-          `name` varchar(8) NOT NULL DEFAULT '',
-          `id` int(11) NOT NULL DEFAULT '0',
-          `timestamp` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
-          `xvalue` int(11) DEFAULT NULL,
-          `yvalue` int(11) DEFAULT NULL,
-          `zvalue` int(11) DEFAULT NULL,
-          PRIMARY KEY (`name`,`id`)
-          ); """
-    cur.execute(query)
-    
-    db.close()
-    
-    slist = GetTSMList()
-    
-    for s in slist:
-        print s.name, s.nos
-        
-        df = GetRawAccelData(siteid=s.name,maxnode=s.nos)
-        df = filterSensorData.applyFilters(df,True,True,False)         
-        
-        dflgd = GetLastGoodData(df,s.nos,True)
-        del df           
-          
-        try:
-            PushLastGoodData(dflgd,s.name)
-        except (AttributeError,TypeError):
-            PrintOut("Error. Empty database")
 
             
 # import values from config file
