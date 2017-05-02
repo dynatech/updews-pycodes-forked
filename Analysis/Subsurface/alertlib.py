@@ -98,6 +98,9 @@ def node_alert(disp_vel, colname, num_nodes, T_disp, T_velL2, T_velL3, k_ac_ax,l
                                 #vel alert 0
                                 0)
     
+    alert['disp_alert']=(alert['ND']*alert['disp_alert']).fillna(value=-1).apply(lambda x: int(x))
+    alert['vel_alert']=(alert['ND']*alert['vel_alert']).fillna(value=-1).apply(lambda x: int(x))
+
     alert['node_alert']=np.where(alert['vel_alert'].values >= alert['disp_alert'].values,
 
                                  #node alert takes the higher perceive risk between vel alert and disp alert
@@ -105,14 +108,8 @@ def node_alert(disp_vel, colname, num_nodes, T_disp, T_velL2, T_velL3, k_ac_ax,l
 
                                  alert['disp_alert'].values)
 
+    alert['ND'] = alert['ND'].fillna(value=0)
 
-    alert['disp_alert']=alert['ND']*alert['disp_alert']
-    alert['vel_alert']=alert['ND']*alert['vel_alert']
-    alert['node_alert']=alert['ND']*alert['node_alert']
-    alert['disp_alert']=alert['disp_alert'].fillna(value=-1)
-    alert['vel_alert']=alert['vel_alert'].fillna(value=-1)
-    alert['node_alert']=alert['node_alert'].fillna(value=-1)
-     
     return alert
 
 def column_alert(alert, num_nodes_to_check):

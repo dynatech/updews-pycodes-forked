@@ -17,8 +17,8 @@ del path
 import querydb as q
 
 class procdata:
-    def __init__ (self, tsm_props, tilt, lgd, max_min_df, max_min_cml):
-        self.tsm_props = tsm_props
+    def __init__ (self, invalid_nodes, tilt, lgd, max_min_df, max_min_cml):
+        self.inv = invalid_nodes
         self.tilt = tilt
         self.lgd = lgd
         self.max_min_df = max_min_df
@@ -195,4 +195,4 @@ def proc(tsm_props, window, config, fixpoint, realtime=False, comp_vel=True):
     else:
         tilt = filled_smoothened.set_index('ts')
     
-    return procdata(tsm_props,tilt.sort_index(),lgd,max_min_df,max_min_cml)
+    return procdata(invalid_nodes,tilt.sort_index(),lgd,max_min_df,max_min_cml)

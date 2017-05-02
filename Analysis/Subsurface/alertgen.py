@@ -7,7 +7,7 @@ import sys
 import alertlib as lib
 import proc as p
 import rtwindow as rtw
-#import trendingalert as t
+import trendingalert as t
 #import ColumnPlotter as plotter
 
 #include the path of "Analysis" folder for the python scripts searching
@@ -109,12 +109,13 @@ def main(tsm_name='', end=datetime.now(), end_mon=False):
     alert = nodal_tilt.apply(lib.node_alert, colname=tsm_props.tsm_name, num_nodes=tsm_props.nos, T_disp=config.io.t_disp, T_velL2=config.io.t_vell2, T_velL3=config.io.t_vell3, k_ac_ax=config.io.k_ac_ax, lastgooddata=lgd,window=window,config=config).reset_index(drop=True)
     alert = lib.column_alert(alert, config.io.num_nodes_to_check)
 
-    if max(alert['col_alert'].values) > 1:
-        site_alert = max(alert['col_alert'].values)
-#        pos_alert = alert[alert.col_alert > 1]
-#        site_alert = t.main(pos_alert, tsm_props.tsm_id, window.end)
+    valid_nodes_alert = alert.loc[~alert.id.isin(proc.inv)]
+
+    if max(valid_nodes_alert['col_alert'].values) > 0:
+        pos_alert = alert[alert.col_alert > 0]
+        site_alert = t.main(pos_alert, tsm_props.tsm_id, window.end, proc.inv)
     else:
-        site_alert = max(lib.getmode(list(alert['col_alert'].values)))
+        site_alert = max(lib.getmode(list(valid_nodes_alert['col_alert'].values)))
         
     column_level_alert = pd.DataFrame({'ts': [window.end], 'tsm_id': [tsm_props.tsm_id], 'alert_level': [site_alert], 'ts_updated': [window.end]})
     
@@ -148,6 +149,6 @@ def main(tsm_name='', end=datetime.now(), end_mon=False):
 ################################################################################
 
 if __name__ == "__main__":
-    start = datetime.now()
-    df, alert = main('magta', end=pd.to_datetime('2017-05-02 07:00'))
-    print 'run time =', datetime.now()-start
+    run_start = datetime.now()
+    main()
+    print 'run time =', datetime.now()-run_start
