@@ -106,8 +106,8 @@ def heatmap(col, t_timestamp, t_win = '1d'):
 #days = sys.argv[3]
 
 
-#site = sys.argv[1]
-#tdate = sys.argv[2]
-#days = sys.argv[3].replace("T"," ")	
-#
-#heatmap(site, tdate, t_win = days)
+site = sys.argv[1]
+tdate = sys.argv[2]
+days = sys.argv[3].replace("T"," ")	
+
+heatmap(site, tdate, t_win = days)
