@@ -2,7 +2,7 @@ import os
 from datetime import datetime, timedelta
 import ConfigParser
 
-output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
 
 cfg = ConfigParser.ConfigParser()
 cfg.read('server-config.txt')    

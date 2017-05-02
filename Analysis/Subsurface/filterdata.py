@@ -7,14 +7,8 @@ Created on Thu Jun 18 14:39:48 2015
 
 import pandas as pd
 import numpy as np
-#import time
-#from datetime import timedelta as td
-#from datetime import datetime as dt
-#import sqlalchemy
-#from sqlalchemy import create_engine
-#import sys
-#import ConfigParser
-import querydb as qdb
+
+import querydb as q
 
 def volt_filter(dfc):
     #assume for a single node lang ito
@@ -24,7 +18,7 @@ def volt_filter(dfc):
     n_id = int(df.head(1).iloc[0][2])
     query = """
     select vmax,vmin from senslopedb.node_accel_table where site_name = '%s' and node_id = %d limit 1""" %(name,n_id)
-    dfv = qdb.GetDBDataFrame(query)
+    dfv = q.GetDBDataFrame(query)
     vmin = dfv.head(1).iloc[0][1]
     vmax = dfv.head(1).iloc[0][0]
     df = df[(df.batt >= vmin) & (df.batt <= vmax)]

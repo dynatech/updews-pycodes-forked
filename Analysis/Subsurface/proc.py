@@ -6,7 +6,7 @@ from pandas.stats.api import ols
 import sys
 
 import filterdata as f
-import errorAnalysis as err
+import erroranalysis as err
 
 #include the path of "Analysis" folder for the python scripts searching
 path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -30,7 +30,7 @@ def resamplenode(df, window):
     df = df.reset_index().drop_duplicates(['ts','id']).set_index('ts')
     df.index = pd.to_datetime(df.index)
     df = df.sort_index(ascending = True)
-    df = df.resample('30Min', base=0, how='pad')
+    df = df.resample('30Min').pad()
     df = df.reset_index(level=1)
     return df    
       
@@ -84,7 +84,7 @@ def fill_smooth (df, offsetstart, end, roll_window_numpts, to_smooth, to_fill):
     df=df[(df.index>=offsetstart)&(df.index<=end)]
     
     if to_smooth and len(df)>1:
-        df=pd.rolling_mean(df,window=roll_window_numpts,min_periods=1)[roll_window_numpts-1:]
+        df=df.rolling(window=roll_window_numpts,min_periods=1).mean()[roll_window_numpts-1:]
         return np.round(df, 4)
     else:
         return df
@@ -195,4 +195,4 @@ def proc(tsm_props, window, config, fixpoint, realtime=False, comp_vel=True):
     else:
         tilt = filled_smoothened.set_index('ts')
     
-    return procdata(tsm_props,tilt.sort(),lgd,max_min_df,max_min_cml)
+    return procdata(tsm_props,tilt.sort_index(),lgd,max_min_df,max_min_cml)

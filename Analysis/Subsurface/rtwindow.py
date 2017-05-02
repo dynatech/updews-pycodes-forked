@@ -27,8 +27,18 @@ print window_now.numpts
 
 '''
 #    set current time as endpoint of the intervalUSA
-import configfileio as cfg
 from datetime import datetime, date, time, timedelta
+import os
+import sys
+
+#include the path of "Analysis" folder for the python scripts searching
+path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+if not path in sys.path:
+    sys.path.insert(1,path)
+del path
+
+import configfileio as cfg
+
 
 class rtwindow:
     def __init__(self, roll_window_numpts,offsetstart, start, end):

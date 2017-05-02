@@ -37,6 +37,7 @@ class config:
 		self.dbio.userdb = cfg.get("DB I/O","userdb")
 		self.dbio.passdb = cfg.get("DB I/O","passdb")
 		self.dbio.namedb = cfg.get("DB I/O","namedb")
+		self.dbio.printtostdout = cfg.get("DB I/O","printtostdout")
 
 		self.value = Container()
 		self.value.limitvalues = cfg.getboolean("Value Limits","limitvalues")

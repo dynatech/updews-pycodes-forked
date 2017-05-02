@@ -1,4 +1,3 @@
-import ConfigParser
 from datetime import datetime, timedelta
 import pandas.io.sql as psql
 import pandas as pd
@@ -12,8 +11,9 @@ if curOS == "Windows":
 elif curOS == "Linux":
     import pymysql as mysqlDriver
 
+import configfileio as cfg
+
 # Scripts for connecting to local database
-# Needs config file: server-config.txt
 
 class loggerArray:
     def __init__(self, site_id, tsm_id, tsm_name, number_of_segments, segment_length):
@@ -76,10 +76,10 @@ def GetDBDataFrame(query):
         PrintOut("Exception detected in accessing database")
         
 #Push a dataframe object into a table
-def PushDBDataFrame(df,table_name):     
+def PushDBDataFrame(df,table_name,index=True):
     engine = create_engine('mysql://'+Userdb+':'+Passdb+'@'+Hostdb+':3306/'+Namedb)
     try:
-        df.to_sql(name = table_name, con = engine, if_exists = 'append', schema = Namedb)
+        df.to_sql(name = table_name, con = engine, if_exists = 'append', schema = Namedb, index=index)
     except:
         print 'already in db'
 
@@ -326,46 +326,18 @@ def GetSingleLGDPM(tsm_name, node_id, startTS):
     return lgdpm
 
             
-# import values from config file
-configFile = "server-config.txt"
-cfg = ConfigParser.ConfigParser()
+s = cfg.config()
 
-try:
-    cfg.read(configFile)
-    
-    DBIOSect = "DB I/O"
-    Hostdb = cfg.get(DBIOSect,'Hostdb')
-    Userdb = cfg.get(DBIOSect,'Userdb')
-    Passdb = cfg.get(DBIOSect,'Passdb')
-    Namedb = cfg.get(DBIOSect,'Namedb')
-    NamedbPurged = cfg.get(DBIOSect,'NamedbPurged')
-    printtostdout = cfg.getboolean(DBIOSect,'Printtostdout')
-    
-    valueSect = 'Value Limits'
-    xlim = cfg.get(valueSect,'xlim')
-    ylim = cfg.get(valueSect,'ylim')
-    zlim = cfg.get(valueSect,'zlim')
-    xmax = cfg.get(valueSect,'xmax')
-    mlowlim = cfg.get(valueSect,'mlowlim')
-    muplim = cfg.get(valueSect,'muplim')
-    islimval = cfg.getboolean(valueSect,'LimitValues')
-    
-except:
-    #default values are used for missing configuration files or for cases when
-    #sensitive info like db access credentials must not be viewed using a browser
-    #print "No file named: %s. Trying Default Configuration" % (configFile)
-    Hostdb = "192.168.150.128"    
-#    Hostdb = "192.168.0.102"
-    Userdb = "root"
-    Passdb = "senslope"
-    Namedb = "senslopedb"
-    NamedbPurged = "senslopedb_purged"
-    printtostdout = False
-    
-    xlim = 100
-    ylim = 1126
-    zlim = 1126
-    xmax = 1200
-    mlowlim = 2000
-    muplim = 4000
-    islimval = True
+Hostdb = s.dbio.hostdb
+Userdb = s.dbio.userdb
+Passdb = s.dbio.passdb
+Namedb = s.dbio.namedb
+printtostdout = s.dbio.printtostdout
+
+xlim = s.value.xlim
+ylim = s.value.ylim
+zlim = s.value.zlim
+xmax = s.value.xmax
+mlowlim = s.value.mlowlim
+muplim = s.value.muplim
+islimval = s.value.limitvalues

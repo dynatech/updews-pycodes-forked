@@ -15,20 +15,18 @@ def RoundTime(date_time):
             
     return date_time
 
-def node_alert2(disp_vel, colname, num_nodes, T_disp, T_velL2, T_velL3, k_ac_ax,lastgooddata,window,config):
-    disp_vel = disp_vel.reset_index(level=1)    
+def node_alert(disp_vel, colname, num_nodes, T_disp, T_velL2, T_velL3, k_ac_ax,lastgooddata,window,config):
     valid_data = pd.to_datetime(window.end - timedelta(hours=3))
     #initializing DataFrame object, alert
-    alert=pd.DataFrame(data=None)
+    alert=pd.DataFrame()
 
     #adding node IDs
     node_id = disp_vel.id.values[0]
     alert['id']= [node_id]
-    alert=alert.set_index('id')
 
     #checking for nodes with no data
     lastgooddata=lastgooddata.loc[lastgooddata.id == node_id]
-#    print "lastgooddata", lastgooddata
+
     try:
         cond = pd.to_datetime(lastgooddata.ts.values[0]) < valid_data
     except IndexError:
@@ -40,7 +38,7 @@ def node_alert2(disp_vel, colname, num_nodes, T_disp, T_velL2, T_velL3, k_ac_ax,
                          np.nan,
                          
                          #Data present within valid date
-                         np.ones(len(alert)))
+                         1)
     
     #evaluating net displacements within real-time window
     alert['xz_disp']=np.round(disp_vel.xz.values[-1]-disp_vel.xz.values[0], 3)
@@ -60,13 +58,14 @@ def node_alert2(disp_vel, colname, num_nodes, T_disp, T_velL2, T_velL3, k_ac_ax,
     cond = np.asarray((np.abs(alert['xz_disp'].values)>T_disp, np.abs(alert['xy_disp'].values)>T_disp))
     alert['disp_alert']=np.where(np.any(cond, axis=0),
 
-                                 #disp alert=2
-                                 np.where(min_disp/max_disp<k_ac_ax,
-                                          np.zeros(len(alert)),
-                                          np.ones(len(alert))),
+                                 #checking if proportional velocity is present across node
+                                 #disp alert 2
+                                 np.where(min_disp/max_disp>k_ac_ax,
+                                          2,
+                                          0),
 
-                                 #disp alert=0
-                                 np.zeros(len(alert)))
+                                 #disp alert 0
+                                 0)
     
     #getting minimum axis velocity value
     alert['min_vel']=np.round(np.where(np.abs(disp_vel.vel_xz.values[-1])<np.abs(disp_vel.vel_xy.values[-1]),
@@ -79,25 +78,25 @@ def node_alert2(disp_vel, colname, num_nodes, T_disp, T_velL2, T_velL3, k_ac_ax,
                                        np.abs(disp_vel.vel_xy.values[-1])), 4)
                                        
     #checking if proportional velocity is present across node
-    alert['vel_alert']=np.where(alert['min_vel'].values/alert['max_vel'].values<k_ac_ax,   
+    alert['vel_alert']=np.where(alert['min_vel'].values/alert['max_vel'].values>k_ac_ax,   
 
-                                #vel alert=0
-                                np.zeros(len(alert)),    
+                                #checking if max node velocity exceeds threshold velocity for alert 2
+                                np.where(alert['max_vel'].values>=T_velL2,                  
 
-                                #checking if max node velocity exceeds threshold velocity for alert 1
-                                np.where(alert['max_vel'].values<=T_velL2,                  
+                                         #checking if max node velocity exceeds threshold velocity for alert 3
+                                         np.where(alert['max_vel'].values>=T_velL3,         
 
-                                         #vel alert=0
-                                         np.zeros(len(alert)),
+                                                  #vel alert 3
+                                                  3,
 
-                                         #checking if max node velocity exceeds threshold velocity for alert 2
-                                         np.where(alert['max_vel'].values<=T_velL3,         
+                                                  #vel alert 2
+                                                  2),
 
-                                                  #vel alert=1
-                                                  np.ones(len(alert)),
+                                         #vel alert 0
+                                         0),
 
-                                                  #vel alert=2
-                                                  np.ones(len(alert))*2)))
+                                #vel alert 0
+                                0)
     
     alert['node_alert']=np.where(alert['vel_alert'].values >= alert['disp_alert'].values,
 
@@ -110,17 +109,13 @@ def node_alert2(disp_vel, colname, num_nodes, T_disp, T_velL2, T_velL3, k_ac_ax,
     alert['disp_alert']=alert['ND']*alert['disp_alert']
     alert['vel_alert']=alert['ND']*alert['vel_alert']
     alert['node_alert']=alert['ND']*alert['node_alert']
-    alert['ND']=alert['ND'].map({0:1,1:1})          #para saan??
-    alert['ND']=alert['ND'].fillna(value=0)         #para saan??
     alert['disp_alert']=alert['disp_alert'].fillna(value=-1)
     alert['vel_alert']=alert['vel_alert'].fillna(value=-1)
     alert['node_alert']=alert['node_alert'].fillna(value=-1)
-    
-    alert=alert.reset_index()
- 
+     
     return alert
 
-def column_alert(alert, num_nodes_to_check, k_ac_ax):
+def column_alert(alert, num_nodes_to_check):
 
     #DESCRIPTION
     #Evaluates column-level alerts from node alert and velocity data
@@ -153,7 +148,7 @@ def column_alert(alert, num_nodes_to_check, k_ac_ax):
                 if i+s<=len(alert): adj_node_ind.append(i+s)
 
             #looping through adjacent nodes to validate current node alert
-            validity_check(adj_node_ind, alert, i, col_node, col_alert, k_ac_ax)
+            validity_check(adj_node_ind, alert, i, col_node, col_alert)
                
         else:
             col_node.append(i-1)
@@ -161,12 +156,9 @@ def column_alert(alert, num_nodes_to_check, k_ac_ax):
             
     alert['col_alert']=np.asarray(col_alert)
 
-    alert['node_alert']=alert['node_alert'].map({-1:'ND',0:'L0',1:'L2',2:'L3'})
-    alert['col_alert']=alert['col_alert'].map({-1:'ND',0:'L0',1:'L2',2:'L3'})
-
     return alert
 
-def validity_check(adj_node_ind, alert, i, col_node, col_alert, k_ac_ax):
+def validity_check(adj_node_ind, alert, i, col_node, col_alert):
 
     #DESCRIPTION
     #used in validating current node alert
@@ -178,7 +170,6 @@ def validity_check(adj_node_ind, alert, i, col_node, col_alert, k_ac_ax):
     #i                                  Integer, used for counting
     #col_node                           Integer, current node
     #col_alert                          Integer, current node alert
-    #k_ac_ax                            float; minimum value of (minimum velocity / maximum velocity) required to consider movement as valid
     
     #OUTPUT:
     #col_alert, col_node                             

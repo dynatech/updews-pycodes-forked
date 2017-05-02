@@ -4,11 +4,11 @@ import pandas as pd
 from sqlalchemy import create_engine
 import sys
 
-import rtwindow as rtw
-import proc as p
-#import AlertAnalysis as A
-#import ColumnPlotter as plotter
 import alertlib as lib
+import proc as p
+import rtwindow as rtw
+#import trendingalert as t
+#import ColumnPlotter as plotter
 
 #include the path of "Analysis" folder for the python scripts searching
 path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -23,15 +23,15 @@ def create_tsm_alerts():
     db, cur = q.SenslopeDBConnect(q.Namedb)
     
     query = "CREATE TABLE `tsm_alerts` ("
-    query += "  `ta_id` INT(3) UNSIGNED NOT NULL AUTO_INCREMENT,"
+    query += "  `ta_id` INT(5) UNSIGNED NOT NULL AUTO_INCREMENT,"
     query += "  `ts` TIMESTAMP NOT NULL,"
     query += "  `tsm_id` SMALLINT(5) UNSIGNED NOT NULL,"
     query += "  `alert_level` CHAR(2) NOT NULL,"
     query += "  `ts_updated` TIMESTAMP NOT NULL,"
     query += "  PRIMARY KEY (`ta_id`),"
     query += "  UNIQUE INDEX `uq_tsm_alerts` (`ts` ASC, `tsm_id` ASC),"
-    query += "  INDEX `fk_node_alerts_tsm_sensors1_idx` (`tsm_id` ASC),"
-    query += "  CONSTRAINT `fk_node_alerts_tsm_sensors1`"
+    query += "  INDEX `fk_tsm_alerts_tsm_sensors1_idx` (`tsm_id` ASC),"
+    query += "  CONSTRAINT `fk_tsm_alerts_tsm_sensors1`"
     query += "    FOREIGN KEY (`tsm_id`)"
     query += "    REFERENCES `tsm_sensors` (`tsm_id`)"
     query += "    ON DELETE NO ACTION"
@@ -104,23 +104,20 @@ def main(tsm_name='', end=datetime.now(), end_mon=False):
     tilt = proc.tilt[window.start:window.end]
     lgd = proc.lgd
     tilt = tilt.reset_index().sort_values('ts',ascending=True)
-    nodal_tilt = tilt.groupby('id')     
+    nodal_tilt = tilt.groupby('id', as_index=False)     
         
-    alert = nodal_tilt.apply(lib.node_alert2, colname=tsm_props.tsm_name, num_nodes=tsm_props.nos, T_disp=config.io.t_disp, T_velL2=config.io.t_vell2, T_velL3=config.io.t_vell3, k_ac_ax=config.io.k_ac_ax, lastgooddata=lgd,window=window,config=config)
-    alert = lib.column_alert(alert, config.io.num_nodes_to_check, config.io.k_ac_ax)
+    alert = nodal_tilt.apply(lib.node_alert, colname=tsm_props.tsm_name, num_nodes=tsm_props.nos, T_disp=config.io.t_disp, T_velL2=config.io.t_vell2, T_velL3=config.io.t_vell3, k_ac_ax=config.io.k_ac_ax, lastgooddata=lgd,window=window,config=config).reset_index(drop=True)
+    alert = lib.column_alert(alert, config.io.num_nodes_to_check)
 
-    if 'L3' in list(alert.col_alert.values):
-        site_alert = 'L3'
-    elif 'L2' in list(alert.col_alert.values):
-        site_alert = 'L2'
+    if max(alert['col_alert'].values) > 1:
+        site_alert = max(alert['col_alert'].values)
+#        pos_alert = alert[alert.col_alert > 1]
+#        site_alert = t.main(pos_alert, tsm_props.tsm_id, window.end)
     else:
-        site_alert = min(lib.getmode(list(alert.col_alert.values)))
+        site_alert = max(lib.getmode(list(alert['col_alert'].values)))
         
     column_level_alert = pd.DataFrame({'ts': [window.end], 'tsm_id': [tsm_props.tsm_id], 'alert_level': [site_alert], 'ts_updated': [window.end]})
     
-#    if site_alert in ('L2', 'L3'):
-#        column_level_alert = A.main(tsm_props.tsm_name, window.end)
-#
 #    alert_toDB(column_level_alert, 'column_level_alert', window)
     
     print column_level_alert
@@ -146,11 +143,11 @@ def main(tsm_name='', end=datetime.now(), end_mon=False):
 #
 ########################
     
-    return column_level_alert
+    return column_level_alert, alert
 
 ################################################################################
 
 if __name__ == "__main__":
     start = datetime.now()
-    main()
+    df, alert = main('magta', end=pd.to_datetime('2017-05-02 07:00'))
     print 'run time =', datetime.now()-start
