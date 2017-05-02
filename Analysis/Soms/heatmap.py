@@ -47,7 +47,7 @@ def heatmap(col, t_timestamp, t_win = '1d'):
 		timew = 72
 		interval = '120T'
 	elif (t_win == '30d'):
-		for_base = int(tdate[11]+tdate[12])      
+		for_base = int(t_timestamp[11]+t_timestamp[12])  
 		timew = 720
 		interval = '24H'
 	else:
@@ -106,8 +106,8 @@ def heatmap(col, t_timestamp, t_win = '1d'):
 #days = sys.argv[3]
 
 
-site = sys.argv[1]
-tdate = sys.argv[2]
-days = sys.argv[3].replace("T"," ")	
-
-heatmap(site, tdate, t_win = days)
+#site = sys.argv[1]
+#tdate = sys.argv[2]
+#days = sys.argv[3].replace("T"," ")	
+#
+#heatmap(site, tdate, t_win = days)
