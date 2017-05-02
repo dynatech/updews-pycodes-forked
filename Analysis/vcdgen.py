@@ -4,7 +4,7 @@ from datetime import date, time, datetime, timedelta
 import rtwindow as rtw
 import querySenslopeDb as q
 import genproc as g
-import RealtimePlotter as plotter
+import ColumnPlotter as plotter
 
 def proc(func, colname, endTS, startTS, day_interval, fixpoint):
     col = q.GetSensorList(colname)

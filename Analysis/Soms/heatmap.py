@@ -91,7 +91,8 @@ def heatmap(col, t_timestamp, t_win = '1d'):
 #				dfp = dfp.reset_index()
 			
 				df_merge = pd.concat([df_merge, dfrs], axis = 0)
-				df_merge['ts'] = df_merge.ts.astype(str)
+				df_merge['ts'] = df_merge.ts.astype(object).astype(str)
+				    
 		
 		
 		dfjson = df_merge.to_json(orient='records' , double_precision=0)
@@ -101,9 +102,7 @@ def heatmap(col, t_timestamp, t_win = '1d'):
 				
 	
 
-#site = sys.argv[1]
-#tdate = sys.argv[2]
-#days = sys.argv[3]
+
 
 
 site = sys.argv[1]
