@@ -830,7 +830,7 @@ def SitePublicAlert(PublicAlert, window):
             with open('l0t_alert.txt', 'w') as w:
                 w.write('')
 
-    if public_CurrAlert == 'A0' and public_PrevAlert != public_CurrAlert:
+    if (public_CurrAlert == 'A0' and public_PrevAlert != public_CurrAlert) or (public_CurrAlert != 'A0' and window.end.time() in [time(3,30), time(7,30), time(11,30), time(15,30), time(19,30), time(23,30)]):
         query = "SELECT * FROM senslopedb.site_column_props where name REGEXP '%s'" %sensor_site
         df = q.GetDBDataFrame(query)
         logger_df = df.groupby('name')
