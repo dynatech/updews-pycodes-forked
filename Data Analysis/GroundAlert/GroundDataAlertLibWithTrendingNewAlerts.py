@@ -563,7 +563,7 @@ def GenerateGroundDataAlert(site=None,end=None):
     #Apply mes data fix
     df = df.groupby(['site_id','crack_id']).apply(FixMesData)    
     #Fix site code
-#    df = df.
+    df = FixSiteCode(df)
     #Step 2: Evaluate the alerts per crack
     crack_alerts = df.groupby(['site_id','crack_id']).apply(crack_eval,print_out_path2,end).reset_index()
     
