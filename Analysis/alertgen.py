@@ -9,7 +9,7 @@ import querySenslopeDb as q
 import genproc as g
 import AlertAnalysis as A
 
-import RealtimePlotter as plotter
+import ColumnPlotter as plotter
 
 def RoundTime(date_time):
     # rounds time to 4/8/12 AM/PM
@@ -253,7 +253,10 @@ def alert_toDB(df, table_name, window):
     
     query = "SELECT * FROM senslopedb.%s WHERE site = '%s' and timestamp <= '%s' AND updateTS >= '%s' ORDER BY timestamp DESC LIMIT 1" %(table_name, df.site.values[0], window.end, window.end-timedelta(hours=1))
     
-    df2 = q.GetDBDataFrame(query)
+    try:
+        df2 = q.GetDBDataFrame(query)
+    except:
+        df2 = pd.DataFrame()
     
     if len(df2) == 0 or df2.alert.values[0] != df.alert.values[0]:
         engine = create_engine('mysql://'+q.Userdb+':'+q.Passdb+'@'+q.Hostdb+':3306/'+q.Namedb)
@@ -296,7 +299,7 @@ def write_site_alert(site, window):
     return output
 
 
-def main(name='', end=datetime.now()):
+def main(name='', end=datetime.now(), end_mon=False):
     if name == '':
         name = sys.argv[1].lower()
     
@@ -350,7 +353,7 @@ def main(name='', end=datetime.now()):
     public_alert = q.GetDBDataFrame(query)
     if public_alert.alert.values[0] != 'A0':
         plot_time = ['07:30:00', '19:30:00']
-        if str(window.end.time()) in plot_time:
+        if str(window.end.time()) in plot_time or end_mon:
             plotter.main(monitoring, window, config, plotvel_start=window.end-timedelta(hours=3), plotvel_end=window.end, realtime=False)
     elif RoundTime(pd.to_datetime(public_alert.timestamp.values[0])) == RoundTime(window.end):
         plotter.main(monitoring, window, config, plotvel_start=window.end-timedelta(hours=3), plotvel_end=window.end, realtime=False)

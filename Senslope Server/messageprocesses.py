@@ -236,8 +236,8 @@ def ProcessColumn(line,txtdatetime,sender):
     #     msgdatetime = txtdatetime
     #     print "date & time adjusted " + msgdatetime
     # else:
-    #     msgdatetime = dt.strptime(msgdatetime,'%y%m%d%H%M').strftime('%Y-%m-%d %H:%M:00')
-    #     print 'date & time no change'
+    msgdatetime = dt.strptime(msgdatetime,'%y%m%d%H%M').strftime('%Y-%m-%d %H:%M:00')
+    # print 'date & time no change'
         
     dlen = len(msgdata) #checks if data length is divisible by 15
     #print 'data length: %d' %dlen
@@ -479,7 +479,8 @@ def ProcessEarthquake(msg):
     dbio.commitToDb(query, 'earthquake')
 
     # subprocess.Popen(["python",cfg.config().fileio.eqprocfile])
-    p = subprocess.Popen("python "+cfg.config().fileio.eqprocfile, stdout=subprocess.PIPE, shell=True, stderr=subprocess.STDOUT)
+    exec_line = "~/anaconda2/bin/python %s > ~/scriptlogs/earthquakescript.txt 2>&1" % (cfg.config().fileio.eqprocfile)
+    p = subprocess.Popen(exec_line, stdout=subprocess.PIPE, shell=True, stderr=subprocess.STDOUT)
 
     return True
 
@@ -696,6 +697,8 @@ def SpawnAlertGen(sitename):
         mc.set('alertgenlist',[])
         mc.set('alertgenlist',alertgenlist)    
 
+def invokeProcessInBgnd(exec_line):
+    p = subprocess.Popen(exec_line, stdout=subprocess.PIPE, shell=True, stderr=subprocess.STDOUT)
 
 def ProcessAllMessages(allmsgs,network):
     c = cfg.config()
@@ -753,6 +756,7 @@ def ProcessAllMessages(allmsgs,network):
                             WriteSomsDataToDb(dlist,msg.dt)
                         else:
                             WriteTwoAccelDataToDb(dlist,msg.dt)
+                            invokeProcessInBgnd("python ~/masynckaiser/client/bin/invoke-masync-CtoS-single.py %s" % dlist[0][0])
                 except IndexError:
                     print "\n\n>> Error: Possible data type error"
                     print msg.data

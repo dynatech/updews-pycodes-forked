@@ -19,9 +19,9 @@ import pandas as pd
 import ConvertSomsRaw as CSR
 import querySenslopeDb as qs
 from datetime import timedelta
-#col = 'imesb'
-#t_timestamp='2016-03-01 08:00'
-#t_win = '1d'
+#site = 'imesb'
+#tdate='2016-03-01 08:00'
+#days = '30d'
 #is_debug = True
 #for a in range(1,17,1):
 
@@ -32,30 +32,34 @@ from datetime import timedelta
 #t_timestamp = raw_input('target date (ex. 2017-01-01): ').lower()
 #t_win = raw_input('select monitoring window[1d, 3d, 30d]: ').lower()
 
-def heatmap(col, t_timestamp, t_win = '1d', is_debug = False):
+def heatmap(col, t_timestamp, t_win = '1d'):
 	
 	df_merge = pd.DataFrame()
 	smin=0; smax=255;mini = 0; maxi = 1300
 	
 	
 	if (t_win == '1d'):
+		for_base = 0         
 		timew = 24
-		interval = '30Min'
+		interval = '30T'
 	elif (t_win == '3d'):
+		for_base = 0      
 		timew = 72
-		interval = '90Min'
+		interval = '120T'
 	elif (t_win == '30d'):
+		for_base = int(t_timestamp[11]+t_timestamp[12])  
 		timew = 720
-		interval = '1D'
+		interval = '24H'
 	else:
 		print "invalid monitoring window"
 	
 	f_timestamp = pd.to_datetime(pd.to_datetime(t_timestamp) - timedelta(hours = timew))	
 	t_timestamp = pd.to_datetime(pd.to_datetime(t_timestamp) + timedelta(minutes = 30))
 	
-	if (len(col)<=4):
-		print df_merge
-	else:
+    
+	
+         
+	if(len(col)>4):
 		
 	
 		query = "select num_nodes from senslopedb.site_column_props where name = '%s'" %col
@@ -63,11 +67,9 @@ def heatmap(col, t_timestamp, t_win = '1d', is_debug = False):
 		node = qs.GetDBDataFrame(query)
 		for node_num in range (1,int(node.num_nodes[0])+1):
 			
-			df = CSR.getsomscaldata(col,node_num,f_timestamp,t_timestamp, is_debug = is_debug,if_multi = True)
-			if (df.empty == True):
-				print df
+			df = CSR.getsomscaldata(col,node_num,f_timestamp,t_timestamp, if_multi = True)
 			
-			else:
+			if (df.empty == False):
 				df = df.reset_index()
 				df.ts=pd.to_datetime(df.ts)
 			
@@ -76,7 +78,7 @@ def heatmap(col, t_timestamp, t_win = '1d', is_debug = False):
 			
 				df=df[((df<1300) == True) & ((df>0)==True)] 
 				df['cval'] = df['mval1'].apply(lambda x:(x- mini) * smax / (maxi) + smin)
-				dfrs =pd.rolling_mean(df.resample(interval), window=3, min_periods=1)   #mean for one day (dataframe)
+				dfrs =pd.rolling_mean(df.resample(interval, base= for_base), window=3, min_periods=1)   #mean for one day (dataframe)
 			
 				if 'mval1' in df.columns:				
 					dfrs = dfrs.drop('mval1', axis=1)
@@ -89,10 +91,22 @@ def heatmap(col, t_timestamp, t_win = '1d', is_debug = False):
 #				dfp = dfp.reset_index()
 			
 				df_merge = pd.concat([df_merge, dfrs], axis = 0)
-				df_merge['ts'] = df_merge.ts.astype(str)
+				df_merge['ts'] = df_merge.ts.astype(object).astype(str)
+				    
 		
 		
 		dfjson = df_merge.to_json(orient='records' , double_precision=0)
 		print dfjson
+	else:
+           return 'v1'                     
 				
-			
+	
+
+
+
+
+site = sys.argv[1]
+tdate = sys.argv[2]
+days = sys.argv[3].replace("T"," ")	
+
+heatmap(site, tdate, t_win = days)
