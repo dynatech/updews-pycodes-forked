@@ -57,7 +57,17 @@ def DoesTableExist(table_name):
     else:
         db.close()
         return False
-        
+
+#ExecuteQuery(query): executes a mysql like code "query" without expecting a return
+#    Parameters:
+#        query: str
+#             mysql like query code
+def ExecuteQuery(query):
+    db, cur = SenslopeDBConnect(Namedb)
+    cur.execute(query)
+    db.commit()
+    db.close()
+
 #GetDBDataFrame(query): queries a specific data table and returns it as
 #    a python dataframe format
 #    Parameters:
@@ -78,11 +88,7 @@ def GetDBDataFrame(query):
 #Push a dataframe object into a table
 def PushDBDataFrame(df,table_name,index=True):
     engine = create_engine('mysql://'+Userdb+':'+Passdb+'@'+Hostdb+':3306/'+Namedb)
-    try:
-        df.to_sql(name = table_name, con = engine, if_exists = 'append', schema = Namedb, index=index)
-    except:
-        print 'already in db'
-
+    df.to_sql(name = table_name, con = engine, if_exists = 'append', schema = Namedb, index=index)
 
 def GetRawAccelData(tsm_name = "", fromTime = "", toTime = "", msgid = "", targetnode ="", batt=0, voltf=False, returndb=True):
     if not tsm_name:

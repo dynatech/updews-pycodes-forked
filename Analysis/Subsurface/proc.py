@@ -138,11 +138,12 @@ def proc(tsm_props, window, config, fixpoint, realtime=False, comp_vel=True):
     NoInitVal = NoInitialData(monitoring,tsm_props.nos,window.offsetstart)
     
     #get last good data prior to the monitoring window (LGDPM)
-    lgdpm = q.GetSingleLGDPM(tsm_props.tsm_name, NoInitVal, window.offsetstart)
-    lgdpm = f.applyFilters(lgdpm)
-    lgdpm = lgdpm.sort_index(ascending = False).drop_duplicates('id')
-    
-    monitoring=monitoring.append(lgdpm)
+    if len(NoInitVal) != 0:
+        lgdpm = q.GetSingleLGDPM(tsm_props.tsm_name, NoInitVal, window.offsetstart)
+        lgdpm = f.applyFilters(lgdpm)
+        lgdpm = lgdpm.sort_index(ascending = False).drop_duplicates('id')
+        
+        monitoring=monitoring.append(lgdpm)
 
     invalid_nodes = q.GetNodeStatus(tsm_props.tsm_id)
     monitoring = monitoring.loc[~monitoring.id.isin(invalid_nodes)]
