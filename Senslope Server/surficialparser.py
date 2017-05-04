@@ -216,11 +216,9 @@ def GetMarkerID(site_id,marker_name):
             AND marker_names.marker_name = "{}" """
         cur.execute(query.format(site_id,marker_name))
         marker_id = cur.fetchone()[0]
-        print "first try"
         db.close()
         return marker_id
     except:
-        print "except"
         marker_id = 0
         return marker_id
 
