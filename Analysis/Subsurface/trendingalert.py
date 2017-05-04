@@ -3,7 +3,7 @@ import numpy as np
 import os
 import sys
 
-#include the path of "Analysis" folder for the python scripts searching
+#include the path of outer folder for the python scripts searching
 path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 if not path in sys.path:
     sys.path.insert(1,path)
@@ -40,13 +40,16 @@ def trending_alertgen(pos_alert, tsm_id, end):
     accel_id = q.GetDBDataFrame(query)['accel_id'].values[0]
     
     if q.DoesTableExist('node_alerts') == False:
-        #Create a NOAH table if it doesn't exist yet
+        #Create a node_alerts table if it doesn't exist yet
         create_node_alerts()
         
     node_alert = pos_alert[['disp_alert', 'vel_alert']]
     node_alert['ts'] = end
     node_alert['accel_id'] = accel_id
-    q.PushDBDataFrame(node_alert, 'node_alerts', index=False)
+    try:
+        q.PushDBDataFrame(node_alert, 'node_alerts', index=False)
+    except:
+        print 'Duplicate entry'
         
     query = "SELECT * FROM node_alerts WHERE accel_id = %s and ts >= '%s'" %(accel_id, end-timedelta(hours=3))
     node_alert = q.GetDBDataFrame(query)
