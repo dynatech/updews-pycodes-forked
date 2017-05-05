@@ -483,6 +483,10 @@ def FixMesData(df):
     
     return df
 
+def FixSiteCode(df):
+    df.replace(to_replace = {'site_id':{'bto':'bat','png':'pan','mng':'man','jor':'pob'}},inplace = True)
+    return df
+    
 def del_data(df):
     #INPUT: Data frame of site and timestamp by groupby
     #Deletes the row at gndmeas_alerts table of [site] at time [end]            
@@ -558,7 +562,8 @@ def GenerateGroundDataAlert(site=None,end=None):
 
     #Apply mes data fix
     df = df.groupby(['site_id','crack_id']).apply(FixMesData)    
-    
+    #Fix site code
+    df = FixSiteCode(df)
     #Step 2: Evaluate the alerts per crack
     crack_alerts = df.groupby(['site_id','crack_id']).apply(crack_eval,print_out_path2,end).reset_index()
     
