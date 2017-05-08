@@ -98,9 +98,8 @@ def GetRawAccelData(tsm_name = "", fromTime = "", toTime = "", msgid = "", targe
         PrintOut('Querying database ...')
 
     if (len(tsm_name) == 5):
-        query ="""Select ts,'%s' as 'name',node_id,xval,yval,zval,batt from 
-                (SELECT ts,'%s' as 'name',times.node_id,xval,yval,zval,batt,type_num, accel_number, voltage_max, voltage_min
-                 from (select * from tilt_%s""" %(tsm_name,tsm_name,tsm_name)
+        query ="""SELECT ts,'%s' as 'tsm_name',times.node_id,xval,yval,zval,batt,accel_id
+                 from (select *, if(type_num in (32,11), 1,2) as 'accel_number' from tilt_%s""" %(tsm_name,tsm_name)
         if not fromTime:
             fromTime = "2010-01-01"
         query += " WHERE ts>='%s'" %fromTime
@@ -111,34 +110,37 @@ def GetRawAccelData(tsm_name = "", fromTime = "", toTime = "", msgid = "", targe
         else:
             toTime_query = ''
             
-        query += toTime_query + ") times"
+        query += toTime_query  
         
-        targetnode_query=""" inner join (select accelerometers.node_id, voltage_min, voltage_max, accel_number from accelerometers
-                            inner join tsm_sensors on tsm_sensors.tsm_id = accelerometers.tsm_id 
-                            where tsm_name = '%s') nodes""" %tsm_name
+        if msgid in (11,12,32,33):
+            query=query+" and type_num =%d " %msgid
+            inUse_query=''
+        else:
+            query=query+" and type_num in (11,32,12,33)"
+            inUse_query=" where inUse=1"
+        
+        query=query+" ) times"
+        
+        targetnode_query=""" inner join (select accelerometers.node_id, voltage_min, voltage_max, accel_number,accel_id,inUse from accelerometers
+                            inner join (select * from tsm_sensors where tsm_name='%s' order by tsm_id desc limit 1) tsm 
+                            on tsm.tsm_id = accelerometers.tsm_id) nodes""" %tsm_name
         if targetnode!='':
-            targetnode_query=""" inner join (select accelerometers.node_id, voltage_min, voltage_max, accel_number from accelerometers
-                                inner join tsm_sensors on tsm_sensors.tsm_id = accelerometers.tsm_id 
-                                where tsm_name = '%s' and node_id=%d) nodes""" %(tsm_name,targetnode)
+            targetnode_query=""" inner join (select accelerometers.node_id, voltage_min, voltage_max, accel_number,accel_id,inUse from accelerometers
+                                inner join (select * from tsm_sensors where tsm_name='%s' order by tsm_id desc limit 1) tsm 
+                            on tsm.tsm_id = accelerometers.tsm_id where node_id=%d) nodes""" %(tsm_name,targetnode)
         query += targetnode_query
                 
-        query += " on times.node_id = nodes.node_id) raw"
+        query += " on times.node_id = nodes.node_id and times.accel_number=nodes.accel_number"
+        
+        query= query + inUse_query
 
-        volt_query=''
         if voltf:
-            volt_query=" and batt>=(raw.voltage_min) and batt<=(raw.voltage_max)"        
-
-        if msgid in (11,12,32,33):
-            query =query+ " where type_num=%d" %msgid + volt_query
-        else:
-            query += " where (raw.accel_number = 1 and type_num in (11,32)" + volt_query+")"
-            query += " or (raw.accel_number = 2 and type_num in (12,33) " + volt_query +")"
+            query=query + " and batt>voltage_min and batt<voltage_max"        
 
 
     elif (len(tsm_name) == 4):
-        query ="""Select ts,'%s' as 'name',node_id,xval,yval,zval from 
-                (SELECT ts,'%s' as 'name',times.node_id,xval,yval,zval
-                 from (select * from tilt_%s""" %(tsm_name,tsm_name,tsm_name)
+        query ="""SELECT ts,'%s' as 'tsm_name',times.node_id,xval,yval,zval,accel_id
+                 from (select * from tilt_%s""" %(tsm_name,tsm_name)
         if not fromTime:
             fromTime = "2010-01-01"
         query += " WHERE ts>='%s'" %fromTime
@@ -151,32 +153,28 @@ def GetRawAccelData(tsm_name = "", fromTime = "", toTime = "", msgid = "", targe
             
         query += toTime_query + ") times"
         
-        targetnode_query=""" inner join (select accelerometers.node_id from accelerometers
+        targetnode_query=""" inner join (select accelerometers.node_id,accel_id from accelerometers
                             inner join tsm_sensors on tsm_sensors.tsm_id = accelerometers.tsm_id 
                             where tsm_name = '%s') nodes""" %tsm_name
         if targetnode!='':
-            targetnode_query=""" inner join (select accelerometers.node_id from accelerometers
+            targetnode_query=""" inner join (select accelerometers.node_id,accel_id from accelerometers
                                 inner join tsm_sensors on tsm_sensors.tsm_id = accelerometers.tsm_id 
                                 where tsm_name = '%s' and node_id=%d) nodes""" %(tsm_name,targetnode)
         query += targetnode_query
         
-        query += " on times.node_id = nodes.node_id) raw"
+        query += " on times.node_id = nodes.node_id"
 
     if returndb:
+        df =  GetDBDataFrame(query)
         if (len(tsm_name) == 5):
-            df =  GetDBDataFrame(query)
-
             if (batt == 1):                
-                df.columns = ['ts','name','id','x','y','z','batt']
+                df.columns = ['ts','tsm_name','node_id','x','y','z','batt','accel_id']
                 df.ts = pd.to_datetime(df.ts)
                 return df
             else:
                 df = df.drop('batt',axis=1)
                 
-        else:
-            df =  GetDBDataFrame(query)
-        
-        df.columns = ['ts','name','id','x','y','z']
+        df.columns = ['ts','tsm_name','node_id','x','y','z','accel_id']
         df.ts = pd.to_datetime(df.ts)
         return df
         

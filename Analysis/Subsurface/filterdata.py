@@ -11,26 +11,26 @@ import pandas as pd
 import sys
 
 #include the path of outer folder for the python scripts searching
-path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+path = os.path.abspath(os.path.join(os.path.dirtsm_name(__file__), '..'))
 if not path in sys.path:
     sys.path.insert(1,path)
 del path   
 
-import querydb as q
-
-def volt_filter(dfc):
-    #assume for a single node lang ito
-    df = dfc.copy()
-#    print df
-    name = str(df.head(1).iloc[0][1])
-    n_id = int(df.head(1).iloc[0][2])
-    query = """
-    select vmax,vmin from senslopedb.node_accel_table where site_name = '%s' and node_id = %d limit 1""" %(name,n_id)
-    dfv = q.GetDBDataFrame(query)
-    vmin = dfv.head(1).iloc[0][1]
-    vmax = dfv.head(1).iloc[0][0]
-    df = df[(df.batt >= vmin) & (df.batt <= vmax)]
-    return df
+#import querydb as q
+#
+#def volt_filter(dfc):
+#    #assume for a single node lang ito
+#    df = dfc.copy()
+##    print df
+#    tsm_name = str(df.head(1).iloc[0][1])
+#    n_node_id = int(df.head(1).iloc[0][2])
+#    query = """
+#    select vmax,vmin from senslopedb.node_accel_table where site_tsm_name = '%s' and node_node_id = %d limit 1""" %(tsm_name,n_node_id)
+#    dfv = q.GetDBDataFrame(query)
+#    vmin = dfv.head(1).iloc[0][1]
+#    vmax = dfv.head(1).iloc[0][0]
+#    df = df[(df.batt >= vmin) & (df.batt <= vmax)]
+#    return df
 
 def checkAccelDrift(df):
     df['mag'] = np.nan
@@ -39,7 +39,7 @@ def checkAccelDrift(df):
     df['vel'] = np.nan
     df['acc'] = np.nan
     df['week'] = np.nan
-    #df.columns = ['id','x','y','z','mag','ave','stdev','vel','acc','week']
+    #df.columns = ['node_id','x','y','z','mag','ave','stdev','vel','acc','week']
 #    df.set_index('ts')
     
     # Compute accelerometer raw value
@@ -58,7 +58,7 @@ def checkAccelDrift(df):
     df.ave = pd.stats.moments.rolling_mean(df.mag, 12, min_periods=None, freq=None, center=False)
     df.stdev = pd.stats.moments.rolling_std(df.mag, 12, min_periods=None, freq=None, center=False)
     
-    # Adjust index to represent mid data
+    # Adjust index to represent mnode_id data
     df.ave = df.ave.shift(-6)
     df.stdev = df.stdev.shift(-6)
     
@@ -121,7 +121,7 @@ def outlierFilter(dff):
 
 def rangeFilterAccel(df):
     dff = df.copy()
-    ## adjust accelerometer values for valid overshoot ranges
+    ## adjust accelerometer values for valnode_id overshoot ranges
     dff.x[(dff.x<-2970) & (dff.x>-3072)] = dff.x[(dff.x<-2970) & (dff.x>-3072)] + 4096
     dff.y[(dff.y<-2970) & (dff.y>-3072)] = dff.y[(dff.y<-2970) & (dff.y>-3072)] + 4096
     dff.z[(dff.z<-2970) & (dff.z>-3072)] = dff.z[(dff.z<-2970) & (dff.z>-3072)] + 4096
@@ -142,7 +142,7 @@ def rangeFilterAccel2(dff):
     y_index = (dff.y<-2970) & (dff.y>-3072)
     z_index = (dff.z<-2970) & (dff.z>-3072)
     
-    ## adjust accelerometer values for valid overshoot ranges
+    ## adjust accelerometer values for valnode_id overshoot ranges
     dff.loc[x_index,'x'] = dff.loc[x_index,'x'] + 4096
     dff.loc[y_index,'y'] = dff.loc[y_index,'y'] + 4096
     dff.loc[z_index,'z'] = dff.loc[z_index,'z'] + 4096
@@ -152,7 +152,7 @@ def rangeFilterAccel2(dff):
     y_range = abs(dff.y) > 1126
     z_range = abs(dff.z) > 1126
     
-    ## remove all invalid values
+    ## remove all invalnode_id values
     dff.loc[x_range,'x'] = np.nan
     dff.loc[y_range,'y'] = np.nan
     dff.loc[z_range,'z'] = np.nan
@@ -178,34 +178,34 @@ def resample_df(df):
 def applyFilters(dfl, orthof=True, rangef=True, outlierf=True):
 
     if dfl.empty:
-        return dfl[['ts','name','id','x','y','z']]
+        return dfl[['ts','tsm_name','node_id','x','y','z']]
         
   
     if rangef:
-        dfl = dfl.groupby(['id'])
+        dfl = dfl.groupby(['node_id'])
         dfl = dfl.apply(rangeFilterAccel)  
         dfl = dfl.reset_index(drop=True)
         dfl = dfl.reset_index(level=['ts'])
         if dfl.empty:
-            return dfl[['ts','name','id','x','y','z']]
+            return dfl[['ts','tsm_name','node_id','x','y','z']]
 
     if orthof: 
-        dfl = dfl.groupby(['id'])
+        dfl = dfl.groupby(['node_id'])
         dfl = dfl.apply(orthogonalFilter)
         dfl = dfl.reset_index(drop=True)
         if dfl.empty:
-            return dfl[['ts','name','id','x','y','z']]
+            return dfl[['ts','tsm_name','node_id','x','y','z']]
             
     
     if outlierf:
-        dfl = dfl.groupby(['id'])
+        dfl = dfl.groupby(['node_id'])
         dfl = dfl.apply(resample_df)
-        dfl = dfl.set_index('ts').groupby('id').apply(outlierFilter)
+        dfl = dfl.set_index('ts').groupby('node_id').apply(outlierFilter)
         dfl = dfl.reset_index(level = ['ts'])
         if dfl.empty:
-            return dfl[['ts','name','id','x','y','z']]
+            return dfl[['ts','tsm_name','node_id','x','y','z']]
 
     
     dfl = dfl.reset_index(drop=True)     
-    dfl = dfl[['ts','name','id','x','y','z']]
+    dfl = dfl[['ts','tsm_name','node_id','x','y','z']]
     return dfl
