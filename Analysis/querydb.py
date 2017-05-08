@@ -324,10 +324,107 @@ def GetSingleLGDPM(tsm_name, node_id, startTS):
     query += "ORDER BY ts DESC"
     
     lgdpm = GetDBDataFrame(query)   
-    lgdpm.columns = ['ts','id','x','y','z']        
-    lgdpm['name'] = tsm_name
+    lgdpm.columns = ['ts','node_id','x','y','z']        
+    lgdpm['tsm_name'] = tsm_name
 
     return lgdpm
+
+#create_tsm_alerts
+#    creates table named 'tsm_alerts' which contains alerts for all tsm
+def create_tsm_alerts():    
+    query = "CREATE TABLE `tsm_alerts` ("
+    query += "  `ta_id` INT(5) UNSIGNED NOT NULL AUTO_INCREMENT,"
+    query += "  `ts` TIMESTAMP NOT NULL DEFAULT '2010-01-01 00:00:00',"
+    query += "  `tsm_id` SMALLINT(5) UNSIGNED NOT NULL,"
+    query += "  `alert_level` TINYINT(2) NOT NULL,"
+    query += "  `ts_updated` TIMESTAMP NOT NULL DEFAULT '2010-01-01 00:00:00',"
+    query += "  PRIMARY KEY (`ta_id`),"
+    query += "  UNIQUE INDEX `uq_tsm_alerts` (`ts` ASC, `tsm_id` ASC),"
+    query += "  INDEX `fk_tsm_alerts_tsm_sensors1_idx` (`tsm_id` ASC),"
+    query += "  CONSTRAINT `fk_tsm_alerts_tsm_sensors1`"
+    query += "    FOREIGN KEY (`tsm_id`)"
+    query += "    REFERENCES `tsm_sensors` (`tsm_id`)"
+    query += "    ON DELETE NO ACTION"
+    query += "    ON UPDATE CASCADE)"
+    
+    ExecuteQuery(query)
+
+#create_operational_triggers
+#    creates table named 'operational_triggers' which contains alerts for all operational triggers
+def create_operational_triggers():
+    query = "CREATE TABLE `operational_triggers` ("
+    query += "  `trigger_id` INT(5) UNSIGNED NOT NULL AUTO_INCREMENT,"
+    query += "  `ts` TIMESTAMP NOT NULL DEFAULT '2010-01-01 00:00:00',"
+    query += "  `site_id` TINYINT(3) UNSIGNED NOT NULL,"
+    query += "  `trigger_sym_id` TINYINT(2) UNSIGNED NOT NULL,"
+    query += "  `ts_updated` TIMESTAMP DEFAULT '2010-01-01 00:00:00',"
+    query += "  PRIMARY KEY (`trigger_id`),"
+    query += "  UNIQUE INDEX `uq_operational_triggers` (`ts` ASC, `site_id` ASC, `trigger_sym_id` ASC),"
+    query += "  INDEX `fk_operational_triggers_sites1_idx` (`site_id` ASC),"
+    query += "  CONSTRAINT `fk_operational_triggers_sites1`"
+    query += "    FOREIGN KEY (`site_id`)"
+    query += "    REFERENCES `sites` (`site_id`)"
+    query += "    ON DELETE NO ACTION"
+    query += "    ON UPDATE CASCADE,"
+    query += "  INDEX `fk_operational_triggers_operational_trigger_symbols1_idx` (`trigger_sym_id` ASC),"
+    query += "  CONSTRAINT `fk_operational_triggers_operational_trigger_symbols1`"
+    query += "    FOREIGN KEY (`trigger_sym_id`)"
+    query += "    REFERENCES `operational_trigger_symbols` (`trigger_sym_id`)"
+    query += "    ON DELETE NO ACTION"
+    query += "    ON UPDATE CASCADE)"
+    
+    ExecuteQuery(query)
+
+#alert_toDB
+#    writes to alert tables
+#    Inputs:
+#        df- dataframe to be written in table_name
+#        table_name- str; name of table in database ('tsm_alerts' or 'operational_triggers')
+def alert_toDB(df, table_name):
+
+    if DoesTableExist(table_name) == False:
+        #Create a tsm_alerts table if it doesn't exist yet
+        if table_name == 'tsm_alerts':
+            create_tsm_alerts()
+        #Create a site_alerts table if it doesn't exist yet
+        elif table_name == 'operational_triggers':
+            create_operational_triggers()
+        else:
+            print 'unrecognized table:', table_name
+            return
+ 
+    query = "SELECT * FROM %s WHERE" %table_name
+
+    if table_name == 'tsm_alerts':
+        query += " tsm_id = '%s'" %df['tsm_id'].values[0]
+    else:
+        query += " site_id = '%s' and trigger_sym_id = '%s'" %(df['site_id'].values[0], df['trigger_sym_id'].values[0])
+
+    query += " and ts <= '%s' ORDER BY ts DESC LIMIT 1" %df['ts_updated'].values[0]
+
+    df2 = GetDBDataFrame(query)
+
+    if table_name == 'tsm_alerts':
+        try:
+            same_alert = df2['alert_level'].values[0] == df['alert_level'].values[0]
+        except:
+            same_alert = False
+    else:
+        try:
+            same_alert = df2['trigger_sym_id'].values[0] == df['trigger_sym_id'].values[0]
+        except:
+            same_alert = False
+
+    if len(df2) == 0 or not same_alert:
+        PushDBDataFrame(df, table_name, index=False)
+        
+    elif same_alert and df2['ts_updated'].values[0] < df['ts_updated'].values[0]:
+        query = "UPDATE %s SET ts_updated = '%s' WHERE" %(table_name, df['ts_updated'].values[0])
+        if table_name == 'tsm_alerts':
+            query += " ta_id = %s" %df2['ta_id'].values[0]
+        else:
+            query += " trigger_id = %s" %df2['trigger_id'].values[0]
+        ExecuteQuery(query)
 
             
 s = cfg.config()
