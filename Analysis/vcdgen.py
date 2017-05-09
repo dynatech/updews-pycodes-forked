@@ -6,7 +6,7 @@ import querySenslopeDb as q
 import genproc as g
 import ColumnPlotter as plotter
 
-def proc(func, colname, endTS, startTS, day_interval, fixpoint):
+def proc(func, colname, endTS, startTS, hour_interval, fixpoint):
     col = q.GetSensorList(colname)
     
     #end
@@ -40,8 +40,13 @@ def proc(func, colname, endTS, startTS, day_interval, fixpoint):
 
     if func == 'colpos' or func == 'vcdgen':
         #colpos interval
-        config.io.col_pos_interval = str(day_interval) + 'D'
-        config.io.num_col_pos = int((window.end - window.start).days/day_interval + 1)
+        if hour_interval == '':
+            if int((window.end-window.start).total_seconds() / (3600 * 24)) <= 5:
+                hour_interval = 4
+            else:
+                hour_interval = 24
+        config.io.col_pos_interval = str(hour_interval) + 'H'
+        config.io.num_col_pos = int((window.end-window.start).total_seconds() / (3600 * hour_interval)) + 1
         
     if func == 'displacement' or func == 'colpos':
         comp_vel = False
@@ -71,9 +76,9 @@ def colpos_json(monitoring_vel, window, config, num_nodes, seg_len, fixpoint):
     colposdf_json = colposdfj[['ts', 'id', 'downslope', 'latslope', 'depth']].to_json(orient="records", date_format="iso")
     return colposdf, colposdf_json
 
-def colpos(colname, endTS='', startTS='', day_interval=1, fixpoint='bottom'):
+def colpos(colname, endTS='', startTS='', hour_interval='', fixpoint='bottom'):
 
-    monitoring_vel, window, config, num_nodes, seg_len = proc('colpos', colname, endTS, startTS, day_interval, fixpoint)
+    monitoring_vel, window, config, num_nodes, seg_len = proc('colpos', colname, endTS, startTS, hour_interval, fixpoint)
     colposdf, colposdf_json = colpos_json(monitoring_vel, window, config, num_nodes, seg_len, fixpoint)
 
 #    #############################
@@ -155,9 +160,9 @@ def displacement(colname, endTS='', startTS='', fixpoint='bottom'):
 
     return df0off_json
 
-def vcdgen(colname, endTS='', startTS='', day_interval=1, fixpoint='bottom'):
+def vcdgen(colname, endTS='', startTS='', hour_interval='', fixpoint='bottom'):
     
-    monitoring_vel, window, config, num_nodes, seg_len = proc('vcdgen', colname, endTS, startTS, day_interval, fixpoint)    
+    monitoring_vel, window, config, num_nodes, seg_len = proc('vcdgen', colname, endTS, startTS, hour_interval, fixpoint)    
 
     colposdf, colposdf_json = colpos_json(monitoring_vel, window, config, num_nodes, seg_len, fixpoint)
 
