@@ -14,11 +14,16 @@ import vcdgen as vcd
     
 def getDF():
 
+#        site = 'agbsb'
+#        fdate = ''
+#        tdate = ''
+        
         site = sys.argv[1]
-        fdate = sys.argv[2]
-        tdate = sys.argv[3]
+        fdate = sys.argv[2].replace("n",'')
+        tdate = sys.argv[3].replace("n",'')
         df= vcd.vcdgen(site, tdate, fdate,1)
 
         print df
+
     
 getDF();

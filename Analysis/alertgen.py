@@ -272,9 +272,9 @@ def alert_toDB(df, table_name, window):
 def write_site_alert(site, window):
     if site != 'messb' and site != 'mesta':
         site = site[0:3] + '%'
-        query = "SELECT * FROM ( SELECT * FROM senslopedb.column_level_alert WHERE site LIKE '%s' and timestamp <= '%s' AND updateTS >= '%s' ORDER BY timestamp DESC) AS sub GROUP BY site" %(site, window.end, window.end-timedelta(hours=0.5))
+        query = "SELECT * FROM ( SELECT * FROM senslopedb.column_level_alert WHERE site LIKE '%s' and timestamp <= '%s' AND updateTS >= '%s' ORDER BY timestamp DESC) AS sub GROUP BY site" %(site, window.end, window.end)
     else:
-        query = "SELECT * FROM ( SELECT * FROM senslopedb.column_level_alert WHERE site = '%s' and timestamp <= '%s' AND updateTS >= '%s' ORDER BY timestamp DESC) AS sub GROUP BY site" %(site, window.end, window.end-timedelta(hours=0.5))
+        query = "SELECT * FROM ( SELECT * FROM senslopedb.column_level_alert WHERE site = '%s' and timestamp <= '%s' AND updateTS >= '%s' ORDER BY timestamp DESC) AS sub GROUP BY site" %(site, window.end, window.end)
         
     df = q.GetDBDataFrame(query)
 
