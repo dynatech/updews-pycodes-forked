@@ -1,0 +1,46 @@
+[CI Values]
+slope = 1.49905955613175			
+intercept = -3.00263765777028
+t_crit = 4.53047399738543
+var_v_log = 215.515369339559
+v_log_mean = 2.232839766
+sum_res_square = 49.8880017417971
+n = 30.
+
+[Thresh Values]
+v_alert_2 = 0.25 	; in cm/hr
+v_alert_3 = 1.80	; in cm/hr
+
+
+[I/O]
+ 
+
+############################
+###   LOCAL FILE PATH    ###
+############################
+OutputFilePath = /MonitoringOutput/
+RainfallPlotsPath = /MonitoringOutput/RainfallPlots/
+surficial_plots_path = /MonitoringOutput/SurficialPlots/
+surficial_trending_plots_path = /MonitoringOutput/SurficialPlots/TrendingPlots/
+surficial_meas_plots_path = /MonitoringOutput/SurficialPlots/MeasPlots/
+
+############################
+###      FILE NAMES      ###
+############################
+CSVFormat=.csv
+ 
+############################
+###        OTHERS        ###
+############################
+
+data_dt=0.5			;time interval between data points, in hours
+rt_window_length=10.		;length of real-time monitoring window, in days
+roll_window_length=3.		;length of rolling/moving window operations in days
+
+PrintPlot = True
+PrintSummaryAlert = True
+PrintTrendPlot = True
+PrintMeasPlot = True
+
+meas_plot_window = 30	; Surificial ground measurement plot window in days
+surficial_num_pts = 10 ; number of points to include to trending analysis
