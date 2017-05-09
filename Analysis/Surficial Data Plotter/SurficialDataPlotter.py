@@ -124,7 +124,7 @@ def onclick(event):
     
     print '\ntimestamp: {}\nsite code: {}\nmarker name: {}\ndata source: {}\n\n'.format(pd.to_datetime(xdata[ind][0]).strftime('%m/%d/%Y %H:%M:%S'),label[4:7],label[8:],label[:3])
     
-    if operation in ['mute','reposition','delete']:
+    if operation in ['mute','reposition','discard']:
         marker_history_edits.loc[index,['ts']] = pd.to_datetime(xdata[ind][0])
         marker_history_edits.loc[index,['data_source']] = label[0:3]
         marker_history_edits.loc[index,['site_code']] = label[4:7]
@@ -341,7 +341,7 @@ def onpress_cumdisp(event):
     else:
         operation = 'none'
 
-    if (event.key == 'control' or event.key =='alt' or event.key =='delete') and event.inaxes:
+    if (event.key == 'control' or event.key =='alt' or event.key =='d') and event.inaxes:
         at  = AnchoredText(operation.title(),prop=dict(size=8), frameon=True,loc = 2)
         at.patch.set_facecolor(color)
         at.patch.set_alpha(0.5)
@@ -373,7 +373,7 @@ def onclick_cumdisp(event):
         
     print '\ntimestamp: {}\nsite code: {}\nmarker name: {}\ndata source: {}\n\n'.format(pd.to_datetime(xdata[ind][0]).strftime('%m/%d/%Y %H:%M:%S'),label[4:7],label[8:],label[:3])
     
-    if operation in ['mute','reposition','delete']:
+    if operation in ['mute','reposition','discard']:
         marker_history_edits.loc[index,['ts']] = pd.to_datetime(xdata[ind][0])
         marker_history_edits.loc[index,['data_source']] = label[0:3]
         marker_history_edits.loc[index,['site_code']] = label[4:7]
