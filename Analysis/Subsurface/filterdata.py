@@ -11,7 +11,7 @@ import pandas as pd
 import sys
 
 #include the path of outer folder for the python scripts searching
-path = os.path.abspath(os.path.join(os.path.dirtsm_name(__file__), '..'))
+path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 if not path in sys.path:
     sys.path.insert(1,path)
 del path   
@@ -23,9 +23,9 @@ del path
 #    df = dfc.copy()
 ##    print df
 #    tsm_name = str(df.head(1).iloc[0][1])
-#    n_node_id = int(df.head(1).iloc[0][2])
+#    n_id = int(df.head(1).iloc[0][2])
 #    query = """
-#    select vmax,vmin from senslopedb.node_accel_table where site_tsm_name = '%s' and node_node_id = %d limit 1""" %(tsm_name,n_node_id)
+#    select vmax,vmin from senslopedb.node_accel_table where site_tsm_name = '%s' and node_id = %d limit 1""" %(tsm_name,n_id)
 #    dfv = q.GetDBDataFrame(query)
 #    vmin = dfv.head(1).iloc[0][1]
 #    vmax = dfv.head(1).iloc[0][0]
@@ -58,7 +58,7 @@ def checkAccelDrift(df):
     df.ave = pd.stats.moments.rolling_mean(df.mag, 12, min_periods=None, freq=None, center=False)
     df.stdev = pd.stats.moments.rolling_std(df.mag, 12, min_periods=None, freq=None, center=False)
     
-    # Adjust index to represent mnode_id data
+    # Adjust index to represent mid data
     df.ave = df.ave.shift(-6)
     df.stdev = df.stdev.shift(-6)
     
@@ -121,7 +121,7 @@ def outlierFilter(dff):
 
 def rangeFilterAccel(df):
     dff = df.copy()
-    ## adjust accelerometer values for valnode_id overshoot ranges
+    ## adjust accelerometer values for valid overshoot ranges
     dff.x[(dff.x<-2970) & (dff.x>-3072)] = dff.x[(dff.x<-2970) & (dff.x>-3072)] + 4096
     dff.y[(dff.y<-2970) & (dff.y>-3072)] = dff.y[(dff.y<-2970) & (dff.y>-3072)] + 4096
     dff.z[(dff.z<-2970) & (dff.z>-3072)] = dff.z[(dff.z<-2970) & (dff.z>-3072)] + 4096
@@ -142,7 +142,7 @@ def rangeFilterAccel2(dff):
     y_index = (dff.y<-2970) & (dff.y>-3072)
     z_index = (dff.z<-2970) & (dff.z>-3072)
     
-    ## adjust accelerometer values for valnode_id overshoot ranges
+    ## adjust accelerometer values for valid overshoot ranges
     dff.loc[x_index,'x'] = dff.loc[x_index,'x'] + 4096
     dff.loc[y_index,'y'] = dff.loc[y_index,'y'] + 4096
     dff.loc[z_index,'z'] = dff.loc[z_index,'z'] + 4096
@@ -152,7 +152,7 @@ def rangeFilterAccel2(dff):
     y_range = abs(dff.y) > 1126
     z_range = abs(dff.z) > 1126
     
-    ## remove all invalnode_id values
+    ## remove all invalid values
     dff.loc[x_range,'x'] = np.nan
     dff.loc[y_range,'y'] = np.nan
     dff.loc[z_range,'z'] = np.nan

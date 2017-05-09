@@ -21,11 +21,11 @@ def node_alert(disp_vel, colname, num_nodes, T_disp, T_velL2, T_velL3, k_ac_ax,l
     alert=pd.DataFrame()
 
     #adding node IDs
-    node_id = disp_vel.id.values[0]
-    alert['id']= [node_id]
+    node_id = disp_vel.node_id.values[0]
+    alert['node_id']= [node_id]
 
     #checking for nodes with no data
-    lastgooddata=lastgooddata.loc[lastgooddata.id == node_id]
+    lastgooddata=lastgooddata.loc[lastgooddata.node_id == node_id]
 
     try:
         cond = pd.to_datetime(lastgooddata.ts.values[0]) < valid_data

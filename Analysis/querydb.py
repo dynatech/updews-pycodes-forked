@@ -392,7 +392,7 @@ def alert_toDB(df, table_name):
         else:
             print 'unrecognized table:', table_name
             return
- 
+
     query = "SELECT * FROM %s WHERE" %table_name
 
     if table_name == 'tsm_alerts':
@@ -409,13 +409,27 @@ def alert_toDB(df, table_name):
             same_alert = df2['alert_level'].values[0] == df['alert_level'].values[0]
         except:
             same_alert = False
+        query = "SELECT EXISTS(SELECT * FROM tsm_alerts"
+        query += " WHERE ts = '%s' AND tsm_id = %s)" %(df['ts_updated'].values[0], df['tsm_id'].values[0])
+        if GetDBDataFrame(query).values[0][0] == 1:
+            inDB = True
+        else:
+            inDB = False
+
     else:
         try:
             same_alert = df2['trigger_sym_id'].values[0] == df['trigger_sym_id'].values[0]
         except:
             same_alert = False
+        query = "SELECT EXISTS(SELECT * FROM operational_triggers"
+        query += " WHERE ts = '%s' AND site_id = %s" %(df['ts_updated'].values[0], df['site_id'].values[0])
+        query += " AND trigger_sym_id)" %df['trigger_sym_id'].values[0]
+        if GetDBDataFrame(query).values[0][0] == 1:
+            inDB = True
+        else:
+            inDB = False
 
-    if len(df2) == 0 or not same_alert:
+    if (len(df2) == 0 or not same_alert) and not inDB:
         PushDBDataFrame(df, table_name, index=False)
         
     elif same_alert and df2['ts_updated'].values[0] < df['ts_updated'].values[0]:

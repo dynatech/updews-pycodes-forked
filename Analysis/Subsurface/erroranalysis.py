@@ -16,7 +16,7 @@ import numpy as np
 
 def max_min(df, num_nodes, mx_mn_df):
 
-    m = df.id.values[0]
+    m = df.node_id.values[0]
 
     df_index = mx_mn_df.loc[mx_mn_df.index == m].index[0]
     
@@ -91,9 +91,9 @@ def cml_noise_profiling(df, config, fixpoint, num_nodes):
     #initializing maximum and minimum positions of xz and xy
     mx_mn_df = pd.DataFrame({'xz_maxlist': [0]*num_nodes, 'xz_minlist': [0]*num_nodes, 'xy_maxlist': [0]*num_nodes, 'xy_minlist': [0]*num_nodes}, index = range(1, num_nodes+1))
     mx_mn_df = mx_mn_df[['xz_maxlist', 'xz_minlist', 'xy_maxlist', 'xy_minlist']]
-    nodal_df = df2.groupby('id')
+    nodal_df = df2.groupby('node_id')
     max_min_df = nodal_df.apply(max_min, num_nodes = num_nodes, mx_mn_df = mx_mn_df)
-    max_min_df = max_min_df.reset_index().loc[max_min_df.reset_index().id == 1][['level_1', 'xz_maxlist', 'xz_minlist', 'xy_maxlist', 'xy_minlist']].rename(columns = {'level_1': 'id'}).set_index('id')
+    max_min_df = max_min_df.reset_index().loc[max_min_df.reset_index().node_id == 1][['level_1', 'xz_maxlist', 'xz_minlist', 'xy_maxlist', 'xy_minlist']].rename(columns = {'level_1': 'node_id'}).set_index('node_id')
     
     if fixpoint == 'top':
         for_cml = max_min_df.sort_index(ascending = True)
@@ -104,9 +104,9 @@ def cml_noise_profiling(df, config, fixpoint, num_nodes):
         max_min_cml = max_min_cml.sort_index(ascending = False)
             
     max_min_df = max_min_df.reset_index()
-    nodal_max_min = max_min_df.groupby('id')
+    nodal_max_min = max_min_df.groupby('node_id')
     max_min_df = nodal_max_min.apply(same_bounds)
-    max_min_df = max_min_df.set_index('id')
+    max_min_df = max_min_df.set_index('node_id')
 
     return  max_min_df, max_min_cml
     
