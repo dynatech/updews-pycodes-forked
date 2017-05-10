@@ -39,9 +39,9 @@ def main(tsm_name='', end='', end_mon=False):
 
     if end == '':
         try:
-            end = datetime.now()
-        except:
             end = pd.to_datetime(sys.argv[2])
+        except:
+            end = datetime.now()
     
     window,config = rtw.getwindow(end)
 
