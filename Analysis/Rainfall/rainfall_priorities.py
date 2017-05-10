@@ -21,7 +21,8 @@ def SiteCoord():
     return df
     
 def AllRGCoord():
-    query = "SELECT * FROM rainfall_gauges where gauge_name not like '%s'" %'mes%'
+    query = "SELECT * FROM rainfall_gauges where gauge_name not like 'mes'"
+    query += " and (date_deactivated >= '2017-05-10' or date_deactivated is null)"
     df = q.GetDBDataFrame(query)
     return df
 
@@ -53,22 +54,18 @@ def create_rainfall_priorities():
     db.close()
 
 def to_MySQL(df, engine):
-#    gauge_name = df['gauge_name'].values[0]
     site_id = df['site_id'].values[0]
-    try:
-        df[['rain_id', 'site_id', 'distance']].to_sql(name = 'rainfall_priorities', con = engine, if_exists = 'append', schema = q.Namedb, index = False)
-#        print site_id, '-', gauge_name, ': success'
-    except:
-        rain_id = df['rain_id'].values[0]
+    rain_id = df['rain_id'].values[0]
+    query = "SELECT EXISTS(SELECT * FROM rainfall_priorities"
+    query += " WHERE site_id = %s AND rain_id = %s)" %(site_id, rain_id)
+    if q.GetDBDataFrame(query).values[0][0] == 0:
+        q.PushDBDataFrame(df[['rain_id', 'site_id', 'distance']], 'rainfall_priorities', index=False)
+    else:
         distance = df['distance'].values[0]
         query = "SELECT * FROM %s WHERE site_id = %s and rain_id = %s" %('rainfall_priorities', site_id, rain_id)
         priority_id = q.GetDBDataFrame(query)['priority_id'].values[0]
-        db, cur = q.SenslopeDBConnect(q.Namedb)
         query = "UPDATE %s SET distance = %s WHERE priority_id = %s" %('rainfall_priorities', distance, priority_id)
-        cur.execute(query)
-        db.commit()
-        db.close()
-#        print site_id, '-', gauge_name, ': updated'
+        q.ExecuteQuery(query)
 
 def Distance(site_coord, rg_coord):
     site_id = site_coord['site_id'].values[0]
