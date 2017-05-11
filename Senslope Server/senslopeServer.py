@@ -385,7 +385,8 @@ def simulateGSM(network='simulate'):
         elif m[2] in user_mobile_sim_nums.keys():
             query_users += "('%s',%d,'%s',%d,%d)," % (ts_received,user_mobile_sim_nums[m[2]],sms_msg,read_status,gsm_id)
             users_count += 1
-        else:            print 'Unknown number', m[2]
+        else:            
+            print 'Unknown number', m[2]
             sms_id_unk.append(m[0])
             continue
         
@@ -395,14 +396,15 @@ def simulateGSM(network='simulate'):
     query_users = query_users[:-1]
     
     # print query
-    query_lastText = 'UPDATE lastTextReceived SET inbox_id = (select max(inbox_id) from smsinbox_loggers) , ts = "{}" where mobile_id= {}'.format(ts_received, ltr_mobile_id)
-    # print query_lastText    if len(sms_id_ok)>0:
+    # query_lastText = 'UPDATE lastTextReceived SET inbox_id = (select max(inbox_id) from smsinbox_loggers) , ts = "{}" where mobile_id= {}'.format(ts_received, ltr_mobile_id)
+    # print query_lastText    
+    if len(sms_id_ok)>0:
         if loggers_count > 0:
             # query_safe= 'SET SQL_SAFE_UPDATES=0'
             # dbio.commitToDb(query_safe,'simulateGSM')
             dbio.commitToDb(query_loggers,'simulateGSM')
-            print query_lastText
-            dbio.commitToDb(query_lastText,'simulateGSM')
+            #print query_lastText
+            #dbio.commitToDb(query_lastText,'simulateGSM')
         if users_count > 0:
             dbio.commitToDb(query_users,'simulateGSM')
         

@@ -99,14 +99,14 @@ def ProcTwoAccelColData(sms):
         
     outl = []
     msgsplit = msg.split('*')
-    colid = msgsplit[0] # column id
+    tsm_name = msgsplit[0] # column id
 
     if len(msgsplit) != 4:
         print 'wrong data format'
         # print msg
         return
 
-    if len(colid) != 5:
+    if len(tsm_name) != 5:
         print 'wrong master name'
         return
 
@@ -147,7 +147,7 @@ def ProcTwoAccelColData(sms):
     if timestamp == '':
         raise ValueError(">> Error: Unrecognized timestamp pattern " + ts)
 
-    updateSimNumTable(colid,sender,timestamp[:8])
+    updateSimNumTable(tsm_name,sender,timestamp[:8])
 
  # PARTITION the message into n characters
     if dtype == 'Y' or dtype == 'X':
@@ -179,14 +179,14 @@ def ProcTwoAccelColData(sms):
                 yd = twoscomp(piece[7:10])
                 zd = twoscomp(piece[10:13])
                 bd = (int(piece[13:15],16)+200)/100.0
-                line = [colid,timestamp,ID,msgID,xd,yd,zd,bd]
+                line = [tsm_name,timestamp,ID,msgID,xd,yd,zd,bd]
                 print line
                 outl.append(line)
             except ValueError:
                 print ">> Value Error detected.", piece,
                 print "Piece of data to be ignored"
     
-    SpawnAlertGen(colid)
+    SpawnAlertGen(tsm_name,timestamp)
 
     return outl
 
@@ -229,26 +229,26 @@ def ProcessColumn(sms):
     txtdatetime = sms.dt
     sender = sms.simnum
 
-    msgtable = line[0:4]
-    print 'SITE: ' + msgtable
+    tsm_name = line[0:4]
+    print 'SITE: ' + tsm_name
     ##msgdata = line[5:len(line)-11] #data is 6th char, last 10 char are date
     msgdata = (line.split('*'))[1]
     print 'raw data: ' + msgdata
     #getting date and time
     #msgdatetime = line[-10:]
     try:
-        msgdatetime = (line.split('*'))[2][:10]
-        print 'date & time: ' + msgdatetime
+        timestamp = (line.split('*'))[2][:10]
+        print 'date & time: ' + timestamp
     except:
         print '>> Date and time defaults to SMS not sensor data'
-        msgdatetime = txtdatetime
+        timestamp = txtdatetime
 
     # col_list = cfg.get("Misc","AdjustColumnTimeOf").split(',')
-    if msgtable == 'PUGB':
-        msgdatetime = txtdatetime
-        print "date & time adjusted " + msgdatetime
+    if tsm_name == 'PUGB':
+        timestamp = txtdatetime
+        print "date & time adjusted " + timestamp
     else:
-        msgdatetime = dt.strptime(msgdatetime,'%y%m%d%H%M').strftime('%Y-%m-%d %H:%M:00')
+        timestamp = dt.strptime(timestamp,'%y%m%d%H%M').strftime('%Y-%m-%d %H:%M:00')
         print 'date & time no change'
         
     dlen = len(msgdata) #checks if data length is divisible by 15
@@ -265,10 +265,10 @@ def ProcessColumn(sms):
         print 'Warning: Excess data will be ignored!'
         valid = nodenum*15
         
-    updateSimNumTable(msgtable,sender,msgdatetime[:10])
+    updateSimNumTable(tsm_name,sender,timestamp[:10])
         
-    query_tilt = """INSERT IGNORE INTO tilt_%s (ts,node_id,xval,yval,zval) VALUES """ % (str(msgtable.lower()))
-    query_soms = """INSERT IGNORE INTO soms_%s (ts,node_id,mval1) VALUES """ % (str(msgtable.lower()))
+    query_tilt = """INSERT IGNORE INTO tilt_%s (ts,node_id,xval,yval,zval) VALUES """ % (str(tsm_name.lower()))
+    query_soms = """INSERT IGNORE INTO soms_%s (ts,node_id,mval1) VALUES """ % (str(tsm_name.lower()))
     
     try:    
         i = 0
@@ -312,8 +312,8 @@ def ProcessColumn(sms):
 
             valueF = tempf #is this the M VALUE?
 
-            query_tilt += """('%s',%d,%d,%d,%d),""" % (str(msgdatetime),node_id,valueX,valueY,valueZ)
-            query_soms += """('%s',%d,%d),""" % (str(msgdatetime),node_id,valueF)
+            query_tilt += """('%s',%d,%d,%d,%d),""" % (str(timestamp),node_id,valueX,valueY,valueZ)
+            query_soms += """('%s',%d,%d),""" % (str(timestamp),node_id,valueF)
 
             print "%s\t%s\t%s\t%s\t%s" % (str(node_id),str(valueX),str(valueY),str(valueZ),str(valueF))
             
@@ -326,12 +326,12 @@ def ProcessColumn(sms):
         # print query
 
         if i!=0:
-        #     # dbio.createTable(str(msgtable), "sensor v1")
+        #     # dbio.createTable(str(tsm_name), "sensor v1")
         #     dbio.commitToDb(query_tilt, 'ProcessColumn')
             dbio.commitToDb(query_tilt, 'ProcessColumn')
             dbio.commitToDb(query_soms, 'ProcessColumn')
         
-        # SpawnAlertGen(msgtable)
+        SpawnAlertGen(tsm_name)
                 
     except KeyboardInterrupt:
         print '\n>>Error: Unknown'
@@ -501,10 +501,10 @@ def ProcessEarthquake(msg):
         print ">> No issuer string recognized"
         issuerstr = 'NULL'
 
-    query = """INSERT INTO earthquake_events (ts, magnitude, depth, latitude, longitude, critical_distance, issuer) \
+    query = """INSERT INTO earthquake_events (ts, magnitude, depth, latitude, longitude, issuer) \
         VALUES ('%s',%s,%s,%s,%s,%s,'%s') ON DUPLICATE KEY UPDATE \
-        magnitude=magnitude, depth=depth, latitude=latitude, longitude=longitude, critical_distance=critical_distance, \
-        issuer=issuer;""" % (datetimestr,magstr,depthstr,latstr,longstr,diststr,issuerstr)
+        magnitude=magnitude, depth=depth, latitude=latitude, longitude=longitude, \
+        issuer=issuer;""" % (datetimestr,magstr,depthstr,latstr,longstr,issuerstr)
 
     print query
 
@@ -725,8 +725,10 @@ def CheckMessageSource(msg):
     else:
         print "From unknown number ", msg.simnum
 
-def SpawnAlertGen(sitename):
+def SpawnAlertGen(tsm_name, timestamp):
     # spawn alert alert_gens
+
+    print "For alertgen.py", tsm_name, timestamp
     return
 
     alertgenlist = mc.get('alertgenlist')
@@ -736,11 +738,11 @@ def SpawnAlertGen(sitename):
         print "Setting alertgenlist for the first time"
         alertgenlist = []
 
-    if sitename.lower() in alertgenlist:
-        print sitename, "already in alert gen list"
+    if tsm_name.lower() in alertgenlist:
+        print tsm_name, "already in alert gen list"
     else:
-        print "Adding", sitename, "to alert gen list"
-        alertgenlist.insert(0, sitename.lower())
+        print "Adding", tsm_name, "to alert gen list"
+        alertgenlist.insert(0, tsm_name.lower())
         mc.set('alertgenlist',[])
         mc.set('alertgenlist',alertgenlist)
 
@@ -760,6 +762,9 @@ def ProcessSurficialObservation(msg):
 
         server.WriteOutboxMessageToDb("READ-FAIL: (%s)\n%s" % (errortype,msg.data),c.smsalert.communitynum,'users')
         server.WriteOutboxMessageToDb(str(e), msg.simnum,'users')
+    except KeyError:
+        print '>> Error: Possible site code error'
+        server.WriteOutboxMessageToDb("READ-FAIL: (site code)\n%s" % (msg.data),c.smsalert.communitynum,'users')
     except:
         # pass
         server.WriteOutboxMessageToDb("READ-FAIL: (Unhandled) \n" + msg.data,c.smsalert.communitynum,'users')

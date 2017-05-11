@@ -95,25 +95,28 @@ def parseSurficialSms(text):
     # data_records = pd.DataFrame(columns= ['marker_name', 'measurement', 'so_id'])
     data_records = dict()
     ind= 0
+    print "====", meas
     for m in meas: #loop for each
-        try:
-            marker_name = m.split(" ",1)[0]
-            cm = m.split(" ",1)[1]
-            print cm
-        except IndexError:
-            crid = m[0]
-            cm = m[1:]
+        marker_name = m[0]
+        marker_len = float(re.search("\d{1,3}\.*\d{0,2}",m[1:]).group(0))
 
+        # check unit
         try:
-            re.search("\d *CM",cm).group(0)
-            cm = float(re.search("\d{1,3}\.*\d{0,2}",cm).group(0))
+            # centimeter
+            re.search("\d *CM",m[1:]).group(0)
+            multiplier = 1.00
         except AttributeError:
-            cm = float(re.search("\d{1,3}\.*\d{0,2}",cm).group(0))*100.0
+            # meter
+            unit = 100.00
+
+        marker_len = marker_len * multiplier
         
         # data_records.set_value(ind, 'marker_name', marker_name)
         # data_records.set_value(ind, 'measurement', cm)
         # ind = ind+1
-        data_records[marker_name] = cm
+        data_records[marker_name] = marker_len
+
+        print '---'
 
     obv['data_records'] = data_records
 
