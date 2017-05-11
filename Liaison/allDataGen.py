@@ -18,12 +18,15 @@ def getDF():
 #        fdate = ''
 #        tdate = ''
         
-        site = sys.argv[1]
-        fdate = sys.argv[2].replace("n",'')
-        tdate = sys.argv[3].replace("n",'')
-        df= vcd.vcdgen(site, tdate, fdate,1)
+		site = sys.argv[1]
+		fdate = sys.argv[2].replace("n",'')
+		tdate = sys.argv[3].replace("n",'')
+		if fdate == '':
+			df= vcd.vcdgen(site)
+		else:
+			df= vcd.vcdgen(site, tdate, fdate,1)
 
-        print df
+		print df
 
     
 getDF();
