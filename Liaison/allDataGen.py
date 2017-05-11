@@ -24,7 +24,7 @@ def getDF():
 		if fdate == '':
 			df= vcd.vcdgen(site)
 		else:
-			df= vcd.vcdgen(site, tdate, fdate,1)
+			df= vcd.vcdgen(site, tdate, fdate)
 
 		print df
 
