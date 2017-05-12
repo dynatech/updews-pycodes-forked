@@ -90,8 +90,18 @@ def PushDBDataFrame(df,table_name,index=True):
     engine = create_engine('mysql://'+Userdb+':'+Passdb+'@'+Hostdb+':3306/'+Namedb)
     df.to_sql(name = table_name, con = engine, if_exists = 'append', schema = Namedb, index=index)
 
-def GetRawAccelData(tsm_name = "", fromTime = "", toTime = "", msgid = "", targetnode ="", batt=0, voltf=False, returndb=True):
-    if not tsm_name:
+def GetRawAccelData(tsm_id='',tsm_name = "", fromTime = "", toTime = "", msgid = "", targetnode ="", batt=0, voltf=False, returndb=True):
+    #query tsm_name if input tsm_id
+    if tsm_id!='':
+        query_tsm_name='select tsm_name from tsm_sensors where tsm_id=%d' %tsm_id
+        t =  GetDBDataFrame(query_tsm_name)
+        tsm_name=t.loc[0][0]
+        
+        tsm_query=' where tsm_sensors.tsm_id=%d' %tsm_id
+    else:
+        tsm_query=" where tsm_name='%s'" %tsm_name
+    
+    if not tsm_name and not tsm_id:
         raise ValueError('no site id entered')
         
     if printtostdout:
@@ -99,7 +109,7 @@ def GetRawAccelData(tsm_name = "", fromTime = "", toTime = "", msgid = "", targe
 
     if (len(tsm_name) == 5):
         query ="""SELECT ts,'%s' as 'tsm_name',times.node_id,xval,yval,zval,batt,accel_id
-                 from (select *, if(type_num in (32,11), 1,2) as 'accel_number' from tilt_%s""" %(tsm_name,tsm_name)
+                 from (select *, if(type_num in (32,11), 1,if(type_num in (33,12),2,0)) as 'accel_number' from tilt_%s""" %(tsm_name,tsm_name)
         if not fromTime:
             fromTime = "2010-01-01"
         query += " WHERE ts>='%s'" %fromTime
@@ -108,30 +118,41 @@ def GetRawAccelData(tsm_name = "", fromTime = "", toTime = "", msgid = "", targe
             toTime = pd.to_datetime(toTime)+timedelta(hours=0.5)
             toTime_query =  " AND ts <= '%s'" %toTime
         else:
+            toTime=pd.to_datetime(datetime.now())
             toTime_query = ''
             
         query += toTime_query  
         
-        if msgid in (11,12,32,33):
-            query=query+" and type_num =%d " %msgid
-            inUse_query=''
-        else:
-            query=query+" and type_num in (11,32,12,33)"
-            inUse_query=" where inUse=1"
         
         query=query+" ) times"
         
-        targetnode_query=""" inner join (select accelerometers.node_id, voltage_min, voltage_max, accel_number,accel_id,inUse from accelerometers
-                            inner join (select * from tsm_sensors where tsm_name='%s' order by tsm_id desc limit 1) tsm 
-                            on tsm.tsm_id = accelerometers.tsm_id) nodes""" %tsm_name
+        targetnode_query=""" inner join (SELECT  accel_id,accelerometers.tsm_id,tsm_name,node_id,accel_number,voltage_min, voltage_max, in_use,version FROM senslopedb.accelerometers
+                            inner join (select * from tsm_sensors"""
+        if tsm_id!='':
+            targetnode_query= targetnode_query + tsm_query
+        else:
+            targetnode_query= targetnode_query + tsm_query + " and (date_deactivated>='%s' or date_deactivated is NULL) limit 1"%toTime
+        targetnode_query= targetnode_query + """ ) tsm 
+                            on tsm.tsm_id = accelerometers.tsm_id) nodes"""
         if targetnode!='':
-            targetnode_query=""" inner join (select accelerometers.node_id, voltage_min, voltage_max, accel_number,accel_id,inUse from accelerometers
-                                inner join (select * from tsm_sensors where tsm_name='%s' order by tsm_id desc limit 1) tsm 
-                            on tsm.tsm_id = accelerometers.tsm_id where node_id=%d) nodes""" %(tsm_name,targetnode)
+            targetnode_query=""" inner join (SELECT  accel_id,accelerometers.tsm_id,tsm_name,node_id,accel_number,voltage_min, voltage_max, in_use,version FROM senslopedb.accelerometers
+                            inner join (select * from tsm_sensors"""
+            if tsm_id!='':
+                targetnode_query= targetnode_query + tsm_query
+            else:
+                targetnode_query= targetnode_query + tsm_query+" and (date_deactivated>='%s' or date_deactivated is NULL) limit 1"%toTime
+                
+            targetnode_query= targetnode_query + """) tsm 
+                            on tsm.tsm_id = accelerometers.tsm_id where node_id=%d) nodes""" %(targetnode)
         query += targetnode_query
                 
         query += " on times.node_id = nodes.node_id and times.accel_number=nodes.accel_number"
-        
+        if msgid in (11,12,32,33):
+            query=query+" where type_num =%d " %msgid
+            inUse_query=''
+        else:
+            query=query+" where if(nodes.version=2,type_num in (32,33),type_num in (11,12))"
+            inUse_query=" and in_use=1"
         query= query + inUse_query
 
         if voltf:
@@ -154,12 +175,14 @@ def GetRawAccelData(tsm_name = "", fromTime = "", toTime = "", msgid = "", targe
         query += toTime_query + ") times"
         
         targetnode_query=""" inner join (select accelerometers.node_id,accel_id from accelerometers
-                            inner join tsm_sensors on tsm_sensors.tsm_id = accelerometers.tsm_id 
-                            where tsm_name = '%s') nodes""" %tsm_name
+                            inner join tsm_sensors on tsm_sensors.tsm_id = accelerometers.tsm_id""" 
+        targetnode_query= targetnode_query + tsm_query
+        targetnode_query= targetnode_query + ") nodes" 
         if targetnode!='':
             targetnode_query=""" inner join (select accelerometers.node_id,accel_id from accelerometers
-                                inner join tsm_sensors on tsm_sensors.tsm_id = accelerometers.tsm_id 
-                                where tsm_name = '%s' and node_id=%d) nodes""" %(tsm_name,targetnode)
+                                inner join tsm_sensors on tsm_sensors.tsm_id = accelerometers.tsm_id""" 
+            targetnode_query= targetnode_query + tsm_query
+            targetnode_query= targetnode_query + " and node_id=%d) nodes" %(targetnode)
         query += targetnode_query
         
         query += " on times.node_id = nodes.node_id"
