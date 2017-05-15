@@ -56,8 +56,14 @@ def rainfall_priorities(df):
     priorities['priority_id'] = range(1,5)
     return priorities
 
-def rainfall_gauges():
-    query = "SELECT priority_id, site_id, rg.rain_id, gauge_name, data_source, distance FROM rainfall_priorities as rp left join rainfall_gauges as rg on rp.rain_id = rg.rain_id"
+def rainfall_gauges(end=datetime.now()):
+    query = "SELECT priority_id, site_id, rg.rain_id, gauge_name, data_source, distance "
+    query += " FROM rainfall_priorities as rp"
+    query += " left join rainfall_gauges as rg"
+    query += " on rg.rain_id = rp.rain_id"
+    query += " where date_activated <= '%s'" %end
+    query += " and (date_deactivated >= '%s'" %end
+    query += " or date_deactivated is null)"
     gauges = q.GetDBDataFrame(query)
     gauges['gauge_name'] = np.array(','.join(gauges.data_source).replace('noah', 'rain_noah_').replace('senslope', 'rain_').split(','))+gauges.gauge_name
     site_gauges = gauges.groupby('site_id')
@@ -93,10 +99,14 @@ def main(site_id='', Print=True, end=datetime.now()):
         threshold = threshold[threshold.site_id.isin(site_id)]
     site_threshold = threshold.groupby('site_id')
     
+    query = "SELECT * FROM operational_trigger_symbols"
+    query += " WHERE trigger_source = 'rainfall'"
+    trigger_symbol = q.GetDBDataFrame(query)
+    
     gauges = site_threshold.apply(site_threshold_gauges, gauges=gauges)
 
     site_gauges = gauges.groupby('site_id')
-    summary = site_gauges.apply(ra.main, end=end, s=s)
+    summary = site_gauges.apply(ra.main, end=end, s=s, trigger_symbol=trigger_symbol)
     summary = summary.reset_index(drop=True).set_index('site_id')[['1D cml', 'half of 2yr max', '3D cml', '2yr max', 'DataSource', 'alert', 'advisory']]
 
     if Print == True:
