@@ -129,7 +129,7 @@ def GetLastGoodData(df):
 
 def proc(tsm_props, window, config, fixpoint, realtime=False, comp_vel=True):
     
-    monitoring = q.GetRawAccelData(tsm_props.tsm_name, window.offsetstart, window.end)
+    monitoring = q.GetRawAccelData(tsm_name=tsm_props.tsm_name, fromTime=window.offsetstart, toTime=window.end)
     monitoring = monitoring.loc[monitoring.node_id <= tsm_props.nos]
 
     monitoring = f.applyFilters(monitoring)
