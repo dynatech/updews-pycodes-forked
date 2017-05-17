@@ -13,14 +13,9 @@ import vcdgen as vcd
 # import querySenslopeDb as qs
     
 
-
-site = 'magtb'
-fdate = '2017-04-04 10:00:00'
-tdate = '2017-04-05 10:00:00'
-
-# site = sys.argv[1]
-# fdate = sys.argv[2].replace("n",'').replace("T",' ')
-# tdate = sys.argv[3].replace("n",'').replace("T",' ')
+site = sys.argv[1]
+fdate = sys.argv[2].replace("n",'').replace("T",' ')
+tdate = sys.argv[3].replace("n",'').replace("T",' ')
 if fdate == '':
 	df= vcd.vcdgen(site)
 else:
