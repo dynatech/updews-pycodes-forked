@@ -170,7 +170,7 @@ def GetSurficialDataWindow(site_id,ts_start,ts_end):
     Dataframe
         Dataframe containing surficial data with columns [ts, marker_id, measurement]
     """
-    query = "SELECT ts, marker_id, measurement FROM marker_data INNER JOIN marker_observations ON marker_observations.mo_id = marker_data.mo_id AND ts <= '{}' AND ts >= '{}' AND marker_id in (SELECT marker_id FROM marker_data INNER JOIN marker_observations ON marker_data.mo_id = marker_observations.mo_id WHERE ts = (SELECT max(ts) FROM marker_observations WHERE site_id = {} AND ts <= '{}'))".format(ts_end,ts_start,site_id,ts_end)
+    query = "SELECT ts, marker_id, measurement FROM marker_data INNER JOIN marker_observations ON marker_observations.mo_id = marker_data.mo_id AND ts <= '{}' AND ts >= '{}' AND marker_id in (SELECT marker_id FROM marker_data INNER JOIN marker_observations ON marker_data.mo_id = marker_observations.mo_id WHERE ts = (SELECT max(ts) FROM marker_observations WHERE site_id = {} AND ts <= '{}')) ORDER by ts DESC".format(ts_end,ts_start,site_id,ts_end)
     return q.GetDBDataFrame(query)
 
 def GetMarkerDetails(marker_id):
@@ -437,8 +437,9 @@ def PlotMarkerMeas(marker_data_df,colors):
     colors: ColorValues
         Color values to be cycled
     """
+    
     marker_name = GetMarkerName(marker_data_df.marker_id.values[0])
-    plt.plot(marker_data_df.ts.values,marker_data_df.measurement.values,'o-',color = colors[marker_data_df.index[0]%len(colors)*2],label = marker_name,lw = 1.5)
+    plt.plot(marker_data_df.ts.values,marker_data_df.measurement.values,'o-',color = colors[marker_data_df.index[0]%(len(colors)/2)*2],label = marker_name,lw = 1.5)
     
     
 def PlotSiteMeas(surficial_data_df,site_id,ts):
@@ -470,11 +471,11 @@ def PlotSiteMeas(surficial_data_df,site_id,ts):
     #### Initialize figure parameters
     plt.figure(figsize = (12,9))
     plt.grid(True)
-    plt.suptitle("{} Measurement Plot for {}".format(site_code,pd.to_datetime(ts).strftime("%b %d, %Y %H:%M")),fontsize = 15)
+    plt.suptitle("{} Measurement Plot for {}".format(site_code.upper(),pd.to_datetime(ts).strftime("%b %d, %Y %H:%M")),fontsize = 15)
     
     #### Group by markers
     marker_data_group = surficial_data_df.groupby('marker_id')
-    
+
     #### Plot the measurement data of each marker
     marker_data_group.agg(PlotMarkerMeas,tableau20)
     
@@ -784,7 +785,7 @@ def GetSurficialAlert(marker_alerts,site_id):
     
     return pd.DataFrame({'ts':marker_alerts.ts.iloc[0],'site_id':site_id,'trigger_sym_id':trigger_sym_id,'ts_updated':marker_alerts.ts.iloc[0]},index = [0])
 
-def GenerateSurficialAlert(site_id,ts):
+def GenerateSurficialAlert(site_id = None,ts = None):
     """
     Main alert generating function for surificial alert for a site at specified time
     
@@ -799,6 +800,10 @@ def GenerateSurficialAlert(site_id,ts):
     -------------------
     Prints the generated alert and writes to marker_alerts database
     """
+    #### Obtain system arguments from command prompt
+    if site_id == None and ts == None:
+        site_id, ts = sys.argv[1].lower(),sys.argv[2].lower()
+    
     #### Config variables
     num_pts = int(surficialconfig.io.surficial_num_pts)
     
@@ -825,14 +830,16 @@ def GenerateSurficialAlert(site_id,ts):
         ts_start = pd.to_datetime(ts) - pd.Timedelta(days = surficialconfig.io.meas_plot_window)
         
         ### Retreive the surficial data to plot
-        surficial_data_to_plot = GetSurficialDataWindow(site_id,ts_start,ts)
+        surficial_data_to_plot = GetSurficialDataWindow(site_id,ts_start.strftime("%Y-%m-%d %H:%M"),ts)
         
         ### Plot the surficial data
         PlotSiteMeas(surficial_data_to_plot,site_id,ts)
     
     print marker_alerts
     return surficial_data_df
-    
-    
+
+#Call the GenerateSurficialAlert() function
+if __name__ == "__main__":
+    GenerateSurficialAlert()  
     
     
