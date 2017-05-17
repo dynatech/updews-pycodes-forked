@@ -3,7 +3,6 @@ import numpy as np
 import os
 import pandas as pd
 import requests
-from sqlalchemy import create_engine
 import sys
 
 #include the path of "Analysis" folder for the python scripts searching
@@ -14,9 +13,7 @@ del path
 
 import querydb as q
 
-def create_rainfall_gauges():
-    
-    db, cur = q.SenslopeDBConnect(q.Namedb)
+def create_rainfall_gauges():    
     
     query = "CREATE TABLE `rainfall_gauges` ("
     query += "  `rain_id` SMALLINT(5) UNSIGNED NOT NULL AUTO_INCREMENT,"
@@ -24,32 +21,42 @@ def create_rainfall_gauges():
     query += "  `data_source` VARCHAR(8) NOT NULL,"
     query += "  `latitude` DECIMAL(9,6) UNSIGNED NOT NULL,"
     query += "  `longitude` DECIMAL(9,6) UNSIGNED NOT NULL,"
+    query += "  `date_activated` DATE NOT NULL,"
+    query += "  `date_deactivated` DATE NULL,"
     query += "  PRIMARY KEY (`rain_id`),"
     query += "  UNIQUE INDEX `gauge_name_UNIQUE` (`gauge_name` ASC))"
 
-    cur.execute(query)
-    db.commit()
-    db.close()
-
+    q.ExecuteQuery(query)
+    
 def senslope_rain_gauges():
-    query = "SELECT l.logger_name, l.latitude, l.longitude FROM loggers as l left join logger_models as lm on l.model_id = lm.model_id where has_rain = 1"
+    query = "SELECT l.logger_name, l.latitude, l.longitude, l.date_activated, l.date_deactivated"
+    query += " FROM loggers as l left join logger_models as m"
+    query += " on l.model_id = m.model_id where has_rain = 1"
+    query += " and not (latitude is null or longitude is null)"
+    query += " order by logger_name"
     df = q.GetDBDataFrame(query)
     df['data_source'] = 'senslope'
     df = df.rename(columns = {'logger_name': 'gauge_name'})
     return df
 
-def to_MySQL(df, engine):
+def to_MySQL(df):
     gauge_name = df['gauge_name'].values[0]
-    try:
-        df.to_sql(name = 'rainfall_gauges', con = engine, if_exists = 'append', schema = q.Namedb, index = False)
-    except:
-        query = "SELECT * FROM %s WHERE gauge_name = '%s'" %('rainfall_gauges', gauge_name)
+    query = "SELECT EXISTS(SELECT * FROM rainfall_gauges"
+    query += " WHERE gauge_name = '%s')" %gauge_name
+    if q.GetDBDataFrame(query).values[0][0] == 0:
+        q.PushDBDataFrame(df, 'rainfall_gauges', index=False)
+    else:
+        query = "SELECT * FROM rainfall_gauges WHERE gauge_name = '%s'" %gauge_name
         rain_id = q.GetDBDataFrame(query)['rain_id'].values[0]
-        db, cur = q.SenslopeDBConnect(q.Namedb)
-        query = "UPDATE %s SET latitude = %s, longitude = %s WHERE rain_id = %s" %('rainfall_gauges', df['latitude'].values[0], df['longitude'].values[0], rain_id)
-        cur.execute(query)
-        db.commit()
-        db.close()
+        query = "UPDATE rainfall_gauges SET latitude = %s, longitude = %s," %(df['latitude'].values[0], df['longitude'].values[0])
+        query += " date_activated = '%s'" %df['date_activated'].values[0]
+        try:
+            if not np.isnan(df['date_deactivated'].values[0]):
+                query += ", date_deactivated = '%s'" %df['date_deactivated'].values[0]
+        except:
+            pass
+        query += " WHERE rain_id = %s" %rain_id
+        q.ExecuteQuery(query)
 
 def main():
     if q.DoesTableExist('rainfall_gauges') == False:
@@ -58,8 +65,7 @@ def main():
         senslope = senslope_rain_gauges()
         
         rain_id = senslope.groupby('gauge_name')
-        engine = create_engine('mysql://'+q.Userdb+':'+q.Passdb+'@'+q.Hostdb+':3306/'+q.Namedb)
-        rain_id.apply(to_MySQL, engine=engine)
+        rain_id.apply(to_MySQL)
 
     r = requests.get('http://weather.asti.dost.gov.ph/web-api/index.php/api/devices', auth=('phivolcs.ggrdd', 'PhiVolcs0117'))    
     noah = pd.DataFrame(r.json())
@@ -69,13 +75,13 @@ def main():
     noah['longitude'] = noah['longitude'].apply(lambda x: np.round(float(x),6))
     noah['latitude'] = noah['latitude'].apply(lambda x: np.round(float(x),6))
     noah = noah.loc[(noah.longitude != 0) & (noah.latitude != 0)]
-    noah = noah.rename(columns = {'dev_id': 'gauge_name'})
+    noah = noah.rename(columns = {'dev_id': 'gauge_name', 'date_installed': 'date_activated'})
     noah['data_source'] = 'noah'
-    noah = noah[['gauge_name', 'data_source', 'longitude', 'latitude']]
+    noah['date_deactivated'] = np.nan
+    noah = noah[['gauge_name', 'data_source', 'longitude', 'latitude', 'date_activated', 'date_deactivated']]
     
     rain_id = noah.groupby('gauge_name')
-    engine = create_engine('mysql://'+q.Userdb+':'+q.Passdb+'@'+q.Hostdb+':3306/'+q.Namedb)
-    rain_id.apply(to_MySQL, engine=engine)
+    rain_id.apply(to_MySQL)
 
 ################################################################################
 if __name__ == "__main__":

@@ -3,7 +3,6 @@ import math
 import numpy as np
 import os
 import pandas as pd
-from sqlalchemy import create_engine
 import sys
 
 #include the path of "Analysis" folder for the python scripts searching
@@ -19,10 +18,10 @@ def create_rainfall_alerts():
     
     query = "CREATE TABLE `rainfall_alerts` ("
     query += "  `ra_id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,"
-    query += "  `ts` TIMESTAMP NOT NULL DEFAULT '2010-01-01 00:00:00',"
+    query += "  `ts` TIMESTAMP NULL,"
     query += "  `site_id` TINYINT(3) UNSIGNED NOT NULL,"
     query += "  `rain_id` SMALLINT(5) UNSIGNED NOT NULL,"
-    query += "  `rain_alert` CHAR(3) NOT NULL,"
+    query += "  `rain_alert` CHAR(1) NOT NULL,"
     query += "  `cumulative` DECIMAL(5,2) UNSIGNED NULL,"
     query += "  `threshold` DECIMAL(5,2) UNSIGNED NULL,"
     query += "  PRIMARY KEY (`ra_id`),"
@@ -43,46 +42,6 @@ def create_rainfall_alerts():
     cur.execute(query)
     db.commit()
     db.close()
-
-def create_site_alerts():
-    db, cur = q.SenslopeDBConnect(q.Namedb)
-    
-    query = "CREATE TABLE `site_alerts` ("
-    query += "  `sa_id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,"
-    query += "  `ts` TIMESTAMP NOT NULL DEFAULT '2010-01-01 00:00:00',"
-    query += "  `site_id` TINYINT(3) UNSIGNED NOT NULL,"
-    query += "  `alert_source` VARCHAR(10) NOT NULL,"
-    query += "  `alert_level` VARCHAR(10) NOT NULL,"
-    query += "  `ts_updated` TIMESTAMP NOT NULL DEFAULT '2010-01-01 00:00:00',"
-    query += "  PRIMARY KEY (`sa_id`),"
-    query += "  INDEX `fk_site_alerts_sites1_idx` (`site_id` ASC),"
-    query += "  UNIQUE INDEX `uq_site_alerts` (`ts` ASC, `site_id` ASC, `alert_source` ASC),"
-    query += "  CONSTRAINT `fk_rainfall_alerts_sites1`"
-    query += "    FOREIGN KEY (`site_id`)"
-    query += "    REFERENCES `sites` (`site_id`)"
-    query += "    ON DELETE CASCADE"
-    query += "    ON UPDATE CASCADE)"
-    
-    cur.execute(query)
-    db.commit()
-    db.close()
-
-def toDB_site_alerts(df, end):
-    
-    query = "SELECT * FROM site_alerts WHERE site_id = '%s' AND alert_source = 'rain' AND ts_updated <= '%s' ORDER BY ts DESC LIMIT 1" %(df['site_id'].values[0], end)
-    
-    df2 = q.GetDBDataFrame(query)
-    
-    if len(df2) == 0 or df2['alert_level'].values[0] != df['alert_level'].values[0]:
-        df['ts_updated'] = end
-        engine = create_engine('mysql://'+q.Userdb+':'+q.Passdb+'@'+q.Hostdb+':3306/'+q.Namedb)
-        df.to_sql(name = 'site_alerts', con = engine, if_exists = 'append', schema = q.Namedb, index = False)
-    elif df2['alert_level'].values[0] == df['alert_level'].values[0]:
-        db, cur = q.SenslopeDBConnect(q.Namedb)
-        query = "UPDATE site_alerts SET ts_updated = '%s' WHERE site_id = '%s' and alert_source = 'rain' and alert_level = '%s' and ts = '%s'" %(end, df2['site_id'].values[0], df2['alert_level'].values[0], df2['ts'].values[0])
-        cur.execute(query)
-        db.commit()
-        db.close()
 
 def GetRawRainData(gauge_name, fromTime="", toTime=""):
     
@@ -196,14 +155,8 @@ def summary_writer(site_id,gauge_name,rain_id,twoyrmax,halfmax,rainfall,end,writ
     ##inserts data to summary
 
     ##INPUT:
-    ##s; float; index    
-    ##r; string; site code
-    ##datasource; string; source of data: ASTI1-3, SENSLOPE Rain Gauge
     ##twoyrmax; float; 2-yr max rainfall, threshold for three day cumulative rainfall
     ##halfmax; float; half of 2-yr max rainfall, threshold for one day cumulative rainfall
-    ##summary; dataframe; contains site codes with its corresponding one and three days cumulative sum, data source, alert level and advisory
-    ##alert; array; alert summary container, r0 sites at alert[0], r1a sites at alert[1], r1b sites at alert[2],  nd sites at alert[3]
-    ##alert_df;array of tuples; alert summary container; format: (site,alert)
     ##one; dataframe; one-day cumulative rainfall
     ##three; dataframe; three-day cumulative rainfall        
     
@@ -211,49 +164,49 @@ def summary_writer(site_id,gauge_name,rain_id,twoyrmax,halfmax,rainfall,end,writ
 
     #threshold is reached
     if one>=halfmax or three>=twoyrmax:
-        ralert='r1'
+        ralert=1
         advisory='Start/Continue monitoring'
     #no data
     elif one==None or math.isnan(one):
-        ralert='nd'
+        ralert=-1
         advisory='---'
     #rainfall below threshold
     else:
-        ralert='r0'
+        ralert=0
         advisory='---'
 
-    if (write_alert and end.time() in [time(3,30), time(7,30), time(11,30), time(15,30), time(19,30), time(23,30)]) or ralert == 'r1':
+    if (write_alert and end.time() in [time(3,30), time(7,30), time(11,30), time(15,30), time(19,30), time(23,30)]) or ralert == 1:
         if q.DoesTableExist('rainfall_alerts') == False:
             #Create a site_alerts table if it doesn't exist yet
             create_rainfall_alerts()
 
-        engine = create_engine('mysql://'+q.Userdb+':'+q.Passdb+'@'+q.Hostdb+':3306/'+q.Namedb)
-        if ralert == 'r0':
-            if one < halfmax*0.75 and three < twoyrmax*0.75:                
-                df = pd.DataFrame({'ts': [end,end], 'site_id': [site_id,site_id], 'rain_id': [rain_id,rain_id], 'rain_alert': ['r0a','r0b'], 'cumulative': [one,three], 'threshold': [round(halfmax,2),round(twoyrmax,2)]})
-                try:
-                    df.to_sql(name = 'rainfall_alerts', con = engine, if_exists = 'append', schema = q.Namedb, index = False)
-                except:
-                    pass
+        if ralert == 0:
+            if one < halfmax*0.75 and three < twoyrmax*0.75:
+                query = "SELECT EXISTS(SELECT * FROM rainfall_alerts"
+                query += " WHERE ts = '%s' AND site_id = %s AND rain_alert = '0'" %(end, site_id)
+                if q.GetDBDataFrame(query).values[0][0] == 0:
+                    df = pd.DataFrame({'ts': [end], 'site_id': [site_id], 'rain_id': [rain_id], 'rain_alert': [0], 'cumulative': [np.nan], 'threshold': [np.nan]})
+                    q.PushDBDataFrame(df, 'rainfall_alerts', index = False)
+
         else:
-            if one >= halfmax:                
-                df = pd.DataFrame({'ts': [end], 'site_id': [site_id], 'rain_id': [rain_id], 'rain_alert': ['r1a'], 'cumulative': [one], 'threshold': [round(halfmax,2)]})
-                try:
-                    df.to_sql(name = 'rainfall_alerts', con = engine, if_exists = 'append', schema = q.Namedb, index = False)
-                except:
-                    pass
-            if three>=twoyrmax:                
-                df = pd.DataFrame({'ts': [end], 'site_id': [site_id], 'rain_id': [rain_id], 'rain_alert': ['r1b'], 'cumulative': [three], 'threshold': [round(twoyrmax,2)]})
-                try:
-                    df.to_sql(name = 'rainfall_alerts', con = engine, if_exists = 'append', schema = q.Namedb, index = False)        
-                except:
-                    pass
+            if one >= halfmax:
+                query = "SELECT EXISTS(SELECT * FROM rainfall_alerts"
+                query += " WHERE ts = '%s' AND site_id = %s AND rain_alert = 'a'" %(end, site_id)
+                if q.GetDBDataFrame(query).values[0][0] == 0:
+                    df = pd.DataFrame({'ts': [end], 'site_id': [site_id], 'rain_id': [rain_id], 'rain_alert': ['a'], 'cumulative': [one], 'threshold': [round(halfmax,2)]})
+                    q.PushDBDataFrame(df, 'rainfall_alerts', index = False)
+            if three>=twoyrmax:
+                query = "SELECT EXISTS(SELECT * FROM rainfall_alerts"
+                query += " WHERE ts = '%s' AND site_id = %s AND rain_alert = 'a'" %(end, site_id)
+                if q.GetDBDataFrame(query).values[0][0] == 0:
+                    df = pd.DataFrame({'ts': [end], 'site_id': [site_id], 'rain_id': [rain_id], 'rain_alert': ['b'], 'cumulative': [three], 'threshold': [round(twoyrmax,2)]})
+                    q.PushDBDataFrame(df, 'rainfall_alerts', index = False)
 
     summary = pd.DataFrame({'site_id': [site_id], '1D cml': [one], 'half of 2yr max': [round(halfmax,2)], '3D cml': [three], '2yr max': [round(twoyrmax,2)], 'DataSource': [gauge_name], 'rain_id': [rain_id], 'alert': [ralert], 'advisory': [advisory]})
     
     return summary
 
-def main(rain_props, end, s):
+def main(rain_props, end, s, trigger_symbol):
 
     ##INPUT:
     ##rainprops; DataFrameGroupBy; contains rain noah ids of noah rain gauge near the site, one and three-day rainfall threshold
@@ -270,10 +223,11 @@ def main(rain_props, end, s):
     offsetstart = start - timedelta(hours=0.5)
 
     try:
-        query = "SELECT * FROM site_alerts where site_id = '%s' and source in ('public') order by ts desc limit 1" %site_id
-        df = q.GetDBDataFrame(query)
-        currAlert = df['alert'].values[0]
-        if currAlert != 'A0':
+        query = "SELECT EXISTS (SELECT * FROM public_alerts as a left join" 
+        query += " public_alert_symbols as s on a.pub_sym_id = s.pub_sym_id"
+        query += " where site_id = %s and alert_level > 0" %site_id
+        query += " and ts <= '%s' and ts_updated >= '%s')" %(end, end)
+        if q.GetDBDataFrame(query).values[0][0] == 1:
             write_alert = True
         else:
             write_alert = False
@@ -292,14 +246,11 @@ def main(rain_props, end, s):
         rain_id="No Alert! No ASTI/SENSLOPE Data"
         summary = summary_writer(site_id,gauge_name,rain_id,twoyrmax,halfmax,rainfall,end,write_alert)
 
-    if q.DoesTableExist('site_alerts') == False:
-        #Create a site_alerts table if it doesn't exist yet
-        create_site_alerts()
-        
-    site_alerts = summary[['site_id', 'alert']]
-    site_alerts['ts'] = str(end)
-    site_alerts['alert_source'] = 'rain'
-    site_alerts = site_alerts.rename(columns = {'alert': 'alert_level'})
-    toDB_site_alerts(site_alerts, end)
+    operational_trigger = summary[['site_id', 'alert']]
+    operational_trigger['alert'] = operational_trigger['alert'].map({-1:trigger_symbol[trigger_symbol.alert_level == -1]['trigger_sym_id'].values[0], 0:trigger_symbol[trigger_symbol.alert_level == 0]['trigger_sym_id'].values[0], 1:trigger_symbol[trigger_symbol.alert_level == 1]['trigger_sym_id'].values[0]})
+    operational_trigger['ts'] = str(end)
+    operational_trigger['ts_updated'] = str(end)
+    operational_trigger = operational_trigger.rename(columns = {'alert': 'trigger_sym_id'})
+    q.alert_toDB(operational_trigger, 'operational_triggers')
 
     return summary

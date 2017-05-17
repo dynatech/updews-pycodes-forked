@@ -11,10 +11,7 @@ del path
 
 import querydb as q
 
-def create_node_alerts():
-    
-    db, cur = q.SenslopeDBConnect(q.Namedb)
-    
+def create_node_alerts():   
     query = "CREATE TABLE `node_alerts` ("
     query += "  `na_id` INT(5) UNSIGNED NOT NULL AUTO_INCREMENT,"
     query += "  `ts` TIMESTAMP NOT NULL,"
@@ -31,26 +28,26 @@ def create_node_alerts():
     query += "    ON DELETE NO ACTION"
     query += "    ON UPDATE CASCADE)"
 
-    cur.execute(query)
-    db.commit()
-    db.close()
-
+    q.ExecuteQuery(query)
+    
 def trending_alertgen(pos_alert, tsm_id, end):
     
     if q.DoesTableExist('node_alerts') == False:
         #Create a node_alerts table if it doesn't exist yet
         create_node_alerts()
-        
-    node_alert = pos_alert[['disp_alert', 'vel_alert']]
-    node_alert['ts'] = end
-    node_alert['tsm_id'] = tsm_id
-    node_alert['node_id'] = pos_alert['id'].values[0]
-    try:
+            
+    query = "SELECT EXISTS(SELECT * FROM node_alerts"
+    query += " WHERE ts = '%s'" %end
+    query += " and tsm_id = %s and node_id = %s)" %(tsm_id, pos_alert['node_id'].values[0])
+    
+    if q.GetDBDataFrame(query).values[0][0] == 0:
+        node_alert = pos_alert[['disp_alert', 'vel_alert']]
+        node_alert['ts'] = end
+        node_alert['tsm_id'] = tsm_id
+        node_alert['node_id'] = pos_alert['node_id'].values[0]
         q.PushDBDataFrame(node_alert, 'node_alerts', index=False)
-    except:
-        print 'Duplicate entry'
         
-    query = "SELECT * FROM node_alerts WHERE tsm_id = %s and node_id = %s and ts >= '%s'" %(tsm_id, pos_alert['id'].values[0], end-timedelta(hours=3))
+    query = "SELECT * FROM node_alerts WHERE tsm_id = %s and node_id = %s and ts >= '%s'" %(tsm_id, pos_alert['node_id'].values[0], end-timedelta(hours=3))
     node_alert = q.GetDBDataFrame(query)
     
     node_alert['node_alert'] = np.where(node_alert['vel_alert'].values >= node_alert['disp_alert'].values,
@@ -61,7 +58,7 @@ def trending_alertgen(pos_alert, tsm_id, end):
                              node_alert['disp_alert'].values)
     
     trending_alert = node_alert[node_alert.node_alert > 0]
-    trending_alert['id'] = pos_alert['id'].values[0]
+    trending_alert['node_id'] = pos_alert['node_id'].values[0]
     
     try:
         trending_alert['TNL'] = max(trending_alert['node_alert'].values)
@@ -72,10 +69,10 @@ def trending_alertgen(pos_alert, tsm_id, end):
 
 def main(pos_alert, tsm_id, end, invalid_nodes):
         
-    nodal_pos_alert = pos_alert.groupby('id')
+    nodal_pos_alert = pos_alert.groupby('node_id')
     trending_alert = nodal_pos_alert.apply(trending_alertgen, tsm_id=tsm_id, end=end)
     
-    valid_nodes_alert = trending_alert.loc[~trending_alert.id.isin(invalid_nodes)]
+    valid_nodes_alert = trending_alert.loc[~trending_alert.node_id.isin(invalid_nodes)]
     
     try:
         site_alert = max(valid_nodes_alert['TNL'].values)

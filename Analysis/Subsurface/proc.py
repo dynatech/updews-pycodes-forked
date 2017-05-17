@@ -25,9 +25,9 @@ class procdata:
         self.max_min_cml = max_min_cml
         
 def resamplenode(df, window):
-    blank_df = pd.DataFrame({'ts': [window.end,window.offsetstart], 'id': [df['id'].values[0]]*2, 'name': [df['name'].values[0]]*2}).set_index('ts')
+    blank_df = pd.DataFrame({'ts': [window.end,window.offsetstart], 'node_id': [df['node_id'].values[0]]*2, 'tsm_name': [df['tsm_name'].values[0]]*2}).set_index('ts')
     df = df.append(blank_df)
-    df = df.reset_index().drop_duplicates(['ts','id']).set_index('ts')
+    df = df.reset_index().drop_duplicates(['ts','node_id']).set_index('ts')
     df.index = pd.to_datetime(df.index)
     df = df.sort_index(ascending = True)
     df = df.resample('30Min').pad()
@@ -36,13 +36,13 @@ def resamplenode(df, window):
       
 def NoInitialData(df,num_nodes,offsetstart):
     allnodes=np.arange(1,num_nodes+1)
-    with_init_val=df[df.ts<offsetstart+timedelta(hours=0.5)]['id'].values
+    with_init_val=df[df.ts<offsetstart+timedelta(hours=0.5)]['node_id'].values
     no_init_val=allnodes[np.in1d(allnodes, with_init_val, invert=True)]
     return no_init_val
 
 def NoData(df, num_nodes):
     allnodes = np.arange(1,num_nodes+1)
-    withval = sorted(set(df.id))
+    withval = sorted(set(df.node_id))
     noval = allnodes[np.in1d(allnodes, withval, invert=True)]
     return noval
 
@@ -120,17 +120,17 @@ def GetLastGoodData(df):
     if df.empty:
         print "Error: Empty dataframe inputted"
         return
-    # groupby id first
-    dfa = df.groupby('id')
-    # extract the latest timestamp per id, drop the index
-    dflgd =  dfa.apply(lambda x: x[x.index==x.index.max()]).reset_index(level=1,drop=True)
+    # groupby node_id
+    dfa = df.groupby('node_id')
+    # extract the latest timestamp per node_id, drop the index
+    dflgd =  dfa.apply(lambda x: x[x.ts==x.ts.max()]).reset_index(level=1,drop=True)
     
     return dflgd
 
 def proc(tsm_props, window, config, fixpoint, realtime=False, comp_vel=True):
     
-    monitoring = q.GetRawAccelData(tsm_props.tsm_name, window.offsetstart, window.end)
-    monitoring = monitoring.loc[monitoring.id <= tsm_props.nos]
+    monitoring = q.GetRawAccelData(tsm_name=tsm_props.tsm_name, fromTime=window.offsetstart, toTime=window.end)
+    monitoring = monitoring.loc[monitoring.node_id <= tsm_props.nos]
 
     monitoring = f.applyFilters(monitoring)
 
@@ -141,12 +141,12 @@ def proc(tsm_props, window, config, fixpoint, realtime=False, comp_vel=True):
     if len(NoInitVal) != 0:
         lgdpm = q.GetSingleLGDPM(tsm_props.tsm_name, NoInitVal, window.offsetstart)
         lgdpm = f.applyFilters(lgdpm)
-        lgdpm = lgdpm.sort_index(ascending = False).drop_duplicates('id')
+        lgdpm = lgdpm.sort_index(ascending = False).drop_duplicates('node_id')
         
         monitoring=monitoring.append(lgdpm)
 
     invalid_nodes = q.GetNodeStatus(tsm_props.tsm_id)
-    monitoring = monitoring.loc[~monitoring.id.isin(invalid_nodes)]
+    monitoring = monitoring.loc[~monitoring.node_id.isin(invalid_nodes)]
 
     lgd = GetLastGoodData(monitoring)
 
@@ -156,21 +156,21 @@ def proc(tsm_props, window, config, fixpoint, realtime=False, comp_vel=True):
     monitoring['xz'],monitoring['xy'] = accel_to_lin_xz_xy(tsm_props.seglen,monitoring.x.values,monitoring.y.values,monitoring.z.values)
     
     monitoring = monitoring.drop(['x','y','z'],axis=1)
-    monitoring = monitoring.drop_duplicates(['ts', 'id'])
+    monitoring = monitoring.drop_duplicates(['ts', 'node_id'])
     monitoring = monitoring.set_index('ts')
-    monitoring = monitoring[['name','id','xz','xy']]
+    monitoring = monitoring[['tsm_name','node_id','xz','xy']]
 
     nodes_noval = NoData(monitoring, tsm_props.nos)
-    nodes_nodata = pd.DataFrame({'name': [tsm_props.tsm_name]*len(nodes_noval), 'id': nodes_noval, 'xy': [np.nan]*len(nodes_noval), 'xz': [np.nan]*len(nodes_noval), 'ts': [window.offsetstart]*len(nodes_noval)})
+    nodes_nodata = pd.DataFrame({'tsm_name': [tsm_props.tsm_name]*len(nodes_noval), 'node_id': nodes_noval, 'xy': [np.nan]*len(nodes_noval), 'xz': [np.nan]*len(nodes_noval), 'ts': [window.offsetstart]*len(nodes_noval)})
     nodes_nodata = nodes_nodata.set_index('ts')
     monitoring = monitoring.append(nodes_nodata)
     
     max_min_df, max_min_cml = err.cml_noise_profiling(monitoring, config, fixpoint, tsm_props.nos)
         
     #resamples xz and xy values per node using forward fill
-    monitoring = monitoring.groupby('id').apply(resamplenode, window = window).reset_index(level=1).set_index('ts')
+    monitoring = monitoring.groupby('node_id').apply(resamplenode, window = window).reset_index(level=1).set_index('ts')
     
-    nodal_proc_monitoring = monitoring.groupby('id')
+    nodal_proc_monitoring = monitoring.groupby('node_id')
     
     if not realtime:
         to_smooth = config.io.to_smooth
@@ -180,19 +180,19 @@ def proc(tsm_props, window, config, fixpoint, realtime=False, comp_vel=True):
         to_fill = config.io.rt_to_fill
     
     filled_smoothened = nodal_proc_monitoring.apply(fill_smooth, offsetstart=window.offsetstart, end=window.end, roll_window_numpts=window.numpts, to_smooth=to_smooth, to_fill=to_fill)
-    filled_smoothened = filled_smoothened[['xz', 'xy','name']].reset_index()
+    filled_smoothened = filled_smoothened[['xz', 'xy','tsm_name']].reset_index()
        
     if comp_vel == True:
         filled_smoothened['td'] = filled_smoothened.ts.values - filled_smoothened.ts.values[0]
         filled_smoothened['td'] = filled_smoothened['td'].apply(lambda x: x / np.timedelta64(1,'D'))
         
-        nodal_filled_smoothened = filled_smoothened.groupby('id') 
+        nodal_filled_smoothened = filled_smoothened.groupby('node_id') 
         
         tilt = nodal_filled_smoothened.apply(node_inst_vel, roll_window_numpts=window.numpts, start=window.start)
-        tilt = tilt[['ts', 'xz', 'xy', 'vel_xz', 'vel_xy','name']].reset_index()
-        tilt = tilt[['ts', 'id', 'xz', 'xy', 'vel_xz', 'vel_xy','name']]
+        tilt = tilt[['ts', 'xz', 'xy', 'vel_xz', 'vel_xy','tsm_name']].reset_index()
+        tilt = tilt[['ts', 'node_id', 'xz', 'xy', 'vel_xz', 'vel_xy','tsm_name']]
         tilt = tilt.set_index('ts')
-        tilt = tilt.sort_values('id', ascending=True)
+        tilt = tilt.sort_values('node_id', ascending=True)
     else:
         tilt = filled_smoothened.set_index('ts')
     
