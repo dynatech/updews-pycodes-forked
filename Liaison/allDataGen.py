@@ -19,8 +19,8 @@ def getDF():
 #        tdate = ''
         
 		site = sys.argv[1]
-		fdate = sys.argv[2].replace("n",'')
-		tdate = sys.argv[3].replace("n",'')
+        fdate = sys.argv[2].replace("n",'').replace("T",' ')
+        tdate = sys.argv[3].replace("n",'').replace("T",' ')
 		if fdate == '':
 			df= vcd.vcdgen(site)
 		else:
