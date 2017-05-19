@@ -29,7 +29,6 @@ if not path in sys.path:
 del path 
 
 #### Import local codes
-import querySenslopeDb as q
 import configfileio as cfg
 import surficialconfig as scfg
 import platform
@@ -150,7 +149,7 @@ def GetSurficialData(site_id,ts,num_pts):
         Dataframe containing surficial data with columns [ts, marker_id, measurement]
     """
     query = "SELECT ts, md1.marker_id, md1.measurement, COUNT(*) num FROM marker_data md1 JOIN marker_data md2 ON md1.mo_id <= md2.mo_id AND md1.marker_id = md2.marker_id AND md1.marker_id in (SELECT marker_id FROM marker_data INNER JOIN marker_observations ON marker_data.mo_id = marker_observations.mo_id AND ts = (SELECT max(ts) FROM marker_observations WHERE site_id = {} AND ts <= '{}')) INNER JOIN marker_observations ON marker_observations.mo_id = md1.mo_id AND ts <= '{}' GROUP BY md1.marker_id, md1.mo_id HAVING COUNT(*) <= {} ORDER by ts desc".format(site_id,ts,ts,num_pts)
-    return q.GetDBDataFrame(query)
+    return qdb.GetDBDataFrame(query)
 
 def GetSurficialDataWindow(site_id,ts_start,ts_end):
     """
@@ -171,7 +170,7 @@ def GetSurficialDataWindow(site_id,ts_start,ts_end):
         Dataframe containing surficial data with columns [ts, marker_id, measurement]
     """
     query = "SELECT ts, marker_id, measurement FROM marker_data INNER JOIN marker_observations ON marker_observations.mo_id = marker_data.mo_id AND ts <= '{}' AND ts >= '{}' AND marker_id in (SELECT marker_id FROM marker_data INNER JOIN marker_observations ON marker_data.mo_id = marker_observations.mo_id WHERE ts = (SELECT max(ts) FROM marker_observations WHERE site_id = {} AND ts <= '{}')) ORDER by ts DESC".format(ts_end,ts_start,site_id,ts_end)
-    return q.GetDBDataFrame(query)
+    return qdb.GetDBDataFrame(query)
 
 def GetMarkerDetails(marker_id):
     """
@@ -378,8 +377,8 @@ def DeleteDuplicatesMarkerAlertsDB(marker_alerts_df):
     None
     """
     #### Collect the values to be deleted
-    values_to_delete = zip(map(lambda x: pd.to_datetime(x).strftime('%Y-%m-%d %H:%M'),marker_alerts_df.ts.values),marker_alerts_df.marker_id.values)
-
+    values_to_delete = zip(marker_alerts_df.ts.values,marker_alerts_df.marker_id.values)
+    
     #### Create query
     query = "DELETE FROM marker_alerts WHERE ts = %s AND marker_id = %s "
 
@@ -414,6 +413,7 @@ def WriteToMarkerAlertsDB(marker_alerts_df):
     --------------------
     None
     """
+    marker_alerts_df['ts'] = map(lambda x: pd.to_datetime(x).strftime('%Y-%m-%d %H:%M'),marker_alerts_df.ts.values)
     #### Delete possible duplicates
     DeleteDuplicatesMarkerAlertsDB(marker_alerts_df)
     
@@ -757,7 +757,7 @@ def GetTriggerSymID(alert_level):
     """
     #### query the translation table from operational_trigger_symbols table
     query = "SELECT trigger_sym_id,alert_level FROM operational_trigger_symbols WHERE trigger_source = 'surficial'"
-    translation_table = q.GetDBDataFrame(query).set_index('alert_level').to_dict()['trigger_sym_id']
+    translation_table = qdb.GetDBDataFrame(query).set_index('alert_level').to_dict()['trigger_sym_id']
     return translation_table[alert_level]
     
 def GetSurficialAlert(marker_alerts,site_id):
