@@ -238,7 +238,10 @@ def GetSOMSRaw(siteid = "", fromTime = "", toTime = "", msgid="", targetnode = "
         if (siteid== 'nagsa'):
             df['mval1-n'] =(((8000000/(df.mval1))-(8000000/(df.mval2)))*4)/10
         else:
-            df['mval1-n'] =(((20000000/(df.mval1))-(20000000/(df.mval2)))*4)/10      
+            df['mval1-n'] =(((20000000/(df.mval1))-(20000000/(df.mval2)))*4)/10     
+        
+        df = df.mval1.drop(axis = 0)
+        df['mval1'] = df['mval1-n']
     
     #df = df.replace("-inf", "NAN")         
         
