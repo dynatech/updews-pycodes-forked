@@ -1,8 +1,6 @@
 import ConfigParser, os, serial
 import memcache
 
-
-
 # USAGE
 # 
 # 
@@ -29,7 +27,39 @@ def saveConfigChanges(cfg):
 
 class Container(object):
 	pass
-        
+
+class dewslserverconfig:
+	def __init__(self):
+		self.version = 1
+
+		cfg = readCfgFile()
+
+		self.config = dict()  
+
+		for section in cfg.sections():
+			options = dict()
+			for opt in cfg.options(section):
+
+				try:
+					options[opt] = cfg.getboolean(section, opt)
+					continue
+				except ValueError:
+					# may not be booelan
+					pass
+
+				try:
+					options[opt] = cfg.getint(section, opt)
+					continue
+				except ValueError:
+					# may not be integer
+					pass
+
+				# should be a string
+				options[opt] = cfg.get(section, opt)
+
+			# setattr(self, section.lower(), options)
+			self.config[section.lower()] = options
+
 class config:
 	def __init__(self):
 
@@ -102,8 +132,15 @@ class config:
 		
 
 def main():
-	sc = config()
 	mc = memcache.Client(['127.0.0.1:11211'],debug=0)
+	
+	c = dewslserverconfig()
+	# initConfig()
+
+	mc.set("server_config",c.config)
+	# print c.config['gsmdb']['username']
+
+	sc = config()
 	mc.set('sc',sc)
 	return
 

@@ -357,10 +357,10 @@ def GetSingleLGDPM(tsm_name, node_id, startTS):
 def create_tsm_alerts():    
     query = "CREATE TABLE `tsm_alerts` ("
     query += "  `ta_id` INT(5) UNSIGNED NOT NULL AUTO_INCREMENT,"
-    query += "  `ts` TIMESTAMP NOT NULL DEFAULT '2010-01-01 00:00:00',"
+    query += "  `ts` TIMESTAMP NULL,"
     query += "  `tsm_id` SMALLINT(5) UNSIGNED NOT NULL,"
     query += "  `alert_level` TINYINT(2) NOT NULL,"
-    query += "  `ts_updated` TIMESTAMP NOT NULL DEFAULT '2010-01-01 00:00:00',"
+    query += "  `ts_updated` TIMESTAMP NULL,"
     query += "  PRIMARY KEY (`ta_id`),"
     query += "  UNIQUE INDEX `uq_tsm_alerts` (`ts` ASC, `tsm_id` ASC),"
     query += "  INDEX `fk_tsm_alerts_tsm_sensors1_idx` (`tsm_id` ASC),"
@@ -377,10 +377,10 @@ def create_tsm_alerts():
 def create_operational_triggers():
     query = "CREATE TABLE `operational_triggers` ("
     query += "  `trigger_id` INT(5) UNSIGNED NOT NULL AUTO_INCREMENT,"
-    query += "  `ts` TIMESTAMP NOT NULL DEFAULT '2010-01-01 00:00:00',"
+    query += "  `ts` TIMESTAMP NULL,"
     query += "  `site_id` TINYINT(3) UNSIGNED NOT NULL,"
     query += "  `trigger_sym_id` TINYINT(2) UNSIGNED NOT NULL,"
-    query += "  `ts_updated` TIMESTAMP DEFAULT '2010-01-01 00:00:00',"
+    query += "  `ts_updated` TIMESTAMP NULL,"
     query += "  PRIMARY KEY (`trigger_id`),"
     query += "  UNIQUE INDEX `uq_operational_triggers` (`ts` ASC, `site_id` ASC, `trigger_sym_id` ASC),"
     query += "  INDEX `fk_operational_triggers_sites1_idx` (`site_id` ASC),"
@@ -398,6 +398,32 @@ def create_operational_triggers():
     
     ExecuteQuery(query)
 
+#create_operational_triggers
+#    creates table named 'public_alerts' which contains alerts for all operational triggers
+def create_public_alerts():
+    query = "CREATE TABLE `public_alerts` ("
+    query += "  `public_id` INT(5) UNSIGNED NOT NULL AUTO_INCREMENT,"
+    query += "  `ts` TIMESTAMP NULL,"
+    query += "  `site_id` TINYINT(3) UNSIGNED NOT NULL,"
+    query += "  `pub_sym_id` TINYINT(1) UNSIGNED NOT NULL,"
+    query += "  `ts_updated` TIMESTAMP NULL,"
+    query += "  PRIMARY KEY (`public_id`),"
+    query += "  UNIQUE INDEX `uq_public_alerts` (`ts` ASC, `site_id` ASC, `pub_sym_id` ASC),"
+    query += "  INDEX `fk_public_alerts_sites1_idx` (`site_id` ASC),"
+    query += "  CONSTRAINT `fk_public_alerts_sites1`"
+    query += "    FOREIGN KEY (`site_id`)"
+    query += "    REFERENCES `sites` (`site_id`)"
+    query += "    ON DELETE NO ACTION"
+    query += "    ON UPDATE CASCADE,"
+    query += "  INDEX `fk_public_alerts_public_alert_symbols1_idx` (`pub_sym_id` ASC),"
+    query += "  CONSTRAINT `fk_public_alerts_public_alert_symbols1`"
+    query += "    FOREIGN KEY (`pub_sym_id`)"
+    query += "    REFERENCES `public_alert_symbols` (`pub_sym_id`)"
+    query += "    ON DELETE NO ACTION"
+    query += "    ON UPDATE CASCADE)"
+    
+    ExecuteQuery(query)
+
 #alert_toDB
 #    writes to alert tables
 #    Inputs:
@@ -409,7 +435,10 @@ def alert_toDB(df, table_name):
         #Create a tsm_alerts table if it doesn't exist yet
         if table_name == 'tsm_alerts':
             create_tsm_alerts()
-        #Create a site_alerts table if it doesn't exist yet
+        #Create a public_alerts table if it doesn't exist yet
+        elif table_name == 'public_alerts':
+            create_public_alerts()
+        #Create a operational_triggers table if it doesn't exist yet
         elif table_name == 'operational_triggers':
             create_operational_triggers()
         else:
@@ -420,10 +449,12 @@ def alert_toDB(df, table_name):
 
     if table_name == 'tsm_alerts':
         query += " tsm_id = '%s'" %df['tsm_id'].values[0]
+    elif table_name == 'public_alerts':
+        query += " site_id = '%s' and pub_sym_id = '%s'" %(df['site_id'].values[0], df['pub_sym_id'].values[0])
     else:
         query += " site_id = '%s' and trigger_sym_id = '%s'" %(df['site_id'].values[0], df['trigger_sym_id'].values[0])
 
-    query += " and ts <= '%s' ORDER BY ts DESC LIMIT 1" %df['ts_updated'].values[0]
+    query += " and ts <= '%s' and ts_updated >= '%s' ORDER BY ts DESC LIMIT 1" %(df['ts_updated'].values[0], pd.to_datetime(df['ts_updated'].values[0])-timedelta(hours=0.5))
 
     df2 = GetDBDataFrame(query)
 
@@ -434,6 +465,19 @@ def alert_toDB(df, table_name):
             same_alert = False
         query = "SELECT EXISTS(SELECT * FROM tsm_alerts"
         query += " WHERE ts = '%s' AND tsm_id = %s)" %(df['ts_updated'].values[0], df['tsm_id'].values[0])
+        if GetDBDataFrame(query).values[0][0] == 1:
+            inDB = True
+        else:
+            inDB = False
+
+    elif table_name == 'public_alerts':
+        try:
+            same_alert = df2['pub_sym_id'].values[0] == df['pub_sym_id'].values[0]
+        except:
+            same_alert = False
+        query = "SELECT EXISTS(SELECT * FROM public_alerts"
+        query += " WHERE ts = '%s' AND site_id = %s" %(df['ts_updated'].values[0], df['site_id'].values[0])
+        query += " AND pub_sym_id)" %df['pub_sym_id'].values[0]
         if GetDBDataFrame(query).values[0][0] == 1:
             inDB = True
         else:
@@ -459,6 +503,8 @@ def alert_toDB(df, table_name):
         query = "UPDATE %s SET ts_updated = '%s' WHERE" %(table_name, df['ts_updated'].values[0])
         if table_name == 'tsm_alerts':
             query += " ta_id = %s" %df2['ta_id'].values[0]
+        elif table_name == 'public_alerts':
+            query += " public_id = %s" %df2['public_id'].values[0]
         else:
             query += " trigger_id = %s" %df2['trigger_id'].values[0]
         ExecuteQuery(query)
