@@ -240,7 +240,7 @@ def GetSOMSRaw(siteid = "", fromTime = "", toTime = "", msgid="", targetnode = "
         else:
             df['mval1-n'] =(((20000000/(df.mval1))-(20000000/(df.mval2)))*4)/10     
         
-        df = df.mval1.drop(axis = 0)
+        df = df.drop('mval1', axis=1, inplace=True)
         df['mval1'] = df['mval1-n']
     
     #df = df.replace("-inf", "NAN")         
