@@ -790,7 +790,7 @@ def ProcessSurficialObservation(msg):
     # spawn surficial measurement analysis
     if proceed_with_analysis:
         sc = mc.get('server_config')
-        surf_cmd_line = "'python %s %s '%s' > %s 2>&1" % (sc['fileio']['surficialanalysis'],obv['site_id'], obv['ts'], sc['fileio']['scriptlogsdir'])        
+        surf_cmd_line = "python %s %s '%s' > %s 2>&1" % (sc['fileio']['gndalert1'],obv['site_id'], obv['ts'], sc['fileio']['surfscriptlogs'])
         p = subprocess.Popen(surf_cmd_line, stdout=subprocess.PIPE, shell=True, stderr=subprocess.STDOUT)
 
 
