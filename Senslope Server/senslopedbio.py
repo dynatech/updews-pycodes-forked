@@ -161,7 +161,7 @@ def getAllOutboxSmsFromDb(table='users',send_status=5,gsm_id=5,limit=10):
                         limit %d """ % (table[:-1],table,send_status,gsm_id,limit)
                 # where send_status = '%s' and gsm_id = '%s' limit %d""" % (gsmdbinstance.name,send_status,network,limit)
                 
-            print query
+            # print query
             a = cur.execute(query)
             out = []
             if a:
@@ -188,7 +188,7 @@ def getLoggerNames(logger_type="all",instance="local"):
         print 'Error: No info for logger type', logger_type
         return
 
-    print query 
+    # print query 
     result_set = querydatabase(query,"createSensorColumnTables",instance)
 
     # print result_set
@@ -265,7 +265,7 @@ def createLoggerTables(logger_type='all',instance="local"):
         print 'Error: No create info for logger type', logger_type
         return
 
-    print query
+    # print query
 
     cur.execute(query)
     db.close()

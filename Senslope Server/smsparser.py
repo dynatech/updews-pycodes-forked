@@ -331,7 +331,7 @@ def ProcessColumn(sms):
             dbio.commitToDb(query_tilt, 'ProcessColumn')
             dbio.commitToDb(query_soms, 'ProcessColumn')
         
-        SpawnAlertGen(tsm_name)
+        SpawnAlertGen(tsm_name,timestamp)
                 
     except KeyboardInterrupt:
         print '\n>>Error: Unknown'
@@ -729,7 +729,11 @@ def SpawnAlertGen(tsm_name, timestamp):
     # spawn alert alert_gens
 
     print "For alertgen.py", tsm_name, timestamp
-    return
+    print timestamp
+    timestamp = (dt.strptime(timestamp,'%Y-%m-%d %H:%M:%S')+\
+        td(minutes=10)).strftime('%Y-%m-%d %H:%M:%S')
+    print timestamp
+    # return
 
     alertgenlist = mc.get('alertgenlist')
 
@@ -738,23 +742,37 @@ def SpawnAlertGen(tsm_name, timestamp):
         print "Setting alertgenlist for the first time"
         alertgenlist = []
 
-    if tsm_name.lower() in alertgenlist:
+    alert_info = dict()
+
+    # check if tsm_name is already in the list for processing
+    for_processing = False
+    for ai in alertgenlist:
+        if ai['tsm_name'] == tsm_name.lower():
+            for_processing = True
+            break
+
+    if for_processing:
         print tsm_name, "already in alert gen list"
     else:
+        # insert tsm_name to list
         print "Adding", tsm_name, "to alert gen list"
-        alertgenlist.insert(0, tsm_name.lower())
+        alert_info['tsm_name'] = tsm_name.lower()
+        alert_info['ts'] = timestamp
+        alertgenlist.insert(0, alert_info)
         mc.set('alertgenlist',[])
         mc.set('alertgenlist',alertgenlist)
 
 def ProcessSurficialObservation(msg):
     c = cfg.config()
+    proceed_with_analysis = False
+    obv = []
     try:
         obv = surfp.parseSurficialSms(msg.data)
         mo_id = surfp.UpdateSurficialObservations(obv)
         surfp.UpdateSurficialData(obv,mo_id)
         server.WriteOutboxMessageToDb("READ-SUCCESS: \n" + msg.data,c.smsalert.communitynum,'users')
         server.WriteOutboxMessageToDb(c.reply.successen, msg.simnum,'users')
-        
+        proceed_with_analysis = True
     except ValueError as e:
         print str(e)
         errortype = re.search("(WEATHER|DATE|TIME|GROUND MEASUREMENTS|NAME)", str(e).upper()).group(0)
@@ -768,6 +786,12 @@ def ProcessSurficialObservation(msg):
     except:
         # pass
         server.WriteOutboxMessageToDb("READ-FAIL: (Unhandled) \n" + msg.data,c.smsalert.communitynum,'users')
+
+    # spawn surficial measurement analysis
+    if proceed_with_analysis:
+        sc = mc.get('server_config')
+        surf_cmd_line = "'python %s %s '%s' > %s 2>&1" % (sc['fileio']['surficialanalysis'],obv['site_id'], obv['ts'], sc['fileio']['scriptlogsdir'])        
+        p = subprocess.Popen(surf_cmd_line, stdout=subprocess.PIPE, shell=True, stderr=subprocess.STDOUT)
 
 
 def ParseAllMessages(args,allmsgs=[]):
