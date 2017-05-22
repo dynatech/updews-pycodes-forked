@@ -379,9 +379,6 @@ def DeleteDuplicatesMarkerAlertsDB(marker_alerts_df):
     #### Collect the values to be deleted
     values_to_delete = zip(marker_alerts_df.ts.values,marker_alerts_df.marker_id.values)
     
-    #### Create query
-    query = "DELETE FROM marker_alerts WHERE ts = %s AND marker_id = %s "
-
     #### Connect to db
     db = mysqlDriver.connect(host = config.dbio.hostdb, user = config.dbio.userdb, passwd = config.dbio.passdb)
     
@@ -391,8 +388,11 @@ def DeleteDuplicatesMarkerAlertsDB(marker_alerts_df):
     #### Use default database
     cur.execute("USE {}".format(config.dbio.namedb))
     
-    #### Use executemany to delete specified values
-    cur.executemany(query,values_to_delete)
+    #### Iterate cur.execute to delete specified values
+    for ts,marker_id in values_to_delete:
+        #### Create query
+        query = "DELETE FROM marker_alerts WHERE ts = '{}' AND marker_id = {} ".format(ts,marker_id)
+        cur.execute(query)
     
     #### Commit changes 
     db.commit()
