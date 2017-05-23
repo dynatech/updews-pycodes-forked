@@ -200,7 +200,7 @@ def SitePublicAlert(PublicAlert, end, pubsym, intsym, opsym):
     
     # most recent surficial alert ts after previous release
     try:
-        surficial = recent_op_trigger[(recent_op_trigger.trigger_source == 'surficial')&(operational_trigger.ts_updated >= RoundReleaseTime(end)-timedelta(hours=4))]['alert_symbol'].values[0]
+        surficial = recent_op_trigger[(recent_op_trigger.trigger_source == 'surficial')]['alert_symbol'].values[0]
     except:
         surficial = opsym[(opsym.alert_level==-1)&(opsym.trigger_source=='surficial')]['alert_symbol'].values[0]
 
@@ -299,8 +299,8 @@ def SitePublicAlert(PublicAlert, end, pubsym, intsym, opsym):
         validity = ''
         
     # latest timestamp of data
-    if len(optrigger_withdata) != 0:
-        ts = pd.to_datetime(max(optrigger_withdata['ts_updated'].values))
+    if len(recent_op_trigger) != 0:
+        ts = pd.to_datetime(max(recent_op_trigger['ts_updated'].values))
         if ts > end:
             ts = end
     else:
@@ -347,7 +347,7 @@ def main(end=datetime.now()):
 
     public_json = PublicAlert.to_json(orient="records")
 
-    with open('PublicAlert.json', 'w') as w:
+    with open('PublicAlertRefDB.json', 'w') as w:
         w.write(public_json)
                 
     return PublicAlert
