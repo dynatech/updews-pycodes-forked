@@ -197,7 +197,7 @@ def summary_writer(site_id,gauge_name,rain_id,twoyrmax,halfmax,rainfall,end,writ
                     q.PushDBDataFrame(df, 'rainfall_alerts', index = False)
             if three>=twoyrmax:
                 query = "SELECT EXISTS(SELECT * FROM rainfall_alerts"
-                query += " WHERE ts = '%s' AND site_id = %s AND rain_alert = 'a'" %(end, site_id)
+                query += " WHERE ts = '%s' AND site_id = %s AND rain_alert = 'b'" %(end, site_id)
                 if q.GetDBDataFrame(query).values[0][0] == 0:
                     df = pd.DataFrame({'ts': [end], 'site_id': [site_id], 'rain_id': [rain_id], 'rain_alert': ['b'], 'cumulative': [three], 'threshold': [round(twoyrmax,2)]})
                     q.PushDBDataFrame(df, 'rainfall_alerts', index = False)
