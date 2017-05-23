@@ -14,8 +14,6 @@ del path
 import querydb as q
 
 def create_rainfall_alerts():
-    db, cur = q.SenslopeDBConnect(q.Namedb)
-    
     query = "CREATE TABLE `rainfall_alerts` ("
     query += "  `ra_id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,"
     query += "  `ts` TIMESTAMP NULL,"
@@ -25,23 +23,21 @@ def create_rainfall_alerts():
     query += "  `cumulative` DECIMAL(5,2) UNSIGNED NULL,"
     query += "  `threshold` DECIMAL(5,2) UNSIGNED NULL,"
     query += "  PRIMARY KEY (`ra_id`),"
-    query += "  INDEX `fk_rainfall_alerts_sites1_idx` (`site_id` ASC),"
-    query += "  INDEX `fk_rainfall_alerts_rain_gauges1_idx` (`rain_id` ASC),"
+    query += "  INDEX `fk_sites1_idx` (`site_id` ASC),"
+    query += "  INDEX `fk_rainfall_gauges1_idx` (`rain_id` ASC),"
     query += "  UNIQUE INDEX `uq_rainfall_alerts` (`ts` ASC, `site_id` ASC, `rain_alert` ASC),"
-    query += "  CONSTRAINT `fk_rainfall_alerts_sites1`"
+    query += "  CONSTRAINT `fk_sites1`"
     query += "    FOREIGN KEY (`site_id`)"
     query += "    REFERENCES `sites` (`site_id`)"
     query += "    ON DELETE CASCADE"
     query += "    ON UPDATE CASCADE,"
-    query += "  CONSTRAINT `fk_rainfall_alerts_rain_gauges1`"
+    query += "  CONSTRAINT `fk_rainfall_gauges1`"
     query += "    FOREIGN KEY (`rain_id`)"
     query += "    REFERENCES `rainfall_gauges` (`rain_id`)"
     query += "    ON DELETE CASCADE"
     query += "    ON UPDATE CASCADE)"
     
-    cur.execute(query)
-    db.commit()
-    db.close()
+    q.ExecuteQuery(query)
 
 def GetRawRainData(gauge_name, fromTime="", toTime=""):
     
@@ -143,7 +139,6 @@ def onethree_val_writer(rainfall):
     rainfall3 = rainfall.rolling(min_periods=1,window=144,center=False).sum()
     rainfall3 = np.round(rainfall3,4)
 
-            
     one = float(rainfall2.rain[-1:])
     three = float(rainfall3.rain[-1:])
     
@@ -183,7 +178,7 @@ def summary_writer(site_id,gauge_name,rain_id,twoyrmax,halfmax,rainfall,end,writ
         if ralert == 0:
             if one < halfmax*0.75 and three < twoyrmax*0.75:
                 query = "SELECT EXISTS(SELECT * FROM rainfall_alerts"
-                query += " WHERE ts = '%s' AND site_id = %s AND rain_alert = '0'" %(end, site_id)
+                query += " WHERE ts = '%s' AND site_id = %s AND rain_alert = '0')" %(end, site_id)
                 if q.GetDBDataFrame(query).values[0][0] == 0:
                     df = pd.DataFrame({'ts': [end], 'site_id': [site_id], 'rain_id': [rain_id], 'rain_alert': [0], 'cumulative': [np.nan], 'threshold': [np.nan]})
                     q.PushDBDataFrame(df, 'rainfall_alerts', index = False)
@@ -191,13 +186,13 @@ def summary_writer(site_id,gauge_name,rain_id,twoyrmax,halfmax,rainfall,end,writ
         else:
             if one >= halfmax:
                 query = "SELECT EXISTS(SELECT * FROM rainfall_alerts"
-                query += " WHERE ts = '%s' AND site_id = %s AND rain_alert = 'a'" %(end, site_id)
+                query += " WHERE ts = '%s' AND site_id = %s AND rain_alert = 'a')" %(end, site_id)
                 if q.GetDBDataFrame(query).values[0][0] == 0:
                     df = pd.DataFrame({'ts': [end], 'site_id': [site_id], 'rain_id': [rain_id], 'rain_alert': ['a'], 'cumulative': [one], 'threshold': [round(halfmax,2)]})
                     q.PushDBDataFrame(df, 'rainfall_alerts', index = False)
             if three>=twoyrmax:
                 query = "SELECT EXISTS(SELECT * FROM rainfall_alerts"
-                query += " WHERE ts = '%s' AND site_id = %s AND rain_alert = 'b'" %(end, site_id)
+                query += " WHERE ts = '%s' AND site_id = %s AND rain_alert = 'b')" %(end, site_id)
                 if q.GetDBDataFrame(query).values[0][0] == 0:
                     df = pd.DataFrame({'ts': [end], 'site_id': [site_id], 'rain_id': [rain_id], 'rain_alert': ['b'], 'cumulative': [three], 'threshold': [round(twoyrmax,2)]})
                     q.PushDBDataFrame(df, 'rainfall_alerts', index = False)
