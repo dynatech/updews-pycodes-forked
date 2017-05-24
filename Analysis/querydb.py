@@ -403,8 +403,8 @@ def create_operational_triggers():
     
     ExecuteQuery(query)
 
-#create_operational_triggers
-#    creates table named 'public_alerts' which contains alerts for all operational triggers
+#create_public_alerts
+#    creates table named 'public_alerts' which contains alerts for all public alerts
 def create_public_alerts():
     query = "CREATE TABLE `public_alerts` ("
     query += "  `public_id` INT(5) UNSIGNED NOT NULL AUTO_INCREMENT,"
@@ -429,6 +429,26 @@ def create_public_alerts():
     
     ExecuteQuery(query)
 
+#create_internal_alerts
+#    creates table named 'internal_alerts' which contains alerts for all internal alerts
+def create_internal_alerts():
+    query = "CREATE TABLE `internal_alerts` ("
+    query += "  `internal_id` INT(5) UNSIGNED NOT NULL AUTO_INCREMENT,"
+    query += "  `ts` TIMESTAMP NULL,"
+    query += "  `site_id` TINYINT(3) UNSIGNED NOT NULL,"
+    query += "  `internal_sym` VARCHAR(9) NULL,"
+    query += "  `ts_updated` TIMESTAMP NULL,"
+    query += "  PRIMARY KEY (`internal_id`),"
+    query += "  UNIQUE INDEX `uq_internal_alerts` (`ts` ASC, `site_id` ASC),"
+    query += "  INDEX `fk_internal_alerts_sites_idx` (`site_id` ASC),"
+    query += "  CONSTRAINT `fk_internal_alerts_sites`"
+    query += "    FOREIGN KEY (`site_id`)"
+    query += "    REFERENCES `sites` (`site_id`)"
+    query += "    ON DELETE NO ACTION"
+    query += "    ON UPDATE CASCADE)"
+    
+    ExecuteQuery(query)
+
 #alert_toDB
 #    writes to alert tables
 #    Inputs:
@@ -443,6 +463,9 @@ def alert_toDB(df, table_name):
         #Create a public_alerts table if it doesn't exist yet
         elif table_name == 'public_alerts':
             create_public_alerts()
+        #Create a internal_alerts table if it doesn't exist yet
+        elif table_name == 'internal_alerts':
+            create_internal_alerts()
         #Create a operational_triggers table if it doesn't exist yet
         elif table_name == 'operational_triggers':
             create_operational_triggers()
@@ -456,6 +479,8 @@ def alert_toDB(df, table_name):
         query += " tsm_id = '%s'" %df['tsm_id'].values[0]
     elif table_name == 'public_alerts':
         query += " site_id = '%s' and pub_sym_id = '%s'" %(df['site_id'].values[0], df['pub_sym_id'].values[0])
+    elif table_name == 'internal_alerts':
+        query += " site_id = '%s' and internal_sym = '%s'" %(df['site_id'].values[0], df['internal_sym'].values[0])
     else:
         query += " site_id = '%s' and trigger_sym_id = '%s'" %(df['site_id'].values[0], df['trigger_sym_id'].values[0])
 
@@ -488,6 +513,19 @@ def alert_toDB(df, table_name):
         else:
             inDB = False
 
+    elif table_name == 'internal_alerts':
+        try:
+            same_alert = df2['internal_sym'].values[0] == df['internal_sym'].values[0]
+        except:
+            same_alert = False
+        query = "SELECT EXISTS(SELECT * FROM internal_alerts"
+        query += " WHERE ts = '%s' AND site_id = %s" %(df['ts_updated'].values[0], df['site_id'].values[0])
+        query += " AND internal_sym = '%s')" %df['internal_sym'].values[0]
+        if GetDBDataFrame(query).values[0][0] == 1:
+            inDB = True
+        else:
+            inDB = False
+
     else:
         try:
             same_alert = df2['trigger_sym_id'].values[0] == df['trigger_sym_id'].values[0]
@@ -510,6 +548,8 @@ def alert_toDB(df, table_name):
             query += " ta_id = %s" %df2['ta_id'].values[0]
         elif table_name == 'public_alerts':
             query += " public_id = %s" %df2['public_id'].values[0]
+        elif table_name == 'internal_alerts':
+            query += " internal_id = %s" %df2['internal_id'].values[0]
         else:
             query += " trigger_id = %s" %df2['trigger_id'].values[0]
         ExecuteQuery(query)

@@ -185,14 +185,13 @@ def SitePublicAlert(PublicAlert, end, pubsym, intsym, opsym):
         if PrevPubAlert > 0:
             query = "SELECT * FROM senslopedb.rainfall_alerts"
             query += " WHERE site_id = %s AND ts = '%s' AND rain_alert = '0'" %(site_id, end)
-            if len(q.GetDBDataFrame(query)) == 0:
-                extend_rainfall = True
-                rainfall = opsym[(opsym.alert_level==-2)&(opsym.trigger_source=='rainfall')]['alert_symbol'].values[0]
-                rainfall_alert = -2
-            else:
-                extend_rainfall = False
-        else:
-            extend_rainfall = False
+            try:
+                if len(q.GetDBDataFrame(query)) == 0 and end.time() in [time(3,30), time(7,30), time(11,30), time(15,30), time(19,30), time(23,30)]:
+                    extend_rainfall = True
+                else:
+                    extend_rainfall = False
+            except:
+                pass
     except:
         extend_rainfall = False
         rainfall = opsym[(opsym.alert_level==-1)&(opsym.trigger_source=='rainfall')]['alert_symbol'].values[0]
@@ -206,6 +205,8 @@ def SitePublicAlert(PublicAlert, end, pubsym, intsym, opsym):
 
     # internal alert
     internal_alert = InternalAlert(positive_trigger, recent_op_trigger, intsym, rainfall_alert)
+    internal_alerts_df = pd.DataFrame({'ts': [end], 'site_id': [site_id], 'internal_sym': [internal_alert], 'ts_updated': [end]})
+    q.alert_toDB(internal_alerts_df, 'internal_alerts')
 
     # checks if surficial and subsurface triggers have current alert level 0
     withdata = []
@@ -244,6 +245,8 @@ def SitePublicAlert(PublicAlert, end, pubsym, intsym, opsym):
                     public_alert = pubsym[(pubsym.alert_level == CurrAlert)&(pubsym.alert_type == 'event')]['alert_symbol'].values[0]
                     pub_sym_id = pubsym[(pubsym.alert_level == CurrAlert)&(pubsym.alert_type == 'event')]['pub_sym_id'].values[0]
                     validity = RoundReleaseTime(end)
+                    rainfall = opsym[(opsym.alert_level==-2)&(opsym.trigger_source=='rainfall')]['alert_symbol'].values[0]
+                    rainfall_alert = -2
                 else:
                     # if rainfall alert -1
                     if rainfall_alert == -1: #### nd rainfall after r1 extend
