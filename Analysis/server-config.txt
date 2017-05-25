@@ -1,5 +1,5 @@
 [DB I/O]
-#Hostdb = 192.168.1.102
+#Hostdb = 192.168.150.128
 Hostdb = 127.0.0.1
 Userdb = root
 Passdb = senslope
@@ -34,9 +34,9 @@ DotProductThreshold = 0.09
 ############################
 ###   LOCAL FILE PATH    ###
 ############################
-OutputFilePath = /MonitoringOutput/
-RainfallPlotsPath = /MonitoringOutput/RainfallPlots/
-GrndMeasPlotsPath = /MonitoringOutput/GrndMeasPlots/
+OutputFilePath = /Documents/MonitoringOutput/
+RainfallPlotsPath = /Documents/MonitoringOutput/RainfallPlots/
+GrndMeasPlotsPath = /Documents/MonitoringOutput/GrndMeasPlots/
 
 #############################
 ###    ALERT CONSTANTS    ###
