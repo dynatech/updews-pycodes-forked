@@ -2,6 +2,7 @@ from datetime import datetime, timedelta, time, date
 import os
 import pandas as pd
 
+import configfileio as cfg
 import querydb as q
 
 def RoundReleaseTime(date_time):
@@ -355,8 +356,10 @@ def main(end=datetime.now()):
 
     public_json = PublicAlert.to_json(orient="records")
 
-    output_path = os.path.abspath(os.path.dirname(__file__))
-    with open(output_path+'/PublicAlertRefDB.json', 'w') as w:
+    output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
+    s = cfg.config()
+
+    with open(output_path+s.io.outputfilepath+'PublicAlertRefDB.json', 'w') as w:
         w.write(public_json)
                 
     return PublicAlert
