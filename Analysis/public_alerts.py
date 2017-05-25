@@ -79,9 +79,7 @@ def SitePublicAlert(PublicAlert, end, pubsym, intsym, opsym):
     PubAlert = q.GetDBDataFrame(query)
     try:
         PrevPubAlert = PubAlert['alert_level'].values[0]
-        print 'Public Alert', PrevPubAlert
     except:
-        print 'Public Alert 0'
         PrevPubAlert = 0
     
     # with previous positive alert
@@ -214,9 +212,9 @@ def SitePublicAlert(PublicAlert, end, pubsym, intsym, opsym):
         for i in ['subsurface', 'surficial']:
             if i in positive_trigger['trigger_source'].values:
                 if i not in optrigger_withdata['trigger_source'].values:
-                     withdata = [False]
-    elif 'subsurface' not in positive_trigger['trigger_source'].values and 'surficial' not in positive_trigger['trigger_source'].values:
-            withdata = [False]
+                     withdata += [False]
+    elif 'subsurface' not in optrigger_withdata['trigger_source'].values and 'surficial' not in optrigger_withdata['trigger_source'].values:
+        withdata += [False]
     withdata = all(withdata)
 
     # Public Alert > 0
@@ -232,6 +230,8 @@ def SitePublicAlert(PublicAlert, end, pubsym, intsym, opsym):
         # Public Alert is still valid
         if validity > end + timedelta(hours=0.5):
             CurrAlert = max(list(recent_op_trigger['alert_level'].values) + [PrevPubAlert])
+            if CurrAlert == 1 and not withdata:
+                CurrAlert = -1
             public_alert = pubsym[(pubsym.alert_level == CurrAlert)&(pubsym.alert_type == 'event')]['alert_symbol'].values[0]
             pub_sym_id = pubsym[(pubsym.alert_level == CurrAlert)&(pubsym.alert_type == 'event')]['pub_sym_id'].values[0]
             
@@ -296,7 +296,11 @@ def SitePublicAlert(PublicAlert, end, pubsym, intsym, opsym):
 
     #Public Alert A0
     else:
-        CurrAlert = 0 # or -1
+        if not withdata:
+            CurrAlert = -1
+        else:
+            CurrAlert = 0
+        
         public_alert = pubsym[(pubsym.alert_level == CurrAlert)&(pubsym.alert_type == 'routine')]['alert_symbol'].values[0]
         pub_sym_id = pubsym[(pubsym.alert_level == CurrAlert)&(pubsym.alert_type == 'routine')]['pub_sym_id'].values[0]
         validity = ''
@@ -359,5 +363,6 @@ def main(end=datetime.now()):
 
 if __name__ == "__main__":
     start_time = datetime.now()
+    print start_time
     main()
     print 'runtime =', datetime.now() - start_time
