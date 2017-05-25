@@ -9,6 +9,8 @@ s = cfg.config()
 #local file paths
 RainfallPlotsPath = output_path + s.io.rainfallplotspath 
 OutputFilePath = output_path + s.io.outputfilepath
+GrndMeasPlotsPath = output_path + s.io.grndmeasplotspath
+
 
 for dirpath, dirnames, filenames in os.walk(RainfallPlotsPath):
     for file in filenames:
@@ -18,6 +20,13 @@ for dirpath, dirnames, filenames in os.walk(RainfallPlotsPath):
             os.remove(curpath)
 
 for dirpath, dirnames, filenames in os.walk(OutputFilePath):
+    for file in filenames:
+        curpath = os.path.join(dirpath, file)
+        file_modified = datetime.fromtimestamp(os.path.getmtime(curpath))
+        if datetime.now() - file_modified > timedelta(days = 10):
+            os.remove(curpath)
+
+for dirpath, dirnames, filenames in os.walk(GrndMeasPlotsPath):
     for file in filenames:
         curpath = os.path.join(dirpath, file)
         file_modified = datetime.fromtimestamp(os.path.getmtime(curpath))
