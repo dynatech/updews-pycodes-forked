@@ -1,18 +1,14 @@
 import os
 from datetime import datetime, timedelta
-import ConfigParser
+import configfileio as cfg
 
 output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
 
-cfg = ConfigParser.ConfigParser()
-cfg.read('server-config.txt')    
-
-#INPUT/OUTPUT FILES
+s = cfg.config()
 
 #local file paths
-RainfallPlotsPath = output_path + cfg.get('I/O', 'RainfallPlotsPath')
-OutputFilePath = output_path + cfg.get('I/O','OutputFilePath')
-
+RainfallPlotsPath = output_path + s.io.rainfallplotspath 
+OutputFilePath = output_path + s.io.outputfilepath
 
 for dirpath, dirnames, filenames in os.walk(RainfallPlotsPath):
     for file in filenames:
