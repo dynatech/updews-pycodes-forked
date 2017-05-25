@@ -4,8 +4,8 @@
 ############################
 ###   LOCAL FILE PATH    ###
 ############################
-OutputFilePath = /MonitoringOutput/
-RainfallPlotsPath = /MonitoringOutput/RainfallPlots/
+OutputFilePath = /Documents/MonitoringOutput/
+RainfallPlotsPath = /Documents/MonitoringOutput/RainfallPlots/
 
 ############################
 ###      FILE NAMES      ###
