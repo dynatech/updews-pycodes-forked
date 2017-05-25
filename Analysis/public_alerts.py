@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, time, date
+import os
 import pandas as pd
 
 import querydb as q
@@ -354,7 +355,8 @@ def main(end=datetime.now()):
 
     public_json = PublicAlert.to_json(orient="records")
 
-    with open('PublicAlertRefDB.json', 'w') as w:
+    output_path = os.path.abspath(os.path.dirname(__file__))
+    with open(output_path+'/PublicAlertRefDB.json', 'w') as w:
         w.write(public_json)
                 
     return PublicAlert
