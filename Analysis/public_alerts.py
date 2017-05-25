@@ -358,6 +358,8 @@ def main(end=datetime.now()):
 
     output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
     s = cfg.config()
+    if not os.path.exists(output_path+s.io.outputfilepath):
+        os.makedirs(output_path+s.io.outputfilepath)
 
     with open(output_path+s.io.outputfilepath+'PublicAlertRefDB.json', 'w') as w:
         w.write(public_json)
