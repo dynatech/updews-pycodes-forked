@@ -13,7 +13,7 @@ import time
 import json
 import simplejson
 import pandas as pd
-#import datetime
+import datetime
 from datetime import datetime
 import queryPiDb as qpi
 
@@ -77,6 +77,8 @@ def writeToSMSoutbox(number, msg, timestamp = None, mobNetwork = None):
     try:
         mobNetwork = identifyMobileNetwork(number)
         print "timestamp: %s" % (timestamp)
+        if len(number) > 11:
+            number = "0"+str(number[len(number)-10::])
 
         if timestamp != None:
             qInsert = """INSERT INTO smsoutbox (timestamp_written,recepients,sms_msg,send_status,gsm_id)
@@ -286,6 +288,7 @@ def formatAckGSMtext(acktype, ts_written, ts_sent, recipient):
 
 def sendDataToDEWS(msg, port=None):
     host = "www.dewslandslide.com"
+    # host = "localhost"
     # New Micro hosting for the Chatterbox app
     # host = "54.166.60.233"
     
