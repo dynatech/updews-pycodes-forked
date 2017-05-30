@@ -266,7 +266,7 @@ def trending_alertgen(trending_alert, monitoring, lgd, window, config):
         for i in palert['id'].values:
             query = "SELECT * FROM senslopedb.node_level_alert WHERE site = '%s' and timestamp >= '%s' and timestamp <= '%s' and id = %s" %(monitoring.colprops.name, endTS-timedelta(hours=3), endTS, i)
             nodal_palertDF = q.GetDBDataFrame(query)
-            if len(nodal_palertDF) >= 3:
+            if len(nodal_palertDF) > 3:
                 palert_index = alert.loc[alert.id == i].index[0]
                 alert.loc[palert_index, ['TNL']] = max(getmode(list(nodal_palertDF['col_alert'].values)))
             else:
