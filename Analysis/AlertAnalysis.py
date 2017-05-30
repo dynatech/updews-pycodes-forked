@@ -240,9 +240,10 @@ def trending_alertgen(trending_alert, monitoring, lgd, window, config):
     endTS = pd.to_datetime(trending_alert['timestamp'].values[0])
     monitoring_vel = monitoring.vel[endTS-timedelta(3):endTS]
     monitoring_vel = monitoring_vel.reset_index().sort_values('ts',ascending=True)
-    nodal_dv = monitoring_vel.groupby('id')     
+    nodal_dv = monitoring_vel.groupby('id', as_index=False)     
     
     alert = nodal_dv.apply(node_alert2, colname=monitoring.colprops.name, num_nodes=monitoring.colprops.nos, T_disp=config.io.t_disp, T_velL2=config.io.t_vell2, T_velL3=config.io.t_vell3, k_ac_ax=config.io.k_ac_ax, lastgooddata=lgd,window=window,config=config)
+    alert = alert.reset_index(drop=True)
     alert = column_alert(alert, config.io.num_nodes_to_check, config.io.k_ac_ax)
     alert['timestamp']=endTS
     
@@ -250,7 +251,6 @@ def trending_alertgen(trending_alert, monitoring, lgd, window, config):
 
     if len(palert) != 0:
         palert['site']=monitoring.colprops.name
-        palert = palert[['timestamp', 'site', 'disp_alert', 'vel_alert', 'col_alert']].reset_index()
         palert = palert[['timestamp', 'site', 'id', 'disp_alert', 'vel_alert', 'col_alert']]
         
         engine = create_engine('mysql://'+q.Userdb+':'+q.Passdb+'@'+q.Hostdb+':3306/'+q.Namedb)
@@ -264,14 +264,14 @@ def trending_alertgen(trending_alert, monitoring, lgd, window, config):
     
     if len(palert) != 0:
         for i in palert['id'].values:
-            query = "SELECT * FROM senslopedb.node_level_alert WHERE site = '%s' and timestamp >= '%s' and id = %s" %(monitoring.colprops.name, endTS-timedelta(hours=3), i)
+            query = "SELECT * FROM senslopedb.node_level_alert WHERE site = '%s' and timestamp >= '%s' and timestamp <= '%s' and id = %s" %(monitoring.colprops.name, endTS-timedelta(hours=3), endTS, i)
             nodal_palertDF = q.GetDBDataFrame(query)
             if len(nodal_palertDF) >= 3:
                 palert_index = alert.loc[alert.id == i].index[0]
-                alert.loc[palert_index]['TNL'] = max(getmode(list(nodal_palertDF['col_alert'].values)))
+                alert.loc[palert_index, ['TNL']] = max(getmode(list(nodal_palertDF['col_alert'].values)))
             else:
                 palert_index = alert.loc[alert.id == i].index[0]
-                alert.loc[palert_index]['TNL'] = 'L0'
+                alert.loc[palert_index, ['TNL']] = 'L0'
     
     not_working = q.GetNodeStatus(1).loc[q.GetNodeStatus(1).site == monitoring.colprops.name]['node'].values
     
@@ -304,8 +304,9 @@ def main(site, end):
     lgd = q.GetLastGoodDataFromDb(monitoring.colprops.name)
 
     
-    trending_alertTS = trending_alert.groupby('timestamp')
+    trending_alertTS = trending_alert.groupby('timestamp', as_index=False)
     output = trending_alertTS.apply(trending_alertgen, window=window, config=config, monitoring=monitoring, lgd=lgd)
+    output = output.reset_index(drop=True)
     
     site_level_alert = output.loc[output.timestamp == window.end]
     site_level_alert['updateTS'] = [window.end]
