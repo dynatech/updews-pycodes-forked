@@ -337,6 +337,7 @@ def main(end=datetime.now()):
     
     query = "SELECT * FROM public_alert_symbols"
     PublicAlertSymbols = q.GetDBDataFrame(query)
+    PublicAlertSymbols = PublicAlertSymbols.sort_values(['alert_type', 'alert_level'], ascending=[True, False])
     
     query = "SELECT i.alert_symbol, alert_level, trigger_source FROM"
     query += " internal_alert_symbols AS i"
@@ -353,7 +354,8 @@ def main(end=datetime.now()):
     Site_Public_Alert = PublicAlert.groupby('site_id', as_index=False)
     
     PublicAlert = Site_Public_Alert.apply(SitePublicAlert, end=end, pubsym=PublicAlertSymbols, intsym=InternalAlertSymbols, opsym=OperationalTriggerSymbols)
-    PublicAlert = PublicAlert.sort_values(['public_alert', 'site_code'], ascending = [False, True])
+    PublicAlert['cat'] = pd.Categorical(PublicAlert['public_alert'], categories=PublicAlertSymbols['alert_symbol'].values, ordered=True)
+    PublicAlert = PublicAlert.sort_values(['cat', 'site_code']).drop('cat', axis=1)
  
     PublicAlert['ts'] = PublicAlert['ts'].apply(lambda x: str(x))
     PublicAlert['validity'] = PublicAlert['validity'].apply(lambda x: str(x))

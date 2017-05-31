@@ -469,6 +469,10 @@ def alert_toDB(df, table_name):
         #Create a operational_triggers table if it doesn't exist yet
         elif table_name == 'operational_triggers':
             create_operational_triggers()
+            query = "SELECT * FROM operational_trigger_symbols"
+            all_trig = GetDBDataFrame(query)
+            trigger_source = all_trig[all_trig.trigger_sym_id == df['trigger_sym_id'].values[0]]['trigger_source'].values[0]
+            trigger_sym_ids = ','.join(map(str, all_trig[all_trig.trigger_source == trigger_source]['trigger_sym_id'].values))
         else:
             print 'unrecognized table:', table_name
             return
@@ -478,11 +482,11 @@ def alert_toDB(df, table_name):
     if table_name == 'tsm_alerts':
         query += " tsm_id = '%s'" %df['tsm_id'].values[0]
     elif table_name == 'public_alerts':
-        query += " site_id = '%s' and pub_sym_id = '%s'" %(df['site_id'].values[0], df['pub_sym_id'].values[0])
+        query += " site_id = '%s'" %(df['site_id'].values[0])
     elif table_name == 'internal_alerts':
-        query += " site_id = '%s' and internal_sym = '%s'" %(df['site_id'].values[0], df['internal_sym'].values[0])
+        query += " site_id = '%s'" %(df['site_id'].values[0], df['internal_sym'].values[0])
     else:
-        query += " site_id = '%s' and trigger_sym_id = '%s'" %(df['site_id'].values[0], df['trigger_sym_id'].values[0])
+        query += " site_id = '%s' and trigger_sym_id in (%s)" %(df['site_id'].values[0], trigger_sym_ids)
 
     query += " and ts <= '%s' and ts_updated >= '%s' ORDER BY ts DESC LIMIT 1" %(df['ts_updated'].values[0], pd.to_datetime(df['ts_updated'].values[0])-timedelta(hours=0.5))
 
