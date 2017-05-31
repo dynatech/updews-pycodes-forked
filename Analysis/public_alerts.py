@@ -49,15 +49,17 @@ def InternalAlert(positive_trigger, optrigger_withdata, intsym, rainfall_alert):
     internal_alert = ''
     for i in trigger_source:
         alert_level = highest_trigger[highest_trigger.trigger_source == i]['alert_level'].values[0]
-        if i == 'rainfall' and rainfall_alert == -2:
+        if i in ['movement', 'earthquake', 'on demand']:
+            internal_alert += intsym[(intsym.trigger_source == i)&(intsym.alert_level == alert_level)]['alert_symbol'].values[0]
+        elif i == 'rainfall' and rainfall_alert == -2:
             internal_alert += intsym[(intsym.trigger_source == i)&(intsym.alert_level == -2)]['alert_symbol'].values[0]
         else:
-            if i in optrigger_withdata['trigger_source'].values:
+            if i in optrigger_withdata['trigger_source'].values or (i == 'rainfall' and rainfall_alert != -1):
                 internal_alert += intsym[(intsym.trigger_source == i)&(intsym.alert_level == alert_level)]['alert_symbol'].values[0]
+            elif i != 'rainfall' and alert_level < 3:
+                internal_alert += intsym[(intsym.trigger_source == i)&(intsym.alert_level == -1)]['alert_symbol'].values[0].lower()
             else:
                 internal_alert += intsym[(intsym.trigger_source == i)&(intsym.alert_level == -1)]['alert_symbol'].values[0]
-                if i != 'rainfall' and alert_level < 3:
-                    internal_alert = internal_alert.lower()
     if 'rainfall' not in trigger_source and rainfall_alert == -2:
         internal_alert += intsym[(intsym.trigger_source == 'rainfall')&(intsym.alert_level == -2)]['alert_symbol'].values[0].lower()
 
