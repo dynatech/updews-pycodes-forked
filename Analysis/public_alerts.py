@@ -30,7 +30,7 @@ def RoundDataTS(endpt):
 
 def InternalAlert(positive_trigger, optrigger_withdata, intsym, rainfall_alert):
     highest_trigger = positive_trigger.sort_values('alert_level', ascending=False).drop_duplicates('trigger_source')
-
+    
     # arrange trigger_source
     trigger_source = []
     if 'subsurface' in highest_trigger['trigger_source'].values:
@@ -55,7 +55,9 @@ def InternalAlert(positive_trigger, optrigger_withdata, intsym, rainfall_alert):
             if i in optrigger_withdata['trigger_source'].values:
                 internal_alert += intsym[(intsym.trigger_source == i)&(intsym.alert_level == alert_level)]['alert_symbol'].values[0]
             else:
-                internal_alert += intsym[(intsym.trigger_source == i)&(intsym.alert_level == -alert_level)]['alert_symbol'].values[0]
+                internal_alert += intsym[(intsym.trigger_source == i)&(intsym.alert_level == -1)]['alert_symbol'].values[0]
+                if i != 'rainfall' and alert_level < 3:
+                    internal_alert = internal_alert.lower()
     if 'rainfall' not in trigger_source and rainfall_alert == -2:
         internal_alert += intsym[(intsym.trigger_source == 'rainfall')&(intsym.alert_level == -2)]['alert_symbol'].values[0].lower()
 
@@ -188,6 +190,8 @@ def SitePublicAlert(PublicAlert, end, pubsym, intsym, opsym):
             try:
                 if len(q.GetDBDataFrame(query)) == 0 and end.time() in [time(3,30), time(7,30), time(11,30), time(15,30), time(19,30), time(23,30)]:
                     extend_rainfall = True
+                    rainfall = opsym[(opsym.alert_level==-2)&(opsym.trigger_source=='rainfall')]['alert_symbol'].values[0]
+                    rainfall_alert = -2
                 else:
                     extend_rainfall = False
             except:
@@ -247,8 +251,6 @@ def SitePublicAlert(PublicAlert, end, pubsym, intsym, opsym):
                     public_alert = pubsym[(pubsym.alert_level == CurrAlert)&(pubsym.alert_type == 'event')]['alert_symbol'].values[0]
                     pub_sym_id = pubsym[(pubsym.alert_level == CurrAlert)&(pubsym.alert_type == 'event')]['pub_sym_id'].values[0]
                     validity = RoundReleaseTime(end)
-                    rainfall = opsym[(opsym.alert_level==-2)&(opsym.trigger_source=='rainfall')]['alert_symbol'].values[0]
-                    rainfall_alert = -2
                 else:
                     # if rainfall alert -1
                     if rainfall_alert == -1: #### nd rainfall after r1 extend
