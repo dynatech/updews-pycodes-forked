@@ -455,7 +455,7 @@ def create_internal_alerts():
 #        df- dataframe to be written in table_name
 #        table_name- str; name of table in database ('tsm_alerts' or 'operational_triggers')
 def alert_toDB(df, table_name):
-
+    
     if DoesTableExist(table_name) == False:
         #Create a tsm_alerts table if it doesn't exist yet
         if table_name == 'tsm_alerts':
@@ -469,16 +469,18 @@ def alert_toDB(df, table_name):
         #Create a operational_triggers table if it doesn't exist yet
         elif table_name == 'operational_triggers':
             create_operational_triggers()
-            query = "SELECT * FROM operational_trigger_symbols"
-            all_trig = GetDBDataFrame(query)
-            trigger_source = all_trig[all_trig.trigger_sym_id == df['trigger_sym_id'].values[0]]['trigger_source'].values[0]
-            trigger_sym_ids = ','.join(map(str, all_trig[all_trig.trigger_source == trigger_source]['trigger_sym_id'].values))
         else:
             print 'unrecognized table:', table_name
             return
 
-    query = "SELECT * FROM %s WHERE" %table_name
+    if table_name == 'operational_triggers':
+        query = "SELECT * FROM operational_trigger_symbols"
+        all_trig = GetDBDataFrame(query)
+        trigger_source = all_trig[all_trig.trigger_sym_id == df['trigger_sym_id'].values[0]]['trigger_source'].values[0]
+        trigger_sym_ids = ','.join(map(str, all_trig[all_trig.trigger_source == trigger_source]['trigger_sym_id'].values))
 
+    query = "SELECT * FROM %s WHERE" %table_name
+    
     if table_name == 'tsm_alerts':
         query += " tsm_id = '%s'" %df['tsm_id'].values[0]
     elif table_name == 'public_alerts':
