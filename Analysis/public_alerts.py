@@ -225,8 +225,17 @@ def SitePublicAlert(PublicAlert, end, pubsym, intsym, opsym):
         withdata += [False]
     withdata = all(withdata)
 
+    #checks for new positive trigger:
+    try:
+        if max(recent_op_trigger['alert_level'].values) > 0:
+            new_trig = True
+        else:
+            new_trig = False
+    except:
+        new_trig = False
+
     # Public Alert > 0
-    if PrevPubAlert > 0 or max(recent_op_trigger['alert_level'].values) > 0:
+    if PrevPubAlert > 0 or new_trig:
         validity_op = list(positive_trigger['ts_updated'].values)
         validity_pub = list(PubAlert['ts'].values)
         validity = RoundReleaseTime(pd.to_datetime(max(validity_pub + validity_op)))
