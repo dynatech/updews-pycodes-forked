@@ -34,6 +34,7 @@ def write_operational_triggers(site_id, end):
     q.alert_toDB(operational_trigger, 'operational_triggers')
 
 def main(tsm_name='', end='', end_mon=False):
+    print tsm_name
     if tsm_name == '':
         tsm_name = sys.argv[1].lower()
 
@@ -57,7 +58,7 @@ def main(tsm_name='', end='', end_mon=False):
     alert = lib.column_alert(alert, config.io.num_nodes_to_check)
 
     valid_nodes_alert = alert.loc[~alert.node_id.isin(proc.inv)]
-
+    
     if max(valid_nodes_alert['col_alert'].values) > 0:
         pos_alert = valid_nodes_alert[valid_nodes_alert.col_alert > 0]
         site_alert = t.main(pos_alert, tsm_props.tsm_id, window.end, proc.inv)
@@ -69,7 +70,6 @@ def main(tsm_name='', end='', end_mon=False):
     q.alert_toDB(tsm_alert, 'tsm_alerts')
     
     write_operational_triggers(tsm_props.site_id, window.end)
-
 ########################
 #
 #    if tsm_props.tsm_name == 'mesta':
@@ -93,7 +93,6 @@ def main(tsm_name='', end='', end_mon=False):
 
 if __name__ == "__main__":
     run_start = datetime.now()
-#    for i in pd.date_range(start='2017-05-02 07:00', end='2017-05-02 13:00', freq='30min'):
-#        main('magta', end=i)
+    print run_start
     main()
     print 'run time =', datetime.now()-run_start

@@ -1,6 +1,7 @@
 from datetime import timedelta
 import numpy as np
 import os
+import pandas as pd
 import sys
 
 #include the path of outer folder for the python scripts searching
@@ -57,13 +58,10 @@ def trending_alertgen(pos_alert, tsm_id, end):
 
                              node_alert['disp_alert'].values)
     
-    trending_alert = node_alert[node_alert.node_alert > 0]
-    trending_alert['node_id'] = pos_alert['node_id'].values[0]
-    
-    try:
-        trending_alert['TNL'] = max(trending_alert['node_alert'].values)
-    except:
-        trending_alert['TNL'] = 0
+    if len(node_alert[node_alert.node_alert > 0]) > 3:        
+        trending_alert = pd.DataFrame({'node_id': [pos_alert['node_id'].values[0]], 'TNL': [max(node_alert['node_alert'].values)]})
+    else:
+        trending_alert = pd.DataFrame({'node_id': [pos_alert['node_id'].values[0]], 'TNL': [0]})
     
     return trending_alert
 
