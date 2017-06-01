@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from datetime import timedelta
 
-def RoundTime(date_time):
+def round_time(date_time):
     # rounds time to 4/8/12 AM/PM
     time_hour = int(date_time.strftime('%H'))
 
@@ -15,6 +15,63 @@ def RoundTime(date_time):
             
     return date_time
 
+def get_mode(li):
+    li.sort()
+    numbers = {}
+    for x in li:
+        num = li.count(x)
+        numbers[x] = num
+    highest = max(numbers.values())
+    n = []
+    for m in numbers.keys():
+        if numbers[m] == highest:
+            n.append(m)
+    return n
+
+def validity_check(adj_node_ind, alert, i, col_node, col_alert):
+
+    #DESCRIPTION
+    #used in validating current node alert
+
+    #INPUT
+    #adj_node_ind                       Indices of adjacent node
+    #alert:                             Pandas DataFrame object, with length equal to number of nodes, and columns for displacements along axes,
+    #                                   displacement alerts, minimum and maximum velocities, velocity alerts, final node alerts and olumn-level alert
+    #i                                  Integer, used for counting
+    #col_node                           Integer, current node
+    #col_alert                          Integer, current node alert
+    
+    #OUTPUT:
+    #col_alert, col_node                             
+
+    adj_node_alert=[]
+    for j in adj_node_ind:
+        if alert['ND'].values[j-1]==0:
+            adj_node_alert.append(-1)
+        else:
+            if alert['vel_alert'].values[i-1]!=0:
+                #comparing current adjacent node velocity with current node velocity
+                if abs(alert['max_vel'].values[j-1])>=abs(alert['max_vel'].values[i-1])*1/(2.**abs(i-j)):
+                    #current adjacent node alert assumes value of current node alert
+                    col_node.append(i-1)
+                    col_alert.append(alert['node_alert'].values[i-1])
+                    break
+                    
+                else:
+                    adj_node_alert.append(0)
+                    col_alert.append(max(get_mode(adj_node_alert)))
+                    break
+                
+            else:
+                col_node.append(i-1)
+                col_alert.append(alert['node_alert'].values[i-1])
+                break
+
+        if j==adj_node_ind[-1]:
+            col_alert.append(max(get_mode(adj_node_alert)))
+        
+    return col_alert, col_node
+    
 def node_alert(disp_vel, colname, num_nodes, T_disp, T_velL2, T_velL3, k_ac_ax,lastgooddata,window,config):
     valid_data = pd.to_datetime(window.end - timedelta(hours=3))
     #initializing DataFrame object, alert
@@ -154,60 +211,3 @@ def column_alert(alert, num_nodes_to_check):
     alert['col_alert']=np.asarray(col_alert)
 
     return alert
-
-def validity_check(adj_node_ind, alert, i, col_node, col_alert):
-
-    #DESCRIPTION
-    #used in validating current node alert
-
-    #INPUT
-    #adj_node_ind                       Indices of adjacent node
-    #alert:                             Pandas DataFrame object, with length equal to number of nodes, and columns for displacements along axes,
-    #                                   displacement alerts, minimum and maximum velocities, velocity alerts, final node alerts and olumn-level alert
-    #i                                  Integer, used for counting
-    #col_node                           Integer, current node
-    #col_alert                          Integer, current node alert
-    
-    #OUTPUT:
-    #col_alert, col_node                             
-
-    adj_node_alert=[]
-    for j in adj_node_ind:
-        if alert['ND'].values[j-1]==0:
-            adj_node_alert.append(-1)
-        else:
-            if alert['vel_alert'].values[i-1]!=0:
-                #comparing current adjacent node velocity with current node velocity
-                if abs(alert['max_vel'].values[j-1])>=abs(alert['max_vel'].values[i-1])*1/(2.**abs(i-j)):
-                    #current adjacent node alert assumes value of current node alert
-                    col_node.append(i-1)
-                    col_alert.append(alert['node_alert'].values[i-1])
-                    break
-                    
-                else:
-                    adj_node_alert.append(0)
-                    col_alert.append(max(getmode(adj_node_alert)))
-                    break
-                
-            else:
-                col_node.append(i-1)
-                col_alert.append(alert['node_alert'].values[i-1])
-                break
-
-        if j==adj_node_ind[-1]:
-            col_alert.append(max(getmode(adj_node_alert)))
-        
-    return col_alert, col_node
-
-def getmode(li):
-    li.sort()
-    numbers = {}
-    for x in li:
-        num = li.count(x)
-        numbers[x] = num
-    highest = max(numbers.values())
-    n = []
-    for m in numbers.keys():
-        if numbers[m] == highest:
-            n.append(m)
-    return n

@@ -31,7 +31,7 @@ def create_node_alerts():
 
     q.ExecuteQuery(query)
     
-def trending_alertgen(pos_alert, tsm_id, end):
+def trending_alert_gen(pos_alert, tsm_id, end):
     
     if q.DoesTableExist('node_alerts') == False:
         #Create a node_alerts table if it doesn't exist yet
@@ -68,7 +68,7 @@ def trending_alertgen(pos_alert, tsm_id, end):
 def main(pos_alert, tsm_id, end, invalid_nodes):
         
     nodal_pos_alert = pos_alert.groupby('node_id')
-    trending_alert = nodal_pos_alert.apply(trending_alertgen, tsm_id=tsm_id, end=end)
+    trending_alert = nodal_pos_alert.apply(trending_alert_gen, tsm_id=tsm_id, end=end)
     
     valid_nodes_alert = trending_alert.loc[~trending_alert.node_id.isin(invalid_nodes)]
     
