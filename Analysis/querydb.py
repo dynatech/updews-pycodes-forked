@@ -484,7 +484,7 @@ def alert_toDB(df, table_name):
     elif table_name == 'public_alerts':
         query += " site_id = '%s'" %(df['site_id'].values[0])
     elif table_name == 'internal_alerts':
-        query += " site_id = '%s'" %(df['site_id'].values[0], df['internal_sym'].values[0])
+        query += " site_id = '%s'" %(df['site_id'].values[0])
     else:
         query += " site_id = '%s' and trigger_sym_id in (%s)" %(df['site_id'].values[0], trigger_sym_ids)
 
