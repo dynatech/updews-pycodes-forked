@@ -312,14 +312,7 @@ def GetTSMList(tsm_name='', end=datetime.now()):
 #returns list of non-working nodes from the node status table
 #function will only return the latest entry per site per node with
 #"Not OK" status
-def GetNodeStatus(tsm_id, status=1):
-    if status == 1:
-        status = "Not OK"
-    elif status == 2:
-        status = "Use with Caution"
-    elif status == 3:
-        status = "Special Case"
-    
+def GetNodeStatus(tsm_id, status=4):   
     try:
         query = "SELECT DISTINCT node_id FROM ("
         query += " SELECT a.node_id FROM"
@@ -327,7 +320,7 @@ def GetNodeStatus(tsm_id, status=1):
         query += " left join accelerometers as a"
         query += " on s.accel_id = a.accel_id"
         query += " where tsm_id = %s" %tsm_id
-        query += " and status = '%s'" %status
+        query += " and status = %s" %status
         query += " ) AS sub"
         df = GetDBDataFrame(query)
         return df['node_id'].values
