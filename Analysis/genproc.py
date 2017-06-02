@@ -94,7 +94,7 @@ def node_inst_vel(filled_smoothened, roll_window_numpts, start):
         filled_smoothened['vel_xy'] = np.round(lr_xy.beta.x.values[0:len(filled_smoothened)],4)
     
     except:
-        print " ERROR in computing velocity"
+#        print " ERROR in computing velocity"
         filled_smoothened['vel_xz'] = np.zeros(len(filled_smoothened))
         filled_smoothened['vel_xy'] = np.zeros(len(filled_smoothened))
     
@@ -122,9 +122,9 @@ def genproc(col, window, config, fixpoint, realtime=False, comp_vel=True):
     	
     except:	
         LastGoodData = q.GetLastGoodDataFromDb(col.name)
-        print 'error'		
+#        print 'error'		
         
-    if len(LastGoodData)<col.nos: print col.name, " Missing nodes in LastGoodData"
+#    if len(LastGoodData)<col.nos: print col.name, " Missing nodes in LastGoodData"
     
     monitoring = monitoring.loc[monitoring.id <= col.nos]
     
