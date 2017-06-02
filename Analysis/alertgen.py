@@ -299,9 +299,15 @@ def write_site_alert(site, window):
     return output
 
 
-def main(name='', end=datetime.now(), end_mon=False):
+def main(name='', end='', end_mon=False):
     if name == '':
         name = sys.argv[1].lower()
+
+    if end == '':
+        try:
+            end = pd.to_datetime(sys.argv[2])
+        except:
+            end = datetime.now()
     
     window,config = rtw.getwindow(end)
 
