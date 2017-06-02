@@ -178,7 +178,7 @@ def ProcTwoAccelColData(msg,sender,txtdatetime):
                 print ">> Value Error detected.", piece,
                 print "Piece of data to be ignored"
     
-    SpawnAlertGen(colid)
+    SpawnAlertGen(colid,timestamp)
 
     return outl
 
@@ -311,7 +311,7 @@ def ProcessColumn(line,txtdatetime,sender):
             dbio.createTable(str(msgtable), "sensor v1")
             dbio.commitToDb(query, 'ProcessColumn')
 
-        SpawnAlertGen(msgtable)
+        SpawnAlertGen(msgtable,msgdatetime)
                 
     except KeyboardInterrupt:
         print '\n>>Error: Unknown'
@@ -679,8 +679,14 @@ def CheckMessageSource(msg):
     else:
         print "From unknown number ", msg.simnum
 
-def SpawnAlertGen(sitename):
+def SpawnAlertGen(tsm_name, timestamp):
     # spawn alert alert_gens
+    print "For alertgen.py", tsm_name, timestamp
+    print timestamp
+    timestamp = (dt.strptime(timestamp,'%Y-%m-%d %H:%M:%S')+\
+        td(minutes=10)).strftime('%Y-%m-%d %H:%M:%S')
+    print timestamp
+    # return
 
     alertgenlist = mc.get('alertgenlist')
 
@@ -689,13 +695,25 @@ def SpawnAlertGen(sitename):
         print "Setting alertgenlist for the first time"
         alertgenlist = []
 
-    if sitename.lower() in alertgenlist:
-        print sitename, "already in alert gen list"
+    alert_info = dict()
+
+    # check if tsm_name is already in the list for processing
+    for_processing = False
+    for ai in alertgenlist:
+        if ai['tsm_name'] == tsm_name.lower():
+            for_processing = True
+            break
+
+    if for_processing:
+        print tsm_name, "already in alert gen list"
     else:
-        print "Adding", sitename, "to alert gen list"
-        alertgenlist.insert(0, sitename.lower())
+        # insert tsm_name to list
+        print "Adding", tsm_name, "to alert gen list"
+        alert_info['tsm_name'] = tsm_name.lower()
+        alert_info['ts'] = timestamp
+        alertgenlist.insert(0, alert_info)
         mc.set('alertgenlist',[])
-        mc.set('alertgenlist',alertgenlist)    
+        mc.set('alertgenlist',alertgenlist)
 
 def invokeProcessInBgnd(exec_line):
     p = subprocess.Popen(exec_line, stdout=subprocess.PIPE, shell=True, stderr=subprocess.STDOUT)
