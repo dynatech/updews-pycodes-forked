@@ -32,7 +32,7 @@ del path
 #    df = df[(df.batt >= vmin) & (df.batt <= vmax)]
 #    return df
 
-def checkAccelDrift(df):
+def check_accel_drift(df):
     df['mag'] = np.nan
     df['ave'] = np.nan
     df['stdev'] = np.nan
@@ -93,7 +93,7 @@ def checkAccelDrift(df):
     except IndexError:
         return
         
-def outlierFilter(dff):
+def outlier_filter(dff):
     df = dff.copy()
 #    df['ts'] = pandas.to_datetime(df['ts'], unit = 's')
 #    df = df.set_index('ts')
@@ -119,7 +119,7 @@ def outlierFilter(dff):
    
     return df
 
-def rangeFilterAccel(df):
+def range_filter_accel(df):
     dff = df.copy()
     ## adjust accelerometer values for valid overshoot ranges
     dff.x[(dff.x<-2970) & (dff.x>-3072)] = dff.x[(dff.x<-2970) & (dff.x>-3072)] + 4096
@@ -136,7 +136,7 @@ def rangeFilterAccel(df):
     return dff[dff.x.notnull()]
     
 ### Prado - Created this version to remove warnings
-def rangeFilterAccel2(dff):
+def range_filter_accel2(dff):
     
     x_index = (dff.x<-2970) & (dff.x>-3072)
     y_index = (dff.y<-2970) & (dff.y>-3072)
@@ -159,7 +159,7 @@ def rangeFilterAccel2(dff):
     
     return dff[dff.x.notnull()]
     
-def orthogonalFilter(df):
+def orthogonal_filter(df):
 
     # remove all non orthogonal value
     dfo = df[['x','y','z']]/1024.0
@@ -175,7 +175,7 @@ def resample_df(df):
     df = df.reset_index()
     return df
     
-def applyFilters(dfl, orthof=True, rangef=True, outlierf=True):
+def apply_filters(dfl, orthof=True, rangef=True, outlierf=True):
 
     if dfl.empty:
         return dfl[['ts','tsm_name','node_id','x','y','z']]
@@ -183,7 +183,7 @@ def applyFilters(dfl, orthof=True, rangef=True, outlierf=True):
   
     if rangef:
         dfl = dfl.groupby(['node_id'])
-        dfl = dfl.apply(rangeFilterAccel)  
+        dfl = dfl.apply(range_filter_accel)  
         dfl = dfl.reset_index(drop=True)
         dfl = dfl.reset_index(level=['ts'])
         if dfl.empty:
@@ -191,7 +191,7 @@ def applyFilters(dfl, orthof=True, rangef=True, outlierf=True):
 
     if orthof: 
         dfl = dfl.groupby(['node_id'])
-        dfl = dfl.apply(orthogonalFilter)
+        dfl = dfl.apply(orthogonal_filter)
         dfl = dfl.reset_index(drop=True)
         if dfl.empty:
             return dfl[['ts','tsm_name','node_id','x','y','z']]
@@ -200,7 +200,7 @@ def applyFilters(dfl, orthof=True, rangef=True, outlierf=True):
     if outlierf:
         dfl = dfl.groupby(['node_id'])
         dfl = dfl.apply(resample_df)
-        dfl = dfl.set_index('ts').groupby('node_id').apply(outlierFilter)
+        dfl = dfl.set_index('ts').groupby('node_id').apply(outlier_filter)
         dfl = dfl.reset_index(level = ['ts'])
         if dfl.empty:
             return dfl[['ts','tsm_name','node_id','x','y','z']]
