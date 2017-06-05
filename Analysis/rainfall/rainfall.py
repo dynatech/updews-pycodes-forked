@@ -3,7 +3,7 @@ import numpy as np
 import os
 import sys
 
-import rainfall_alert as ra
+import rainfallalert as ra
 #import rainfall_plot as rp
 
 #include the path of "Analysis" folder for the python scripts searching
