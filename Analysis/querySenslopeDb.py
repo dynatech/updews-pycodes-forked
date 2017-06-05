@@ -701,12 +701,12 @@ def GetSingleLGDPM(site, node, startTS):
     query = "SELECT timestamp,id, xvalue, yvalue, zvalue"
     if len(site) == 5:
         query = query + ", msgid"
-    query = query + " from %s WHERE id = %s and timestamp < '%s' " % (site, node, startTS)
+    query = query + " from %s WHERE id = %s and timestamp < '%s'  and timestamp >= '%s' " % (site, node, startTS, pd.to_datetime(startTS)-tda(3))
     if len(site) == 5:
         query = query + "and (msgid = 32 or msgid = 11) "
 #        query = query + "ORDER BY timestamp DESC LIMIT 2"
 #    else:
-    query = query + "ORDER BY timestamp DESC LIMIT 240"
+    query = query + "ORDER BY timestamp DESC"
     lgdpm = GetDBDataFrame(query)
     lgdpm['name'] = site 
 
