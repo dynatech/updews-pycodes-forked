@@ -49,7 +49,7 @@ surficialconfig = scfg.config()
 #### Create directory
 output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
 
-def GaussianWeightedAverage(series,sigma = 3,width = 39):
+def gaussian_weighted_average(series,sigma = 3,width = 39):
     """
     Computes for rolling weighted average and variance using a gaussian signal filter
     
@@ -81,7 +81,7 @@ def GaussianWeightedAverage(series,sigma = 3,width = 39):
     
     return average,var
 
-def RoundTime(date_time):
+def round_time(date_time):
     """
     Rounds given date_time to the next alert release time
     """
@@ -102,7 +102,7 @@ def RoundTime(date_time):
             
     return date_time
     
-def CreateMarkerAlertsTable():
+def create_marker_alerts_table():
     """Creates the marker alerts table"""
     db = mysqlDriver.connect(host = config.dbio.hostdb, user = config.dbio.userdb, passwd = config.dbio.passdb)
     cur = db.cursor()
@@ -114,7 +114,7 @@ def CreateMarkerAlertsTable():
     cur.execute(query)
     db.close()
 
-def Tableau20Colors():
+def tableau_20_colors():
     """
     Generates normalized RGB values of tableau20
     """
@@ -130,7 +130,7 @@ def Tableau20Colors():
     return tableau20
 
 
-def GetSurficialData(site_id,ts,num_pts):
+def get_surficial_data(site_id,ts,num_pts):
     """
     Retrieves the latest surficial data from marker_id and marker_observations table
     
@@ -149,9 +149,9 @@ def GetSurficialData(site_id,ts,num_pts):
         Dataframe containing surficial data with columns [ts, marker_id, measurement]
     """
     query = "SELECT ts, md1.marker_id, md1.measurement, COUNT(*) num FROM marker_data md1 JOIN marker_data md2 ON md1.mo_id <= md2.mo_id AND md1.marker_id = md2.marker_id AND md1.marker_id in (SELECT marker_id FROM marker_data INNER JOIN marker_observations ON marker_data.mo_id = marker_observations.mo_id AND ts = (SELECT max(ts) FROM marker_observations WHERE site_id = {} AND ts <= '{}')) INNER JOIN marker_observations ON marker_observations.mo_id = md1.mo_id AND ts <= '{}' GROUP BY md1.marker_id, md1.mo_id HAVING COUNT(*) <= {} ORDER by ts desc".format(site_id,ts,ts,num_pts)
-    return qdb.GetDBDataFrame(query)
+    return qdb.get_db_data_frame(query)
 
-def GetSurficialDataWindow(site_id,ts_start,ts_end):
+def get_surficial_data_window(site_id,ts_start,ts_end):
     """
     Retrieves the measurement of surficial ground movement for the specified site within the given time range
     
@@ -170,9 +170,9 @@ def GetSurficialDataWindow(site_id,ts_start,ts_end):
         Dataframe containing surficial data with columns [ts, marker_id, measurement]
     """
     query = "SELECT ts, marker_id, measurement FROM marker_data INNER JOIN marker_observations ON marker_observations.mo_id = marker_data.mo_id AND ts <= '{}' AND ts >= '{}' AND marker_id in (SELECT marker_id FROM marker_data INNER JOIN marker_observations ON marker_data.mo_id = marker_observations.mo_id WHERE ts = (SELECT max(ts) FROM marker_observations WHERE site_id = {} AND ts <= '{}')) ORDER by ts DESC".format(ts_end,ts_start,site_id,ts_end)
-    return qdb.GetDBDataFrame(query)
+    return qdb.get_db_data_frame(query)
 
-def GetMarkerDetails(marker_id):
+def get_marker_details(marker_id):
     """
     Gives the site_code and marker name for a given marker id
     
@@ -208,7 +208,7 @@ def GetMarkerDetails(marker_id):
     
     return site_code,marker_name
 
-def GetSiteCode(site_id):
+def get_site_code(site_id):
     """
     Gives the site code of the given site_id
     
@@ -245,7 +245,7 @@ def GetSiteCode(site_id):
     
     return site_code
 
-def GetMarkerName(marker_id):
+def get_marker_name(marker_id):
     """
     Give the corresponding marker name of the given marker id
 
@@ -283,7 +283,7 @@ def GetMarkerName(marker_id):
     
     return marker_name
 
-def ComputeConfidenceIntervalWidth(velocity):
+def compute_confidence_interval_width(velocity):
     """
     Computes for the width of the confidence interval for a given velocity
     
@@ -301,7 +301,7 @@ def ComputeConfidenceIntervalWidth(velocity):
     ### Using tcrit table and Federico 2012 values
     return surficialconfig.values.t_crit*np.sqrt(1/(surficialconfig.values.n-2)*surficialconfig.values.sum_res_square*(1/surficialconfig.values.n + (np.log(velocity) - surficialconfig.values.v_log_mean)**2/surficialconfig.values.var_v_log))
 
-def ComputeCriticalAcceleration(velocity):
+def compute_critical_acceleration(velocity):
     """
     Computes for the critical acceleration and its lower and upper bounds for a given velocity range
     
@@ -324,7 +324,7 @@ def ComputeCriticalAcceleration(velocity):
     crit_acceleration = np.exp(surficialconfig.values.slope*np.log(velocity) + surficialconfig.values.intercept)
     
     #### Compute for confidence interval width width
-    ci_width = ComputeConfidenceIntervalWidth(velocity)
+    ci_width = compute_confidence_interval_width(velocity)
     
     #### Compute for lower and upper bound of acceleration
     acceleration_upper_bound = crit_acceleration*np.exp(ci_width)
@@ -332,7 +332,7 @@ def ComputeCriticalAcceleration(velocity):
     
     return crit_acceleration,acceleration_upper_bound,acceleration_lower_bound
 
-def ResetAutoIncrement():
+def reset_auto_increment():
     """
     Reset autoincrement to maximum value after delete
     """
@@ -363,7 +363,7 @@ def ResetAutoIncrement():
     
     db.close()
     
-def DeleteDuplicatesMarkerAlertsDB(marker_alerts_df):
+def delete_duplicates_marker_alerts_db(marker_alerts_df):
     """
     Deletes entries on the database with the same timestamp and marker id as the supplied marker alerts df
     
@@ -400,7 +400,7 @@ def DeleteDuplicatesMarkerAlertsDB(marker_alerts_df):
     #### Close db
     db.close()
 
-def WriteToMarkerAlertsDB(marker_alerts_df):
+def write_to_marker_alerts_db(marker_alerts_df):
     """
     Writes the input marker alerts to the database, replacing any duplicate entries.
     
@@ -415,10 +415,10 @@ def WriteToMarkerAlertsDB(marker_alerts_df):
     """
     marker_alerts_df['ts'] = map(lambda x: pd.to_datetime(x).strftime('%Y-%m-%d %H:%M'),marker_alerts_df.ts.values)
     #### Delete possible duplicates
-    DeleteDuplicatesMarkerAlertsDB(marker_alerts_df)
+    delete_duplicates_marker_alerts_db(marker_alerts_df)
     
     ### Reset the auto increment
-    ResetAutoIncrement()
+    reset_auto_increment()
     
     #### Create engine to connect to db
     engine=create_engine('mysql://'+config.dbio.userdb+':'+config.dbio.passdb+'@'+config.dbio.hostdb+':3306/'+config.dbio.namedb)
@@ -426,7 +426,7 @@ def WriteToMarkerAlertsDB(marker_alerts_df):
     #### Insert dataframe to the database
     marker_alerts_df.set_index('ts').to_sql(name = 'marker_alerts', con = engine, if_exists = 'append', schema = config.dbio.namedb, index = True)
 
-def PlotMarkerMeas(marker_data_df,colors):
+def plot_marker_meas(marker_data_df,colors):
     """
     Plots the marker data on the current figure
     
@@ -438,11 +438,11 @@ def PlotMarkerMeas(marker_data_df,colors):
         Color values to be cycled
     """
     
-    marker_name = GetMarkerName(marker_data_df.marker_id.values[0])
+    marker_name = get_marker_name(marker_data_df.marker_id.values[0])
     plt.plot(marker_data_df.ts.values,marker_data_df.measurement.values,'o-',color = colors[marker_data_df.index[0]%(len(colors)/2)*2],label = marker_name,lw = 1.5)
     
     
-def PlotSiteMeas(surficial_data_df,site_id,ts):
+def plot_site_meas(surficial_data_df,site_id,ts):
     """
     Generates the measurements vs. time plot of the given surficial data
     
@@ -463,10 +463,10 @@ def PlotSiteMeas(surficial_data_df,site_id,ts):
         os.makedirs(plot_path)
     
     #### Generate colors
-    tableau20 = Tableau20Colors() 
+    tableau20 = tableau_20_colors() 
     
     #### Get site code
-    site_code = GetSiteCode(site_id)
+    site_code = get_site_code(site_id)
     
     #### Initialize figure parameters
     plt.figure(figsize = (12,9))
@@ -477,7 +477,7 @@ def PlotSiteMeas(surficial_data_df,site_id,ts):
     marker_data_group = surficial_data_df.groupby('marker_id')
 
     #### Plot the measurement data of each marker
-    marker_data_group.agg(PlotMarkerMeas,tableau20)
+    marker_data_group.agg(plot_marker_meas,tableau20)
     
     #### Plot legend
     plt.legend(loc='upper left',fancybox = True, framealpha = 0.5)
@@ -492,7 +492,7 @@ def PlotSiteMeas(surficial_data_df,site_id,ts):
     plt.savefig(plot_path+"{} {} meas plot".format(site_code,pd.to_datetime(ts).strftime("%Y-%m-%d_%H-%M")),dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w',bbox_inches = 'tight')
 
 
-def PlotTrendingAnalysis(marker_id,date_time,time,displacement,time_array,disp_int,velocity,acceleration,velocity_data,acceleration_data):
+def plot_trending_analysis(marker_id,date_time,time,displacement,time_array,disp_int,velocity,acceleration,velocity_data,acceleration_data):
     """
     Generates Trending plot given all parameters
     """
@@ -502,7 +502,7 @@ def PlotTrendingAnalysis(marker_id,date_time,time,displacement,time_array,disp_i
         os.makedirs(plot_path)
     
     #### Generate Colors
-    tableau20 = Tableau20Colors()
+    tableau20 = tableau_20_colors()
     
     #### Create figure
     fig = plt.figure()
@@ -511,7 +511,7 @@ def PlotTrendingAnalysis(marker_id,date_time,time,displacement,time_array,disp_i
     fig.set_size_inches(15,8)
     
     #### Get marker details for labels
-    site_code, marker_name = GetMarkerDetails(marker_id)
+    site_code, marker_name = get_marker_details(marker_id)
     
     #### Set fig title
     fig.suptitle('{} Marker {} {}'.format(site_code.upper(),marker_name,pd.to_datetime(date_time).strftime("%b %d, %Y %H:%M")),fontsize = 15)
@@ -540,7 +540,7 @@ def PlotTrendingAnalysis(marker_id,date_time,time,displacement,time_array,disp_i
     velocity_to_plot = np.linspace(min(velocity_data),max(velocity_data),1000)
     
     #### Compute for corresponding crit acceleration, and confidence interval to plot threshold line    
-    acceleration_to_plot, acceleration_upper_bound, acceleration_lower_bound = ComputeCriticalAcceleration(velocity_to_plot)
+    acceleration_to_plot, acceleration_upper_bound, acceleration_lower_bound = compute_critical_acceleration(velocity_to_plot)
     
     #### Plot threshold line
     threshold_line = va_ax.plot(velocity_to_plot,acceleration_to_plot,color = tableau20[0],lw = 1.5,label = 'Threshold Line')
@@ -586,7 +586,7 @@ def PlotTrendingAnalysis(marker_id,date_time,time,displacement,time_array,disp_i
     #### Save fig
     plt.savefig(plot_path+filename,facecolor='w', edgecolor='w',orientation='landscape',mode='w',bbox_inches = 'tight')
 
-def EvaluateTrendingFilter(marker_data_df,to_plot):
+def evaluate_trending_filter(marker_data_df,to_plot):
     """
     Function used to evaluate the Onset of Acceleration (OOA) Filter
     
@@ -611,7 +611,7 @@ def EvaluateTrendingFilter(marker_data_df,to_plot):
     displacement = marker_data_df.measurement.values
     
     #### Get variance of gaussian weighted average for interpolation
-    _,var = GaussianWeightedAverage(displacement)
+    _,var = gaussian_weighted_average(displacement)
     
     #### Compute for the spline interpolation and its derivative using the variance as weights
     spline = UnivariateSpline(time,displacement,w = 1/np.sqrt(var))
@@ -629,7 +629,7 @@ def EvaluateTrendingFilter(marker_data_df,to_plot):
     acceleration_data = np.abs(spline_acceleration(time))
         
     #### Compute for critical, upper and lower bounds of acceleration for the current data point
-    crit_acceleration, acceleration_upper_threshold, acceleration_lower_threshold = ComputeCriticalAcceleration(np.abs(velocity[-1]))
+    crit_acceleration, acceleration_upper_threshold, acceleration_lower_threshold = compute_critical_acceleration(np.abs(velocity[-1]))
     
     #### Trending alert = 1 if current acceleration is within the threshold and sign of velocity & acceleration is the same
     current_acceleration = np.abs(acceleration[-1])
@@ -640,11 +640,11 @@ def EvaluateTrendingFilter(marker_data_df,to_plot):
     
     #### Plot OOA trending analysis
     if to_plot:        
-        PlotTrendingAnalysis(marker_data_df.marker_id.iloc[0],marker_data_df.ts.iloc[0],time,displacement,time_array,disp_int,velocity,acceleration,velocity_data,acceleration_data)
+        plot_trending_analysis(marker_data_df.marker_id.iloc[0],marker_data_df.ts.iloc[0],time,displacement,time_array,disp_int,velocity,acceleration,velocity_data,acceleration_data)
     
     return trend_alert
 
-def EvaluateMarkerAlerts(marker_data_df,ts):
+def evaluate_marker_alerts(marker_data_df,ts):
     """
     Function used to evaluates the alerts for every marker at a specified time
     
@@ -666,7 +666,7 @@ def EvaluateMarkerAlerts(marker_data_df,ts):
     time_delta = 0
     
     #### Check if data is valid for given time of alert generation
-    if RoundTime(marker_data_df.ts.values[0]) < RoundTime(ts):
+    if round_time(marker_data_df.ts.values[0]) < round_time(ts):
         
         #### Marker alert is ND
         marker_alert = -1
@@ -713,7 +713,7 @@ def EvaluateMarkerAlerts(marker_data_df,ts):
                         
                     else:
                     #### Perform trending analysis
-                        trend_alert = EvaluateTrendingFilter(marker_data_df,surficialconfig.io.PrintTrendPlot)
+                        trend_alert = evaluate_trending_filter(marker_data_df,surficialconfig.io.PrintTrendPlot)
                     if velocity < surficialconfig.thresh.v_alert_3:
                         
                         #### Velocity is less than threshold for alert 3
@@ -729,7 +729,7 @@ def EvaluateMarkerAlerts(marker_data_df,ts):
     
 #def marker_translation():
 #    query = "SELECT markers.marker_id, marker_name FROM markers INNER JOIN marker_history ON marker_history.marker_id = markers.marker_id INNER JOIN marker_names ON marker_history.history_id = marker_names.history_id WHERE markers.site_id = 27"
-#    df = q.GetDBDataFrame(query)
+#    df = q.get_db_data_frame(query)
 #    df['marker_name'] = df.marker_name.apply(lambda x:x[:1])
 #    df.replace(to_replace = {'marker_name':{'C':81,'B':82,'E':83,'D':84}},inplace = True)
 #    df.set_index('marker_id',inplace = True)
@@ -741,7 +741,7 @@ def EvaluateMarkerAlerts(marker_data_df,ts):
 #    df['marker_id'] = df.marker_id.map(marker_translation())
 #    return df
 
-def GetTriggerSymID(alert_level):
+def get_trigger_sym_id(alert_level):
     """
     Gets the corresponding trigger sym id given the alert level
     
@@ -757,10 +757,10 @@ def GetTriggerSymID(alert_level):
     """
     #### query the translation table from operational_trigger_symbols table
     query = "SELECT trigger_sym_id,alert_level FROM operational_trigger_symbols WHERE trigger_source = 'surficial'"
-    translation_table = qdb.GetDBDataFrame(query).set_index('alert_level').to_dict()['trigger_sym_id']
+    translation_table = qdb.get_db_data_frame(query).set_index('alert_level').to_dict()['trigger_sym_id']
     return translation_table[alert_level]
     
-def GetSurficialAlert(marker_alerts,site_id):
+def get_surficial_alert(marker_alerts,site_id):
     """
     Generates the surficial alerts of a site given the marker alerts dataframe with the corresponding timestamp of generation 
     
@@ -781,11 +781,11 @@ def GetSurficialAlert(marker_alerts,site_id):
     site_alert = max(marker_alerts.alert_level.values)
     
     #### Get the corresponding trigger sym id
-    trigger_sym_id = GetTriggerSymID(site_alert)
+    trigger_sym_id = get_trigger_sym_id(site_alert)
     
     return pd.DataFrame({'ts':marker_alerts.ts.iloc[0],'site_id':site_id,'trigger_sym_id':trigger_sym_id,'ts_updated':marker_alerts.ts.iloc[0]},index = [0])
 
-def GenerateSurficialAlert(site_id = None,ts = None):
+def generate_surficial_alert(site_id = None,ts = None):
     """
     Main alert generating function for surificial alert for a site at specified time
     
@@ -808,20 +808,20 @@ def GenerateSurficialAlert(site_id = None,ts = None):
     num_pts = int(surficialconfig.io.surficial_num_pts)
     
     #### Get latest ground data
-    surficial_data_df = GetSurficialData(site_id,ts,num_pts)
+    surficial_data_df = get_surficial_data(site_id,ts,num_pts)
 
     #### Generate Marker alerts
     marker_data_df = surficial_data_df.groupby('marker_id',as_index = False)
-    marker_alerts = marker_data_df.apply(EvaluateMarkerAlerts,ts)
+    marker_alerts = marker_data_df.apply(evaluate_marker_alerts,ts)
     
     #### Write to marker_alerts table    
-    WriteToMarkerAlertsDB(marker_alerts)
+    write_to_marker_alerts_db(marker_alerts)
     
     #### Generate surficial alert for site
-    surficial_alert = GetSurficialAlert(marker_alerts,site_id)
+    surficial_alert = get_surficial_alert(marker_alerts,site_id)
     
     #### Write to db
-    qdb.alert_toDB(surficial_alert,'operational_triggers')
+    qdb.alert_to_db(surficial_alert,'operational_triggers')
     
     #### Plot current ground meas    
     if surficialconfig.io.PrintMeasPlot:
@@ -830,16 +830,16 @@ def GenerateSurficialAlert(site_id = None,ts = None):
         ts_start = pd.to_datetime(ts) - pd.Timedelta(days = surficialconfig.io.meas_plot_window)
         
         ### Retreive the surficial data to plot
-        surficial_data_to_plot = GetSurficialDataWindow(site_id,ts_start.strftime("%Y-%m-%d %H:%M"),ts)
+        surficial_data_to_plot = get_surficial_data_window(site_id,ts_start.strftime("%Y-%m-%d %H:%M"),ts)
         
         ### Plot the surficial data
-        PlotSiteMeas(surficial_data_to_plot,site_id,ts)
+        plot_site_meas(surficial_data_to_plot,site_id,ts)
     
     print marker_alerts
     return surficial_data_df
 
-#Call the GenerateSurficialAlert() function
+#Call the generate_surficial_alert() function
 if __name__ == "__main__":
-    GenerateSurficialAlert()  
+    generate_surficial_alert()  
     
     
