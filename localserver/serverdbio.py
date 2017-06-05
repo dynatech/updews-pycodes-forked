@@ -18,9 +18,9 @@ class dbInstance:
 # backupdbinstance = dbInstance(c.backupdb.name,c.backupdb.host,c.backupdb.user,c.backupdb.pwd)
 
 
-# def SenslopeDBConnect():
+# def db_connect():
 # Definition: Connect to senslopedb in mysql
-def SenslopeDBConnect(host='local'):
+def db_connect(host='local'):
     dbc = dbInstance(host)
 
     while True:
@@ -33,8 +33,8 @@ def SenslopeDBConnect(host='local'):
             print '6.',
             time.sleep(2)
             
-def createTable(table_name, type, instance='local'):
-    db, cur = SenslopeDBConnect(instance)
+def create_table(table_name, type, instance='local'):
+    db, cur = db_connect(instance)
     # cur.execute("CREATE DATABASE IF NOT EXISTS %s" %Namedb)
     # cur.execute("USE %s"%Namedb)
     table_name = table_name.lower()
@@ -81,13 +81,13 @@ def createTable(table_name, type, instance='local'):
         
     db.close()
 
-def setReadStatus(sms_id_list,read_status=0,table='',instance='local'):
+def set_read_status(sms_id_list,read_status=0,table='',instance='local'):
     
     if table == '':
         print "Error: Empty table"
         return
 
-    db, cur = SenslopeDBConnect(instance)
+    db, cur = db_connect(instance)
     
     # print type(sms_id_list)
 
@@ -103,10 +103,10 @@ def setReadStatus(sms_id_list,read_status=0,table='',instance='local'):
     query = "update smsinbox_%s set read_status = %d %s" % (table, read_status, where_clause)
     
     # print query
-    commitToDb(query,"setReadStatus")
+    commit_to_db(query,"set_read_status")
     
-def setSendStatus(table,status_list):
-    db, cur = SenslopeDBConnect('gsm')
+def set_send_status(table,status_list):
+    db, cur = db_connect('gsm')
     
     query = "insert into smsoutbox_%s_status (stat_id, send_status, ts_sent) values " % (table[:-1])
 
@@ -116,10 +116,10 @@ def setSendStatus(table,status_list):
     query = query[:-1]
     query += " on duplicate key update stat_id=values(stat_id), send_status=send_status+values(send_status),ts_sent=values(ts_sent)"
     
-    commitToDb(query,"setSendStatus")
+    commit_to_db(query,"set_send_status")
     
-def getAllSmsFromDb(host='local',read_status=0,table='loggers',limit=200):
-    db, cur = SenslopeDBConnect(host)
+def get_all_sms_from_db(host='local',read_status=0,table='loggers',limit=200):
+    db, cur = db_connect(host)
 
     if table in ['loggers','users']:
         tbl_contacts = '%s_mobile' % table[:-1]
@@ -149,10 +149,10 @@ def getAllSmsFromDb(host='local',read_status=0,table='loggers',limit=200):
             print '9.',
             time.sleep(20)
             
-def getAllOutboxSmsFromDb(table='users',send_status=5,gsm_id=5,limit=10):
+def get_all_outbox_sms_from_db(table='users',send_status=5,gsm_id=5,limit=10):
     while True:
         try:
-            db, cur = SenslopeDBConnect()
+            db, cur = db_connect()
             query = """select t1.stat_id,t1.mobile_id,t2.sms_msg from smsoutbox_%s_status as t1
                         inner join (select * from smsoutbox_%s) as t2
                         on t1.outbox_id = t2.outbox_id
@@ -173,8 +173,8 @@ def getAllOutboxSmsFromDb(table='users',send_status=5,gsm_id=5,limit=10):
             print '10.',
             time.sleep(20)
 
-def getLoggerNames(logger_type="all",instance="local"):
-    db, cur = SenslopeDBConnect(instance)
+def get_logger_names(logger_type="all",instance="local"):
+    db, cur = db_connect(instance)
 
     if logger_type == 'soms':
         query = "SELECT `logger_name` from `loggers` where `model_id` in (SELECT `model_id` FROM `logger_models` where `has_soms`=1) and `logger_name` is not null"
@@ -189,7 +189,7 @@ def getLoggerNames(logger_type="all",instance="local"):
         return
 
     # print query 
-    result_set = querydatabase(query,"createSensorColumnTables",instance)
+    result_set = query_database(query,"createSensorColumnTables",instance)
 
     # print result_set
     names = []
@@ -199,10 +199,10 @@ def getLoggerNames(logger_type="all",instance="local"):
 
     return names
 
-def createLoggerTables(logger_type='all',instance="local"):
-    db, cur = SenslopeDBConnect(instance)
+def create_logger_tables(logger_type='all',instance="local"):
+    db, cur = db_connect(instance)
 
-    logger_names = getLoggerNames(logger_type,instance)
+    logger_names = get_logger_names(logger_type,instance)
 
     query = ''
 
@@ -270,8 +270,8 @@ def createLoggerTables(logger_type='all',instance="local"):
     cur.execute(query)
     db.close()
 
-def commitToDb(query, identifier, last_insert=False, instance='local'):
-    db, cur = SenslopeDBConnect(instance)
+def commit_to_db(query, identifier, last_insert=False, instance='local'):
+    db, cur = db_connect(instance)
 
     # print query
     b=''
@@ -314,8 +314,8 @@ def commitToDb(query, identifier, last_insert=False, instance='local'):
     db.close()
     return b
 
-def querydatabase(query, identifier='', instance='local'):
-    db, cur = SenslopeDBConnect(instance)
+def query_database(query, identifier='', instance='local'):
+    db, cur = db_connect(instance)
     a = ''
     try:
         a = cur.execute(query)
@@ -336,7 +336,7 @@ def querydatabase(query, identifier='', instance='local'):
         db.close()
         return a
 
-def checkNumberIfExists(simnumber,table='community'):
+def check_number_if_exists(simnumber,table='community'):
     simnumber = simnumber[-10:]
     if table == 'community':
         query = """select lastname,firstname,sitename from %scontacts where
@@ -350,14 +350,14 @@ def checkNumberIfExists(simnumber,table='community'):
     else:
         return None
 
-    identity = querydatabase(query,'checknumber')
+    identity = query_database(query,'checknumber')
 
     return identity
 
-def getArguments():
+def get_arguments():
     parser = argparse.ArgumentParser(description="senslopedbio\n senslopedbio [-options]")
     parser.add_argument("-t", "--test", help="run test function",action="store_true")
-    parser.add_argument("-c", "--createtables", help="run test function")    
+    parser.add_argument("-c", "--create_tables", help="run test function")    
     
     try:
         args = parser.parse_args()
@@ -369,17 +369,17 @@ def getArguments():
         sys.exit()
 
 def main():
-    args = getArguments()
+    args = get_arguments()
 
     if args.test:
         test()
         sys.exit()
 
-    if args.createtables:
-        tables_to_create = args.createtables.split(",")
+    if args.create_tables:
+        tables_to_create = args.create_tables.split(",")
         for t in tables_to_create:
             try:
-                createLoggerTables(t,'sandbox')
+                create_logger_tables(t,'sandbox')
             except:
                 print 'Warning: No table info for', t
     else:
@@ -389,10 +389,10 @@ def main():
 
 # for test codes    
 def test():
-    args = getArguments()
+    args = get_arguments()
 
-    if args.createtables:
-        print args.createtables
+    if args.create_tables:
+        print args.create_tables
     else:
         print 'Will not create tables'
 
@@ -401,7 +401,7 @@ def test():
     # createTTables("backup")
     # createTsmSensorTables("backup")
     # createTsmSensorTables("backup")
-    # createLoggerTables("piezo","sandbox")
+    # create_logger_tables("piezo","sandbox")
 
     # print 
     return

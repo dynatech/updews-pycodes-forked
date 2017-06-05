@@ -4,16 +4,16 @@ import datetime
 import cfgfileio as cfg
 from datetime import datetime as dt
 from datetime import timedelta as td
-import senslopedbio as dbio
-import senslopeServer as server
+import serverdbio as dbio
+import mainserver as server
 import queryserverinfo as qsi
 import argparse
 #---------------------------------------------------------------------------------------------------------------------------
 
-def checkAlertMessage():
+def check_alert_message():
     c = cfg.config()    
-    dbio.createTable("runtimelog","runtime")
-    server.logRuntimeStatus("alert","checked")
+    dbio.create_table("runtimelog","runtime")
+    server.log_runtime_status("alert","checked")
 
     alertfile = cfg.config().fileio.allalertsfile
     f = open(alertfile,'r')
@@ -26,19 +26,19 @@ def checkAlertMessage():
         return
 
     # write alert message to db
-    server.writeAlertToDb(alertmsg)
+    server.write_alert_to_db(alertmsg)
 
-def getAlertStaffNumbers():
+def get_alert_staff_numbers():
     query = """select nickname, numbers from dewslcontacts where grouptags like '%alert%'"""
     contacts = dbio.querydatabase(query,'checkalert')
     return contacts
 
-def sendAlertMessage():
+def send_alert_message():
     # check due alert messages
     ts_due = dt.today()
     query = "select alert_id,alertmsg from smsalerts where ack = 'none' and ts_set <= '%s'" % (ts_due.strftime("%Y-%m-%d %H:%M:%S"))
 
-    alertmsg = dbio.querydatabase(query,'SendAlertMessage')
+    alertmsg = dbio.querydatabase(query,'send_alert_message')
 
     if alertmsg == None:
         print 'No alertmsg set for sending'
@@ -48,30 +48,30 @@ def sendAlertMessage():
     message += 'Text "ACK <alert id> <valid/invalid> <remarks>" to acknowledge'
 
     # send to alert staff
-    contacts = getAlertStaffNumbers()
+    contacts = get_alert_staff_numbers()
     for item in contacts:
         # for multile contacts
         for i in item[1].split(','):
-            server.WriteOutboxMessageToDb(message,i)
+            server.write_outbox_message_to_db(message,i)
     
     # set alert to 15 mins later
     ts_due = ts_due + td(seconds=60*15)
     query = "update smsalerts set ts_set = '%s' where alert_id = %s" % (ts_due.strftime("%Y-%m-%d %H:%M:%S"),alertmsg[0][0])
 
-    dbio.commitToDb(query, 'checkalertmsg')
+    dbio.commit_to_db(query, 'checkalertmsg')
 
 
-def processAckToAlert(msg):
+def process_ack_to_alert(msg):
     try:
         alert_id = re.search("(?<=K )\d+(?= )",msg.data,re.IGNORECASE).group(0)
     except:
         errmsg = "Error in parsing alert id. Please try again"
-        server.WriteOutboxMessageToDb(errmsg,msg.simnum)
+        server.write_outbox_message_to_db(errmsg,msg.simnum)
         return True
 
     # check to see if message from chatter box
     try:
-        name = qsi.getNameofStaff(msg.simnum)
+        name = qsi.get_name_of_staff(msg.simnum)
         if re.search("server",name.lower()):
             name = re.search("(?>=-).+(?= from)").group(0)
     except:
@@ -81,14 +81,14 @@ def processAckToAlert(msg):
             msg.data = msg.data.replace(chat_footer,"")
         except:
             errmsg = "You are not permitted to acknowledge."
-            server.WriteOutboxMessageToDb(errmsg,msg.simnum)
+            server.write_outbox_message_to_db(errmsg,msg.simnum)
             return True
 
     try:
         remarks = re.search("(?<=\d ).+(?=($|\r|\n))",msg.data,re.IGNORECASE).group(0)
     except:
         errmsg = "Please put in your remarks."
-        server.WriteOutboxMessageToDb(errmsg,msg.simnum)
+        server.write_outbox_message_to_db(errmsg,msg.simnum)
         return True
 
     try:
@@ -96,29 +96,29 @@ def processAckToAlert(msg):
         remarks = remarks.replace(alert_status,"").strip()
     except:
         errmsg = "Please put in the alert status validity. i.e (VALID, INVALID, VALIDATING)"
-        server.WriteOutboxMessageToDb(errmsg,msg.simnum)
+        server.write_outbox_message_to_db(errmsg,msg.simnum)
         return True
 
     query = "update smsalerts set ack = '%s', ts_ack = '%s', remarks = '%s', alertstat = '%s' where alert_id = %s" % (name,msg.dt,remarks,alert_status, alert_id)
-    dbio.commitToDb(query,processAckToAlert)
+    dbio.commit_to_db(query,process_ack_to_alert)
 
-    contacts = getAlertStaffNumbers()
+    contacts = get_alert_staff_numbers()
     message = "Alert ID %s ACK by %s on %s\nStatus: %s\nRemarks: %s" % (alert_id,name,msg.dt,alert_status,remarks)
     
     tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
     for item in contacts:
         message = message.replace("ALERT","AL3RT")
-        server.WriteOutboxMessageToDb(message,item[1])
+        server.write_outbox_message_to_db(message,item[1])
 
     return True
 
-def updateShiftTags():
+def update_shift_tags():
     # remove tags to old shifts
     today = dt.today().strftime("%Y-%m-%d %H:%M:%S")
     print 'Updating shift tags for', today
 
     query = "update senslopedb.dewslcontacts set grouptags = replace(grouptags,',alert-mon','') where grouptags like '%alert-mon%'"
-    dbio.commitToDb(query, 'updateShiftTags')
+    dbio.commit_to_db(query, 'update_shift_tags')
 
     # update the tags of current shifts
     query = """
@@ -134,13 +134,13 @@ def updateShiftTags():
         t1.nickname = t2.oompmt or
         t1.nickname = t2.oompct
     """ % (today)
-    dbio.commitToDb(query, 'updateShiftTags')
+    dbio.commit_to_db(query, 'update_shift_tags')
 
 def main():
     parser = argparse.ArgumentParser(description="Request information from server\n PSIR [-options]")
     parser.add_argument("-w", "--writetodb", help="write alert to db", action="store_true")
-    parser.add_argument("-c", "--checkalertmessage", help="check alert messages from db", action="store_true")
-    parser.add_argument("-s", "--sendalertmessage", help="send alert messages from db", action="store_true")
+    parser.add_argument("-c", "--check_alert_message", help="check alert messages from db", action="store_true")
+    parser.add_argument("-s", "--send_alert_message", help="send alert messages from db", action="store_true")
     parser.add_argument("-u", "--updateshifts", help="update shifts with alert tag", action="store_true")
     parser.add_argument("-cs", "--checksendalert", help="check alert then send", action="store_true")
     
@@ -155,15 +155,15 @@ def main():
 
     if args.writetodb: 
         writetodb = True
-    if args.checkalertmessage:
-        checkAlertMessage()
-    if args.sendalertmessage:
-        sendAlertMessage()
+    if args.check_alert_message:
+        check_alert_message()
+    if args.send_alert_message:
+        send_alert_message()
     if args.checksendalert:
-        checkAlertMessage()
-        sendAlertMessage()
+        check_alert_message()
+        send_alert_message()
     if args.updateshifts:
-        updateShiftTags()
+        update_shift_tags()
     
 if __name__ == "__main__":
     main()

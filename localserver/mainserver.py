@@ -4,10 +4,10 @@ import datetime
 import ConfigParser
 from datetime import datetime as dt
 from datetime import timedelta as td
-import senslopedbio as dbio
-import gsmSerialio as gsmio
+import serverdbio as dbio
+import gsmio
 import multiprocessing
-import SomsServerParser as SSP
+import somsparser as ssp
 import math
 import cfgfileio as cfg
 import memcache
@@ -19,38 +19,7 @@ if cfg.config().mode.script_mode == 'gsmserver':
     import dewsSocketLeanLib as dsll
 #---------------------------------------------------------------------------------------------------------------------------
 
-def updateSimNumTable(name,sim_num,date_activated):
-    db, cur = dbio.SenslopeDBConnect('local')
-    
-    while True:
-        try:
-            query = """select sim_num from senslopedb.site_column_sim_nums
-                where name = '%s' """ % (name)
-        
-            a = cur.execute(query)
-            if a:
-                out = cur.fetchall()
-                if (sim_num == out[0][0]):
-                    print ">> Number already in database", name, out[0][0]
-                    return
-                                    
-                break
-            else:
-                print '>> Number not in database', sim_num
-                return
-                break
-        except MySQLdb.OperationalError:
-            print MySQLdb.OperationalError
-            print '1.',
-            raise KeyboardInterrupt
-    
-    query = """INSERT INTO senslopedb.site_column_sim_nums
-                (name,sim_num,date_activated)
-                VALUES ('%s','%s','%s')""" %(name,sim_num,date_activated)
-
-    dbio.commitToDb(query, 'updateSimNumTable')
-    
-def logRuntimeStatus(script_name,status):
+def log_runtime_status(script_name,status):
     if (status == 'alive'):
         ts = dt.today()
         diff = (ts.minute%10) * 60 + ts.second
@@ -66,9 +35,9 @@ def logRuntimeStatus(script_name,status):
                 values ('%s','%s','%s')
                 """ %(logtimestamp,script_name,status)
     
-    dbio.commitToDb(query, 'logRuntimeStatus')
+    dbio.commit_to_db(query, 'log_runtime_status')
        
-def SendAlertGsm(network,alertmsg):
+def send_alert_gsm(network,alertmsg):
     c = cfg.config()
     try:
         if network == 'GLOBE':    
@@ -79,11 +48,11 @@ def SendAlertGsm(network,alertmsg):
         # alllines = f.read()
         # f.close()
         for n in numlist:
-            gsmio.sendMsg(alertmsg,n)
+            gsmio.send_msg(alertmsg,n)
     except IndexError:
         print "Error sending all_alerts.txt"
 
-def WriteRawSmsToDb(msglist,sensor_nums):
+def write_raw_sms_to_db(msglist,sensor_nums):
     query = "INSERT INTO smsinbox (timestamp,sim_num,sms_msg,read_status,web_flag) VALUES "
     for m in msglist:
         if sensor_nums.find(m.simnum[-10:]) == -1:
@@ -107,16 +76,16 @@ def WriteRawSmsToDb(msglist,sensor_nums):
     query = query[:-1]
     # print query
     
-    dbio.commitToDb(query, "WriteRawSmsToDb", instance='GSM')
+    dbio.commit_to_db(query, "write_raw_sms_to_db", instance='GSM')
 
-def WriteEQAlertMessageToDb(alertmsg):
+def write_eq_alert_message_to_db(alertmsg):
     c = cfg.config()
-    # WriteOutboxMessageToDb(alertmsg,c.smsalert.globenum)
-    # WriteOutboxMessageToDb(alertmsg,c.smsalert.smartnum)
+    # write_outbox_message_to_db(alertmsg,c.smsalert.globenum)
+    # write_outbox_message_to_db(alertmsg,c.smsalert.smartnum)
 
-def getGsmId(number):
-    smart_prefixes = getAllowedPrefixes('SMART')
-    globe_prefixes = getAllowedPrefixes('GLOBE')
+def get_gsm_id(number):
+    smart_prefixes = get_allowed_prefixes('SMART')
+    globe_prefixes = get_allowed_prefixes('GLOBE')
 
     try:
         num_prefix = re.match("^((0)|(63))9\d\d",number).group()
@@ -134,7 +103,7 @@ def getGsmId(number):
         print '>> Prefix', num_prefix, 'cannot be sent'
         return -1
 
-def WriteOutboxMessageToDb(message='',recepients='',table='users'):
+def write_outbox_message_to_db(message='',recepients='',table='users'):
     if table == '':
         print "Error: No table indicated"
         raise ValueError
@@ -143,14 +112,14 @@ def WriteOutboxMessageToDb(message='',recepients='',table='users'):
     tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
     query = "insert into smsoutbox_%s (ts_written,sms_msg,source) VALUES ('%s','%s','central')" % (table,tsw,message)
     
-    last_insert = dbio.commitToDb(query,'WriteOutboxMessageToDb',last_insert=True)[0][0]
+    last_insert = dbio.commit_to_db(query,'write_outbox_message_to_db',last_insert=True)[0][0]
 
-    table_mobile = getMobileSimNums(table)
+    table_mobile = get_mobile_sim_nums(table)
 
     query = "INSERT INTO smsoutbox_%s_status (outbox_id,mobile_id,gsm_id) VALUES " % (table[:-1])
             
     for r in recepients.split(","):
-        gsm_id = getGsmId(r)
+        gsm_id = get_gsm_id(r)
         if gsm_id == -1:
             continue
         else:
@@ -161,9 +130,9 @@ def WriteOutboxMessageToDb(message='',recepients='',table='users'):
     
     query = query[:-1]
     print query        
-    dbio.commitToDb(query, "WriteOutboxMessageToDb")
+    dbio.commit_to_db(query, "write_outbox_message_to_db")
     
-def CheckAlertMessages():
+def check_alert_messages():
     c = cfg.config()
     alllines = ''
     print c.fileio.allalertsfile
@@ -175,7 +144,7 @@ def CheckAlertMessages():
         print '>> Error in reading file', alllines
     return alllines
 
-def getAllowedPrefixes(network):
+def get_allowed_prefixes(network):
     c = cfg.config()
     if network.upper() == 'SMART':
         prefix_list = c.simprefix.smart.split(',')
@@ -189,11 +158,11 @@ def getAllowedPrefixes(network):
 
     return extended_prefix_list
     
-def SendMessagesFromDb(table='users',send_status=0,gsm_id=0,limit=10):
+def send_messages_from_db(table='users',send_status=0,gsm_id=0,limit=10):
     c = cfg.config()
-    # if not c.mode.sendmsg:
+    # if not c.mode.send_msg:
     #     return
-    allmsgs = dbio.getAllOutboxSmsFromDb(table,send_status,gsm_id,limit)
+    allmsgs = dbio.get_all_outbox_sms_from_db(table,send_status,gsm_id,limit)
     if len(allmsgs) <= 0:
         print ">> No messages in outbox"
         return
@@ -203,7 +172,7 @@ def SendMessagesFromDb(table='users',send_status=0,gsm_id=0,limit=10):
     for m in allmsgs:
         print m
 
-    table_mobile = getMobileSimNums(table)
+    table_mobile = get_mobile_sim_nums(table)
     inv_table_mobile = {v: k for k, v in table_mobile.iteritems()}
     # print inv_table_mobile
         
@@ -215,7 +184,7 @@ def SendMessagesFromDb(table='users',send_status=0,gsm_id=0,limit=10):
     
     status_list = []
     
-    allowed_prefixes = getAllowedPrefixes('globe')
+    allowed_prefixes = get_allowed_prefixes('globe')
     # # cycle through all messages
     for msg in allmsgs:
         try:
@@ -226,7 +195,7 @@ def SendMessagesFromDb(table='users',send_status=0,gsm_id=0,limit=10):
             continue
             # check if recepient number in allowed prefixed list    
         if num_prefix in allowed_prefixes:
-            ret = gsmio.sendMsg(msg.data,msg.simnum.strip(),simulate=True)
+            ret = gsmio.send_msg(msg.data,msg.simnum.strip(),simulate=True)
 
             today = dt.today().strftime("%Y-%m-%d %H:%M:%S")
             if ret:
@@ -240,23 +209,23 @@ def SendMessagesFromDb(table='users',send_status=0,gsm_id=0,limit=10):
         else:
             print "Number not in prefix list", num_prefix
 
-    dbio.setSendStatus(table,status_list)
+    dbio.set_send_status(table,status_list)
     
     #Get all outbox messages with send_status "SENT" and attempt to send
     #   chatterbox acknowledgements
     #   send_status will be changed to "SENT-WSS" if successful
     # dsll.sendAllAckSentGSMtoDEWS()    
     
-def getSensorNumbers():
+def get_sensor_numbers():
     querys = "SELECT sim_num from site_column_sim_nums"
 
     # print querys
 
-    nums = dbio.querydatabase(querys,'getSensorNumbers','LOCAL')
+    nums = dbio.query_database(querys,'get_sensor_numbers','LOCAL')
 
     return nums
 
-def getMobileSimNums(table):
+def get_mobile_sim_nums(table):
 
     if table == 'loggers':
 
@@ -273,7 +242,7 @@ def getMobileSimNums(table):
                 OR (t1.date_activated = t2.date_activated AND t1.mobile_id < t2.mobile_id)) 
         WHERE t2.sim_num IS NULL and t1.sim_num is not null"""
 
-        nums = dbio.querydatabase(query,'getMobilesimnums','sandbox')
+        nums = dbio.query_database(query,'get_mobile_sim_nums','sandbox')
         nums = {key: value for (value, key) in nums}
 
         logger_mobile_sim_nums = nums
@@ -287,7 +256,7 @@ def getMobileSimNums(table):
         
         query = "select mobile_id,sim_num from user_mobile"
 
-        nums = dbio.querydatabase(query,'getMobilesimnums','sandbox')
+        nums = dbio.query_database(query,'get_mobile_sim_nums','sandbox')
         nums = {key: value for (value, key) in nums}
 
         user_mobile_sim_nums = nums
@@ -299,8 +268,8 @@ def getMobileSimNums(table):
 
     return nums
 
-def writeAlertToDb(alertmsg):
-    dbio.createTable('smsalerts','smsalerts')
+def write_alert_to_db(alertmsg):
+    dbio.create_table('smsalerts','smsalerts')
 
     today = dt.today().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -308,24 +277,24 @@ def writeAlertToDb(alertmsg):
 
     print query
 
-    dbio.commitToDb(query,'writeAlertToDb')
+    dbio.commit_to_db(query,'write_alert_to_db')
 
-def saveToCache(key,value):
+def save_to_cache(key,value):
     mc.set(key,value)
 
-def getValueFromCache(key):
+def get_value_from_cache(key):
     value = mc.get(key)
 
-def trySendingMessages(network):
+def try_sending_messages(network):
     start = dt.now()
     while True:
-        SendMessagesFromDb(network)
+        send_messages_from_db(network)
         print '.',
         time.sleep(2)
         if (dt.now()-start).seconds > 30:
             break
 
-def deleteMessagesfromGSM():
+def detele_messages_from_gsm():
     print "\n>> Deleting all read messages"
     try:
         gsmio.gsmcmd('AT+CMGD=0,2').strip()
@@ -333,10 +302,10 @@ def deleteMessagesfromGSM():
     except ValueError:
         print '>> Error deleting messages'
 
-def simulateGSM(network='simulate'):
+def simulate_gsm(network='simulate'):
     print "Simulating GSM"
     
-    db, cur = dbio.SenslopeDBConnect('sandbox')
+    db, cur = dbio.db_connect('sandbox')
     
     smsinbox_sms = []
 
@@ -354,11 +323,11 @@ def simulateGSM(network='simulate'):
         time.sleep(20)
 
     # print smsinbox_sms
-    logger_mobile_sim_nums = getMobileSimNums('loggers')
-    user_mobile_sim_nums = getMobileSimNums('users')
+    logger_mobile_sim_nums = get_mobile_sim_nums('loggers')
+    user_mobile_sim_nums = get_mobile_sim_nums('users')
     # print logger_mobile
 
-    # gsm_ids = getGsmIDs()
+    # gsm_ids = get_gsm_ids()
     # gsm_id = 1gsm_ids[network]
     gsm_id = 1
     loggers_count = 0
@@ -401,26 +370,26 @@ def simulateGSM(network='simulate'):
     if len(sms_id_ok)>0:
         if loggers_count > 0:
             # query_safe= 'SET SQL_SAFE_UPDATES=0'
-            # dbio.commitToDb(query_safe,'simulateGSM')
-            dbio.commitToDb(query_loggers,'simulateGSM')
+            # dbio.commit_to_db(query_safe,'simulate_gsm')
+            dbio.commit_to_db(query_loggers,'simulate_gsm')
             print query_lastText
-            dbio.commitToDb(query_lastText,'simulateGSM')
+            dbio.commit_to_db(query_lastText,'simulate_gsm')
         if users_count > 0:
-            dbio.commitToDb(query_users,'simulateGSM')
+            dbio.commit_to_db(query_users,'simulate_gsm')
         
         sms_id_ok = str(sms_id_ok).replace("L","")[1:-1]
         query = "update smsinbox set web_flag = '0' where sms_id in (%s);" % (sms_id_ok)
-        dbio.commitToDb(query,'simulateGSM')
+        dbio.commit_to_db(query,'simulate_gsm')
 
     if len(sms_id_unk)>0:
         # print sms_id_unk
         sms_id_unk = str(sms_id_unk).replace("L","")[1:-1]
         query = "update smsinbox set web_flag = '-1' where sms_id in (%s);" % (sms_id_unk)
-        dbio.commitToDb(query,'simulateGSM')
+        dbio.commit_to_db(query,'simulate_gsm')
     
     sys.exit()
         
-def RunSenslopeServer(network='simulate',table='loggers'):
+def run_server(network='simulate',table='loggers'):
     minute_of_last_alert = dt.now().minute
     timetosend = 0
     lastAlertMsgSent = ''
@@ -429,47 +398,47 @@ def RunSenslopeServer(network='simulate',table='loggers'):
     checkIfActive = True
 
     if network == 'simulate':
-        simulateGSM(network)
+        simulate_gsm(network)
         sys.exit()
 
     try:
-        gsm = gsmio.gsmInit(network)        
+        gsm = gsmio.init_gsm(network)        
     except serial.SerialException:
         print '**NO COM PORT FOUND**'
         serverstate = 'serial'
         gsm.close()
-        logRuntimeStatus(network,"com port error")
+        log_runtime_status(network,"com port error")
         raise ValueError(">> Error: no com port found")
             
-    # dbio.createTable("runtimelog","runtime",cfg.config().mode.logtoinstance)
-    # logRuntimeStatus(network,"startup",)
+    # dbio.create_table("runtimelog","runtime",cfg.config().mode.logtoinstance)
+    # log_runtime_status(network,"startup",)
     
-    # dbio.createTable('smsinbox','smsinbox',cfg.config().mode.logtoinstance)
-    # dbio.createTable('smsoutbox','smsoutbox',cfg.config().mode.logtoinstance)
+    # dbio.create_table('smsinbox','smsinbox',cfg.config().mode.logtoinstance)
+    # dbio.create_table('smsoutbox','smsoutbox',cfg.config().mode.logtoinstance)
 
-    sensor_numbers_str = str(getSensorNumbers())
+    sensor_numbers_str = str(get_sensor_numbers())
 
     print '**' + network + ' GSM server active**'
     print time.asctime()
     while True:
         m = gsmio.countmsg()
         if m>0:
-            allmsgs = gsmio.getAllSms(network)
+            allmsgs = gsmio.get_all_sms(network)
             
             try:
-                WriteRawSmsToDb(allmsgs,sensor_numbers_str)
+                write_raw_sms_to_db(allmsgs,sensor_numbers_str)
             except MySQLdb.ProgrammingError:
                 print ">> Error: May be an empty line.. skipping message storing"
             
-            deleteMessagesfromGSM()
+            detele_messages_from_gsm()
                 
             print dt.today().strftime("\n" + network + " Server active as of %A, %B %d, %Y, %X")
-            logRuntimeStatus(network,"alive")
+            log_runtime_status(network,"alive")
 
-            trySendingMessages(network)
+            try_sending_messages(network)
             
         elif m == 0:
-            trySendingMessages(network)
+            try_sending_messages(network)
             
             gsmio.gsmflush()
             today = dt.today()
@@ -483,7 +452,7 @@ def RunSenslopeServer(network='simulate',table='loggers'):
         elif m == -1:
             print'GSM MODULE MAYBE INACTIVE'
             serverstate = 'inactive'
-            logRuntimeStatus(network,"gsm inactive")
+            log_runtime_status(network,"gsm inactive")
             gsmio.resetGsm()
 
         elif m == -2:
@@ -493,7 +462,7 @@ def RunSenslopeServer(network='simulate',table='loggers'):
             print '>> Error in parsing mesages: Error unknown'
             gsmio.resetGsm()
 
-def getArguments():
+def get_arguments():
     parser = argparse.ArgumentParser(description="Run SMS server [-options]")
     parser.add_argument("-t", "--table", help="smsinbox table (loggers or users)")
     parser.add_argument("-n", "--network", help="network name (smart/globe/simulate)")
@@ -517,11 +486,11 @@ def getArguments():
         print error
         sys.exit()
 
-def getGsmModules():
+def get_gsm_modules():
     ids = mc.get('gsmids')
     if ids == None:
         query = "select * from gsm_modules"
-        gsm_modules = dbio.querydatabase(query,'getGsmIds')
+        gsm_modules = dbio.query_database(query,'get_gsm_ids')
 
         ids = dict() 
         for gsm_id,name,num in gsm_modules:
@@ -532,17 +501,17 @@ def getGsmModules():
     return ids
 
 def main():
-    args = getArguments()
+    args = get_arguments()
     network = args.network
 
-    gsm_ids = getGsmModules()
+    gsm_ids = get_gsm_modules()
     print gsm_ids.keys()
 
     if network not in gsm_ids.keys():
         print ">> Error in network selection", network
         sys.exit()
     
-    RunSenslopeServer(network)
+    run_server(network)
     sys.exit()
 
 if __name__ == '__main__':

@@ -37,7 +37,7 @@ def main():
             print "Line:", linecount
             dlist = []
             try:
-                dlist = proc.ProcTwoAccelColData(line,"","")
+                dlist = proc.parse_two_accel_col_data(line,"","")
             except ValueError:
                 print "Moving to different line"
             if dlist:
@@ -52,9 +52,9 @@ def main():
         # sys.stderr = sys.__stderr__
         # print "hey"
         if soms_dlist:
-            proc.WriteSomsDataToDb(soms_dlist,"")
+            proc.write_soms_data_to_db(soms_dlist,"")
         if accel_dlist:
-            proc.WriteTwoAccelDataToDb(accel_dlist,"")
+            proc.write_two_accel_data_to_db(accel_dlist,"")
             
 
 if __name__ == "__main__":
