@@ -15,7 +15,7 @@ import configfileio as cfg
 
 # Scripts for connecting to local database
 
-class loggerArray:
+class LoggerArray:
     def __init__(self, site_id, tsm_id, tsm_name, number_of_segments, segment_length):
         self.site_id = site_id
         self.tsm_id = tsm_id
@@ -23,7 +23,7 @@ class loggerArray:
         self.nos = number_of_segments
         self.seglen = segment_length
         
-class coordsArray:
+class CoordsArray:
     def __init__(self, name, lat, lon, barangay):
         self.name = name
         self.lat = lat
@@ -424,12 +424,12 @@ def create_internal_alerts():
     
     execute_query(query)
 
-#alert_toDB
+#alert_to_db
 #    writes to alert tables
 #    Inputs:
 #        df- dataframe to be written in table_name
 #        table_name- str; name of table in database ('tsm_alerts' or 'operational_triggers')
-def alert_toDB(df, table_name):
+def alert_to_db(df, table_name):
     
     if does_table_exist(table_name) == False:
         #Create a tsm_alerts table if it doesn't exist yet

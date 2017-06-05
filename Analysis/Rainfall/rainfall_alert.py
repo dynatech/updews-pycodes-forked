@@ -11,7 +11,7 @@ if not path in sys.path:
     sys.path.insert(1,path)
 del path   
 
-import querydb as q
+import querydb as qdb
 
 def create_rainfall_alerts():
     query = "CREATE TABLE `rainfall_alerts` ("
@@ -37,13 +37,13 @@ def create_rainfall_alerts():
     query += "    ON DELETE CASCADE"
     query += "    ON UPDATE CASCADE)"
     
-    q.ExecuteQuery(query)
+    qdb.execute_query(query)
 
 def GetRawRainData(gauge_name, fromTime="", toTime=""):
     
     try:
         
-        query = "SELECT ts, rain from %s.%s " % (q.Namedb, gauge_name)
+        query = "SELECT ts, rain from %s.%s " % (qdb.Namedb, gauge_name)
                         
         if not fromTime:
             fromTime = "2010-01-01"
@@ -55,7 +55,7 @@ def GetRawRainData(gauge_name, fromTime="", toTime=""):
     
         query = query + " order by ts"
     
-        df =  q.GetDBDataFrame(query)
+        df =  qdb.get_db_dataframe(query)
         
         # change ts column to datetime
         df.ts = pd.to_datetime(df.ts)
@@ -171,7 +171,7 @@ def summary_writer(site_id,gauge_name,rain_id,twoyrmax,halfmax,rainfall,end,writ
         advisory='---'
 
     if (write_alert and end.time() in [time(3,30), time(7,30), time(11,30), time(15,30), time(19,30), time(23,30)]) or ralert == 1:
-        if q.DoesTableExist('rainfall_alerts') == False:
+        if qdb.does_table_exist('rainfall_alerts') == False:
             #Create a site_alerts table if it doesn't exist yet
             create_rainfall_alerts()
 
@@ -179,23 +179,23 @@ def summary_writer(site_id,gauge_name,rain_id,twoyrmax,halfmax,rainfall,end,writ
             if one < halfmax*0.75 and three < twoyrmax*0.75:
                 query = "SELECT EXISTS(SELECT * FROM rainfall_alerts"
                 query += " WHERE ts = '%s' AND site_id = %s AND rain_alert = '0')" %(end, site_id)
-                if q.GetDBDataFrame(query).values[0][0] == 0:
+                if qdb.get_db_dataframe(query).values[0][0] == 0:
                     df = pd.DataFrame({'ts': [end], 'site_id': [site_id], 'rain_id': [rain_id], 'rain_alert': [0], 'cumulative': [np.nan], 'threshold': [np.nan]})
-                    q.PushDBDataFrame(df, 'rainfall_alerts', index = False)
+                    qdb.push_db_dataframe(df, 'rainfall_alerts', index = False)
 
         else:
             if one >= halfmax:
                 query = "SELECT EXISTS(SELECT * FROM rainfall_alerts"
                 query += " WHERE ts = '%s' AND site_id = %s AND rain_alert = 'a')" %(end, site_id)
-                if q.GetDBDataFrame(query).values[0][0] == 0:
+                if qdb.get_db_dataframe(query).values[0][0] == 0:
                     df = pd.DataFrame({'ts': [end], 'site_id': [site_id], 'rain_id': [rain_id], 'rain_alert': ['a'], 'cumulative': [one], 'threshold': [round(halfmax,2)]})
-                    q.PushDBDataFrame(df, 'rainfall_alerts', index = False)
+                    qdb.push_db_dataframe(df, 'rainfall_alerts', index = False)
             if three>=twoyrmax:
                 query = "SELECT EXISTS(SELECT * FROM rainfall_alerts"
                 query += " WHERE ts = '%s' AND site_id = %s AND rain_alert = 'b')" %(end, site_id)
-                if q.GetDBDataFrame(query).values[0][0] == 0:
+                if qdb.get_db_dataframe(query).values[0][0] == 0:
                     df = pd.DataFrame({'ts': [end], 'site_id': [site_id], 'rain_id': [rain_id], 'rain_alert': ['b'], 'cumulative': [three], 'threshold': [round(twoyrmax,2)]})
-                    q.PushDBDataFrame(df, 'rainfall_alerts', index = False)
+                    qdb.push_db_dataframe(df, 'rainfall_alerts', index = False)
 
     summary = pd.DataFrame({'site_id': [site_id], '1D cml': [one], 'half of 2yr max': [round(halfmax,2)], '3D cml': [three], '2yr max': [round(twoyrmax,2)], 'DataSource': [gauge_name], 'rain_id': [rain_id], 'alert': [ralert], 'advisory': [advisory]})
     
@@ -222,7 +222,7 @@ def main(rain_props, end, s, trigger_symbol):
         query += " public_alert_symbols as s on a.pub_sym_id = s.pub_sym_id"
         query += " where site_id = %s and alert_level > 0" %site_id
         query += " and ts <= '%s' and ts_updated >= '%s')" %(end, end)
-        if q.GetDBDataFrame(query).values[0][0] == 1:
+        if qdb.get_db_dataframe(query).values[0][0] == 1:
             write_alert = True
         else:
             write_alert = False
@@ -246,6 +246,6 @@ def main(rain_props, end, s, trigger_symbol):
     operational_trigger['ts'] = str(end)
     operational_trigger['ts_updated'] = str(end)
     operational_trigger = operational_trigger.rename(columns = {'alert': 'trigger_sym_id'})
-    q.alert_toDB(operational_trigger, 'operational_triggers')
+    qdb.alert_to_db(operational_trigger, 'operational_triggers')
 
     return summary

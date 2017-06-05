@@ -85,3 +85,11 @@ class config:
   
 		self.io.rt_to_fill = cfg.getint("I/O","rt_to_fill")
 		self.io.rt_to_smooth = cfg.getint("I/O","rt_to_smooth")
+
+		self.rainfall = Container()
+		self.rainfall.PrintPlot = cfg.getboolean('rainfall','PrintPlot')
+		self.rainfall.PrintSummaryAlert = cfg.getboolean('rainfall','PrintSummaryAlert')
+
+		self.rainfall.data_dt = cfg.getfloat("rainfall","data_dt")
+		self.rainfall.rt_window_length = cfg.getfloat("rainfall","rt_window_length")
+		self.rainfall.roll_window_length = cfg.getfloat("rainfall","roll_window_length")

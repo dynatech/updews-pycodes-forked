@@ -10,11 +10,11 @@ if not path in sys.path:
     sys.path.insert(1,path)
 del path   
 
-import querydb as q
+import querydb as qdb
 
 def SiteCoord():
     query = "select site_id, latitude, longitude from loggers"
-    df = q.GetDBDataFrame(query)
+    df = qdb.get_db_dataframe(query)
     df = df.dropna()
     df = df.drop_duplicates('site_id')
     df = df.sort_values('site_id')
@@ -23,12 +23,10 @@ def SiteCoord():
 def AllRGCoord():
     query = "SELECT * FROM rainfall_gauges where gauge_name not like 'mes'"
     query += " and (date_deactivated >= '2017-05-10' or date_deactivated is null)"
-    df = q.GetDBDataFrame(query)
+    df = qdb.get_db_dataframe(query)
     return df
 
 def create_rainfall_priorities():
-    db, cur = q.SenslopeDBConnect(q.Namedb)
-    
     query = "CREATE TABLE `rainfall_priorities` ("
     query += "  `priority_id` SMALLINT(5) UNSIGNED NOT NULL AUTO_INCREMENT,"
     query += "  `rain_id` SMALLINT(5) UNSIGNED NOT NULL,"
@@ -49,23 +47,21 @@ def create_rainfall_priorities():
     query += "    ON DELETE CASCADE"
     query += "    ON UPDATE CASCADE)"
     
-    cur.execute(query)
-    db.commit()
-    db.close()
+    qdb.execute_query(query)
 
 def to_MySQL(df, engine):
     site_id = df['site_id'].values[0]
     rain_id = df['rain_id'].values[0]
     query = "SELECT EXISTS(SELECT * FROM rainfall_priorities"
     query += " WHERE site_id = %s AND rain_id = %s)" %(site_id, rain_id)
-    if q.GetDBDataFrame(query).values[0][0] == 0:
-        q.PushDBDataFrame(df[['rain_id', 'site_id', 'distance']], 'rainfall_priorities', index=False)
+    if qdb.get_db_dataframe(query).values[0][0] == 0:
+        qdb.push_db_dataframe(df[['rain_id', 'site_id', 'distance']], 'rainfall_priorities', index=False)
     else:
         distance = df['distance'].values[0]
         query = "SELECT * FROM %s WHERE site_id = %s and rain_id = %s" %('rainfall_priorities', site_id, rain_id)
-        priority_id = q.GetDBDataFrame(query)['priority_id'].values[0]
+        priority_id = qdb.get_db_dataframe(query)['priority_id'].values[0]
         query = "UPDATE %s SET distance = %s WHERE priority_id = %s" %('rainfall_priorities', distance, priority_id)
-        q.ExecuteQuery(query)
+        qdb.execute_query(query)
 
 def Distance(site_coord, rg_coord):
     site_id = site_coord['site_id'].values[0]
@@ -99,11 +95,11 @@ def main():
     nearest_rg = site_coord.apply(Distance, rg_coord=rg_coord)
     nearest_rg['distance'] = np.round(nearest_rg.distance,2)
     
-    if q.DoesTableExist('rainfall_priorities') == False:
+    if qdb.does_table_exist('rainfall_priorities') == False:
         #Create a NOAH table if it doesn't exist yet
         create_rainfall_priorities()
 
-    engine = create_engine('mysql://'+q.Userdb+':'+q.Passdb+'@'+q.Hostdb+':3306/'+q.Namedb)
+    engine = create_engine('mysql://'+qdb.Userdb+':'+qdb.Passdb+'@'+qdb.Hostdb+':3306/'+qdb.Namedb)
     nearest_rg = nearest_rg.reset_index(drop=True)
     nearest_rg['priority_id'] = range(len(nearest_rg))
     site_nearest_rg = nearest_rg.groupby('priority_id')
@@ -113,7 +109,6 @@ def main():
     
 if __name__ == "__main__":
     start = datetime.now()
-    
+    print start
     main()
-
     print 'runtime =', datetime.now() - start

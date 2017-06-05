@@ -10,7 +10,7 @@ if not path in sys.path:
     sys.path.insert(1,path)
 del path   
 
-import querydb as q
+import querydb as qdb
 
 def create_node_alerts():   
     query = "CREATE TABLE `node_alerts` ("
@@ -29,11 +29,11 @@ def create_node_alerts():
     query += "    ON DELETE NO ACTION"
     query += "    ON UPDATE CASCADE)"
 
-    q.ExecuteQuery(query)
+    qdb.execute_query(query)
     
 def trending_alert_gen(pos_alert, tsm_id, end):
     
-    if q.DoesTableExist('node_alerts') == False:
+    if qdb.does_table_exist('node_alerts') == False:
         #Create a node_alerts table if it doesn't exist yet
         create_node_alerts()
             
@@ -41,15 +41,15 @@ def trending_alert_gen(pos_alert, tsm_id, end):
     query += " WHERE ts = '%s'" %end
     query += " and tsm_id = %s and node_id = %s)" %(tsm_id, pos_alert['node_id'].values[0])
     
-    if q.GetDBDataFrame(query).values[0][0] == 0:
+    if qdb.get_db_dataframe(query).values[0][0] == 0:
         node_alert = pos_alert[['disp_alert', 'vel_alert']]
         node_alert['ts'] = end
         node_alert['tsm_id'] = tsm_id
         node_alert['node_id'] = pos_alert['node_id'].values[0]
-        q.PushDBDataFrame(node_alert, 'node_alerts', index=False)
+        qdb.push_db_dataframe(node_alert, 'node_alerts', index=False)
         
     query = "SELECT * FROM node_alerts WHERE tsm_id = %s and node_id = %s and ts >= '%s'" %(tsm_id, pos_alert['node_id'].values[0], end-timedelta(hours=3))
-    node_alert = q.GetDBDataFrame(query)
+    node_alert = qdb.get_db_dataframe(query)
     
     node_alert['node_alert'] = np.where(node_alert['vel_alert'].values >= node_alert['disp_alert'].values,
 

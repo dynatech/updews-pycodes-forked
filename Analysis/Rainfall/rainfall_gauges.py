@@ -11,7 +11,7 @@ if not path in sys.path:
     sys.path.insert(1,path)
 del path   
 
-import querydb as q
+import querydb as qdb
 
 def create_rainfall_gauges():    
     
@@ -26,7 +26,7 @@ def create_rainfall_gauges():
     query += "  PRIMARY KEY (`rain_id`),"
     query += "  UNIQUE INDEX `gauge_name_UNIQUE` (`gauge_name` ASC))"
 
-    q.ExecuteQuery(query)
+    qdb.execute_query(query)
     
 def senslope_rain_gauges():
     query = "SELECT l.logger_name, l.latitude, l.longitude, l.date_activated, l.date_deactivated"
@@ -34,7 +34,7 @@ def senslope_rain_gauges():
     query += " on l.model_id = m.model_id where has_rain = 1"
     query += " and not (latitude is null or longitude is null)"
     query += " order by logger_name"
-    df = q.GetDBDataFrame(query)
+    df = qdb.get_db_dataframe(query)
     df['data_source'] = 'senslope'
     df = df.rename(columns = {'logger_name': 'gauge_name'})
     return df
@@ -43,11 +43,11 @@ def to_MySQL(df):
     gauge_name = df['gauge_name'].values[0]
     query = "SELECT EXISTS(SELECT * FROM rainfall_gauges"
     query += " WHERE gauge_name = '%s')" %gauge_name
-    if q.GetDBDataFrame(query).values[0][0] == 0:
-        q.PushDBDataFrame(df, 'rainfall_gauges', index=False)
+    if qdb.get_db_dataframe(query).values[0][0] == 0:
+        qdb.push_db_dataframe(df, 'rainfall_gauges', index=False)
     else:
         query = "SELECT * FROM rainfall_gauges WHERE gauge_name = '%s'" %gauge_name
-        rain_id = q.GetDBDataFrame(query)['rain_id'].values[0]
+        rain_id = qdb.get_db_dataframe(query)['rain_id'].values[0]
         query = "UPDATE rainfall_gauges SET latitude = %s, longitude = %s," %(df['latitude'].values[0], df['longitude'].values[0])
         query += " date_activated = '%s'" %df['date_activated'].values[0]
         try:
@@ -56,10 +56,10 @@ def to_MySQL(df):
         except:
             pass
         query += " WHERE rain_id = %s" %rain_id
-        q.ExecuteQuery(query)
+        qdb.execute_query(query)
 
 def main():
-    if q.DoesTableExist('rainfall_gauges') == False:
+    if qdb.does_table_exist('rainfall_gauges') == False:
         #Create a rainfall_gauges table if it doesn't exist yet
         create_rainfall_gauges()
         senslope = senslope_rain_gauges()
@@ -86,5 +86,6 @@ def main():
 ################################################################################
 if __name__ == "__main__":
     start = datetime.now()
+    print start
     main()
     print 'runtime =', datetime.now() - start

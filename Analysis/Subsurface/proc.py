@@ -5,7 +5,7 @@ import pandas as pd
 from pandas.stats.api import ols
 import sys
 
-import filterdata as f
+import filterdata as filt
 import erroranalysis as err
 
 #include the path of "Analysis" folder for the python scripts searching
@@ -14,7 +14,7 @@ if not path in sys.path:
     sys.path.insert(1,path)
 del path   
 
-import querydb as q
+import querydb as qdb
 
 class ProcData:
     def __init__ (self, invalid_nodes, tilt, lgd, max_min_df, max_min_cml):
@@ -32,7 +32,7 @@ def resample_node(df, window):
     df = df.sort_index(ascending = True)
     df = df.resample('30Min').pad()
     df = df.reset_index(level=1)
-    return df    
+    return df
       
 def no_initial_data(df,num_nodes,offsetstart):
     allnodes=np.arange(1,num_nodes+1)
@@ -129,23 +129,23 @@ def get_last_good_data(df):
 
 def proc_data(tsm_props, window, config, fixpoint, realtime=False, comp_vel=True):
     
-    monitoring = q.GetRawAccelData(tsm_name=tsm_props.tsm_name, fromTime=window.offsetstart, toTime=window.end)
+    monitoring = qdb.get_raw_accel_data(tsm_name=tsm_props.tsm_name, from_time=window.offsetstart, to_time=window.end)
     monitoring = monitoring.loc[monitoring.node_id <= tsm_props.nos]
 
-    monitoring = f.applyFilters(monitoring)
+    monitoring = filt.apply_filters(monitoring)
 
     #identify the node ids with no data at start of monitoring window
     NoInitVal = no_initial_data(monitoring,tsm_props.nos,window.offsetstart)
     
     #get last good data prior to the monitoring window (LGDPM)
     if len(NoInitVal) != 0:
-        lgdpm = q.GetSingleLGDPM(tsm_props.tsm_name, NoInitVal, window.offsetstart)
-        lgdpm = f.applyFilters(lgdpm)
+        lgdpm = qdb.get_single_lgdpm(tsm_props.tsm_name, NoInitVal, window.offsetstart)
+        lgdpm = filt.apply_filters(lgdpm)
         lgdpm = lgdpm.sort_index(ascending = False).drop_duplicates('node_id')
         
         monitoring=monitoring.append(lgdpm)
 
-    invalid_nodes = q.GetNodeStatus(tsm_props.tsm_id)
+    invalid_nodes = qdb.get_node_status(tsm_props.tsm_id)
     monitoring = monitoring.loc[~monitoring.node_id.isin(invalid_nodes)]
 
     lgd = get_last_good_data(monitoring)

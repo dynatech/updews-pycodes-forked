@@ -85,9 +85,9 @@ def node_alert(disp_vel, colname, num_nodes, T_disp, T_velL2, T_velL3, k_ac_ax,l
     lastgooddata=lastgooddata.loc[lastgooddata.node_id == node_id]
 
     try:
-        cond = pd.to_datetime(lastgooddata.ts.values[0]) < valid_data
+        cond = pd.to_datetime(lastgooddata['ts'].values[0]) < valid_data
     except IndexError:
-        cond = False
+        cond = True
         
     alert['ND']=np.where(cond,
                          
@@ -96,7 +96,7 @@ def node_alert(disp_vel, colname, num_nodes, T_disp, T_velL2, T_velL3, k_ac_ax,l
                          
                          #Data present within valid date
                          1)
-    
+
     #evaluating net displacements within real-time window
     alert['xz_disp']=np.round(disp_vel.xz.values[-1]-disp_vel.xz.values[0], 3)
     alert['xy_disp']=np.round(disp_vel.xy.values[-1]-disp_vel.xy.values[0], 3)
