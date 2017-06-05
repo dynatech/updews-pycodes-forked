@@ -639,7 +639,7 @@ def GetRainProps(table_name='site_rain_props'):
 #            dataframe object of the resulting last good data
 def GetLastGoodData(df, nos, fillMissing=False):
     if df.empty:
-        print "Error: Empty dataframe inputted"
+#        print "Error: Empty dataframe inputted"
         return
     # groupby id first
     dfa = df.groupby('id')
