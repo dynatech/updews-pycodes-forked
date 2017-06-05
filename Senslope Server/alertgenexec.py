@@ -36,16 +36,16 @@ def main():
 		if len(alertgenlist) == 0:
 			break
 
-		col = alertgenlist.pop()
+		alert_info = alertgenlist.pop()
 
 		mc.set('alertgenlist',[])
 		mc.set('alertgenlist',alertgenlist)
 
-		command = "~/anaconda2/bin/python %s %s" % (c.fileio.alertgenscript,col)
+		command = "~/anaconda2/bin/python %s %s '%s'" % (c.fileio.alertgenscript,alert_info['tsm_name'],alert_info['ts'])
 
-		print "Running", col, "alertgen"
+		print "Running", alert_info['tsm_name'], "alertgen"
         
-		if lockscript.get_lock('alertgen for %s' % col,exitifexist=False):
+		if lockscript.get_lock('alertgen for %s' % alert_info['tsm_name'],exitifexist=False):
 			p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, stderr=subprocess.STDOUT)
 		else:
 			continue
