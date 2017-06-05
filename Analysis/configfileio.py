@@ -12,7 +12,7 @@ import ConfigParser, os
 # print s.misc.debug
 
 
-cfgfiletxt = 'server-config.txt'
+cfgfiletxt = 'serverconfig.txt'
 cfile = os.path.dirname(os.path.realpath(__file__)) + '/' + cfgfiletxt
     
 def readCfgFile():
