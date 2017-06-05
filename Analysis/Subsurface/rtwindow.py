@@ -40,7 +40,7 @@ del path
 import configfileio as cfg
 
 
-class rtwindow:
+class RTWindow:
     def __init__(self, roll_window_numpts,offsetstart, start, end):
         self.numpts = roll_window_numpts
         self.offsetstart = offsetstart
@@ -96,11 +96,11 @@ def set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_w
 
     return roll_window_numpts, offsetstart, start, end
 
-def getwindow(end=datetime.now(),rt_window_length=cfg.config().io.rt_window_length):
+def get_window(end=datetime.now(),rt_window_length=cfg.config().io.rt_window_length):
     
     s = cfg.config()
     s.io.rt_window_length = rt_window_length
 
     roll_window_numpts, offsetstart, start, end = set_monitoring_window(s.io.roll_window_length,s.io.data_dt,s.io.rt_window_length,s.io.num_roll_window_ops,endpt=end)
     
-    return rtwindow(roll_window_numpts, offsetstart, start, end),s
+    return RTWindow(roll_window_numpts, offsetstart, start, end),s

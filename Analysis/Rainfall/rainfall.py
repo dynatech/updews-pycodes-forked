@@ -3,7 +3,6 @@ import numpy as np
 import os
 import sys
 
-import rainconfig as cfg
 import rainfall_alert as ra
 #import rainfall_plot as rp
 
@@ -13,7 +12,8 @@ if not path in sys.path:
     sys.path.insert(1,path)
 del path   
 
-import querydb as q
+import querydb as qdb
+import configfileio as cfg
 
 ############################################################
 ##      TIME FUNCTIONS                                    ##    
@@ -47,7 +47,7 @@ def get_rt_window(rt_window_length, roll_window_length, end=datetime.now()):
 
 def rainfall_threshold(threshold_name='two_year_max'):
     query = "SELECT site_id, threshold_value FROM rainfall_thresholds where threshold_name = '%s'" %threshold_name
-    threshold = q.GetDBDataFrame(query)
+    threshold = qdb.get_db_dataframe(query)
     return threshold
 
 def rainfall_priorities(df):
@@ -64,7 +64,7 @@ def rainfall_gauges(end=datetime.now()):
     query += " where date_activated <= '%s'" %end
     query += " and (date_deactivated >= '%s'" %end
     query += " or date_deactivated is null)"
-    gauges = q.GetDBDataFrame(query)
+    gauges = qdb.get_db_dataframe(query)
     gauges['gauge_name'] = np.array(','.join(gauges.data_source).replace('noah', 'rain_noah_').replace('senslope', 'rain_').split(','))+gauges.gauge_name
     site_gauges = gauges.groupby('site_id')
     priorities = site_gauges.apply(rainfall_priorities)
@@ -82,12 +82,12 @@ def main(site_id='', Print=True, end=datetime.now()):
     s = cfg.config()
 
     #creates directory if it doesn't exist
-    if (s.io.PrintPlot or s.io.PrintSummaryAlert) and Print:
-        if not os.path.exists(output_path+s.io.RainfallPlotsPath):
-            os.makedirs(output_path+s.io.RainfallPlotsPath)
+    if (s.rainfall.PrintPlot or s.rainfall.PrintSummaryAlert) and Print:
+        if not os.path.exists(output_path+s.io.rainfallplotspath):
+            os.makedirs(output_path+s.io.rainfallplotspath)
 
     # setting monitoring window
-    end, start, offsetstart = get_rt_window(s.io.rt_window_length,s.io.roll_window_length, end=end)
+    end, start, offsetstart = get_rt_window(s.rainfall.rt_window_length,s.rainfall.roll_window_length, end=end)
     tsn=end.strftime("%Y-%m-%d_%H-%M-%S")
 
     # 4 nearest rain gauges of each site
@@ -101,7 +101,7 @@ def main(site_id='', Print=True, end=datetime.now()):
     
     query = "SELECT * FROM operational_trigger_symbols"
     query += " WHERE trigger_source = 'rainfall'"
-    trigger_symbol = q.GetDBDataFrame(query)
+    trigger_symbol = qdb.get_db_dataframe(query)
     
     gauges = site_threshold.apply(site_threshold_gauges, gauges=gauges)
 
@@ -110,10 +110,10 @@ def main(site_id='', Print=True, end=datetime.now()):
     summary = summary.reset_index(drop=True).set_index('site_id')[['1D cml', 'half of 2yr max', '3D cml', '2yr max', 'DataSource', 'alert', 'advisory']]
 
     if Print == True:
-        if s.io.PrintSummaryAlert:
-            summary.to_csv(output_path+s.io.RainfallPlotsPath+'SummaryOfRainfallAlertGenerationFor'+tsn+s.io.CSVFormat,sep=',',mode='w')
+        if s.rainfall.PrintSummaryAlert:
+            summary.to_csv(output_path+s.io.rainfallplotspath+'SummaryOfRainfallAlertGenerationFor'+tsn+'.csv',sep=',',mode='w')
         
-#        if s.io.PrintPlot:
+#        if s.rainfall.PrintPlot:
 #            siterainprops.apply(rp.main, offsetstart=offsetstart, start=start, end=end, tsn=tsn, s=s, output_path=output_path)
         
     summary_json = summary.reset_index().to_json(orient="records")
@@ -124,6 +124,7 @@ def main(site_id='', Print=True, end=datetime.now()):
 
 if __name__ == "__main__":
     start_time = datetime.now()
+    print start_time
     main()
     print "runtime = ", datetime.now()-start_time
 

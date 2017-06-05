@@ -12,7 +12,7 @@ import ConfigParser, os
 # print s.misc.debug
 
 
-cfgfiletxt = 'server-config.txt'
+cfgfiletxt = 'serverconfig.txt'
 cfile = os.path.dirname(os.path.realpath(__file__)) + '/' + cfgfiletxt
     
 def readCfgFile():
@@ -65,6 +65,7 @@ class config:
 		self.io = Container()
 		self.io.outputfilepath = cfg.get("I/O","outputfilepath")
 		self.io.rainfallplotspath = cfg.get("I/O","rainfallplotspath")
+		self.io.grndmeasplotspath = cfg.get("I/O","grndmeasplotspath")
           
 		self.io.t_disp = cfg.getfloat("I/O","t_disp")
 		self.io.t_vell2 = cfg.getfloat("I/O","t_vell2")
@@ -84,3 +85,11 @@ class config:
   
 		self.io.rt_to_fill = cfg.getint("I/O","rt_to_fill")
 		self.io.rt_to_smooth = cfg.getint("I/O","rt_to_smooth")
+
+		self.rainfall = Container()
+		self.rainfall.PrintPlot = cfg.getboolean('rainfall','PrintPlot')
+		self.rainfall.PrintSummaryAlert = cfg.getboolean('rainfall','PrintSummaryAlert')
+
+		self.rainfall.data_dt = cfg.getfloat("rainfall","data_dt")
+		self.rainfall.rt_window_length = cfg.getfloat("rainfall","rt_window_length")
+		self.rainfall.roll_window_length = cfg.getfloat("rainfall","roll_window_length")

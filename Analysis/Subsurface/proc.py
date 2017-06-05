@@ -5,7 +5,7 @@ import pandas as pd
 from pandas.stats.api import ols
 import sys
 
-import filterdata as f
+import filterdata as filt
 import erroranalysis as err
 
 #include the path of "Analysis" folder for the python scripts searching
@@ -14,9 +14,9 @@ if not path in sys.path:
     sys.path.insert(1,path)
 del path   
 
-import querydb as q
+import querydb as qdb
 
-class procdata:
+class ProcData:
     def __init__ (self, invalid_nodes, tilt, lgd, max_min_df, max_min_cml):
         self.inv = invalid_nodes
         self.tilt = tilt
@@ -24,7 +24,7 @@ class procdata:
         self.max_min_df = max_min_df
         self.max_min_cml = max_min_cml
         
-def resamplenode(df, window):
+def resample_node(df, window):
     blank_df = pd.DataFrame({'ts': [window.end,window.offsetstart], 'node_id': [df['node_id'].values[0]]*2, 'tsm_name': [df['tsm_name'].values[0]]*2}).set_index('ts')
     df = df.append(blank_df)
     df = df.reset_index().drop_duplicates(['ts','node_id']).set_index('ts')
@@ -32,15 +32,15 @@ def resamplenode(df, window):
     df = df.sort_index(ascending = True)
     df = df.resample('30Min').pad()
     df = df.reset_index(level=1)
-    return df    
+    return df
       
-def NoInitialData(df,num_nodes,offsetstart):
+def no_initial_data(df,num_nodes,offsetstart):
     allnodes=np.arange(1,num_nodes+1)
     with_init_val=df[df.ts<offsetstart+timedelta(hours=0.5)]['node_id'].values
     no_init_val=allnodes[np.in1d(allnodes, with_init_val, invert=True)]
     return no_init_val
 
-def NoData(df, num_nodes):
+def no_data(df, num_nodes):
     allnodes = np.arange(1,num_nodes+1)
     withval = sorted(set(df.node_id))
     noval = allnodes[np.in1d(allnodes, withval, invert=True)]
@@ -65,7 +65,7 @@ def accel_to_lin_xz_xy(seg_len,xa,ya,za):
     
     return np.round(xz,4),np.round(xy,4)
 
-def fill_smooth (df, offsetstart, end, roll_window_numpts, to_smooth, to_fill):    
+def fill_smooth(df, offsetstart, end, roll_window_numpts, to_smooth, to_fill):    
     if to_fill:
         # filling NAN values
         df = df.fillna(method = 'pad')
@@ -106,7 +106,7 @@ def node_inst_vel(filled_smoothened, roll_window_numpts, start):
     
     return filled_smoothened
 
-#GetLastGoodData(df):
+#get_last_good_data(df):
 #    evaluates the last good data from the input df
 #    
 #    Parameters:
@@ -116,7 +116,7 @@ def node_inst_vel(filled_smoothened, roll_window_numpts, start):
 #    Returns:
 #        dflgd: dataframe object
 #            dataframe object of the resulting last good data
-def GetLastGoodData(df):
+def get_last_good_data(df):
     if df.empty:
         print "Error: Empty dataframe inputted"
         return
@@ -127,28 +127,28 @@ def GetLastGoodData(df):
     
     return dflgd
 
-def proc(tsm_props, window, config, fixpoint, realtime=False, comp_vel=True):
+def proc_data(tsm_props, window, config, fixpoint, realtime=False, comp_vel=True):
     
-    monitoring = q.GetRawAccelData(tsm_name=tsm_props.tsm_name, fromTime=window.offsetstart, toTime=window.end)
+    monitoring = qdb.get_raw_accel_data(tsm_name=tsm_props.tsm_name, from_time=window.offsetstart, to_time=window.end)
     monitoring = monitoring.loc[monitoring.node_id <= tsm_props.nos]
 
-    monitoring = f.applyFilters(monitoring)
+    monitoring = filt.apply_filters(monitoring)
 
     #identify the node ids with no data at start of monitoring window
-    NoInitVal = NoInitialData(monitoring,tsm_props.nos,window.offsetstart)
+    NoInitVal = no_initial_data(monitoring,tsm_props.nos,window.offsetstart)
     
     #get last good data prior to the monitoring window (LGDPM)
     if len(NoInitVal) != 0:
-        lgdpm = q.GetSingleLGDPM(tsm_props.tsm_name, NoInitVal, window.offsetstart)
-        lgdpm = f.applyFilters(lgdpm)
+        lgdpm = qdb.get_single_lgdpm(tsm_props.tsm_name, NoInitVal, window.offsetstart)
+        lgdpm = filt.apply_filters(lgdpm)
         lgdpm = lgdpm.sort_index(ascending = False).drop_duplicates('node_id')
         
         monitoring=monitoring.append(lgdpm)
 
-    invalid_nodes = q.GetNodeStatus(tsm_props.tsm_id)
+    invalid_nodes = qdb.get_node_status(tsm_props.tsm_id)
     monitoring = monitoring.loc[~monitoring.node_id.isin(invalid_nodes)]
 
-    lgd = GetLastGoodData(monitoring)
+    lgd = get_last_good_data(monitoring)
 
     #assigns timestamps from LGD to be timestamp of offsetstart
     monitoring.loc[(monitoring.ts < window.offsetstart)|(pd.isnull(monitoring.ts)), ['ts']] = window.offsetstart
@@ -160,7 +160,7 @@ def proc(tsm_props, window, config, fixpoint, realtime=False, comp_vel=True):
     monitoring = monitoring.set_index('ts')
     monitoring = monitoring[['tsm_name','node_id','xz','xy']]
 
-    nodes_noval = NoData(monitoring, tsm_props.nos)
+    nodes_noval = no_data(monitoring, tsm_props.nos)
     nodes_nodata = pd.DataFrame({'tsm_name': [tsm_props.tsm_name]*len(nodes_noval), 'node_id': nodes_noval, 'xy': [np.nan]*len(nodes_noval), 'xz': [np.nan]*len(nodes_noval), 'ts': [window.offsetstart]*len(nodes_noval)})
     nodes_nodata = nodes_nodata.set_index('ts')
     monitoring = monitoring.append(nodes_nodata)
@@ -168,7 +168,7 @@ def proc(tsm_props, window, config, fixpoint, realtime=False, comp_vel=True):
     max_min_df, max_min_cml = err.cml_noise_profiling(monitoring, config, fixpoint, tsm_props.nos)
         
     #resamples xz and xy values per node using forward fill
-    monitoring = monitoring.groupby('node_id').apply(resamplenode, window = window).reset_index(level=1).set_index('ts')
+    monitoring = monitoring.groupby('node_id').apply(resample_node, window = window).reset_index(level=1).set_index('ts')
     
     nodal_proc_monitoring = monitoring.groupby('node_id')
     
@@ -196,4 +196,4 @@ def proc(tsm_props, window, config, fixpoint, realtime=False, comp_vel=True):
     else:
         tilt = filled_smoothened.set_index('ts')
     
-    return procdata(invalid_nodes,tilt.sort_index(),lgd,max_min_df,max_min_cml)
+    return ProcData(invalid_nodes,tilt.sort_index(),lgd,max_min_df,max_min_cml)

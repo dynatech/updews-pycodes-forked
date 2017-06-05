@@ -12,7 +12,7 @@ if not path in sys.path:
     sys.path.insert(1,path)
 del path   
 
-import querydb as q
+import querydb as qdb
     
 #download the NOAH Rainfall data directly from ASTI
 def downloadRainfallNOAH(noah_id, fdate, tdate):   
@@ -68,7 +68,7 @@ def UpdateTableData(noah_id, gauge_name, fdate, tdate, noah_gauges):
             #   note: values with -1 should not be included in values used for computation
             placeHolderData = pd.DataFrame({"ts": tdate+" 00:00:00","rain":-1}, index=[0])
             placeHolderData = placeHolderData.set_index('ts')
-            q.PushDBDataFrame(placeHolderData, gauge_name) 
+            qdb.push_db_dataframe(placeHolderData, gauge_name) 
             
             #call this function again until the maximum recent timestamp is hit        
             UpdateSingleTable(noah_gauges)
@@ -78,7 +78,7 @@ def UpdateTableData(noah_id, gauge_name, fdate, tdate, noah_gauges):
         noahData = noahData.reset_index()
         noahData = noahData.drop_duplicates('ts')
         noahData = noahData.set_index('ts')
-        q.PushDBDataFrame(noahData, gauge_name)
+        qdb.push_db_dataframe(noahData, gauge_name)
         
         #The table is already up to date
         if pd.to_datetime(tdate) > curTS:
@@ -89,7 +89,6 @@ def UpdateTableData(noah_id, gauge_name, fdate, tdate, noah_gauges):
     
 #Create NOAH Table
 def createNOAHTable(gauge_name):
-    db, cur = q.SenslopeDBConnect(q.Namedb)
     #Create table for noahid before proceeding with the download
     query = "CREATE TABLE `%s` (" %gauge_name
     query += "  `data_id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,"
@@ -108,31 +107,21 @@ def createNOAHTable(gauge_name):
     print "Creating table: %s..." % gauge_name
 
     #Create new table
-    cur.execute(query)
-    db.commit()
-    db.close()
+    qdb.execute_query(query)
 
 def GetLatestTimestamp(table_name):
-    db, cur = q.SenslopeDBConnect(q.Namedb)
-    cur.execute("use "+ q.Namedb)
-    cur.execute("SHOW TABLES LIKE '%s'" %table_name)    
-
     try:
-        cur.execute("SELECT max(ts) FROM %s" %(table_name))
+        a = qdb.execute_query("SELECT max(ts) FROM %s" %(table_name))
+        return a[0][0]
     except:
         print "Error in getting maximum timestamp"
-
-    a = cur.fetchall()
-    if a:
-        return a[0][0]
-    else: 
         return ''
 
 def UpdateSingleTable(noah_gauges):
     noah_id = noah_gauges['dev_id'].values[0]
     gauge_name = noah_gauges['gauge_name'].values[0]
     #check if table "rain_noah_" + "noah_id" exists already
-    if q.DoesTableExist(gauge_name) == False:
+    if qdb.does_table_exist(gauge_name) == False:
         #Create a NOAH table if it doesn't exist yet
         createNOAHTable(gauge_name)
     else:
@@ -168,5 +157,6 @@ def main():
 
 if __name__ == "__main__": 
     start_time = datetime.now()
+    print start_time
     main()
     print 'runtime =', datetime.now() - start_time

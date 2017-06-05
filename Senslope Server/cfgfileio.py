@@ -134,14 +134,15 @@ class config:
 def main():
 	mc = memcache.Client(['127.0.0.1:11211'],debug=0)
 	
+	# new server config
 	c = dewslserverconfig()
-	# initConfig()
-
 	mc.set("server_config",c.config)
 	# print c.config['gsmdb']['username']
 
+	# old server config
 	sc = config()
 	mc.set('sc',sc)
+
 	return
 
 if __name__ == "__main__":

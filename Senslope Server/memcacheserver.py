@@ -60,7 +60,10 @@ def main():
 	mc = memcache.Client(['127.0.0.1:11211'],debug=0)
 	print 'done'
 
-	setServerConfig(mc)
+	c = cfg.dewslserverconfig()
+	mc.set("server_config",c.config)
+
+	# setServerConfig(mc)
 	setMysqlTables(mc)
 	
 if __name__ == "__main__":

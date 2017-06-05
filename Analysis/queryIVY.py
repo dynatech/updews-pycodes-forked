@@ -182,11 +182,11 @@ def PushDBDataFrame(df,table_name):
 
 
 def GetRawAccelData(siteid = "", fromTime = "", toTime = "", targetnode =""):
-    if not siteid:
-        raise ValueError('no site id entered')
-        
-    if printtostdout:
-        PrintOut('Querying database ...')
+#    if not siteid:
+#        raise ValueError('no site id entered')
+#        
+#    if printtostdout:
+#        PrintOut('Querying database ...')
 
     if (len(siteid) == 5):
 
@@ -237,8 +237,8 @@ def GetRawAccelData(siteid = "", fromTime = "", toTime = "", targetnode =""):
 
 def GetSOMSRaw(siteid = "", fromTime = "", toTime = "", msgid="", targetnode = ""):
 
-    if not siteid:
-        raise ValueError('invalid siteid')
+#    if not siteid:
+#        raise ValueError('invalid siteid')
     
     query_accel = "SELECT version FROM senslopedb.tsm_sensors where tsm_name = '%s'" %siteid  
     df_accel =  GetDBDataFrame(query_accel) 
