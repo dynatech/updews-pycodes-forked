@@ -41,7 +41,7 @@ def node_alert2(disp_vel, colname, num_nodes, T_disp, T_velL2, T_velL3, k_ac_ax,
     try:
         cond = pd.to_datetime(lastgooddata.ts.values[0]) < valid_data
     except IndexError:
-        cond = False
+        cond = True
         
     alert['ND']=np.where(cond,
                          
@@ -320,7 +320,6 @@ def main(name='', end='', end_mon=False):
     monitoring_vel = monitoring_vel.reset_index().sort_values('ts',ascending=True)
     nodal_dv = monitoring_vel.groupby('id')     
     
-    
     alert = nodal_dv.apply(node_alert2, colname=monitoring.colprops.name, num_nodes=monitoring.colprops.nos, T_disp=config.io.t_disp, T_velL2=config.io.t_vell2, T_velL3=config.io.t_vell3, k_ac_ax=config.io.k_ac_ax, lastgooddata=lgd,window=window,config=config)
     alert = column_alert(alert, config.io.num_nodes_to_check, config.io.k_ac_ax)
 
@@ -372,5 +371,6 @@ def main(name='', end='', end_mon=False):
 
 if __name__ == "__main__":
     start = datetime.now()
+	print start
     main()
     print 'run time =', datetime.now()-start

@@ -129,7 +129,7 @@ def genproc(col, window, config, fixpoint, realtime=False, comp_vel=True):
     monitoring = monitoring.loc[monitoring.id <= col.nos]
     
     invalid_nodes = q.GetNodeStatus(1)
-    invalid_nodes[invalid_nodes.site == col.name]['node'].values
+    invalid_nodes = invalid_nodes[invalid_nodes.site == col.name]['node'].values
     monitoring = monitoring.loc[~monitoring.id.isin(invalid_nodes)]
     
     #assigns timestamps from LGD to be timestamp of offsetstart
