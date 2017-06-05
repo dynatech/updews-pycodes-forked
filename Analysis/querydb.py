@@ -246,7 +246,7 @@ def get_coords_list():
         # make a sensor list of columnArray class functions
         sensors = []
         for s in range(len(df)):
-            s = coordsArray(df.name[s],df.lat[s],df.lon[s],df.barangay[s])
+            s = CoordsArray(df.name[s],df.lat[s],df.lon[s],df.barangay[s])
             sensors.append(s)
             
         return sensors
@@ -256,7 +256,7 @@ def get_coords_list():
 #logger_array_list():
 #    transforms dataframe TSMdf to list of loggerArray
 def logger_array_list(TSMdf):
-    return loggerArray(TSMdf['site_id'].values[0], TSMdf['tsm_id'].values[0], TSMdf['tsm_name'].values[0], TSMdf['number_of_segments'].values[0], TSMdf['segment_length'].values[0])
+    return LoggerArray(TSMdf['site_id'].values[0], TSMdf['tsm_id'].values[0], TSMdf['tsm_name'].values[0], TSMdf['number_of_segments'].values[0], TSMdf['segment_length'].values[0])
 
 #get_tsm_list():
 #    returns a list of loggerArray objects from the database tables
