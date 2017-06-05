@@ -37,7 +37,7 @@ DotProductThreshold = 0.09
 OutputFilePath = /Documents/MonitoringOutput/
 RainfallPlotsPath = /Documents/MonitoringOutput/RainfallPlots/
 GrndMeasPlotsPath = /Documents/MonitoringOutput/GrndMeasPlots/
-EQPlotsPath = /Documents/MonitoringOutput/EQPlots/
+eq_plots_path = /Documents/MonitoringOutput/EQPlots/
 
 #############################
 ###    ALERT CONSTANTS    ###
