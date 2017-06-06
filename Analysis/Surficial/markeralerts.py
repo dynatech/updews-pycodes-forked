@@ -149,7 +149,7 @@ def get_surficial_data(site_id,ts,num_pts):
         Dataframe containing surficial data with columns [ts, marker_id, measurement]
     """
     query = "SELECT ts, md1.marker_id, md1.measurement, COUNT(*) num FROM marker_data md1 JOIN marker_data md2 ON md1.mo_id <= md2.mo_id AND md1.marker_id = md2.marker_id AND md1.marker_id in (SELECT marker_id FROM marker_data INNER JOIN marker_observations ON marker_data.mo_id = marker_observations.mo_id AND ts = (SELECT max(ts) FROM marker_observations WHERE site_id = {} AND ts <= '{}')) INNER JOIN marker_observations ON marker_observations.mo_id = md1.mo_id AND ts <= '{}' GROUP BY md1.marker_id, md1.mo_id HAVING COUNT(*) <= {} ORDER by ts desc".format(site_id,ts,ts,num_pts)
-    return qdb.get_db_data_frame(query)
+    return qdb.get_db_dataframe(query)
 
 def get_surficial_data_window(site_id,ts_start,ts_end):
     """
@@ -170,7 +170,7 @@ def get_surficial_data_window(site_id,ts_start,ts_end):
         Dataframe containing surficial data with columns [ts, marker_id, measurement]
     """
     query = "SELECT ts, marker_id, measurement FROM marker_data INNER JOIN marker_observations ON marker_observations.mo_id = marker_data.mo_id AND ts <= '{}' AND ts >= '{}' AND marker_id in (SELECT marker_id FROM marker_data INNER JOIN marker_observations ON marker_data.mo_id = marker_observations.mo_id WHERE ts = (SELECT max(ts) FROM marker_observations WHERE site_id = {} AND ts <= '{}')) ORDER by ts DESC".format(ts_end,ts_start,site_id,ts_end)
-    return qdb.get_db_data_frame(query)
+    return qdb.get_db_dataframe(query)
 
 def get_marker_details(marker_id):
     """
@@ -729,7 +729,7 @@ def evaluate_marker_alerts(marker_data_df,ts):
     
 #def marker_translation():
 #    query = "SELECT markers.marker_id, marker_name FROM markers INNER JOIN marker_history ON marker_history.marker_id = markers.marker_id INNER JOIN marker_names ON marker_history.history_id = marker_names.history_id WHERE markers.site_id = 27"
-#    df = q.get_db_data_frame(query)
+#    df = q.get_db_dataframe(query)
 #    df['marker_name'] = df.marker_name.apply(lambda x:x[:1])
 #    df.replace(to_replace = {'marker_name':{'C':81,'B':82,'E':83,'D':84}},inplace = True)
 #    df.set_index('marker_id',inplace = True)
@@ -757,7 +757,7 @@ def get_trigger_sym_id(alert_level):
     """
     #### query the translation table from operational_trigger_symbols table
     query = "SELECT trigger_sym_id,alert_level FROM operational_trigger_symbols WHERE trigger_source = 'surficial'"
-    translation_table = qdb.get_db_data_frame(query).set_index('alert_level').to_dict()['trigger_sym_id']
+    translation_table = qdb.get_db_dataframe(query).set_index('alert_level').to_dict()['trigger_sym_id']
     return translation_table[alert_level]
     
 def get_surficial_alert(marker_alerts,site_id):
