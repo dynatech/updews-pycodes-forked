@@ -13,26 +13,26 @@ import memcache
 # print s.misc.debug
 
 
-cfgfiletxt = 'senslope-server-config.txt'
+cfgfiletxt = 'server_config.txt'
 cfile = os.path.dirname(os.path.realpath(__file__)) + '/' + cfgfiletxt
     
-def readCfgFile():
+def read_cfg_file():
     cfg = ConfigParser.ConfigParser()
     cfg.read(cfile)
     return cfg
 
-def saveConfigChanges(cfg):
+def save_cfg_changes(cfg):
     with open(cfile, 'wb') as c:
         cfg.write(c)
 
 class Container(object):
 	pass
 
-class dewslserverconfig:
+class dewsl_server_config:
 	def __init__(self):
 		self.version = 1
 
-		cfg = readCfgFile()
+		cfg = read_cfg_file()
 
 		self.config = dict()  
 
@@ -63,7 +63,7 @@ class dewslserverconfig:
 class config:
 	def __init__(self):
 
-		cfg = readCfgFile()            
+		cfg = read_cfg_file()            
 		self.cfg = cfg
 
 		self.dbhost = dict()
@@ -135,7 +135,7 @@ def main():
 	mc = memcache.Client(['127.0.0.1:11211'],debug=0)
 	
 	# new server config
-	c = dewslserverconfig()
+	c = dewsl_server_config()
 	mc.set("server_config",c.config)
 	# print c.config['gsmdb']['username']
 

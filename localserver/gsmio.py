@@ -1,7 +1,7 @@
 import serial, datetime, ConfigParser, time, re
 from datetime import datetime as dt
 from datetime import timedelta as td
-import senslopedbio as dbio 
+import serverdbio as dbio 
 from messaging.sms import SmsDeliver as smsdeliver
 from messaging.sms import SmsSubmit as smssubmit
 import cfgfileio as cfg
@@ -27,23 +27,23 @@ class sms:
 class CustomGSMResetException(Exception):
     pass
 
-def powerGsm(mode):
+def power_gsm(mode):
     GPIO.output(cfg.config().gsmio.resetpin, mode)
     print 'done'
     
-def resetGsm():
+def reset_gsm():
     print ">> Resetting GSM Module ...",
     try:
-        powerGsm(False)
+        power_gsm(False)
         time.sleep(2)
-        powerGsm(True)
+        power_gsm(True)
         print 'done'
     except ImportError:
         return
        
-def gsmInit(network):
+def init_gsm(network):
     global gsm
-    powerGsm(True)
+    power_gsm(True)
     gsm = serial.Serial()
     c = cfg.config()
     if network.lower() == 'globe':
@@ -59,38 +59,38 @@ def gsmInit(network):
     if(gsm.isOpen() == False):
         gsm.open()
     
-    #gsmflush()
+    #flush_gsm()
     for i in range(0,4):
         gsm.write('AT\r\n')
         time.sleep(1)
-    print 'Switching to no-echo mode', gsmcmd('ATE0').strip('\r\n')
-    print 'Switching to PDU mode', gsmcmd('AT+CMGF=0').rstrip('\r\n')
-    print 'Disabling unsolicited CMTI', gsmcmd('AT+CNMI=2,0,0,0,0').rstrip('\r\n')
+    print 'Switching to no-echo mode', gsm_cmd('ATE0').strip('\r\n')
+    print 'Switching to PDU mode', gsm_cmd('AT+CMGF=0').rstrip('\r\n')
+    print 'Disabling unsolicited CMTI', gsm_cmd('AT+CNMI=2,0,0,0,0').rstrip('\r\n')
 
     return gsm
     
-def gsmflush():
+def flush_gsm():
     """Removes any pending inputs from the GSM modem and checks if it is alive."""
     try:
         gsm.flushInput()
         gsm.flushOutput()
         ghost = gsm.read(gsm.inWaiting())
-        stat = gsmcmd('\x1a\rAT\r')    
+        stat = gsm_cmd('\x1a\rAT\r')    
         while('E' in stat):
             gsm.flushInput()
             gsm.flushOutput()
             ghost = gsm.read(gsm.inWaiting())
-            stat = gsmcmd('\x1a\rAT\r')
+            stat = gsm_cmd('\x1a\rAT\r')
     except serial.SerialException:
-        print "NO SERIAL COMMUNICATION (gsmflush)"
+        print "NO SERIAL COMMUNICATION (flush_gsm)"
         sys.exit()
         # RunSenslopeServer(gsm_network)
 
-def gsmcmd(cmd):
+def gsm_cmd(cmd):
     """
     Sends a command 'cmd' to GSM Module
     Returns the reply of the module
-    Usage: str = gsmcmd()
+    Usage: str = gsm_cmd()
     """
     global gsm
 
@@ -113,14 +113,14 @@ def gsmcmd(cmd):
             raise CustomGSMResetException(">> Raising exception to reset code from GSM module reset")
         return a
     except serial.SerialException:
-        print "NO SERIAL COMMUNICATION (gsmcmd)"
+        print "NO SERIAL COMMUNICATION (gsm_cmd)"
         # RunSenslopeServer(gsm_network)
 
-def sendMsg(msg, number, simulate=False):
+def send_msg(msg, number, simulate=False):
     """
     Sends a command 'cmd' to GSM Module
     Returns the reply of the module
-    Usage: str = gsmcmd()
+    Usage: str = gsm_cmd()
     """
     # under development
     # return
@@ -181,27 +181,27 @@ def sendMsg(msg, number, simulate=False):
                 
                 
         except serial.SerialException:
-            print "NO SERIAL COMMUNICATION (sendmsg)"
+            print "NO SERIAL COMMUNICATION (send_msg)"
             RunSenslopeServer(gsm_network)  
 
     return 0
         
-def logError(log):
+def log_error(log):
     nowdate = dt.today().strftime("%A, %B %d, %Y, %X")
     f = open("errorLog.txt","a")
     f.write(nowdate+','+log.replace('\r','%').replace('\n','%') + '\n')
     f.close()
     
 
-def countmsg():
+def count_msg():
     """
     Gets the # of SMS messages stored in GSM modem.
-    Usage: c = countmsg()
+    Usage: c = count_msg()
     """
     while True:
         b = ''
         c = ''
-        b = gsmcmd('AT+CPMS?')
+        b = gsm_cmd('AT+CPMS?')
         
         try:
             c = int( b.split(',')[1] )
@@ -209,7 +209,7 @@ def countmsg():
             return c
         except IndexError:
             print 'count_msg b = ',b
-            # logError(b)
+            # log_error(b)
             if b:
                 return 0                
             else:
@@ -220,11 +220,11 @@ def countmsg():
             print '>> ValueError:'
             print b
             print '>> Retryring message reading'
-            # logError(b)
+            # log_error(b)
             # return -2   
 
-def getAllSms(network):
-    allmsgs = 'd' + gsmcmd('AT+CMGL=4')
+def get_all_sms(network):
+    allmsgs = 'd' + gsm_cmd('AT+CMGL=4')
     # print allmsgs.replace('\r','@').replace('\n','$')
     # allmsgs = allmsgs.replace("\r\nOK\r\n",'').split("+CMGL")[1:]
 
@@ -246,7 +246,7 @@ def getAllSms(network):
         except AttributeError:
             # particular msg may be some extra strip of string 
             print ">> Error: cannot find pdu text", msg
-            # logError("wrong construction\n"+msg[0])
+            # log_error("wrong construction\n"+msg[0])
             continue
 
         # print pdu
@@ -258,7 +258,7 @@ def getAllSms(network):
         except AttributeError:
             # particular msg may be some extra strip of string 
             print ">> Error: message may not have correct construction", msg
-            # logError("wrong construction\n"+msg[0])
+            # log_error("wrong construction\n"+msg[0])
             continue
         
         # try:
@@ -306,5 +306,5 @@ if __name__ == '__main__':
 
     if args.reset_gsm:
         print "> Resetting GSM module"
-        resetGsm()
+        reset_gsm()
         

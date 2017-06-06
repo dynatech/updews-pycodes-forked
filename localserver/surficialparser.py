@@ -2,13 +2,12 @@ import re, sys
 from datetime import datetime as dt
 import cfgfileio as cfg
 import subprocess, time
-import senslopedbio as dbio
+import serverdbio as dbio
 import pandas as pd
 import memcache
-import senslopedbio as dbio
 mc = memcache.Client(['127.0.0.1:11211'],debug=0)
 
-def parseSurficialSms(text):
+def parse_surficial_text(text):
     c = cfg.config()
     print '\n\n*******************************************************'  
     print text
@@ -34,13 +33,13 @@ def parseSurficialSms(text):
     data_field = re.split(" ",cleanText,maxsplit=2)[2]
     
     try:
-        date_str = getDateFromSms(data_field)
+        date_str = get_date_from_sms(data_field)
         print "Date: " + date_str
     except IndexError:
         raise ValueError(c.reply.faildateen)
       
     try:
-        time_str = getTimeFromSms(data_field)
+        time_str = get_time_from_sms(data_field)
         print "Time: " + time_str
     except ValueError:
         raise ValueError(c.reply.failtimeen)
@@ -122,7 +121,7 @@ def parseSurficialSms(text):
 
     return obv
 
-def getTimeFromSms(text):
+def get_time_from_sms(text):
   # timetxt = ""
     hm = "\d{1,2}"
     sep = " *:+ *"
@@ -161,7 +160,7 @@ def getTimeFromSms(text):
     return time_str
 
         
-def getDateFromSms(text):
+def get_date_from_sms(text):
   # timetxt = ""
     mon_re1 = "[JFMASOND][AEPUCO][NBRYLGTVCP]"
     mon_re2 = "[A-Z]{4,9}"
@@ -194,7 +193,7 @@ def getDateFromSms(text):
         raise ValueError          
     return date_str
 
-def GetSiteID(code):
+def get_site_id(code):
     db, cur = dbio.SenslopeDBConnect('local') 
     
     if (code == 'MAN'):
@@ -217,7 +216,7 @@ def GetSiteID(code):
         print "ERROR in sites database"
         db.close()
 
-def GetMarkerID(site_id,marker_name):
+def get_marker_id(site_id,marker_name):
 
     db, cur = dbio.SenslopeDBConnect('local') 
     
@@ -235,7 +234,7 @@ def GetMarkerID(site_id,marker_name):
         marker_id = 0
         return marker_id
 
-def InsertNewMarkers(site_id, marker_name, ts):
+def insert_new_markers(site_id, marker_name, ts):
     db, cur = dbio.SenslopeDBConnect() 
     # query = 'INSERT INTO markers (site_id) VALUES ({})'.format(site_id)
     # print query
@@ -254,7 +253,7 @@ def InsertNewMarkers(site_id, marker_name, ts):
 
     return marker_id
 
-def UpdateSurficialObservations(obv):
+def update_surficial_observations(obv):
     
     db, cur = dbio.SenslopeDBConnect('local') 
 
@@ -276,16 +275,16 @@ def UpdateSurficialObservations(obv):
 
     return mo_id
 
-def UpdateSurficialData(obv, mo_id):
+def update_surficial_data(obv, mo_id):
     db, cur = dbio.SenslopeDBConnect('local') 
 
     data_records = obv['data_records']
 
     for marker_name in data_records.keys():
-        marker_id = GetMarkerID(obv['site_id'], marker_name)
+        marker_id = get_marker_id(obv['site_id'], marker_name)
         if marker_id == 0:
             print "Inserting new marker ID"
-            marker_id = InsertNewMarkers(obv['site_id'], marker_name, obv['ts'])   
+            marker_id = insert_new_markers(obv['site_id'], marker_name, obv['ts'])   
 
         query= 'INSERT INTO marker_data(marker_id,measurement,mo_id) '\
         'VALUES({},{},{}) ON DUPLICATE KEY UPDATE MEASUREMENT = {}'.format(marker_id, data_records[marker_name], mo_id, data_records[marker_name])

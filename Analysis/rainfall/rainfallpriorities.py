@@ -12,7 +12,7 @@ del path
 
 import querydb as qdb
 
-def SiteCoord():
+def all_site_coord():
     query = "select site_id, latitude, longitude from loggers"
     df = qdb.get_db_dataframe(query)
     df = df.dropna()
@@ -20,7 +20,7 @@ def SiteCoord():
     df = df.sort_values('site_id')
     return df
     
-def AllRGCoord():
+def all_rg_coord():
     query = "SELECT * FROM rainfall_gauges where gauge_name not like 'mes'"
     query += " and (date_deactivated >= '2017-05-10' or date_deactivated is null)"
     df = qdb.get_db_dataframe(query)
@@ -49,7 +49,7 @@ def create_rainfall_priorities():
     
     qdb.execute_query(query)
 
-def to_MySQL(df, engine):
+def to_mysql(df, engine):
     site_id = df['site_id'].values[0]
     rain_id = df['rain_id'].values[0]
     query = "SELECT EXISTS(SELECT * FROM rainfall_priorities"
@@ -89,8 +89,8 @@ def Distance(site_coord, rg_coord):
     return nearest_rg
 
 def main():
-    coord = SiteCoord()
-    rg_coord = AllRGCoord()
+    coord = all_site_coord()
+    rg_coord = all_rg_coord()
     site_coord = coord.groupby('site_id')
     nearest_rg = site_coord.apply(Distance, rg_coord=rg_coord)
     nearest_rg['distance'] = np.round(nearest_rg.distance,2)
@@ -103,7 +103,7 @@ def main():
     nearest_rg = nearest_rg.reset_index(drop=True)
     nearest_rg['priority_id'] = range(len(nearest_rg))
     site_nearest_rg = nearest_rg.groupby('priority_id')
-    site_nearest_rg.apply(to_MySQL, engine=engine)
+    site_nearest_rg.apply(to_mysql, engine=engine)
 
     return nearest_rg
     

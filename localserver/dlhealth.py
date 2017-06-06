@@ -2,10 +2,9 @@ import os,time,serial,re,sys,traceback
 import MySQLdb, subprocess
 from datetime import datetime as dt
 from datetime import timedelta as td
-import senslopedbio as dbio
-import groundMeasurements as gndmeas
-import SomsServerParser as SSP
-import senslopeServer as server
+import severdbio as dbio
+import somsparser as SSP
+import mainserver as server
 import cfgfileio as cfg
 import argparse
 import queryserverinfo as qsi
@@ -31,10 +30,10 @@ globaldf= pd.DataFrame()
 
 c = cfg.config()
 
-def readDataframe():
+def read_dataframe():
     
     localdf=0
-    db, cur = dbio.SenslopeDBConnect('local')
+    db, cur = dbio.db_connect('local')
     
     query= '''SELECT DISTINCT logger_health.health_id, ltr.logger_id, health, battery, signal_strength, ibx_errors, data_presence, network, logger_name, model_id, ts \
         from (select logger_health.health_id from logger_health where health_id IN (select max(logger_health.health_id) from logger_health group by logger_id)) a \
@@ -56,9 +55,9 @@ def readDataframe():
 
     return localdf
 
-def dataPresence(): 
+def data_presence(): 
     global globaldf
-    globaldf= readDataframe() 
+    globaldf= read_dataframe() 
     print globaldf
     timeNow= dt.today()
     print len(globaldf)
@@ -74,16 +73,16 @@ def dataPresence():
             else:
                 lgr_name = "tilt_"+ lgr_name
 
-            res= checkLastData(lgr_name)
+            res= check_last_data(lgr_name)
 
             if (res != None):
-                encodeCase(timeNow, logger_id, res)
+                encode_case(timeNow, logger_id, res)
             else: 
-                encodeCase(timeNow, logger_id, 4)
-    globaldf= readDataframe() 
+                encode_case(timeNow, logger_id, 4)
+    globaldf= read_dataframe() 
 
-def checkLastData(lgr_name):
-    db, cur = dbio.SenslopeDBConnect('local')
+def check_last_data(lgr_name):
+    db, cur = dbio.db_connect('local')
     query = "SELECT ts FROM " + lgr_name + " order by data_id desc limit 1"
     print query
     timeNow= dt.today()
@@ -147,9 +146,9 @@ def loggerHealth():
                    
         # globaldf.set_value(i, 'case', health)     
 
-def ibxErrors(): #okay
+def check_ibx_errors(): #okay
     global globaldf
-    db, cur = dbio.SenslopeDBConnect('local')
+    db, cur = dbio.db_connect('local')
 
     # <baka may mali sa pag query dito: hindi kapareho ng sa logger sa labas query>
     print globaldf
@@ -204,10 +203,10 @@ def ibxErrors(): #okay
 
     db.close()
         
-def storehealthData(): #---------------------same lang naman dapat to---------------------------------------------
+def store_health_data(): #---------------------same lang naman dapat to---------------------------------------------
     global globaldf 
 
-    db, cur = dbio.SenslopeDBConnect('local')    
+    db, cur = dbio.db_connect('local')    
     columns= ['logger_id','batv1', 'batv2', 'signal', 'model']
     siteHealthdf = pd.DataFrame(columns=columns)
 
@@ -249,7 +248,7 @@ def storehealthData(): #---------------------same lang naman dapat to-----------
             siteHealthdf.set_value(i, 'logger_id', logger_id)
     return siteHealthdf
 
-def healthCaseGenerator(siteHealthdf):
+def generate_health_case(siteHealthdf):
     global globaldf
     print siteHealthdf  
 
@@ -311,15 +310,15 @@ def healthCaseGenerator(siteHealthdf):
             print ""  
     # return 0
     print globaldf
-    encodeDataFrame()
+    encode_dataframe()
 
-def gsmStatus(): #ibaaaaang approach
+def gsm_status(): #ibaaaaang approach
     timeNow= dt.today()
-    lgrdf= readDataframe()
+    lgrdf= read_dataframe()
 
     # global lgrdf 
     
-    gsmio.gsmInit('call')
+    gsmio.init_gsm('call')
     for i in range (0,len(lgrdf)):
         if (lgrdf.health_case.loc[i] == 4): #3 na yung chinecheck
             s_number= str(lgrdf.sim_num.loc[i])
@@ -333,7 +332,7 @@ def gsmStatus(): #ibaaaaang approach
                 print health
             else:
 
-                q= gsmio.callSite(s_number).replace("\r\n","")        
+                q= gsmio.call_site(s_number).replace("\r\n","")        
                 if (q== "NO CARRIER"):
                     health= 31
                 elif (q== "BUSY" ):
@@ -345,13 +344,13 @@ def gsmStatus(): #ibaaaaang approach
                 else:
                     health= 4
             lgrdf.set_value(i, 'health_case', health)  
-            encodeCase(timeNow, s_id, health)
+            encode_case(timeNow, s_id, health)
 
 
 
 
 def checkLastV1soms(lgr_name):
-    db, cur = dbio.SenslopeDBConnect('local')
+    db, cur = dbio.db_connect('local')
     query = """select timestamp, mvalue from """ + lgr_name + """ order by timestamp desc limit 1 """
     
     timeNow= dt.today()
@@ -379,8 +378,8 @@ def checkLastV1soms(lgr_name):
         return 50  
     db.close()
 
-def encodeCase(timestamp, logger_id, case): #may provision kung data_presence lang ba o health na
-    db, cur = dbio.SenslopeDBConnect('local')
+def encode_case(timestamp, logger_id, case): #may provision kung data_presence lang ba o health na
+    db, cur = dbio.db_connect('local')
     query = '''SELECT * from logger_health where logger_id = ''' + str(logger_id) + ''' order by health_id desc limit 1'''
     
     casedf = psql.read_sql(query,db)
@@ -400,12 +399,12 @@ def encodeCase(timestamp, logger_id, case): #may provision kung data_presence la
         query = """UPDATE logger_health SET ts_updated ='""" +str(timestamp)+ """' WHERE health_id=""" + prevCaseId
     else:
         query = "INSERT into logger_health (data_presence, logger_id, ts_initial, ts_updated, battery, health, signal_strength, network, ibx_errors) values ('%d','%d','%s', '%s', '%s', '%s', '%s', '%s', '%s')" %(case, logger_id, timestamp, timestamp, str(casedf.battery.loc[0]), str(casedf.health.loc[0]), str(casedf.signal_strength.loc[0]), str(casedf.network.loc[0]), str(casedf.ibx_errors.loc[0])) 
-    dbio.commitToDb(query, 'logger_health')
+    dbio.commit_to_db(query, 'logger_health')
     # except ValueError, e:
     #         query = "INSERT into logger_health (data_presence, logger_id, ts_initial, ts_updated) values (6,'%d','%s', '%s')" %( logger_id, timestamp, timestamp)
 
-def updatedeadSites():
-    db, cur = dbio.SenslopeDBConnect('local') 
+def update_dead_sites():
+    db, cur = dbio.db_connect('local') 
     
     query= "SELECT logger_id FROM senslopedb.loggers where date_deactivated IS NOT NULL"
     lgrdf = psql.read_sql(query,db)
@@ -415,9 +414,9 @@ def updatedeadSites():
     for i in range (0, len(lgrdf)):    
         logger_id= str(lgrdf.logger_id.loc[i])
         health= 5
-        encodeCase(timeNow, lgrdf.logger_id.loc[i], health)
+        encode_case(timeNow, lgrdf.logger_id.loc[i], health)
 
-def printloggerStatus():
+def print_logger_status():
     # {yung mga nasa logger}
 
     globaldf.sort_values(['name'], ascending=[True],inplace = True)
@@ -485,7 +484,7 @@ def printloggerStatus():
         print line
     f.close
 
-def encodeDataFrame():
+def encode_dataframe():
     timeNow= dt.today()
     global globaldf
 
@@ -497,10 +496,10 @@ def encodeDataFrame():
         h_id= globaldf.health_id.loc[i]
 
         query= 'UPDATE logger_health SET ts_updated = "{}" , health= {}, battery = {}, signal_strength={}, ibx_errors= {} where health_id = {}'.format(timeNow, he, batt, sig, ibx, h_id)
-        dbio.commitToDb(query, 'logger_health')
+        dbio.commit_to_db(query, 'logger_health')
         print "dbio commit to query"
 
-def updateCSV():
+def update_csv():
     global globaldf
     # mondir= c.fileio.monitoringoutputdir
     mondir =  "/home/dewsl/zheyserver/"
@@ -518,12 +517,12 @@ def updateCSV():
     # with open('test.json', 'w') as f:
     #     json.dump(rows, f)
 
-def activeRain():
+def check_active_rain():
     #rain_tsm
     
     raindf=0
     
-    db, cur = dbio.SenslopeDBConnect('local')
+    db, cur = dbio.db_connect('local')
     query= '''SELECT name, loggers.model_id from loggers inner join (select model_id from logger_models where has_rain =1) a on a.model_id= loggers.model_id'''
     try:
         raindf = psql.read_sql(query,db)
@@ -540,14 +539,14 @@ def activeRain():
         else:
             lgr_name= lgr_name + 'w'
         
-        res= checkLastActive(lgr_name)
+        res= check_last_active(lgr_name)
 
         raindf.set_value(i, 'model_id', res)    
     return raindf
 
 def activeSoms():
     somsdf=0
-    db, cur = dbio.SenslopeDBConnect('local')
+    db, cur = dbio.db_connect('local')
     query= '''SELECT version, name, loggers.model_id from loggers inner join (select model_id from logger_models where has_soms =1) a on a.model_id= loggers.model_id  inner join (select column_id, version from columns) b on loggers.column_id = b.column_id'''
     
     try:
@@ -559,7 +558,7 @@ def activeSoms():
         lgr_name= str (somsdf.name.loc[i])
         if (somsdf.version.loc[i] != 1):
             lgr_name= lgr_name + 'm'
-            res= checkLastActive(lgr_name)
+            res= check_last_active(lgr_name)
         else:
             print lgr_name
             res= checkLastV1soms(lgr_name)
@@ -567,9 +566,9 @@ def activeSoms():
         somsdf.set_value(i, 'model_id', res)  
     return somsdf
 
-def activePiezo():
+def check_active_piezo():
     piezodf=0
-    db, cur = dbio.SenslopeDBConnect('local')
+    db, cur = dbio.db_connect('local')
     query= '''SELECT name, loggers.model_id from loggers inner join (select model_id from logger_models where has_piezo =1) a on a.model_id= loggers.model_id'''
     
     try:
@@ -580,21 +579,21 @@ def activePiezo():
     for i in range (0, len(piezodf)):
         lgr_name= str (piezodf.name.loc[i])
         lgr_name= lgr_name + 'pz'
-        res= checkLastActive(lgr_name)
+        res= check_last_active(lgr_name)
         if (res == 50):
             lgr_name= lgr_name + 'pz'  
-            res= checkLastActive(lgr_name)
+            res= check_last_active(lgr_name)
             
         piezodf.set_value(i, 'model_id', res)    
    
     return piezodf
 
 
-def printotherStatus():
+def print_other_status():
     timeNow =  dt.today()
     
-    raindf= activeRain()
-    pzdf= activePiezo()
+    raindf= check_active_rain()
+    pzdf= check_active_piezo()
     somsdf = activeSoms()
 
     raindf.sort_values(['name'], ascending=[True],inplace = True)
@@ -614,18 +613,18 @@ def printotherStatus():
     f.write("Status update for: ")
     f.write(str(timeNow))
     f.write("\n\n")
-    writeStatus(f, "Rain", raindf)
+    write_status(f, "Rain", raindf)
     f.write("\n\n")
-    writeStatus(f, "Piezo", pzdf) 
+    write_status(f, "Piezo", pzdf) 
     f.write("\n\n")
-    writeStatus(f, "Soil Moisture", somsdf) 
+    write_status(f, "Soil Moisture", somsdf) 
     
 
     f = open(mondir+"otherSensors_health.txt", "r");
     for line in f.readlines():
         print line
 
-def writeStatus(f, sensortype, df):
+def write_status(f, sensortype, df):
 
     f.write("----------     ")
     f.write(str(sensortype))
@@ -669,10 +668,10 @@ def writeStatus(f, sensortype, df):
 
     f.write("\n\n")
 
-def manualChange():
+def manual_change():
     logger = raw_input('Enter logger name: ')
     
-    db, cur = dbio.SenslopeDBConnect('local')
+    db, cur = dbio.db_connect('local')
     query = """SELECT logger_health.logger_id, health_id, health_case from logger_health inner join loggers on logger_health.logger_id= loggers.logger_id where loggers.name= '""" + logger + """' and  logger_health.health_id IN (select max(logger_health.health_id) from logger_health group by logger_id) """
     # print query
     timeNow= dt.today()
@@ -691,7 +690,7 @@ def manualChange():
                 ans= raw_input(que)
                 if (ans == 'y'):         
                     query = """UPDATE logger_health SET ts_updated = '""" +str(timeNow)+ """' , health_case= """ + str(case) + " WHERE health_id= " + str(prevCaseId)
-                    dbio.commitToDb(query, 'logger_health')
+                    dbio.commit_to_db(query, 'logger_health')
                     print "entry updated"
 
             except NameError:
@@ -710,32 +709,32 @@ def main():
     func = sys.argv[1] 
     
     if func == 'loggerstatus':
-        updatedeadSites()
+        update_dead_sites()
         global globaldf
-        globaldf= readDataframe()
+        globaldf= read_dataframe()
         print globaldf 
-        # print ('-----------------------dataPresence()')
+        # print ('-----------------------data_presence()')
         
-        # dataPresence()
+        # data_presence()
         # print ('-----------------------loggerHealth()')
         
         # loggerHealth()
-        print ('-----------------------ibxErrors()')
+        print ('-----------------------check_ibx_errors()')
         
-        ibxErrors()
-        # healthCaseGenerator(storehealthData())  
+        check_ibx_errors()
+        # generate_health_case(store_health_data())  
         # print globaldf
-        # updateCSV()
+        # update_csv()
         # print 'csvUpdate'
 
     elif func == 'checknetstat':
         print 'check net stat'
-        updatedeadSites()
-        gsmStatus()
+        update_dead_sites()
+        gsm_status()
     elif func == 'otherstat':
-        printotherStatus()
+        print_other_status()
     elif func == 'manual':
-        manualChange()
+        manual_change()
     else:
         print '>> Wrong argument'
 

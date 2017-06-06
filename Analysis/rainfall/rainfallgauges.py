@@ -39,7 +39,7 @@ def senslope_rain_gauges():
     df = df.rename(columns = {'logger_name': 'gauge_name'})
     return df
 
-def to_MySQL(df):
+def to_mysql(df):
     gauge_name = df['gauge_name'].values[0]
     query = "SELECT EXISTS(SELECT * FROM rainfall_gauges"
     query += " WHERE gauge_name = '%s')" %gauge_name
@@ -65,7 +65,7 @@ def main():
         senslope = senslope_rain_gauges()
         
         rain_id = senslope.groupby('gauge_name')
-        rain_id.apply(to_MySQL)
+        rain_id.apply(to_mysql)
 
     r = requests.get('http://weather.asti.dost.gov.ph/web-api/index.php/api/devices', auth=('phivolcs.ggrdd', 'PhiVolcs0117'))    
     noah = pd.DataFrame(r.json())
@@ -81,7 +81,7 @@ def main():
     noah = noah[['gauge_name', 'data_source', 'longitude', 'latitude', 'date_activated', 'date_deactivated']]
     
     rain_id = noah.groupby('gauge_name')
-    rain_id.apply(to_MySQL)
+    rain_id.apply(to_mysql)
 
 ################################################################################
 if __name__ == "__main__":

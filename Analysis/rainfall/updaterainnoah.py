@@ -4,7 +4,7 @@ import pandas as pd
 import requests
 import sys
 
-import rainfall as r
+import rainfall as rain
 
 #include the path of "Analysis" folder for the python scripts searching
 path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -15,7 +15,7 @@ del path
 import querydb as qdb
     
 #download the NOAH Rainfall data directly from ASTI
-def downloadRainfallNOAH(noah_id, fdate, tdate):   
+def download_rainfall_noah(noah_id, fdate, tdate):   
     #Reduce latestTS by 1 day as a work around for NOAH's API of returning data
     #   that starts from 8am
     #Reduce by another 1 day due to the "rolling_sum" function
@@ -52,8 +52,8 @@ def downloadRainfallNOAH(noah_id, fdate, tdate):
         return pd.DataFrame()
         
 #insert the newly downloaded data to the database
-def UpdateTableData(noah_id, gauge_name, fdate, tdate, noah_gauges):
-    noahData = downloadRainfallNOAH(noah_id, fdate, tdate)
+def update_table_data(noah_id, gauge_name, fdate, tdate, noah_gauges):
+    noahData = download_rainfall_noah(noah_id, fdate, tdate)
     curTS = datetime.now()
     
     if noahData.empty: 
@@ -71,7 +71,7 @@ def UpdateTableData(noah_id, gauge_name, fdate, tdate, noah_gauges):
             qdb.push_db_dataframe(placeHolderData, gauge_name) 
             
             #call this function again until the maximum recent timestamp is hit        
-            UpdateSingleTable(noah_gauges)
+            update_single_table(noah_gauges)
 
     else:        
         #Insert the new data on the noahid table
@@ -85,7 +85,7 @@ def UpdateTableData(noah_id, gauge_name, fdate, tdate, noah_gauges):
             return         
         else:
             #call this function again until the maximum recent timestamp is hit        
-            UpdateSingleTable(noah_gauges)
+            update_single_table(noah_gauges)
     
 #Create NOAH Table
 def createNOAHTable(gauge_name):
@@ -117,7 +117,7 @@ def GetLatestTimestamp(table_name):
         print "Error in getting maximum timestamp"
         return ''
 
-def UpdateSingleTable(noah_gauges):
+def update_single_table(noah_gauges):
     noah_id = noah_gauges['dev_id'].values[0]
     gauge_name = noah_gauges['gauge_name'].values[0]
     #check if table "rain_noah_" + "noah_id" exists already
@@ -143,15 +143,15 @@ def UpdateSingleTable(noah_gauges):
     print "    End timestamp: %s" % (endTS)
     
     #Download data for noahid
-    UpdateTableData(noah_id, gauge_name, latestTS, endTS, noah_gauges)
+    update_table_data(noah_id, gauge_name, latestTS, endTS, noah_gauges)
 
 def main():
     #get the list of rainfall NOAH rain gauge IDs
-    gauges = r.rainfall_gauges()
+    gauges = rain.rainfall_gauges()
     gauges = gauges[gauges.gauge_name.str.contains('noah')].drop_duplicates('gauge_name')
     gauges['dev_id'] = ','.join(gauges.gauge_name).replace('rain_noah_', '').split(',')
     noah_gauges = gauges.groupby('gauge_name')    
-    noah_gauges.apply(UpdateSingleTable)
+    noah_gauges.apply(update_single_table)
     
 ######################################
 

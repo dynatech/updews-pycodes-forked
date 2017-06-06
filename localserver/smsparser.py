@@ -2,10 +2,9 @@ import os,time,serial,re,sys,traceback
 import MySQLdb, subprocess
 from datetime import datetime as dt
 from datetime import timedelta as td
-import senslopedbio as dbio
-import groundMeasurements as gndmeas
-import SomsServerParser as SSP
-import senslopeServer as server
+import serverdbio as dbio
+import somsparser as ssp
+import mainserver as server
 import cfgfileio as cfg
 import argparse
 import queryserverinfo as qsi
@@ -13,11 +12,11 @@ import lockscript as lock
 import alertmessaging as amsg
 import memcache
 import lockscript
-import gsmSerialio as gsmio
+import gsmio
 import surficialparser as surfp
 mc = memcache.Client(['127.0.0.1:11211'],debug=0)
 
-def updateLastMsgReceivedTable(txtdatetime,name,sim_num,msg):
+def update_last_msg_received_table(txtdatetime,name,sim_num,msg):
     query = """insert into senslopedb.last_msg_received
                 (timestamp,name,sim_num,last_msg)
                 values ('%s','%s','%s','%s')
@@ -26,19 +25,19 @@ def updateLastMsgReceivedTable(txtdatetime,name,sim_num,msg):
                 sim_num = '%s',
                 last_msg = '%s'""" %(txtdatetime,name,sim_num,msg,txtdatetime,sim_num,msg)
                 
-    dbio.commitToDb(query, 'updateLastMsgReceivedTable')
+    dbio.commit_to_db(query, 'update_last_msg_received_table')
     
-def updateSimNumTable(name,sim_num,date_activated):
+def update_sim_num_table(name,sim_num,date_activated):
     return
-    db, cur = dbio.SenslopeDBConnect('local')
+    db, cur = dbio.db_connect('local')
     
     query = """INSERT IGNORE INTO site_column_sim_nums (name,sim_num,date_activated)
                 VALUES ('%s','%s','%s')""" %( name.upper(),sim_num,date_activated)
 
-    dbio.commitToDb(query, 'updateSimNumTable')
+    dbio.commit_to_db(query, 'update_sim_num_table')
 
-def checkNameOfNumber(number):
-    db, cur = dbio.SenslopeDBConnect()
+def check_name_of_number(number):
+    db, cur = dbio.db_connect()
     
     while True:
         try:
@@ -60,7 +59,7 @@ def checkNameOfNumber(number):
             
     db.close()
 
-def twoscomp(hexstr):
+def twos_comp(hexstr):
     # print hexstr
     num = int(hexstr[2:4]+hexstr[0:2],16)
     if len(hexstr) == 4:
@@ -72,7 +71,7 @@ def twoscomp(hexstr):
     else:
         return num
 
-def ProcTwoAccelColData(sms):
+def process_two_accle_col_data(sms):
     msg = sms.data
     sender = sms.simnum
     txtdatetime = sms.dt
@@ -147,7 +146,7 @@ def ProcTwoAccelColData(sms):
     if timestamp == '':
         raise ValueError(">> Error: Unrecognized timestamp pattern " + ts)
 
-    updateSimNumTable(tsm_name,sender,timestamp[:8])
+    update_sim_num_table(tsm_name,sender,timestamp[:8])
 
  # PARTITION the message into n characters
     if dtype == 'Y' or dtype == 'X':
@@ -156,12 +155,12 @@ def ProcTwoAccelColData(sms):
        sd = [datastr[i:i+n] for i in range(0,len(datastr),n)]
     elif dtype == 'B':
         # do parsing for datatype 'B' (SOMS RAW)
-        outl = SSP.somsparser(msg,1,10,0)       
+        outl = ssp.soms_parser(msg,1,10,0)       
         for piece in outl:
             print piece
     elif dtype == 'C':
         # do parsing for datatype 'C' (SOMS CALIB/NORMALIZED)
-        outl = SSP.somsparser(msg,2,7,0)
+        outl = ssp.soms_parser(msg,2,7,0)
         for piece in outl:
             print piece
     else:
@@ -175,9 +174,9 @@ def ProcTwoAccelColData(sms):
                 # print piece
                 ID = int(piece[0:2],16)
                 msgID = int(piece[2:4],16)
-                xd = twoscomp(piece[4:7])
-                yd = twoscomp(piece[7:10])
-                zd = twoscomp(piece[10:13])
+                xd = twos_comp(piece[4:7])
+                yd = twos_comp(piece[7:10])
+                zd = twos_comp(piece[10:13])
                 bd = (int(piece[13:15],16)+200)/100.0
                 line = [tsm_name,timestamp,ID,msgID,xd,yd,zd,bd]
                 print line
@@ -186,11 +185,11 @@ def ProcTwoAccelColData(sms):
                 print ">> Value Error detected.", piece,
                 print "Piece of data to be ignored"
     
-    SpawnAlertGen(tsm_name,timestamp)
+    spawn_alert_gen(tsm_name,timestamp)
 
     return outl
 
-def WriteTwoAccelDataToDb(dlist,msgtime):
+def write_two_accel_data_to_db(dlist,msgtime):
     query = """INSERT IGNORE INTO tilt_%s (ts,node_id,type_num,xval,yval,zval,batt) VALUES """ % (str(dlist[0][0].lower()))
     
     for item in dlist:
@@ -200,9 +199,9 @@ def WriteTwoAccelDataToDb(dlist,msgtime):
     query = query[:-1]
     # print len(query)
     
-    dbio.commitToDb(query, 'WriteTwoAccelDataToDb')
+    dbio.commit_to_db(query, 'write_two_accel_data_to_db')
    
-def WriteSomsDataToDb(dlist,msgtime):
+def write_soms_data_to_db(dlist,msgtime):
     query = """INSERT IGNORE INTO soms_%s (ts,node_id,type_num,mval1,mval2) VALUES """ % (str(dlist[0][0].lower()))
     
     print "site_name", str(dlist[0][0])
@@ -214,9 +213,9 @@ def WriteSomsDataToDb(dlist,msgtime):
     query = query[:-1]
     query = query.replace("nan","NULL")
     
-    dbio.commitToDb(query, 'WriteSomsDataToDb')
+    dbio.commit_to_db(query, 'write_soms_data_to_db')
     
-def PreProcessColumnV1(sms):
+def pre_process_col_v1(sms):
     data = sms.data
     data = data.replace("DUE","")
     data = data.replace(",","*")
@@ -224,7 +223,7 @@ def PreProcessColumnV1(sms):
     data = data[:-2]
     return data
     
-def ProcessColumn(sms):
+def process_column_v1(sms):
     line = sms.data
     txtdatetime = sms.dt
     sender = sms.simnum
@@ -265,7 +264,7 @@ def ProcessColumn(sms):
         print 'Warning: Excess data will be ignored!'
         valid = nodenum*15
         
-    updateSimNumTable(tsm_name,sender,timestamp[:10])
+    update_sim_num_table(tsm_name,sender,timestamp[:10])
         
     query_tilt = """INSERT IGNORE INTO tilt_%s (ts,node_id,xval,yval,zval) VALUES """ % (str(tsm_name.lower()))
     query_soms = """INSERT IGNORE INTO soms_%s (ts,node_id,mval1) VALUES """ % (str(tsm_name.lower()))
@@ -326,12 +325,12 @@ def ProcessColumn(sms):
         # print query
 
         if i!=0:
-        #     # dbio.createTable(str(tsm_name), "sensor v1")
-        #     dbio.commitToDb(query_tilt, 'ProcessColumn')
-            dbio.commitToDb(query_tilt, 'ProcessColumn')
-            dbio.commitToDb(query_soms, 'ProcessColumn')
+        #     # dbio.create_table(str(tsm_name), "sensor v1")
+        #     dbio.commit_to_db(query_tilt, 'process_column_v1')
+            dbio.commit_to_db(query_tilt, 'process_column_v1')
+            dbio.commit_to_db(query_soms, 'process_column_v1')
         
-        SpawnAlertGen(tsm_name,timestamp)
+        spawn_alert_gen(tsm_name,timestamp)
                 
     except KeyboardInterrupt:
         print '\n>>Error: Unknown'
@@ -341,7 +340,7 @@ def ProcessColumn(sms):
         print '\n>>Error: Unknown'
         return
 
-def ProcessPiezometer(sms):    
+def process_piezometer(sms):    
     #msg = message
     line = sms.data
     sender = sms.simnum
@@ -386,7 +385,7 @@ def ProcessPiezometer(sms):
         return      
 
         # try:
-    # dbio.createTable(str(msgname), "piezo")
+    # dbio.create_table(str(msgname), "piezo")
     try:
       query = """INSERT INTO piezo_%s (ts, frequency_shift, temperature ) VALUES ('%s', %s, %s)""" %(msgname,txtdatetime,str(piezodata), str(tempdata))
       # print query
@@ -395,16 +394,16 @@ def ProcessPiezometer(sms):
         print '>> Error writing query string.', 
         return
     
-    dbio.commitToDb(query, 'ProcessPiezometer')
+    dbio.commit_to_db(query, 'process_piezometer')
         
     print 'End of Process Piezometer data'
 
-def ProcessEarthquake(msg):
+def process_earthquake(msg):
     line = msg.data.upper()
     print "Processing earthquake data"
     print line
 
-    # dbio.createTable('earthquake', 'earthquake')
+    # dbio.create_table('earthquake', 'earthquake')
 
     #find date
     if re.search("\d{1,2}\w+201[6789]",line):
@@ -510,7 +509,7 @@ def ProcessEarthquake(msg):
 
     query.replace("'NULL'","NULL")
 
-    dbio.commitToDb(query, 'earthquake')
+    dbio.commit_to_db(query, 'earthquake')
 
     # subprocess.Popen(["python",cfg.config().fileio.eqprocfile])
     # p = subprocess.Popen("python "+cfg.config().fileio.eqprocfile, stdout=subprocess.PIPE, shell=True, stderr=subprocess.STDOUT)
@@ -518,7 +517,7 @@ def ProcessEarthquake(msg):
     return True
 
 
-def ProcessARQWeather(sms):
+def process_arq_weather(sms):
     
     #msg = message
     line = sms.data
@@ -533,7 +532,7 @@ def ProcessARQWeather(sms):
         #table name
         linesplit = line.split('+')
        
-        msgname = checkNameOfNumber(sender).lower()
+        msgname = check_name_of_number(sender).lower()
         if msgname:
             print ">> Number registered as", msgname
             msgname_contact = msgname
@@ -554,7 +553,7 @@ def ProcessARQWeather(sms):
         flashp = linesplit[12]
         txtdatetime = dt.strptime(linesplit[13],'%y%m%d/%H%M%S').strftime('%Y-%m-%d %H:%M:00')
 
-        # updateSimNumTable(msgname_contact,sender,txtdatetime[:8])
+        # update_sim_num_table(msgname_contact,sender,txtdatetime[:8])
             
         
         # print str(r15m),str(r24h),batv1, batv2, current, boostv1, boostv2, charge, csq, temp, hum, flashp,txtdatetime 
@@ -569,7 +568,7 @@ def ProcessARQWeather(sms):
         return
         
     # if msgname:
-    #     dbio.createTable(str(msgname), "arqweather")
+    #     dbio.create_table(str(msgname), "arqweather")
     # else:
     #     print ">> Error: Number does not have station name yet"
     #     return
@@ -582,16 +581,16 @@ def ProcessARQWeather(sms):
         print '>> Error writing query string.', 
         return
 
-    dbio.commitToDb(query, 'ProcessARQWeather')
+    dbio.commit_to_db(query, 'process_arq_weather')
            
     print 'End of Process ARQ weather data'
 
-def checkLoggerModel(logger_name):
+def check_logger_model(logger_name):
     query = "SELECT model_id FROM senslopedb.loggers where logger_name = '%s'" % logger_name
 
-    return dbio.querydatabase(query,'checkloggermodel')[0][0]
+    return dbio.querydatabase(query,'check_logger_model')[0][0]
     
-def ProcessRain(sms):
+def process_rain(sms):
 
     line = sms.data
     sender = sms.simnum
@@ -609,14 +608,14 @@ def ProcessRain(sms):
 
     try:
     
-        logger_name = checkNameOfNumber(sender)
-        logger_model = checkLoggerModel(logger_name)
+        logger_name = check_name_of_number(sender)
+        logger_model = check_logger_model(logger_name)
         print logger_name,logger_model
         if logger_model in [23,24,25,26]:
             msgtable = logger_name
         else:
             msgtable = line.split(",")[0][:-1]+'G'
-        # msgtable = checkNameOfNumber(sender)
+        # msgtable = check_name_of_number(sender)
         msgdatetime = re.search("\d{02}\/\d{02}\/\d{02},\d{02}:\d{02}:\d{02}",line).group(0)
 
         txtdatetime = dt.strptime(msgdatetime,'%m/%d/%y,%H:%M:%S')
@@ -635,9 +634,9 @@ def ProcessRain(sms):
         print '\n>>Error: Weather message format unknown ' + line
         return
         
-    # updateSimNumTable(msgtable,sender,txtdatetime[:10])
+    # update_sim_num_table(msgtable,sender,txtdatetime[:10])
 
-    # dbio.createTable(str(msgtable),"weather")
+    # dbio.create_table(str(msgtable),"weather")
 
     try:
         query = """INSERT INTO rain_%s (ts,rain,csq) VALUES ('%s',%s,%s)""" %(msgtable.lower(),txtdatetime,rain,csq)
@@ -647,14 +646,14 @@ def ProcessRain(sms):
         return
 
     try:
-        dbio.commitToDb(query, 'ProcesRain')
+        dbio.commit_to_db(query, 'ProcesRain')
     except MySQLdb.ProgrammingError:
         # print query[:-2]
-        dbio.commitToDb(query[:-2]+')', 'ProcessRain')
+        dbio.commit_to_db(query[:-2]+')', 'process_rain')
         
     print 'End of Process weather data'
 
-def ProcessStats(msg):
+def process_stats(msg):
 
     print 'Site status: ' + msg.data
     
@@ -692,7 +691,7 @@ def ProcessStats(msg):
         print '\n>>Error: Status message format unknown ' + line
         return
 
-    dbio.createTable(str(msgtable),"stats")
+    dbio.create_table(str(msgtable),"stats")
         
     try:
         query = """INSERT INTO %s (timestamp,site,voltage,chan,att,retVal,msgs,sim,csq,sd)
@@ -703,29 +702,29 @@ def ProcessStats(msg):
         return
 
     
-    dbio.commitToDb(query, 'ProcessStats')
+    dbio.commit_to_db(query, 'process_stats')
         
     print 'End of Process status data'
 
-def CheckMessageSource(msg):
+def check_message_source(msg):
     c = cfg.config()
-    identity = dbio.checkNumberIfExists(msg.simnum,'community')
+    identity = dbio.check_number_if_exists(msg.simnum,'community')
     if identity:
         smsmsg = "From: %s %s of %s\n" % (identity[0][1],identity[0][0],identity[0][2])
         smsmsg += msg.data
-        # server.WriteOutboxMessageToDb(smsmsg,c.smsalert.communitynum)
+        # server.write_outbox_message_to_db(smsmsg,c.smsalert.communitynum)
         return
-    elif dbio.checkNumberIfExists(msg.simnum,'dewsl'):
+    elif dbio.check_number_if_exists(msg.simnum,'dewsl'):
         print ">> From senslope staff"
         return
 
-    name = dbio.checkNumberIfExists(msg.simnum,'sensor')    
+    name = dbio.check_number_if_exists(msg.simnum,'sensor')    
     if name:
         print ">> From sensor", name[0][0]
     else:
         print "From unknown number ", msg.simnum
 
-def SpawnAlertGen(tsm_name, timestamp):
+def spawn_alert_gen(tsm_name, timestamp):
     # spawn alert alert_gens
 
     print "For alertgen.py", tsm_name, timestamp
@@ -762,30 +761,30 @@ def SpawnAlertGen(tsm_name, timestamp):
         mc.set('alertgenlist',[])
         mc.set('alertgenlist',alertgenlist)
 
-def ProcessSurficialObservation(msg):
+def process_surficial_observation(msg):
     c = cfg.config()
     proceed_with_analysis = False
     obv = []
     try:
-        obv = surfp.parseSurficialSms(msg.data)
-        mo_id = surfp.UpdateSurficialObservations(obv)
-        surfp.UpdateSurficialData(obv,mo_id)
-        server.WriteOutboxMessageToDb("READ-SUCCESS: \n" + msg.data,c.smsalert.communitynum,'users')
-        server.WriteOutboxMessageToDb(c.reply.successen, msg.simnum,'users')
+        obv = surfp.parse_surficial_text(msg.data)
+        mo_id = surfp.update_sufricial_obvservations(obv)
+        surfp.update_surficial_data(obv,mo_id)
+        server.write_outbox_message_to_db("READ-SUCCESS: \n" + msg.data,c.smsalert.communitynum,'users')
+        server.write_outbox_message_to_db(c.reply.successen, msg.simnum,'users')
         proceed_with_analysis = True
     except ValueError as e:
         print str(e)
         errortype = re.search("(WEATHER|DATE|TIME|GROUND MEASUREMENTS|NAME)", str(e).upper()).group(0)
         print ">> Error in manual ground measurement SMS", errortype
 
-        server.WriteOutboxMessageToDb("READ-FAIL: (%s)\n%s" % (errortype,msg.data),c.smsalert.communitynum,'users')
-        server.WriteOutboxMessageToDb(str(e), msg.simnum,'users')
+        server.write_outbox_message_to_db("READ-FAIL: (%s)\n%s" % (errortype,msg.data),c.smsalert.communitynum,'users')
+        server.write_outbox_message_to_db(str(e), msg.simnum,'users')
     except KeyError:
         print '>> Error: Possible site code error'
-        server.WriteOutboxMessageToDb("READ-FAIL: (site code)\n%s" % (msg.data),c.smsalert.communitynum,'users')
+        server.write_outbox_message_to_db("READ-FAIL: (site code)\n%s" % (msg.data),c.smsalert.communitynum,'users')
     except:
         # pass
-        server.WriteOutboxMessageToDb("READ-FAIL: (Unhandled) \n" + msg.data,c.smsalert.communitynum,'users')
+        server.write_outbox_message_to_db("READ-FAIL: (Unhandled) \n" + msg.data,c.smsalert.communitynum,'users')
 
     # spawn surficial measurement analysis
     if proceed_with_analysis:
@@ -794,7 +793,7 @@ def ProcessSurficialObservation(msg):
         p = subprocess.Popen(surf_cmd_line, stdout=subprocess.PIPE, shell=True, stderr=subprocess.STDOUT)
 
 
-def ParseAllMessages(args,allmsgs=[]):
+def parse_all_messages(args,allmsgs=[]):
     c = cfg.config()
     read_success_list = []
     read_fail_list = []
@@ -816,59 +815,59 @@ def ParseAllMessages(args,allmsgs=[]):
             # msg.data = msg.data.upper()
             cur_num = msg.num
                          
-            msgname = checkNameOfNumber(msg.simnum)
+            msgname = check_name_of_number(msg.simnum)
             
-            ##### Added for V1 sensors removes unnecessary characters pls see function PreProcessColumnV1(data)
+            ##### Added for V1 sensors removes unnecessary characters pls see function pre_process_col_v1(data)
             if re.search("\*FF",msg.data) or re.search("PZ\*",msg.data):
-                ProcessPiezometer(msg)
+                process_piezometer(msg)
             # elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*\d+T?$",msg.data):
             elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*.*",msg.data):
-               msg.data = PreProcessColumnV1(msg)
-               ProcessColumn(msg)
+               msg.data = pre_process_col_v1(msg)
+               process_column_v1(msg)
             elif re.search("EQINFO",msg.data.upper()):
-                isMsgProcSuccess = ProcessEarthquake(msg)
+                isMsgProcSuccess = process_earthquake(msg)
             elif re.search("^PSIR ",msg.data.upper()):
-                isMsgProcSuccess = qsi.ProcessServerInfoRequest(msg)
+                isMsgProcSuccess = qsi.process_server_info_request(msg)
             elif re.search("^SENDGM ",msg.data.upper()):
-                isMsgProcSuccess = qsi.ServerMessaging(msg)
+                isMsgProcSuccess = qsi.server_messaging(msg)
             elif re.search("^ACK \d+ .+",msg.data.upper()):
-                isMsgProcSuccess = amsg.processAckToAlert(msg)   
+                isMsgProcSuccess = amsg.process_ack_to_alert(msg)   
             elif re.search("^ *(R(O|0)*U*TI*N*E )|(EVE*NT )", msg.data.upper()):
-                ProcessSurficialObservation(msg)                  
+                process_surficial_observation(msg)                  
             elif re.search("^[A-Z]{4,5}\*[xyabcXYABC]\*[A-F0-9]+\*[0-9]+T?$",msg.data):
                 try:
-                    dlist = ProcTwoAccelColData(msg)
+                    dlist = process_two_accle_col_data(msg)
                     if dlist:
                         if len(dlist[0]) < 7:
-                            WriteSomsDataToDb(dlist,msg)
+                            write_soms_data_to_db(dlist,msg)
                         else:
-                            WriteTwoAccelDataToDb(dlist,msg)
+                            write_two_accel_data_to_db(dlist,msg)
                 except IndexError:
                     print "\n\n>> Error: Possible data type error"
                     print msg.data
                 except ValueError:
                     print ">> Value error detected"
             elif re.search("[A-Z]{4}\*[A-F0-9]+\*[0-9]+$",msg.data):
-                #ProcessColumn(msg.data)
-                ProcessColumn(msg)
+                #process_column_v1(msg.data)
+                process_column_v1(msg)
             #check if message is from rain gauge
             # elif re.search("^\w{4},[\d\/:,]+,[\d,\.]+$",msg.data):
             elif re.search("^\w{4},[\d\/:,]+",msg.data):
-                ProcessRain(msg)
+                process_rain(msg)
             elif re.search(r'(\w{4})[-](\d{1,2}[.]\d{02}),(\d{01}),(\d{1,2})/(\d{1,2}),#(\d),(\d),(\d{1,2}),(\d)[*](\d{10})',msg.data):
-                ProcessStats(msg)
+                process_stats(msg)
             elif re.search("ARQ\+[0-9\.\+/\- ]+$",msg.data):
-                ProcessARQWeather(msg)
+                process_arq_weather(msg)
             elif msg.data.split('*')[0] == 'COORDINATOR' or msg.data.split('*')[0] == 'GATEWAY':
-                isMsgProcSuccess = ProcessGatewayMsg(msg)
+                isMsgProcSuccess = process_gateway_msg(msg)
             elif re.search("^MANUAL RESET",msg.data):
-                server.WriteOutboxMessageToDb("SENSORPOLL SENSLOPE", msg.simnum,'loggers')
+                server.write_outbox_message_to_db("SENSORPOLL SENSLOPE", msg.simnum,'loggers')
                 isMsgProcSuccess = True
             else:
                 print '>> Unrecognized message format: '
                 print 'NUM: ' , msg.simnum
                 print 'MSG: ' , msg.data
-                CheckMessageSource(msg)            
+                check_message_source(msg)            
                 isMsgProcSuccess = False
                 
             if isMsgProcSuccess:
@@ -881,50 +880,50 @@ def ParseAllMessages(args,allmsgs=[]):
             # print all the traceback routine so that the error can be traced
             print (traceback.format_exc())
             print ">> Setting message read_status to fatal error"
-            dbio.setReadStatus(cur_num, read_status=-1, table = args.table)
+            dbio.set_read_status(cur_num, read_status=-1, table = args.table)
             continue
         
     return read_success_list, read_fail_list
     
-def RecordGroundMeasurements(gnd_meas):
+def record_surficial_measurements(gnd_meas):
     # print gnd_meas
     
-    # dbio.createTable("gndmeas","gndmeas")
+    # dbio.create_table("gndmeas","gndmeas")
     
     query = "INSERT INTO gndmeas (timestamp, meas_type, site_id, observer_name, crack_id, meas, weather) VALUES " + gnd_meas
     query += "ON DUPLICATE KEY UPDATE meas = values(meas), observer_name = values(observer_name), weather = values(weather);"
     
     # print query
     
-    dbio.commitToDb(query, 'RecordGroundMeasurements')
+    dbio.commit_to_db(query, 'record_surficial_measurements')
 
-def RecordManualWeather(mw_text):
+def record_manual_weather(mw_text):
     # print gnd_meas
     
-    dbio.createTable("manualweather","manualweather")
+    dbio.create_table("manualweather","manualweather")
     
     query = "INSERT IGNORE INTO manualweather (timestamp, meas_type, site_id, observer_name, weatherdesc) VALUES " + mw_text
     
-    dbio.commitToDb(query, 'RecordManualWeather')
+    dbio.commit_to_db(query, 'record_manual_weather')
 
 
-def getRouterIDs():
-    db, cur = dbio.SenslopeDBConnect()
+def get_router_ids():
+    db, cur = dbio.db_connect()
 
     query = "SELECT `logger_id`,`logger_name` from `loggers` where `model_id` in (SELECT `model_id` FROM `logger_models` where `logger_type`='router') and `logger_name` is not null"
 
-    nums = dbio.querydatabase(query,'getRouterIDs')
+    nums = dbio.querydatabase(query,'get_router_ids')
     nums = {key: value for (value, key) in nums}
 
     return nums
         
-def ProcessGatewayMsg(msg):
+def process_gateway_msg(msg):
     print ">> Coordinator message received"
     print msg.data
     
-    # dbio.createTable("coordrssi","coordrssi")
+    # dbio.create_table("coordrssi","coordrssi")
 
-    routers = getRouterIDs()
+    routers = get_router_ids()
     
     msg.data = re.sub("(?<=,)(?=(,|$))","NULL",msg.data)
     
@@ -950,7 +949,7 @@ def ProcessGatewayMsg(msg):
 
             print query
             
-            dbio.commitToDb(query, 'ProcessGatewayMsg')
+            dbio.commit_to_db(query, 'process_gateway_msg')
 
             return True
         else:
@@ -962,7 +961,7 @@ def ProcessGatewayMsg(msg):
     #     print ">> Unknown Error", msg.data
     #     return False
 
-def getArguments():
+def get_arguments():
     parser = argparse.ArgumentParser(description="Run SMS parser\n smsparser [-options]")
     parser.add_argument("-db", "--dbhost", help="host name (check senslope-server-config.txt")
     parser.add_argument("-t", "--table", help="smsinbox table")
@@ -995,12 +994,12 @@ def test():
     msg = gsmio.sms('', '', sms, '')
     
 def main():
-    args = getArguments()
+    args = get_arguments()
 
     if not args.bypasslock:
         lockscript.get_lock('smsparser %s' % args.table)
 
-    # dbio.createTable("runtimelog","runtime")
+    # dbio.create_table("runtimelog","runtime")
     # logRuntimeStatus("procfromdb","startup")
 
     if args.runtest:
@@ -1011,7 +1010,7 @@ def main():
 
     # force backup
     while True:
-        allmsgs = dbio.getAllSmsFromDb(host=args.dbhost,table=args.table,read_status=args.status,limit=args.messagelimit)
+        allmsgs = dbio.get_all_sms_from_db(host=args.dbhost,table=args.table,read_status=args.status,limit=args.messagelimit)
         
         if len(allmsgs) > 0:
             msglist = []
@@ -1020,10 +1019,10 @@ def main():
                 msglist.append(smsItem)
             allmsgs = msglist
 
-            read_success_list, read_fail_list = ParseAllMessages(args,allmsgs)
+            read_success_list, read_fail_list = parse_all_messages(args,allmsgs)
 
-            dbio.setReadStatus(read_success_list, read_status=1,table=args.table)
-            dbio.setReadStatus(read_fail_list, read_status=-1,table=args.table)
+            dbio.set_read_status(read_success_list, read_status=1,table=args.table)
+            dbio.set_read_status(read_fail_list, read_status=-1,table=args.table)
             # sleeptime = 5
         else:
             # server.logRuntimeStatus("procfromdb","alive")

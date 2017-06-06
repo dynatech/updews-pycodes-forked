@@ -17,7 +17,7 @@ temprawlist=[]
 buff=[]
 SOMS=[]
 
-def errorlogs(errortype, line, dt):
+def log_errors(errortype, line, dt):
     error=""
     writefolder=''
     
@@ -32,7 +32,7 @@ def errorlogs(errortype, line, dt):
     text_file.write(error)
     text_file.close()
 
-def somsparser(msgline,mode,div,err):
+def soms_parser(msgline,mode,div,err):
 #    global prevdatetime
     global backupGID
     global tempbuff
@@ -64,7 +64,7 @@ def somsparser(msgline,mode,div,err):
         dt=pd.to_datetime(r[3][:12],format='%y%m%d%H%M%S') #uses datetime from end of msg 
     except:
         dt='0000-00-00 00:00:00'
-        errorlogs(4,msgline,dt)
+        log_errors(4,msgline,dt)
         return rawlist   
    
    #if msgdata is broken (without nodeid at start)   
@@ -72,10 +72,10 @@ def somsparser(msgline,mode,div,err):
         firsttwo = int('0x'+data[:2],base=0)
     except:
         firsttwo = data[:2]
-        errorlogs(10,msgline,dt) 
+        log_errors(10,msgline,dt) 
         
     if firsttwo in nodecommands:        # kapag msgid yung first 2 chars ng msgline
-        errorlogs(2,msgline,dt)
+        log_errors(2,msgline,dt)
             
         if long(r[3][:10])-long(prevdatetime[a])<=10:
             data=backupGID[a]+r[2]
@@ -89,12 +89,12 @@ def somsparser(msgline,mode,div,err):
         try:
             GID=int("0x"+data[i*div:2+div*i],base=0)
         except: #kapag hindi kaya maging int ng gid
-            errorlogs(10, msgline, dt)
+            log_errors(10, msgline, dt)
             continue
         try:    
             CMD = int('0x'+data[2+div*i:4+div*i],base=0)
         except:
-            errorlogs(10, msgline, dt)
+            log_errors(10, msgline, dt)
             continue
         
         if CMD in nodecommands:
@@ -104,45 +104,45 @@ def somsparser(msgline,mode,div,err):
                 try:    
                     rawdata1= int('0x'+ data[6+div*i:7+div*i]+data[4+div*i:6+div*i], base=0)
                 except:
-                    errorlogs(10,msgline,dt)
+                    log_errors(10,msgline,dt)
                     rawdata1=np.nan
         else:
             #print "WRONG DATAMSG:" + msgline +'/n err: '+ str(err)
             if mode == 1: 
                 if err == 0: # err0: 'b' gives calib data
                     if CMD in [112,113,26]:
-                        errorlogs(0, msgline, dt)
-                        return somsparser(msgline,2,7,1)
+                        log_errors(0, msgline, dt)
+                        return soms_parser(msgline,2,7,1)
                     else:
-                        errorlogs(1,msgline,dt)
-                        return somsparser(msgline,1,12,2)   #if CMD cannot be distinguished try 12 chars
+                        log_errors(1,msgline,dt)
+                        return soms_parser(msgline,1,12,2)   #if CMD cannot be distinguished try 12 chars
                 elif err == 1:
-                    errorlogs(1,msgline,dt)
-                    return somsparser(msgline,1,12,2)   # err: if data has 2 extra zeros
+                    log_errors(1,msgline,dt)
+                    return soms_parser(msgline,1,12,2)   # err: if data has 2 extra zeros
                 elif err == 2:
-                    errorlogs(2,msgline,dt)
+                    log_errors(2,msgline,dt)
                     return rawlist
                 else:
-                    errorlogs(3, msgline, dt)
+                    log_errors(3, msgline, dt)
                     return rawlist
 
             if mode == 2:
                 if err == 0: #if c gives raw data
                     if CMD in [110, 111, 21]:
-                        errorlogs(0,msgline,dt)
-                        return somsparser(msgline,1,10,1) #if c gives raw data
+                        log_errors(0,msgline,dt)
+                        return soms_parser(msgline,1,10,1) #if c gives raw data
                     else:
-                        errorlogs(1,msgline,dt)
+                        log_errors(1,msgline,dt)
                         #print "div=6!"
-                        return somsparser(msgline,2,6,2)    #wrong node division
+                        return soms_parser(msgline,2,6,2)    #wrong node division
                 elif err == 1:
-                    errorlogs(1,msgline,dt)
-                    return somsparser(msgline,2,6,2)    #if CMD cannot be distinguished
+                    log_errors(1,msgline,dt)
+                    return soms_parser(msgline,2,6,2)    #if CMD cannot be distinguished
                 elif err == 2:
-                    errorlogs(2,msgline,dt)
+                    log_errors(2,msgline,dt)
                     return rawlist
                 else:
-                    errorlogs(3,msgline,dt)
+                    log_errors(3,msgline,dt)
                     return rawlist
             if mode == 3:
                 return rawlist
@@ -152,7 +152,7 @@ def somsparser(msgline,mode,div,err):
             try:
                 rawdata2= int('0x' + data[9+div*i:10+div*i]+data[7+div*i:9+div*i], base =0)
             except:
-                errorlogs(10,msgline,dt)
+                log_errors(10,msgline,dt)
                 rawdata2=np.nan
 
         rawlist.append([site, str(dt),GID,CMD,rawdata1,rawdata2])
@@ -164,7 +164,7 @@ def somsparser(msgline,mode,div,err):
         backupGID[a]=data[maxnode*div:2+div*maxnode]
         if len(tempbuff[a])>1:
             temprawlist = rawlist
-            buff = somsparser(tempbuff[a],1,10,0)
+            buff = soms_parser(tempbuff[a],1,10,0)
             #print temprawlist+buff
             return temprawlist+buff
             
@@ -187,9 +187,9 @@ def somsparser(msgline,mode,div,err):
 #    line= raw_input('Enter line: ')  
 #     
 #    if '*b*' in line:
-#        SOMS = somsparser(line,1,10,0)
+#        SOMS = soms_parser(line,1,10,0)
 #    if '*c*' in line:
-#        SOMS = somsparser(line,2,7,0)
+#        SOMS = soms_parser(line,2,7,0)
 #
 #    soms=pd.DataFrame.from_records(SOMS,columns=cols)
 #    print(soms)

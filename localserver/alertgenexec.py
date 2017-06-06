@@ -6,7 +6,7 @@ import lockscript, time
 from datetime import datetime as dt
 
 
-def countAlertAnalysisInstances():
+def count_alert_analysis_instances():
 	p = subprocess.Popen("ps ax | grep alertgen.py -c", stdout=subprocess.PIPE, shell=True, stderr=subprocess.STDOUT)
 	out, err = p.communicate()
 	return int(out)
@@ -50,7 +50,7 @@ def main():
 		else:
 			continue
 
-		while countAlertAnalysisInstances() > proc_limit:
+		while count_alert_analysis_instances() > proc_limit:
 			time.sleep(5)
 			print '.',	
 

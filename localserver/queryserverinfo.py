@@ -2,14 +2,14 @@ import os,time,serial,re,sys
 import datetime
 from datetime import datetime as dt
 from datetime import timedelta as td
-import senslopedbio as dbio
-import senslopeServer as server
+import serverdbio as dbio
+import mainserver as server
 import cfgfileio as cfg
 import argparse
 import StringIO
-import gsmSerialio as gsmio
+import gsmio
 
-def getLatestQueryReport():
+def get_latest_query_reportt():
 	c = cfg.config()
 	querylatestreportoutput = c.fileio.queryoutput
 	print querylatestreportoutput
@@ -22,7 +22,7 @@ def getLatestQueryReport():
 	except:
 		return 'ERROR'
 
-def getRuntimeLogs(db='local'):
+def get_runtime_logs(db='local'):
 	if db == 'local':
 		script1 = 'procfro'
 		script2 = 'alert'
@@ -43,35 +43,35 @@ def getRuntimeLogs(db='local'):
 		order by timestamp desc limit 1)
 		""" % (script1,status1,script2,status2)
 
-	return dbio.querydatabase(query,'customquery',db)
+	return dbio.query_database(query,'customquery',db)
 
-def getNumberOfReporter(datedt):
+def get_number_of_reporter(datedt):
 	# today = dt.today()
 
 	query = """select numbers from dewslcontacts 
 		where nickname = (select nickname from servermonsched 
 		where date = '%s')""" % (datedt.strftime("%Y-%m-%d"))
 
-	num = dbio.querydatabase(query,'customquery')[0][0]
+	num = dbio.query_database(query,'customquery')[0][0]
 
 	return num
 
-def getNameofStaff(number):
+def get_name_of_staff(number):
 	query = """select nickname from dewslcontacts 
 		where numbers like '%s%s%s' """ % ('%',number[-7:],'%')
 
 	print query
 
-	name = dbio.querydatabase(query,'customquery')[0][0]
+	name = dbio.query_database(query,'customquery')[0][0]
 
 	return name
 
-def sendStatusUpdates(reporter='scheduled'):
+def send_status_updates(reporter='scheduled'):
 	c = cfg.config()
-	active_loggers_count = getLatestQueryReport()
+	active_loggers_count = get_latest_query_reportt()
 
-	loclogs = getRuntimeLogs('local')
-	gsmlogs = getRuntimeLogs('gsm')
+	loclogs = get_runtime_logs('local')
+	gsmlogs = get_runtime_logs('gsm')
 
 	status_message = "SERVER STATUS UPDATES\n"
 	status_message += "Active loggers: %s\n" % (active_loggers_count)
@@ -84,13 +84,13 @@ def sendStatusUpdates(reporter='scheduled'):
 	print dt.today()
 
 	if reporter == 'scheduled':
-		reportnumber = getNumberOfReporter(dt.today())
-		server.WriteOutboxMessageToDb(status_message,reportnumber)
+		reportnumber = get_number_of_reporter(dt.today())
+		server.write_outbox_message_to_db(status_message,reportnumber)
 	elif int(active_loggers_count) < c.io.active_lgr_limit:
 		print ">> Sending alert sms for server"
-		server.WriteOutboxMessageToDb(status_message,c.smsalert.serveralert)
+		server.write_outbox_message_to_db(status_message,c.smsalert.serveralert)
 
-def getTimeOfDayDescription():
+def get_time_of_day_description():
 	today = dt.today()
 
 	if today.hour < 12:
@@ -100,43 +100,43 @@ def getTimeOfDayDescription():
 	else:
 		return 'evening'
 
-def getNumberOfReporter(datedt):
+def get_number_of_reporter(datedt):
 	# today = dt.today()
 
 	query = """select numbers from dewslcontacts 
 		where nickname = (select nickname from servermonsched 
 		where date = '%s')""" % (datedt.strftime("%Y-%m-%d"))
 
-	num = dbio.querydatabase(query,'customquery')[0][0]
+	num = dbio.query_database(query,'customquery')[0][0]
 
 	return num
 
-def sendServerMonReminder():
+def send_server_mon_reminder():
 	tomorrow = dt.today()+td(hours=24)
-	reportnumber = getNumberOfReporter(tomorrow)
+	reportnumber = get_number_of_reporter(tomorrow)
 
-	reminder_message = "Good %s. This is to remind you that you are assigned" % (getTimeOfDayDescription())
+	reminder_message = "Good %s. This is to remind you that you are assigned" % (get_time_of_day_description())
 	reminder_message += " for server monitoring duties for tomorrow, %s." % (tomorrow.strftime("%A, %B %d"))
 	reminder_message += " As such, you will be receiving regular sms regarding the sever status updates."
 	reminder_message += " Thanks."
-	server.WriteOutboxMessageToDb(reminder_message,reportnumber)
+	server.write_outbox_message_to_db(reminder_message,reportnumber)
 
-def getShifts(datedt):
+def get_shifts(datedt):
 
 	query = """select * from monshiftsched where timestamp < "%s" order by timestamp desc limit 1
 	""" % (datedt.strftime("%Y-%m-%d %H:%M:00"))
 
-	return dbio.querydatabase(query,'customquery')
+	return dbio.query_database(query,'customquery')
 
-def getNumbersFromList(personnel_list):
+def get_numbers_from_list(personnel_list):
 
 	query = """select nickname,numbers from dewslcontacts where nickname in %s""" % (personnel_list)
 
-	return dbio.querydatabase(query,'customquery')
+	return dbio.query_database(query,'customquery')
 
-def sendEventMonitoringReminder():
+def send_event_monitoring_reminder():
 	next_shift = dt.today()+td(hours=13)
-	shifts = getShifts(next_shift)
+	shifts = get_shifts(next_shift)
 	report_dt = shifts[0][1]
 
 	position = ['iompmt','iompct','oomps','oompmt','oompct']
@@ -144,28 +144,28 @@ def sendEventMonitoringReminder():
 	for pos,per in zip(position,shifts[0][2:]):
 		position_dict[per.upper().strip()] = pos
 
-	numbers = getNumbersFromList(str(shifts[0][2:]))
+	numbers = get_numbers_from_list(str(shifts[0][2:]))
 	numbers_dict = {}
 	for nick,num in numbers:
 		numbers_dict[nick.upper().strip()] = num
 
 	for key in position_dict:
-		reminder_message = "Monitoring shift reminder. Good %s %s, " % (getTimeOfDayDescription(),key)
+		reminder_message = "Monitoring shift reminder. Good %s %s, " % (get_time_of_day_description(),key)
 		reminder_message += "you are assigned to be the %s " % (position_dict[key].upper())
 		reminder_message += "for %s." % (report_dt.strftime("%B %d, %I:%M%p"))
 		# print reminder_message
 
-	 	server.WriteOutboxMessageToDb(reminder_message,numbers_dict[key])
+	 	server.write_outbox_message_to_db(reminder_message,numbers_dict[key])
 
 def introduce():
 	query = """select nickname,numbers from dewslcontacts
 			where grouptags not like "%admin" 
 			group by nickname
 			"""
-	print dbio.querydatabase(query,'customquery')
-	return dbio.querydatabase(query,'customquery')
+	print dbio.query_database(query,'customquery')
+	return dbio.query_database(query,'customquery')
 
-def getNonReportingSites():
+def get_non_reporting_sites():
 	c = cfg.config()
 	two_weeks_ago = (dt.today() - td(days=14)).strftime("%Y-%m-%d")
 	query = """ SELECT name FROM `senslopedb`.`site_rain_props` s
@@ -178,7 +178,7 @@ def getNonReportingSites():
 		)
 		""" % (two_weeks_ago)
 		
-	non_rep_sites = dbio.querydatabase(query,'nonreporting')
+	non_rep_sites = dbio.query_database(query,'nonreporting')
 	accu_sites = []
 	for s in non_rep_sites:
 		accu_sites.append(s[0])
@@ -189,9 +189,9 @@ def getNonReportingSites():
 	message += str(accu_sites)[1:-1]
 	message = message.replace("'","")
 	print repr(message)
-	server.WriteOutboxMessageToDb(message,c.smsalert.communitynum)
+	server.write_outbox_message_to_db(message,c.smsalert.communitynum)
 
-def getLatestSmsFromColumn(colname):
+def get_latest_sms_from_column(colname):
 	query = """ select timestamp,sms_msg from smsinbox where sms_msg like '%s%s*%s' 
 		and sms_msg not like '%spsir%s' order by timestamp desc limit 1 """ % ('%',colname,'%','%','%')
 	
@@ -205,7 +205,7 @@ def getLatestSmsFromColumn(colname):
 	#	order by timestamp desc limit 1;
 	#""" % ('%',colname,'%')
 	
-	last_col_msg = dbio.querydatabase(query,'getlatestcolmsg','gsm')
+	last_col_msg = dbio.query_database(query,'getlatestcolmsg','gsm')
 	print last_col_msg
 
 	tmp_msg = "Latest message from %s\n" % (colname.upper())
@@ -216,10 +216,10 @@ def getLatestSmsFromColumn(colname):
 		tmp_msg += 'UNDEFINED'
 	return tmp_msg
 
-def GetSimNumofColumn(colname):
+def get_sim_num_of_column(colname):
 	query = """ select sim_num from site_column_sim_nums where name = '%s'; """ % (colname)
 
-	num = dbio.querydatabase(query,'getsimumofcolumn')
+	num = dbio.query_database(query,'getsimumofcolumn')
 
 	tmp_msg = "%s: " % (colname.upper())
 	if num:
@@ -227,12 +227,12 @@ def GetSimNumofColumn(colname):
 	else:
 		return tmp_msg + 'UNDEFINED'
 
-def GetLatestDataofNode(colname,nid):
+def get_latest_data_of_node(colname,nid):
 	query = """ select * from %s where id = %d and 
 	timestamp = (select max(timestamp) from %s where id = %d); """ % (colname,nid,colname,nid)
 
 	print query
-	data = dbio.querydatabase(query,'getlatestdataofnode')
+	data = dbio.query_database(query,'get_latest_data_of_node')
 	tmp_msg = "Latest data from %s %d\n" % (colname.upper(),nid)
 	for line in data:
 		tmp_msg += line[0].strftime("%Y-%m-%d %H:%M:%S") + ','
@@ -248,23 +248,23 @@ def GetLatestDataofNode(colname,nid):
 def main():
 	func = sys.argv[1] 
 	if func == 'sendregularstatusupdates':
-		sendStatusUpdates()
-	elif func == 'sendservermonreminder':
-		sendServerMonReminder()
-	elif func == 'sendeventmonitoringreminder':
-		sendEventMonitoringReminder()
+		send_status_updates()
+	elif func == 'send_server_mon_reminder':
+		send_server_mon_reminder()
+	elif func == 'send_event_monitoring_reminder':
+		send_event_monitoring_reminder()
 	elif func == 'introduce':
 		introduce()
 	elif func == 'sendserveralert':
-		sendStatusUpdates('server')
-	elif func == 'getnonreportingsites':
-		getNonReportingSites()
+		send_status_updates('server')
+	elif func == 'get_non_reporting_sites':
+		get_non_reporting_sites()
 	elif func == 'test':
 		test()
 	else:
 		print '>> Wrong argument'
 
-def getPersonnelofGroup(groupname):
+def get_personnel_of_group(groupname):
 	query = """ select nickname from dewslcontacts where """
 
 	for g in groupname.split(","):
@@ -273,21 +273,21 @@ def getPersonnelofGroup(groupname):
 	# remove trailing or
 	query = re.sub(" or $", "", query)
 
-	return dbio.querydatabase(query,'customquery')
+	return dbio.query_database(query,'customquery')
 
 
 # if __name__ == "__main__":
 # 	main()
-def ServerMessaging(msg):
+def server_messaging(msg):
 	print msg.data
 
-	sender = getNameofStaff(msg.simnum)
+	sender = get_name_of_staff(msg.simnum)
 
 	group_tags = msg.data.split(" ")[1]
 
 	messagetosend = msg.data.split(" ",2)[2]
 
-	person_list = getPersonnelofGroup(group_tags)
+	person_list = get_personnel_of_group(group_tags)
 
 	# print str(person_list)
 
@@ -295,17 +295,17 @@ def ServerMessaging(msg):
 
 	# print str(person_list)[1:-1]
 
-	personnel_number_list = getNumbersFromList('('+str(person_list)[1:-1]+')')
+	personnel_number_list = get_numbers_from_list('('+str(person_list)[1:-1]+')')
 
 	messagetosend = "From: %s\nTo: %s\n%s" % (sender,group_tags,messagetosend)
 
 
 	for pnl in personnel_number_list:
-		server.WriteOutboxMessageToDb(messagetosend,pnl[1])
+		server.write_outbox_message_to_db(messagetosend,pnl[1])
 
 	return True
 
-def ProcessServerInfoRequest(msg):
+def process_server_info_request(msg):
 	parser = argparse.ArgumentParser(description="Request information from server\n PSIR [-options]")
 	parser.add_argument("-s", "--sim_num", help="get sim number of column", action="store_true")
 	parser.add_argument("-t", "--latest_ts", help="get timestamp of latest sms", action="store_true")
@@ -325,26 +325,26 @@ def ProcessServerInfoRequest(msg):
 		error = parser.format_help().replace("processmessagesfromdb.py","PSRI")
 		# error = error_msg.get
 		print error
-		server.WriteOutboxMessageToDb(error,msg.simnum)
+		server.write_outbox_message_to_db(error,msg.simnum)
 		return
 
 	if args.sim_num:
 		print ">> Sim num request",
-		num = GetSimNumofColumn(args.col_name.strip())
+		num = get_sim_num_of_column(args.col_name.strip())
 		print num
-		server.WriteOutboxMessageToDb(num,msg.simnum)
+		server.write_outbox_message_to_db(num,msg.simnum)
 	
 	if args.latest_ts:
 		print ">> Latest sms request",
-		ts_msg = getLatestSmsFromColumn(args.col_name.strip())
+		ts_msg = get_latest_sms_from_column(args.col_name.strip())
 		print ts_msg
-		server.WriteOutboxMessageToDb(ts_msg,msg.simnum)
+		server.write_outbox_message_to_db(ts_msg,msg.simnum)
 
 	if args.latest_node_data:
 		print ">> Latest data of node", 
-		latest_data = GetLatestDataofNode(args.col_name.strip(),args.node_id)
+		latest_data = get_latest_data_of_node(args.col_name.strip(),args.node_id)
 		print latest_data
-		server.WriteOutboxMessageToDb(latest_data,msg.simnum)
+		server.write_outbox_message_to_db(latest_data,msg.simnum)
 
 	print ">> End of psir"
 	return True
@@ -355,7 +355,7 @@ def test():
     # msg = gsmio.sms("1","09176023735","PSIR -T -CLABB -N 10","")
     # msg = gsmio.sms("1","09176023735","SENDGM -GCOMMUNITY -M \"This is a test message GM message from GSM server. Please ignore for now.\"","")
     msg = gsmio.sms("1","09176023735","Sendgm senslope,dynaslope Syntax for sending GM\r\n Sendgm <grouptags> <message>","")    
-    ServerMessaging(msg)
+    server_messaging(msg)
 
 if __name__ == "__main__":
     main()

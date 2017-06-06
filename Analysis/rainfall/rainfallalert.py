@@ -39,7 +39,7 @@ def create_rainfall_alerts():
     
     qdb.execute_query(query)
 
-def GetRawRainData(gauge_name, fromTime="", toTime=""):
+def get_raw_rain_data(gauge_name, fromTime="", toTime=""):
     
     try:
         
@@ -67,7 +67,7 @@ def GetRawRainData(gauge_name, fromTime="", toTime=""):
 
     return
 
-def GetResampledData(gauge_name, offsetstart, start, end):
+def get_resampled_data(gauge_name, offsetstart, start, end):
     
     ##INPUT:
     ##r; str; site
@@ -78,7 +78,7 @@ def GetResampledData(gauge_name, offsetstart, start, end):
     ##rainfall; dataframe containing start to end of rainfall data resampled to 30min
     
     #raw data from senslope rain gauge
-    rainfall = GetRawRainData(gauge_name, fromTime=offsetstart, toTime=end)
+    rainfall = get_raw_rain_data(gauge_name, fromTime=offsetstart, toTime=end)
     rainfall = rainfall.set_index('ts')
     rainfall = rainfall.loc[rainfall['rain']>=0]
 
@@ -98,7 +98,7 @@ def GetResampledData(gauge_name, offsetstart, start, end):
     except:
         return pd.DataFrame()
         
-def GetUnemptyRGdata(rain_props, offsetstart, start, end):
+def get_unempty_rg_data(rain_props, offsetstart, start, end):
     
     ##INPUT:
     ##r; str; site
@@ -115,14 +115,14 @@ def GetUnemptyRGdata(rain_props, offsetstart, start, end):
     for n in range(RG_num):            
         gauge_name = rain_props['rainfall_gauges'].values[0][n]
         rain_id = rain_props['rain_id'].values[0][n]
-        RGdata = GetResampledData(gauge_name, offsetstart, start, end)
+        RGdata = get_resampled_data(gauge_name, offsetstart, start, end)
         if len(RGdata) != 0:
             latest_ts = pd.to_datetime(RGdata.index.values[-1])
             if latest_ts > end - timedelta(1):
                 return RGdata, gauge_name, rain_id
     return pd.DataFrame()
 
-def onethree_val_writer(rainfall):
+def one_three_val_writer(rainfall):
 
     ##INPUT:
     ##one; dataframe; one-day cumulative rainfall
@@ -155,7 +155,7 @@ def summary_writer(site_id,gauge_name,rain_id,twoyrmax,halfmax,rainfall,end,writ
     ##one; dataframe; one-day cumulative rainfall
     ##three; dataframe; three-day cumulative rainfall        
     
-    one,three = onethree_val_writer(rainfall)
+    one,three = one_three_val_writer(rainfall)
 
     #threshold is reached
     if one>=halfmax or three>=twoyrmax:
@@ -231,7 +231,7 @@ def main(rain_props, end, s, trigger_symbol):
 
     try:
         #data is gathered from nearest rain gauge
-        rainfall, gauge_name, rain_id = GetUnemptyRGdata(rain_props, offsetstart, start, end)
+        rainfall, gauge_name, rain_id = get_unempty_rg_data(rain_props, offsetstart, start, end)
         summary = summary_writer(site_id,gauge_name,rain_id,twoyrmax,halfmax,rainfall,end,write_alert)
     except:
         #if no data for all rain gauge
