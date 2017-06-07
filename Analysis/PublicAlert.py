@@ -310,7 +310,7 @@ def SitePublicAlert(PublicAlert, window):
         if public_PrevAlert != 'A0':
             query = "SELECT * FROM senslopedb.rain_alerts where site_id = '%s' and ts = '%s'" %(site, window.end)
             rain_alert_df = q.GetDBDataFrame(query)
-            if len(rain_alert_df) == 0:
+            if len(rain_alert_df) == 0 and rain_alert != 'nd':
                 extend_rain_alert = True
             else:
                 extend_rain_alert = False
