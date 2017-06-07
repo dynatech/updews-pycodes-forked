@@ -3,7 +3,7 @@ import os
 import pandas as pd
 
 import configfileio as cfg
-import querydb as q
+import querydb as qdb
 
 def RoundReleaseTime(date_time):
     # rounds time to 4/8/12 AM/PM
@@ -70,9 +70,9 @@ def SitePublicAlert(PublicAlert, end, pubsym, intsym, opsym):
     site_id = PublicAlert['site_id'].values[0]
     print site_code
 
-    if q.DoesTableExist('public_alerts') == False:
+    if qdb.does_table_exist('public_alerts') == False:
         #Create a public_alerts table if it doesn't exist yet
-        q.create_public_alerts()
+        qdb.create_public_alerts()
         
     query = "SELECT ts, site_id, alert_level, alert_symbol, ts_updated FROM"
     query += " (SELECT * FROM public_alerts WHERE site_id = %s" %site_id
@@ -82,7 +82,7 @@ def SitePublicAlert(PublicAlert, end, pubsym, intsym, opsym):
     query += " ORDER BY ts DESC LIMIT 1"
     
     # previous public alert
-    PubAlert = q.GetDBDataFrame(query)
+    PubAlert = qdb.get_db_dataframe(query)
     try:
         PrevPubAlert = PubAlert['alert_level'].values[0]
     except:
@@ -99,7 +99,7 @@ def SitePublicAlert(PublicAlert, end, pubsym, intsym, opsym):
         query += " ORDER BY ts DESC LIMIT 3"
         
         # previous positive alert
-        PosPubAlert = q.GetDBDataFrame(query)
+        PosPubAlert = qdb.get_db_dataframe(query)
         
         if len(PosPubAlert) == 1:
             start_monitor = pd.to_datetime(PosPubAlert['ts'].values[0])
@@ -141,7 +141,7 @@ def SitePublicAlert(PublicAlert, end, pubsym, intsym, opsym):
     query += " ON op.trigger_sym_id = sym.trigger_sym_id"
 
     # operational triggers
-    operational_trigger = q.GetDBDataFrame(query)
+    operational_trigger = qdb.get_db_dataframe(query)
     operational_trigger = operational_trigger.sort_values('ts', ascending=False)
     # operational triggers ts after previous release
     recent_op_trigger = operational_trigger[operational_trigger.ts_updated >= RoundReleaseTime(end)-timedelta(hours=4)]
@@ -177,7 +177,7 @@ def SitePublicAlert(PublicAlert, end, pubsym, intsym, opsym):
     query += " INNER JOIN (SELECT * FROM operational_trigger_symbols"
     query += " WHERE trigger_source = 'subsurface') sym ON sub.alert_level = sym.alert_level"
 
-    subsurface = q.GetDBDataFrame(query)
+    subsurface = qdb.get_db_dataframe(query)
     subsurface = subsurface.sort_values('ts', ascending=False).drop_duplicates('tsm_name')
     subsurface = subsurface.rename(columns = {'alert_symbol': 'alert'})
     subsurface = subsurface[['tsm_name', 'alert']]
@@ -190,7 +190,7 @@ def SitePublicAlert(PublicAlert, end, pubsym, intsym, opsym):
             query = "SELECT * FROM senslopedb.rainfall_alerts"
             query += " WHERE site_id = %s AND ts = '%s' AND rain_alert = '0'" %(site_id, end)
             try:
-                if len(q.GetDBDataFrame(query)) == 0 and end.time() in [time(3,30), time(7,30), time(11,30), time(15,30), time(19,30), time(23,30)]:
+                if len(qdb.get_db_dataframe(query)) == 0 and end.time() in [time(3,30), time(7,30), time(11,30), time(15,30), time(19,30), time(23,30)]:
                     extend_rainfall = True
                     rainfall = opsym[(opsym.alert_level==-2)&(opsym.trigger_source=='rainfall')]['alert_symbol'].values[0]
                     rainfall_alert = -2
@@ -212,7 +212,7 @@ def SitePublicAlert(PublicAlert, end, pubsym, intsym, opsym):
     # internal alert
     internal_alert = InternalAlert(positive_trigger, recent_op_trigger, intsym, rainfall_alert)
     internal_alerts_df = pd.DataFrame({'ts': [end], 'site_id': [site_id], 'internal_sym': [internal_alert], 'ts_updated': [end]})
-    q.alert_toDB(internal_alerts_df, 'internal_alerts')
+    qdb.alert_to_db(internal_alerts_df, 'internal_alerts')
 
     # checks if surficial and subsurface triggers have current alert level 0
     withdata = []
@@ -272,7 +272,7 @@ def SitePublicAlert(PublicAlert, end, pubsym, intsym, opsym):
                         query += " ON op.trigger_sym_id = sym.trigger_sym_id"
                         query += " ORDER BY ts DESC LIMIT 2"
                         # if from rainfall alert 1
-                        if q.GetDBDataFrame(query).values[0][0] == 1:
+                        if qdb.get_db_dataframe(query).values[0][0] == 1:
                             # within 1-day cap of 4H extension for nd                                
                             if RoundReleaseTime(end) - validity < timedelta(1):
                                 CurrAlert = max(list(recent_op_trigger['alert_level'].values) + [PrevPubAlert])
@@ -337,7 +337,7 @@ def SitePublicAlert(PublicAlert, end, pubsym, intsym, opsym):
     except:
         pass
     
-    q.alert_toDB(SitePublicAlert, 'public_alerts')
+    qdb.alert_to_db(SitePublicAlert, 'public_alerts')
 
     return PublicAlert
 
@@ -345,20 +345,20 @@ def main(end=datetime.now()):
     end = RoundDataTS(pd.to_datetime(end))
     
     query = "SELECT * FROM public_alert_symbols"
-    PublicAlertSymbols = q.GetDBDataFrame(query)
+    PublicAlertSymbols = qdb.get_db_dataframe(query)
     PublicAlertSymbols = PublicAlertSymbols.sort_values(['alert_type', 'alert_level'], ascending=[True, False])
     
     query = "SELECT i.alert_symbol, alert_level, trigger_source FROM"
     query += " internal_alert_symbols AS i"
     query += " INNER JOIN operational_trigger_symbols AS op"
     query += " ON op.trigger_sym_id = i.trigger_sym_id"
-    InternalAlertSymbols = q.GetDBDataFrame(query)
+    InternalAlertSymbols = qdb.get_db_dataframe(query)
     
     query = "SELECT * FROM operational_trigger_symbols"
-    OperationalTriggerSymbols = q.GetDBDataFrame(query)
+    OperationalTriggerSymbols = qdb.get_db_dataframe(query)
     
     query = "SELECT site_id, site_code FROM sites WHERE site_code != 'mes'"
-    PublicAlert = q.GetDBDataFrame(query)
+    PublicAlert = qdb.get_db_dataframe(query)
 
     Site_Public_Alert = PublicAlert.groupby('site_id', as_index=False)
     
