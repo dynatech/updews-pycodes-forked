@@ -65,30 +65,16 @@ def proc(func, colname, endTS, startTS, hour_interval, fixpoint):
 
     return monitoring_vel, window, config, num_nodes, seg_len
 
-def colpos_json(monitoring_vel, window, config, num_nodes, seg_len, fixpoint):
+def colpos(monitoring_vel, window, config, num_nodes, seg_len, fixpoint):
     # compute column position
     colposdf = plotter.compute_colpos(window, config, monitoring_vel, num_nodes, seg_len, fixpoint=fixpoint)
-    colposdfj = colposdf.rename(columns = {'cs_xz': 'downslope', 'cs_xy': 'latslope', 'x': 'depth'})
-    colposdfj['ts'] = colposdfj['ts'].apply(lambda x: str(x))
+    colposdf = colposdf.rename(columns = {'cs_xz': 'downslope', 'cs_xy': 'latslope', 'x': 'depth'})
+    colposdf['ts'] = colposdf['ts'].apply(lambda x: str(x))
+    colposdf = colposdf[['ts', 'id', 'depth', 'latslope', 'downslope']]
+    
+    return colposdf
 
-#    colposdfj = colposdfj[0:3]
-
-    colposdf_json = colposdfj[['ts', 'id', 'downslope', 'latslope', 'depth']].to_json(orient="records", date_format="iso")
-    return colposdf, colposdf_json
-
-def colpos(colname, endTS='', startTS='', hour_interval='', fixpoint='bottom'):
-
-    monitoring_vel, window, config, num_nodes, seg_len = proc('colpos', colname, endTS, startTS, hour_interval, fixpoint)
-    colposdf, colposdf_json = colpos_json(monitoring_vel, window, config, num_nodes, seg_len, fixpoint)
-
-#    #############################
-#    show_part_legend = False
-#    plotter.plot_column_positions(colposdf,colname,window.end, show_part_legend, config)
-#    #############################
-
-    return colposdf_json
-
-def velocity_json(monitoring_vel, window, config, num_nodes):
+def velocity(monitoring_vel, window, config, num_nodes):
     #velplots
     vel = monitoring_vel.loc[(monitoring_vel.ts >= window.start) & (monitoring_vel.ts <= window.end)]
     #vel_xz
@@ -98,100 +84,45 @@ def velocity_json(monitoring_vel, window, config, num_nodes):
     vel_xy = vel[['ts', 'vel_xy', 'id']]
     velplot_xy,L2_xy,L3_xy = plotter.vel_classify(vel_xy, config, num_nodes, linearvel=False)
 
-    velplot = velplot_xz, velplot_xy, L2_xz, L2_xy, L3_xz, L3_xy
-    
     L2 = L2_xz.append(L2_xy)
-    L3 = L3_xz.append(L3_xy)  
-    L2['ts'] = L2['ts'].apply(lambda x: str(x))
-    L3['ts'] = L3['ts'].apply(lambda x: str(x))    
-
-#    L2 = L2[0:3]
-#    L3 = L3[0:3]
+    L3 = L3_xz.append(L3_xy) 
     
-    L2_json = L2.to_json(orient="records", date_format="iso")
-    L3_json = L3.to_json(orient="records", date_format="iso")
-    velocity = dict({'L2': L2_json, 'L3': L3_json})
-    velocity = '[' + str(velocity).replace('\'', '').replace('L2', '"L2"').replace('L3', '"L3"') + ']'
+    L2['ts'] = L2['ts'].apply(lambda x: str(x))
+    L3['ts'] = L3['ts'].apply(lambda x: str(x))
+    
+    veldf = pd.DataFrame({'L2': [L2], 'L3': [L3]})
 
-    return velplot, velocity
+    return veldf
 
-def velocity(colname, endTS='', startTS=''):
-
-    monitoring_vel, window, config, num_nodes, seg_len = proc('velocity', colname, endTS, startTS, '', '')    
-    velplot, velocity = velocity_json(monitoring_vel, window, config, num_nodes)
-
-#    #############################
-#    plotvel = True
-#    empty = pd.DataFrame({'ts':[], 'id':[]})
-#    xzd_plotoffset = 0
-#    plotter.plot_disp_vel(empty, empty, empty, colname, window, config, plotvel, xzd_plotoffset, num_nodes, velplot, False)
-#    #############################
-
-    return velocity
-
-def displacement_json(monitoring_vel, window, config, num_nodes, fixpoint):
+def displacement(monitoring_vel, window, config, num_nodes, fixpoint):
     # displacement plot offset
-    xzd_plotoffset = 0
+    xzd_plotoffset = plotter.plotoffset(monitoring_vel, disp_offset = 'mean')
 
     #zeroing and offseting xz,xy
     df0off = plotter.disp0off(monitoring_vel, window, config, xzd_plotoffset, num_nodes, fixpoint=fixpoint)
-    df0offj = df0off.rename(columns = {'xz': 'downslope', 'xy': 'latslope'})
-    df0offj = df0offj.reset_index()
-    df0offj['ts'] = df0offj['ts'].apply(lambda x: str(x))
-
-#    df0offj = df0offj[0:3]
-
-    df0off_json = df0offj[['ts', 'id', 'downslope', 'latslope']].to_json(orient="records", date_format="iso")
-
-    return df0off, df0off_json
-
-def displacement(colname, endTS='', startTS='', fixpoint='bottom'):
+    df0off = df0off.rename(columns = {'xz': 'downslope', 'xy': 'latslope'})
+    df0off = df0off.reset_index()
+    df0off['ts'] = df0off['ts'].apply(lambda x: str(x))
+    df0off = df0off[['ts', 'downslope', 'latslope']]
     
-    monitoring_vel, window, config, num_nodes, seg_len = proc('displacement', colname, endTS, startTS, '', fixpoint)    
-    df0off, df0off_json = displacement_json(monitoring_vel, window, config, num_nodes, fixpoint)
+    inc_df = plotter.node_annotation(monitoring_vel, num_nodes)
+    inc_df = inc_df.rename(columns = {'text_xz': 'downslope_annotation', 'text_xy': 'latslope_annotation'})
+    inc_df = inc_df[['id', 'downslope_annotation', 'latslope_annotation']]
+        
+    dispdf = pd.DataFrame({'d': [df0off], 'annotation': [inc_df]})
 
-#    #############################
-#    velplot = ''
-#    xzd_plotoffset = 0
-#    plotvel = False
-#    empty = pd.DataFrame({'ts':[], 'id':[]})
-#    plotter.plot_disp_vel(empty, df0off, empty, colname, window, config, plotvel, xzd_plotoffset, num_nodes, velplot, False)
-#    #############################
-
-    return df0off_json
+    return dispdf
 
 def vcdgen(colname, endTS='', startTS='', hour_interval='', fixpoint='bottom'):
     
     monitoring_vel, window, config, num_nodes, seg_len = proc('vcdgen', colname, endTS, startTS, hour_interval, fixpoint)    
 
-    colposdf, colposdf_json = colpos_json(monitoring_vel, window, config, num_nodes, seg_len, fixpoint)
-
-#    #############################
-#    show_part_legend = False
-#    plotter.plot_column_positions(colposdf,colname,window.end, show_part_legend, config)
-#    #############################
+    dispdf = displacement(monitoring_vel, window, config, num_nodes, fixpoint)
     
-    df0off, df0off_json = displacement_json(monitoring_vel, window, config, num_nodes, fixpoint)
-    velplot, velocity = velocity_json(monitoring_vel, window, config, num_nodes)
+    colposdf = colpos(monitoring_vel, window, config, num_nodes, seg_len, fixpoint)
+    veldf = velocity(monitoring_vel, window, config, num_nodes)
 
-#    #############################
-#    plotvel = True
-#    xzd_plotoffset = 0
-#    empty = pd.DataFrame({'ts':[], 'id':[]})
-#    plotter.plot_disp_vel(empty, df0off, empty, colname, window, config, plotvel, xzd_plotoffset, num_nodes, velplot, False)
-#    #############################
+    vcd = pd.DataFrame({'v': [veldf], 'c': [colposdf], 'd': [dispdf]})
+    vcd_json = vcd.to_json(orient="records", date_format="iso")
 
-    vcd = dict({'v': velocity, 'c': colposdf_json, 'd': df0off_json})
-    vcd = '[' + str(vcd).replace('\'', '').replace('v:', '"v":').replace('c:', '"c":').replace('d:', '"d":') + ']'
-
-    return vcd
-    
-######################################
-#    
-#if __name__ == '__main__':
-#    start = datetime.now()
-#    v=velocity('magta', endTS='2016-10-12 12:00')
-#    c=colpos('magta', endTS='2016-10-12 12:00')
-#    d=displacement('magta', endTS='2016-10-12 12:00')
-#    vcd=vcdgen('magta', endTS='2016-10-12 12:00')
-#    print "runtime =", str(datetime.now() - start)
+    return vcd_json

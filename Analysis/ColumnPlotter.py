@@ -275,6 +275,69 @@ def check_increasing(df, inc_df):
     diff_xy = max(df['xy'].values) - min(df['xy'].values)
     inc_df.loc[sum_index] = [df['id'].values[0], inc_xz, inc_xy, diff_xz, diff_xy]
 
+def metadata(inc_df):
+    node_id = str(int(inc_df['id'].values[0]))
+
+    if inc_df['diff_xz'].values[0]>0.01:
+        if inc_df['inc_xz'].values[0]>3:
+            text_xz = node_id + '++++'
+            xz_text_size = 'large'
+        elif inc_df['inc_xz'].values[0]>2:
+            text_xz = node_id + '+++'
+            xz_text_size = 'large'
+        elif inc_df['inc_xz'].values[0]>1:
+            text_xz = node_id + '++'
+            xz_text_size = 'medium'
+        elif inc_df['inc_xz'].values[0]>0:
+            text_xz = node_id + '+'
+            xz_text_size = 'medium'
+        else:
+            text_xz = node_id
+            xz_text_size = 'x-small'
+    else:
+        text_xz = node_id
+        xz_text_size = 'x-small'
+    
+    if inc_df['diff_xy'].values[0]>0.01:
+        if inc_df['inc_xy'].values[0]>3:
+            text_xy = node_id + '++++'
+            xy_text_size = 'large'
+        elif inc_df['inc_xy'].values[0]>2:
+            text_xy = node_id + '+++'
+            xy_text_size = 'large'
+        elif inc_df['inc_xy'].values[0]>1:
+            text_xy = node_id + '++'
+            xy_text_size = 'medium'
+        elif inc_df['inc_xy'].values[0]>0:
+            text_xy = node_id + '+'
+            xy_text_size = 'medium'
+        else:
+            text_xy = node_id
+            xy_text_size = 'x-small'
+    else:
+        text_xy = node_id
+        xy_text_size = 'x-small'
+    
+    inc_df['text_xz'] = text_xz
+    inc_df['xz_text_size'] = xz_text_size
+    inc_df['text_xy'] = text_xy
+    inc_df['xy_text_size'] = xy_text_size
+
+    return inc_df
+
+def node_annotation(monitoring_vel, num_nodes):
+    check_inc_df = monitoring_vel.sort('ts')
+    
+    inc_df = pd.DataFrame({'id': range(1, num_nodes+1), 'inc_xz': [np.nan]*num_nodes, 'inc_xy': [np.nan]*num_nodes, 'diff_xz': [np.nan]*num_nodes, 'diff_xy': [np.nan]*num_nodes})
+    inc_df = inc_df[['id', 'inc_xz', 'inc_xy', 'diff_xz', 'diff_xy']]
+    nodal_monitoring_vel = check_inc_df.groupby('id')
+    nodal_monitoring_vel.apply(check_increasing, inc_df=inc_df)
+    
+    nodal_inc_df = inc_df.groupby('id', as_index=False)
+    inc_df = nodal_inc_df.apply(metadata)
+
+    return inc_df
+
 def plot_disp_vel(noise_df, df0off, cs_df, colname, window, config, plotvel, xzd_plotoffset, num_nodes, velplot, plot_inc, inc_df=''):
 #==============================================================================
 # 
@@ -359,22 +422,12 @@ def plot_disp_vel(noise_df, df0off, cs_df, colname, window, config, plotvel, xzd
         z = range(1, num_nodes+1)
         if not plot_inc:
             for i,j in zip(y,z):
-                curax.annotate(str(int(j)),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')
+                curax.annotate(str(int(j)),xy=(x,i),xytext = (5,-2.5), textcoords='offset points', size = 'x-small')
         else:
             for i,j in zip(y,z):
-                if inc_df.loc[inc_df.id == j]['diff_xz'].values[0]>0.01:
-                    if inc_df.loc[inc_df.id == j]['inc_xz'].values[0]>3:
-                        curax.annotate(str(int(j))+'++++',xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'large')
-                    elif inc_df.loc[inc_df.id == j]['inc_xz'].values[0]>2:
-                        curax.annotate(str(int(j))+'+++',xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'large')
-                    elif inc_df.loc[inc_df.id == j]['inc_xz'].values[0]>1:
-                        curax.annotate(str(int(j))+'++',xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'medium')
-                    elif inc_df.loc[inc_df.id == j]['inc_xz'].values[0]>0:
-                        curax.annotate(str(int(j))+'+',xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'medium')
-                    else:
-                        curax.annotate(str(int(j)),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')
-                else:
-                    curax.annotate(str(int(j)),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')
+                text = inc_df.loc[inc_df.id == j]['text_xz'].values[0]
+                text_size = inc_df.loc[inc_df.id == j]['xz_text_size'].values[0]
+                curax.annotate(text,xy=(x,i),xytext = (5,-2.5), textcoords='offset points', size = text_size )
 
         #plotting displacement for xy
         curax=ax_xyd
@@ -394,19 +447,9 @@ def plot_disp_vel(noise_df, df0off, cs_df, colname, window, config, plotvel, xzd
                 curax.annotate(str(int(j)),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')
         else:
             for i,j in zip(y,z):
-                if inc_df.loc[inc_df.id == j]['diff_xy'].values[0]>0.01:
-                    if inc_df.loc[inc_df.id == j]['inc_xy'].values[0]>3:
-                        curax.annotate(str(int(j))+'++++',xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'large')
-                    elif inc_df.loc[inc_df.id == j]['inc_xy'].values[0]>2:
-                        curax.annotate(str(int(j))+'+++',xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'large')
-                    elif inc_df.loc[inc_df.id == j]['inc_xy'].values[0]>1:
-                        curax.annotate(str(int(j))+'++',xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'medium')
-                    elif inc_df.loc[inc_df.id == j]['inc_xy'].values[0]>0:
-                        curax.annotate(str(int(j))+'+',xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'medium')
-                    else:
-                        curax.annotate(str(int(j)),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')
-                else:
-                    curax.annotate(str(int(j)),xy=(x,i),xytext = (5,-2.5), textcoords='offset points',size = 'x-small')
+                text = inc_df.loc[inc_df.id == j]['text_xy'].values[0]
+                text_size = inc_df.loc[inc_df.id == j]['xy_text_size'].values[0]
+                curax.annotate(text,xy=(x,i),xytext = (5,-2.5), textcoords='offset points', size = text_size)
 
     except:
         print 'Error in plotting displacement'
@@ -576,11 +619,7 @@ def main(monitoring, window, config, plotvel_start='', plotvel_end='', plotvel=T
     plt.savefig(output_path+config.io.outputfilepath+colname+'ColPos_'+str(window.end.strftime('%Y-%m-%d_%H-%M'))+'.png',
                 dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w', bbox_extra_artists=(lgd,))
     
-    check_inc_df = monitoring_vel.sort('ts')
-    inc_df = pd.DataFrame({'id': range(1, num_nodes+1), 'inc_xz': [np.nan]*num_nodes, 'inc_xy': [np.nan]*num_nodes, 'diff_xz': [np.nan]*num_nodes, 'diff_xy': [np.nan]*num_nodes})
-    inc_df = inc_df[['id', 'inc_xz', 'inc_xy', 'diff_xz', 'diff_xy']]
-    nodal_monitoring_vel = check_inc_df.groupby('id')
-    nodal_monitoring_vel.apply(check_increasing, inc_df=inc_df)
+    inc_df = node_annotation(monitoring_vel, num_nodes)
 
     # displacement plot offset
     xzd_plotoffset = plotoffset(monitoring_vel, disp_offset = 'mean')
