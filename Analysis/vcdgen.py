@@ -103,13 +103,13 @@ def displacement(monitoring_vel, window, config, num_nodes, fixpoint):
     df0off = df0off.rename(columns = {'xz': 'downslope', 'xy': 'latslope'})
     df0off = df0off.reset_index()
     df0off['ts'] = df0off['ts'].apply(lambda x: str(x))
-    df0off = df0off[['ts', 'downslope', 'latslope']]
+    df0off = df0off[['ts', 'id', 'downslope', 'latslope']]
     
     inc_df = plotter.node_annotation(monitoring_vel, num_nodes)
     inc_df = inc_df.rename(columns = {'text_xz': 'downslope_annotation', 'text_xy': 'latslope_annotation'})
     inc_df = inc_df[['id', 'downslope_annotation', 'latslope_annotation']]
         
-    dispdf = pd.DataFrame({'d': [df0off], 'annotation': [inc_df]})
+    dispdf = pd.DataFrame({'disp': [df0off], 'annotation': [inc_df]})
 
     return dispdf
 
