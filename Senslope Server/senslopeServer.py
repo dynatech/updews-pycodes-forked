@@ -10,12 +10,13 @@ import multiprocessing
 import SomsServerParser as SSP
 import math
 import cfgfileio as cfg
-import memcache
+import memcache, subprocess
 mc = memcache.Client(['127.0.0.1:11211'],debug=0)
 
-if cfg.config().mode.script_mode == 'gsmserver':
-    sys.path.insert(0, cfg.config().fileio.websocketdir)
-    import dewsSocketLeanLib as dsll
+# if cfg.config().mode.script_mode == 'gsmserver':
+#     sys.path.insert(0, cfg.config().fileio.websocketdir)
+#     print cfg.config().fileio.websocketdir
+#     import dewsSocketLeanLib as dsll
 #---------------------------------------------------------------------------------------------------------------------------
 
 def updateSimNumTable(name,sim_num,date_activated):
@@ -88,13 +89,13 @@ def WriteRawSmsToDb(msglist,sensor_nums):
         # if re.search(m.simnum[-10:],sensor_nums):
             web_flag = 'W'
             print m.data[:20]
-            if cfg.config().mode.script_mode == 'gsmserver':
-                ret = dsll.sendReceivedGSMtoDEWS(str(m.dt.replace("/","-")), m.simnum, m.data)
+            # if cfg.config().mode.script_mode == 'gsmserver':
+            #     ret = dsll.sendReceivedGSMtoDEWS(str(m.dt.replace("/","-")), m.simnum, m.data)
 
                 #if the SMS Message was sent successfully to the web socket server then,
                 #   change web_flag to 'WS' which means "Websocket Server Sent"
-                if ret == 0:
-                    web_flag = 'WSS'
+                # if ret == 0:
+                #     web_flag = 'WSS'
         else:
             web_flag = 'S'
         query += "('%s','%s','%s','UNREAD','%s')," % (str(m.dt.replace("/","-")),str(m.simnum),str(m.data.replace("'","\"")),web_flag)
@@ -215,7 +216,9 @@ def SendMessagesFromDb(network,limit=10):
     #Get all outbox messages with send_status "SENT" and attempt to send
     #   chatterbox acknowledgements
     #   send_status will be changed to "SENT-WSS" if successful
-    dsll.sendAllAckSentGSMtoDEWS()    
+    # dsll.sendAllAckGSMToDEWS()
+    exec_line = "python %s/invokeAckToDEWS.py > log.txt 2>&1" % (cfg.config().fileio.websocketdir)
+    p = subprocess.Popen(exec_line, stdout=subprocess.PIPE, shell=True, stderr=subprocess.STDOUT)
     
 def getSensorNumbers():
     querys = "SELECT sim_num from site_column_sim_nums"
@@ -296,6 +299,8 @@ def RunSenslopeServer(network):
                 WriteRawSmsToDb(allmsgs,sensor_numbers_str)
             except MySQLdb.ProgrammingError:
                 print ">> Error: May be an empty line.. skipping message storing"
+
+            p = subprocess.Popen("python ~/updews-pycodes/Experimental\ Versions/pythonSockets/invokeInboxToDEWS.py", stdout=subprocess.PIPE, shell=True, stderr=subprocess.STDOUT)
             
             deleteMessagesfromGSM()
                 
