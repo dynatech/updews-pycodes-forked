@@ -115,7 +115,7 @@ def displacement(monitoring_vel, window, config, num_nodes, fixpoint):
     cs_df['ts'] = cs_df['ts'].apply(lambda x: str(x))
     cs_df = cs_df[['ts', 'downslope', 'latslope']]
         
-    dispdf = pd.DataFrame({'disp': [df0off], 'annotation': [inc_df], 'cumulative': [cs_df]})
+    dispdf = pd.DataFrame({'disp': [df0off], 'annotation': [inc_df], 'cumulative': [cs_df], 'cml_base': [xzd_plotoffset * num_nodes]})
 
     return dispdf
 
