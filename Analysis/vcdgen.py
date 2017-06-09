@@ -108,8 +108,14 @@ def displacement(monitoring_vel, window, config, num_nodes, fixpoint):
     inc_df = plotter.node_annotation(monitoring_vel, num_nodes)
     inc_df = inc_df.rename(columns = {'text_xz': 'downslope_annotation', 'text_xy': 'latslope_annotation'})
     inc_df = inc_df[['id', 'downslope_annotation', 'latslope_annotation']]
+    
+    cs_df = plotter.cum_surf(monitoring_vel, xzd_plotoffset, num_nodes)
+    cs_df = cs_df.rename(columns = {'xz': 'downslope', 'xy': 'latslope'})
+    cs_df = cs_df.reset_index()
+    cs_df['ts'] = cs_df['ts'].apply(lambda x: str(x))
+    cs_df = cs_df[['ts', 'downslope', 'latslope']]
         
-    dispdf = pd.DataFrame({'disp': [df0off], 'annotation': [inc_df]})
+    dispdf = pd.DataFrame({'disp': [df0off], 'annotation': [inc_df], 'cumulative': [cs_df]})
 
     return dispdf
 
