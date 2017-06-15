@@ -29,8 +29,6 @@ if not path in sys.path:
 del path 
 
 #### Import local codes
-import configfileio as cfg
-import surficialconfig as scfg
 import platform
 import querydb as qdb
 #### Determine current os
@@ -43,8 +41,7 @@ elif curOS == "Linux":
     import pymysql as mysqlDriver
 
 #### Open config files
-config = cfg.config()
-surficialconfig = scfg.config()
+sc = qdb.memcached()
 
 #### Create directory
 output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
@@ -104,10 +101,10 @@ def round_time(date_time):
     
 def create_marker_alerts_table():
     """Creates the marker alerts table"""
-    db = mysqlDriver.connect(host = config.dbio.hostdb, user = config.dbio.userdb, passwd = config.dbio.passdb)
+    db = mysqlDriver.connect(host = sc['hosts']['local'], user = sc['db']['user'], passwd = sc['db']['password'])
     cur = db.cursor()
 
-    cur.execute("USE {}".format(config.dbio.namedb))
+    cur.execute("USE {}".format(sc['db']['name']))
     
     query = "CREATE TABLE IF NOT EXISTS marker_alerts(ma_id int AUTO_INCREMENT, ts timestamp, marker_id smallint(6) unsigned, displacement float, time_delta float, alert_level tinyint, PRIMARY KEY (ma_id), FOREIGN KEY (marker_id) REFERENCES markers(marker_id))"
     
@@ -186,13 +183,13 @@ def get_marker_details(marker_id):
     site_code, marker_name: string, string
     """
     #### Connect to db
-    db = mysqlDriver.connect(host = config.dbio.hostdb, user = config.dbio.userdb, passwd = config.dbio.passdb)
+    db = mysqlDriver.connect(host = sc['hosts']['local'], user = sc['db']['user'], passwd = sc['db']['password'])
     
     #### Initialize cursor    
     cur = db.cursor()
     
     #### Use default database
-    cur.execute("USE {}".format(config.dbio.namedb))
+    cur.execute("USE {}".format(sc['db']['name']))
     
     #### select site_code and marker name from tables markers, marker_history, marker_names, and sites
     query = "SELECT site_code,marker_name FROM marker_history INNER JOIN markers ON markers.marker_id = marker_history.marker_id INNER JOIN sites ON markers.site_id = sites.site_id INNER JOIN marker_names ON marker_history.history_id = marker_names.history_id WHERE marker_history.history_id = (SELECT max(history_id) FROM marker_history WHERE event in ('add','rename') AND marker_id = {})".format(marker_id)
@@ -223,13 +220,13 @@ def get_site_code(site_id):
         Three letter site code of the corresponding site_id
     """
     #### Connect to db
-    db = mysqlDriver.connect(host = config.dbio.hostdb, user = config.dbio.userdb, passwd = config.dbio.passdb)
+    db = mysqlDriver.connect(host = sc['hosts']['local'], user = sc['db']['user'], passwd = sc['db']['password'])
     
     #### Initialize cursor    
     cur = db.cursor()
     
     #### Use default database
-    cur.execute("USE {}".format(config.dbio.namedb))
+    cur.execute("USE {}".format(sc['db']['name']))
     
     #### select site_code and marker name from tables markers, marker_history, marker_names, and sites
     query = "SELECT site_code FROM sites WHERE site_id = {}".format(site_id)
@@ -261,13 +258,13 @@ def get_marker_name(marker_id):
     """
     
     #### Connect to db
-    db = mysqlDriver.connect(host = config.dbio.hostdb, user = config.dbio.userdb, passwd = config.dbio.passdb)
+    db = mysqlDriver.connect(host = sc['hosts']['local'], user = sc['db']['user'], passwd = sc['db']['password'])
     
     #### Initialize cursor    
     cur = db.cursor()
     
     #### Use default database
-    cur.execute("USE {}".format(config.dbio.namedb))
+    cur.execute("USE {}".format(sc['db']['name']))
     
     #### select site_code and marker name from tables markers, marker_history, marker_names, and sites
     query = "SELECT marker_name FROM marker_history INNER JOIN markers ON markers.marker_id = marker_history.marker_id INNER JOIN marker_names ON marker_history.history_id = marker_names.history_id WHERE marker_history.history_id = (SELECT max(history_id) FROM marker_history WHERE event in ('add','rename') AND marker_id = {})".format(marker_id)
@@ -299,7 +296,7 @@ def compute_confidence_interval_width(velocity):
     """
     
     ### Using tcrit table and Federico 2012 values
-    return surficialconfig.values.t_crit*np.sqrt(1/(surficialconfig.values.n-2)*surficialconfig.values.sum_res_square*(1/surficialconfig.values.n + (np.log(velocity) - surficialconfig.values.v_log_mean)**2/surficialconfig.values.var_v_log))
+    return float(sc['surficial']['ci_t_crit'])*np.sqrt(1/(float(sc['surficial']['ci_n'])-2)*float(sc['surficial']['ci_sum_res_square'])*(1/float(sc['surficial']['ci_n']) + (np.log(velocity) - float(sc['surficial']['ci_v_log_mean']))**2/float(sc['surficial']['ci_var_v_log'])))
 
 def compute_critical_acceleration(velocity):
     """
@@ -321,7 +318,7 @@ def compute_critical_acceleration(velocity):
     """
     
     #### Compute for critical acceleration from computed slope and intercept from critical values
-    crit_acceleration = np.exp(surficialconfig.values.slope*np.log(velocity) + surficialconfig.values.intercept)
+    crit_acceleration = np.exp(float(sc['surficial']['ci_slope'])*np.log(velocity) + float(sc['surficial']['ci_intercept']))
     
     #### Compute for confidence interval width width
     ci_width = compute_confidence_interval_width(velocity)
@@ -337,13 +334,13 @@ def reset_auto_increment():
     Reset autoincrement to maximum value after delete
     """
     #### Connect to db
-    db = mysqlDriver.connect(host = config.dbio.hostdb, user = config.dbio.userdb, passwd = config.dbio.passdb)
+    db = mysqlDriver.connect(host = sc['hosts']['local'], user = sc['db']['user'], passwd = sc['db']['password'])
     
     #### Initialize cursor    
     cur = db.cursor()
     
     #### Use default database
-    cur.execute("USE {}".format(config.dbio.namedb))
+    cur.execute("USE {}".format(sc['db']['name']))
 
     ## Get the current maximum
     cur.execute("SELECT max(ma_id) FROM marker_alerts")
@@ -380,13 +377,13 @@ def delete_duplicates_marker_alerts_db(marker_alerts_df):
     values_to_delete = zip(marker_alerts_df.ts.values,marker_alerts_df.marker_id.values)
     
     #### Connect to db
-    db = mysqlDriver.connect(host = config.dbio.hostdb, user = config.dbio.userdb, passwd = config.dbio.passdb)
+    db = mysqlDriver.connect(host = sc['hosts']['local'], user = sc['db']['user'], passwd = sc['db']['password'])
     
     #### Initialize cursor    
     cur = db.cursor()
     
     #### Use default database
-    cur.execute("USE {}".format(config.dbio.namedb))
+    cur.execute("USE {}".format(sc['db']['name']))
     
     #### Iterate cur.execute to delete specified values
     for ts,marker_id in values_to_delete:
@@ -421,10 +418,10 @@ def write_to_marker_alerts_db(marker_alerts_df):
     reset_auto_increment()
     
     #### Create engine to connect to db
-    engine=create_engine('mysql://'+config.dbio.userdb+':'+config.dbio.passdb+'@'+config.dbio.hostdb+':3306/'+config.dbio.namedb)
+    engine=create_engine('mysql://'+sc['db']['user']+':'+sc['db']['password']+'@'+sc['hosts']['local']+':3306/'+sc['db']['name'])
     
     #### Insert dataframe to the database
-    marker_alerts_df.set_index('ts').to_sql(name = 'marker_alerts', con = engine, if_exists = 'append', schema = config.dbio.namedb, index = True)
+    marker_alerts_df.set_index('ts').to_sql(name = 'marker_alerts', con = engine, if_exists = 'append', schema = sc['db']['name'], index = True)
 
 def plot_marker_meas(marker_data_df,colors):
     """
@@ -458,7 +455,7 @@ def plot_site_meas(surficial_data_df,site_id,ts):
     None
     """
     #### Set output path
-    plot_path = output_path+surficialconfig.io.surficial_meas_plots_path
+    plot_path = output_path+sc['fileio']['surficial_meas_path']
     if not os.path.exists(plot_path):
         os.makedirs(plot_path)
     
@@ -479,8 +476,12 @@ def plot_site_meas(surficial_data_df,site_id,ts):
     #### Plot the measurement data of each marker
     marker_data_group.agg(plot_marker_meas,tableau20)
     
+    #### Rearrange legend handles
+    handles,labels = plt.gca().get_legend_handles_labels()
+    handles = [i for (i,j) in sorted(zip(handles,labels),key = lambda pair:pair[1])]    
+    labels = sorted(labels)
     #### Plot legend
-    plt.legend(loc='upper left',fancybox = True, framealpha = 0.5)
+    plt.legend(handles,labels,loc='upper left',fancybox = True, framealpha = 0.5)
 
     #### Rotate xticks
     plt.xticks(rotation = 45)
@@ -497,7 +498,7 @@ def plot_trending_analysis(marker_id,date_time,time,displacement,time_array,disp
     Generates Trending plot given all parameters
     """
     #### Create output plot directory if it doesn't exists
-    plot_path = output_path+surficialconfig.io.surficial_trending_plots_path
+    plot_path = output_path+sc['fileio']['surficial_trending_path']
     if not os.path.exists(plot_path):
         os.makedirs(plot_path)
     
@@ -698,7 +699,7 @@ def evaluate_marker_alerts(marker_data_df,ts):
             else:
                 
                 #### Evaluate alert based on velocity alert table
-                if velocity < surficialconfig.thresh.v_alert_2:
+                if velocity < float(sc['surficial']['v_alert_2']):
                     
                     #### Velocity is less than threshold velocity for alert 2, marker alert is L0
                     marker_alert = 0
@@ -707,14 +708,14 @@ def evaluate_marker_alerts(marker_data_df,ts):
                     #### Velocity if greater than threshold velocity for alert 2
                     
                     #### Check if there is enough data for trending analysis
-                    if len(marker_data_df) < surficialconfig.io.surficial_num_pts:
+                    if len(marker_data_df) < int(sc['surficial']['surficial_num_pts']):
                         #### Not enough data points for trending analysis
                         trend_alert = 1
                         
                     else:
                     #### Perform trending analysis
-                        trend_alert = evaluate_trending_filter(marker_data_df,surficialconfig.io.PrintTrendPlot)
-                    if velocity < surficialconfig.thresh.v_alert_3:
+                        trend_alert = evaluate_trending_filter(marker_data_df,sc['surficial']['print_trend_plot'])
+                    if velocity < float(sc['surficial']['v_alert_3']):
                         
                         #### Velocity is less than threshold for alert 3
                         ### If trend alert = 1, marker_alert = 2 -> L2 alert
@@ -805,7 +806,7 @@ def generate_surficial_alert(site_id = None,ts = None):
         site_id, ts = sys.argv[1].lower(),sys.argv[2].lower()
     
     #### Config variables
-    num_pts = int(surficialconfig.io.surficial_num_pts)
+    num_pts = int(sc['surficial']['surficial_num_pts'])
     
     #### Get latest ground data
     surficial_data_df = get_surficial_data(site_id,ts,num_pts)
@@ -824,10 +825,10 @@ def generate_surficial_alert(site_id = None,ts = None):
     qdb.alert_to_db(surficial_alert,'operational_triggers')
     
     #### Plot current ground meas    
-    if surficialconfig.io.PrintMeasPlot:
+    if sc['surficial']['print_meas_plot']:
         
         #### Plot data with specified window
-        ts_start = pd.to_datetime(ts) - pd.Timedelta(days = surficialconfig.io.meas_plot_window)
+        ts_start = pd.to_datetime(ts) - pd.Timedelta(days = int(sc['surficial']['meas_plot_window']))
         
         ### Retreive the surficial data to plot
         surficial_data_to_plot = get_surficial_data_window(site_id,ts_start.strftime("%Y-%m-%d %H:%M"),ts)

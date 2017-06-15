@@ -71,6 +71,8 @@ output_path = /Documents/monitoringoutput/
 realtime_path = /Documents/monitoringoutput/realtime/
 rainfall_path = /Documents/monitoringoutput/rainfall/
 surficial_path = /Documents/monitoringoutput/surficial/
+surficial_trending_path = /Documents/monitoringoutput/surficial/trending/
+surficial_meas_path = /Documents/monitoringoutput/surficial/meas/
 subsurface_path = /Documents/monitoringoutput/subsurface/
 eq_path = /Documents/monitoringoutput/eq/
 
@@ -86,29 +88,47 @@ proc_limit = 10
 active_lgr_limit = 40
 
 [subsurface]
-disp = 0.05 			#Treshold displacement value for alert 1 (in meters)
-vel2 = 0.032			#Treshold velocity value for alert level 1 (in meters/day)
-vel3 = 0.5 				#Treshold velocity value for alert level 2 (in meters/day)
-k_ac_ax = 0.1			#minimum value velocity of axis across maximum velocity to consider movement as valid (in percent)
-num_nodes_to_check = 2	#number of nodes to check before calling column alert level 2 or 3
-data_dt = 0.5			#length of real-time monitoring window, in days
-roll_window_length = 3.	#length of rolling/moving window operations in hours
-num_roll_window_ops = 2	#number of rolling window operations in the whole monitoring analysis
-col_pos_interval = 4H	#string expression indicating interval between two adjacent column position dates ex: '1D'= 1 day
-num_col_pos = 7         #number of column position dates to plot 
-to_fill = 1				#to forward fill (1 or 0)
-to_smooth = 1			#to smooth xz and xy through moving average (1 or 0)
-rt_to_fill = 1			#to forward fill (1 or 0)
-rt_to_smooth = 1		#to smooth xz and xy through moving average (1 or 0)
-column_fix = bottom		#node to fix in column position plot (top or bottom)
+disp = 0.05 			;Treshold displacement value for alert 1 (in meters)
+vel2 = 0.032			;Treshold velocity value for alert level 1 (in meters/day)
+vel3 = 0.5 				;Treshold velocity value for alert level 2 (in meters/day)
+k_ac_ax = 0.1			;minimum value velocity of axis across maximum velocity to consider movement as valid (in percent)
+num_nodes_to_check = 2	;number of nodes to check before calling column alert level 2 or 3
+data_dt = 0.5			;length of real-time monitoring window, in days
+roll_window_length = 3.	;length of rolling/moving window operations in hours
+num_roll_window_ops = 2	;number of rolling window operations in the whole monitoring analysis
+col_pos_interval = 4H	;string expression indicating interval between two adjacent column position dates ex: '1D'= 1 day
+num_col_pos = 7         ;number of column position dates to plot 
+to_fill = 1				;to forward fill (1 or 0)
+to_smooth = 1			;to smooth xz and xy through moving average (1 or 0)
+rt_to_fill = 1			;to forward fill (1 or 0)
+rt_to_smooth = 1		;to smooth xz and xy through moving average (1 or 0)
+column_fix = bottom		;node to fix in column position plot (top or bottom)
 
 [rainfall]
 
-data_dt=0.5				#time interval between data points, in hours
-rt_window_length=10.	#length of real-time monitoring window, in days
-roll_window_length=3.	#length of rolling/moving window operations in days
+data_dt=0.5				;time interval between data points, in hours
+rt_window_length=10.	;length of real-time monitoring window, in days
+roll_window_length=3.	;length of rolling/moving window operations in days
 print_plot = True
 print_summary_alert = True
+
+[surficial]
+ci_slope = 1.49905955613175				;confidence interval constants
+ci_intercept = -3.00263765777028
+ci_t_crit = 4.53047399738543
+ci_var_v_log = 215.515369339559
+ci_v_log_mean = 2.232839766
+ci_sum_res_square = 49.8880017417971
+ci_n = 30.
+
+v_alert_2 = 0.25 						;threshold values in cm/hr
+v_alert_3 = 1.80	
+print_trend_plot = True
+print_meas_plot = True
+
+meas_plot_window = 30					;Surificial ground measurement plot window in days
+surficial_num_pts = 10					;number of points to include to trending analysis
+
 
 [print]
 print_stdout = True
