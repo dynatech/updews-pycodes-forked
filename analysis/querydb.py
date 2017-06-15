@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import memcache
 import pandas.io.sql as psql
 import pandas as pd
 import platform
@@ -10,8 +11,6 @@ if curOS == "Windows":
     import MySQLdb as mysqlDriver
 elif curOS == "Linux":
     import pymysql as mysqlDriver
-
-import configfileio as cfg
 
 # Scripts for connecting to local database
 
@@ -31,24 +30,30 @@ class CoordsArray:
         self.bgy = barangay
 
 
-def senslopedb_connect(nameDB):
+def senslopedb_connect(hostdb='local'):
+    sc = memcached()
+    Hostdb = sc['hosts'][hostdb]
+    Userdb = sc['db']['user']
+    Passdb = sc['db']['password']
+    Namedb = sc['db']['name']
     while True:
         try:
-            db = mysqlDriver.connect(host = Hostdb, user = Userdb, passwd = Passdb, db=nameDB)
+            db = mysqlDriver.connect(host = Hostdb, user = Userdb, passwd = Passdb, db=Namedb)
             cur = db.cursor()
+            cur.execute("use "+ Namedb)
             return db, cur
         except mysqlDriver.OperationalError:
             print '.',
 
 def print_out(line):
-    if printtostdout:
+    sc = memcached()
+    if sc['print']['print_stdout']:
         print line
 
 #Check if table exists
 #   Returns true if table exists
-def does_table_exist(table_name):
-    db, cur = senslopedb_connect(Namedb)
-    cur.execute("use "+ Namedb)
+def does_table_exist(table_name, hostdb='local'):
+    db, cur = senslopedb_connect(hostdb)
     cur.execute("SHOW TABLES LIKE '%s'" %table_name)
 
     if cur.rowcount > 0:
@@ -62,8 +67,8 @@ def does_table_exist(table_name):
 #    Parameters:
 #        query: str
 #             mysql like query code
-def execute_query(query):
-    db, cur = senslopedb_connect(Namedb)
+def execute_query(query, hostdb='local'):
+    db, cur = senslopedb_connect(hostdb)
     cur.execute(query)
     db.commit()
     db.close()
@@ -76,9 +81,9 @@ def execute_query(query):
 #    Returns:
 #        df: dataframe object
 #            dataframe object of the result set
-def get_db_dataframe(query):
+def get_db_dataframe(query, hostdb='local'):
     try:
-        db, cur = senslopedb_connect(Namedb)
+        db, cur = senslopedb_connect(hostdb)
         df = psql.read_sql(query, db)
         db.close()
         return df
@@ -86,7 +91,12 @@ def get_db_dataframe(query):
         print_out("Exception detected in accessing database")
         
 #Push a dataframe object into a table
-def push_db_dataframe(df,table_name,index=True):
+def push_db_dataframe(df,table_name,index=True, hostdb='local'):
+    sc = memcached()
+    Hostdb = sc['hosts'][hostdb]
+    Userdb = sc['db']['user']
+    Passdb = sc['db']['password']
+    Namedb = sc['db']['name']
     engine = create_engine('mysql://'+Userdb+':'+Passdb+'@'+Hostdb+':3306/'+Namedb)
     df.to_sql(name = table_name, con = engine, if_exists = 'append', schema = Namedb, index=index)
 
@@ -111,8 +121,7 @@ def get_raw_accel_data(tsm_id='',tsm_name = "", from_time = "", to_time = "", ty
     if not tsm_name and not tsm_id:
         raise ValueError('no site id entered')
         
-    if printtostdout:
-        print_out('Querying database ...')
+    print_out('Querying database ...')
 
     if (len(tsm_name) == 5):
         query = """SELECT ts,'%s' as 'tsm_name',times.node_id,xval,yval,zval,batt,accel_id
@@ -236,8 +245,7 @@ def get_soms_raw(tsm_name = "", from_time = "", to_time = "", type_num="", node_
 
 def get_coords_list():
     try:
-        db, cur = senslopedb_connect(Namedb)
-        cur.execute("use "+ Namedb)
+        db, cur = senslopedb_connect()
         
         query = 'SELECT name, lat, lon, barangay FROM site_column'
         
@@ -535,19 +543,7 @@ def alert_to_db(df, table_name):
             query += " trigger_id = %s" %df2['trigger_id'].values[0]
         execute_query(query)
 
-            
-s = cfg.config()
-
-Hostdb = s.dbio.hostdb
-Userdb = s.dbio.userdb
-Passdb = s.dbio.passdb
-Namedb = s.dbio.namedb
-printtostdout = s.dbio.printtostdout
-
-xlim = s.value.xlim
-ylim = s.value.ylim
-zlim = s.value.zlim
-xmax = s.value.xmax
-mlowlim = s.value.mlowlim
-muplim = s.value.muplim
-islimval = s.value.limitvalues
+def memcached():
+    mc = memcache.Client(['127.0.0.1:11211'],debug=0)
+    sc = mc.get("server_config")
+    return sc

@@ -13,7 +13,6 @@ if not path in sys.path:
 del path   
 
 import querydb as qdb
-import configfileio as cfg
 
 ############################################################
 ##      TIME FUNCTIONS                                    ##    
@@ -76,18 +75,20 @@ def site_threshold_gauges(threshold, gauges):
     return threshold
 
 def main(site_id='', Print=True, end=datetime.now()):
+    start_time = datetime.now()
+    print start_time
 
     output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
     
-    s = cfg.config()
+    sc = qdb.memcached()
 
     #creates directory if it doesn't exist
-    if (s.rainfall.PrintPlot or s.rainfall.PrintSummaryAlert) and Print:
-        if not os.path.exists(output_path+s.io.rainfallplotspath):
-            os.makedirs(output_path+s.io.rainfallplotspath)
+    if (sc['rainfall']['print_plot'] or sc['rainfall']['print_summary_alert']) and Print:
+        if not os.path.exists(output_path+sc['fileio']['rainfall_path']):
+            os.makedirs(output_path+sc['fileio']['rainfall_path'])
 
     # setting monitoring window
-    end, start, offsetstart = get_rt_window(s.rainfall.rt_window_length,s.rainfall.roll_window_length, end=end)
+    end, start, offsetstart = get_rt_window(float(sc['rainfall']['rt_window_length']),float(sc['rainfall']['roll_window_length']), end=end)
     tsn=end.strftime("%Y-%m-%d_%H-%M-%S")
 
     # 4 nearest rain gauges of each site
@@ -106,25 +107,23 @@ def main(site_id='', Print=True, end=datetime.now()):
     gauges = site_threshold.apply(site_threshold_gauges, gauges=gauges)
 
     site_gauges = gauges.groupby('site_id')
-    summary = site_gauges.apply(ra.main, end=end, s=s, trigger_symbol=trigger_symbol)
+    summary = site_gauges.apply(ra.main, end=end, sc=sc, trigger_symbol=trigger_symbol)
     summary = summary.reset_index(drop=True).set_index('site_id')[['1D cml', 'half of 2yr max', '3D cml', '2yr max', 'DataSource', 'alert', 'advisory']]
 
     if Print == True:
-        if s.rainfall.PrintSummaryAlert:
-            summary.to_csv(output_path+s.io.rainfallplotspath+'SummaryOfRainfallAlertGenerationFor'+tsn+'.csv',sep=',',mode='w')
+        if sc['rainfall']['print_summary_alert']:
+            summary.to_csv(output_path+sc['fileio']['rainfall_path']+'SummaryOfRainfallAlertGenerationFor'+tsn+'.csv',sep=',',mode='w')
         
 #        if s.rainfall.PrintPlot:
 #            siterainprops.apply(rp.main, offsetstart=offsetstart, start=start, end=end, tsn=tsn, s=s, output_path=output_path)
         
     summary_json = summary.reset_index().to_json(orient="records")
     
+    print "runtime = ", datetime.now()-start_time
+    
     return summary_json
 
 ################################################################################
 
 if __name__ == "__main__":
-    start_time = datetime.now()
-    print start_time
     main()
-    print "runtime = ", datetime.now()-start_time
-

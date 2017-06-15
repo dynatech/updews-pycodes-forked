@@ -109,3 +109,6 @@ rt_window_length=10.	#length of real-time monitoring window, in days
 roll_window_length=3.	#length of rolling/moving window operations in days
 print_plot = True
 print_summary_alert = True
+
+[print]
+print_stdout = True

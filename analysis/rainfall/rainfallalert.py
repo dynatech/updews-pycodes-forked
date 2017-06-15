@@ -43,7 +43,7 @@ def get_raw_rain_data(gauge_name, fromTime="", toTime=""):
     
     try:
         
-        query = "SELECT ts, rain from %s.%s " % (qdb.Namedb, gauge_name)
+        query = "SELECT ts, rain from %s " %gauge_name
                         
         if not fromTime:
             fromTime = "2010-01-01"
@@ -201,7 +201,7 @@ def summary_writer(site_id,gauge_name,rain_id,twoyrmax,halfmax,rainfall,end,writ
     
     return summary
 
-def main(rain_props, end, s, trigger_symbol):
+def main(rain_props, end, sc, trigger_symbol):
 
     ##INPUT:
     ##rainprops; DataFrameGroupBy; contains rain noah ids of noah rain gauge near the site, one and three-day rainfall threshold
@@ -214,7 +214,7 @@ def main(rain_props, end, s, trigger_symbol):
     twoyrmax = rain_props['threshold_value'].values[0]
     halfmax=twoyrmax/2
     
-    start = end - timedelta(s.io.roll_window_length)
+    start = end - timedelta(float(sc['rainfall']['roll_window_length']))
     offsetstart = start - timedelta(hours=0.5)
 
     try:
