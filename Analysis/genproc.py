@@ -173,8 +173,7 @@ def genproc(col, window, config, fixpoint, realtime=False, comp_vel=True):
         nodal_filled_smoothened = filled_smoothened.groupby('id') 
         
         disp_vel = nodal_filled_smoothened.apply(node_inst_vel, roll_window_numpts=window.numpts, start=window.start)
-        disp_vel = disp_vel[['ts', 'xz', 'xy', 'vel_xz', 'vel_xy','name']].reset_index()
-        disp_vel = disp_vel[['ts', 'id', 'xz', 'xy', 'vel_xz', 'vel_xy','name']]
+        disp_vel = disp_vel.reset_index(drop=True)
         disp_vel = disp_vel.set_index('ts')
         disp_vel = disp_vel.sort_values('id', ascending=True)
     else:
