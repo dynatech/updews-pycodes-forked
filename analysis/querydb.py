@@ -100,96 +100,135 @@ def push_db_dataframe(df,table_name,index=True, hostdb='local'):
     engine = create_engine('mysql://'+Userdb+':'+Passdb+'@'+Hostdb+':3306/'+Namedb)
     df.to_sql(name = table_name, con = engine, if_exists = 'append', schema = Namedb, index=index)
 
-def get_raw_accel_data(tsm_id='',tsm_name = "", from_time = "", to_time = "", type_num = "", node_id ="", batt=0, voltf=False, return_db=True):
+#update memcache if ever there is changes 
+#in accelerometers and tsm_sensors tables in senslopedb
+def update_memcache():
+    #memcached
+    memc = memcache.Client(['127.0.0.1:11211'], debug=1)
+    
+    query_tsm=("SELECT tsm_id, tsm_name, date_deactivated,"
+               " number_of_segments, version"
+               " FROM senslopedb.tsm_sensors")
+    query_accel=("SELECT accel_id, voltage_min, voltage_max"
+                 " FROM senslopedb.accelerometers")
+    
+    memc.set('tsm', get_db_dataframe(query_tsm))
+    memc.set('accel', get_db_dataframe(query_accel))
+    
+    print_out("Updated memcached with MySQL data")
+
+#Get raw accel data
+#    if batt is True, it will return batt voltage of each accel
+#    if analysis is True, it will return the accel in use 
+#       and it will drop columns 'in_use' and 'accel_number'
+#    if voltf is True, it will apply voltage filter
+#    if return_db is True, it will return dataframe, else it will return query
+def get_raw_accel_data(tsm_id='',tsm_name = "", from_time = "", to_time = "", 
+                       accel_number = "", node_id ="", batt=False, 
+                       analysis=False, voltf=False, return_db=True):
+    #memcached
+    memc = memcache.Client(['127.0.0.1:11211'], debug=1)
+    
+    try:
+        if not memc.get('tsm') and not memc.get('accel'):
+            update_memcache()
+            
+    except ValueError:
+        print_out("Data already saved in memcached")
+        pass
+    
+    tsm_details = memc.get('tsm')
+    accelerometers = memc.get('accel')
+        
+    tsm_details.date_deactivated=pd.to_datetime(tsm_details.date_deactivated)
+    
+    #range time
     if from_time == "":
         from_time = "2010-01-01"
     if to_time == "":
         to_time = pd.to_datetime(datetime.now())
     
-    #query tsm_name if input tsm_id
-    if tsm_id != '':
-        query_tsm_name = 'select tsm_name from tsm_sensors where tsm_id=%d' %tsm_id
-        tsm =  get_db_dataframe(query_tsm_name)
-        tsm_name = tsm.loc[0][0]
-        
-        tsm_query = ' where tsm_sensors.tsm_id=%d' %tsm_id
-    else:
-        tsm_query = " where tsm_name='%s'" %(tsm_name)
-        if len(tsm_name) == 5:
-             tsm_query += " and (date_deactivated>='%s' or date_deactivated is NULL) limit 1" %to_time
-        
     if not tsm_name and not tsm_id:
-        raise ValueError('no site id entered')
+        raise ValueError('no tsm_sensor entered')
         
+    #get tsm_name if input tsm_id
+    if tsm_id != '':
+        tsm_name = tsm_details.tsm_name[tsm_details.tsm_id==tsm_id].iloc[0]
+    
+    #get tsm_id if input is tsm_name and not tsm_id
+    else:
+        #if tsm_name has more than 1 tsm_id, it will return tsm_name 
+        #where the date_deactivation is NULL or greater than or equal to_time 
+        if tsm_details.tsm_id[tsm_details.tsm_name==tsm_name].count()>1:
+            
+            tsm_id = (tsm_details.tsm_id[(tsm_details.tsm_name==tsm_name) & 
+                                         ((tsm_details.date_deactivated>=to_time) 
+                                         | (tsm_details.date_deactivated.isnull()))
+                                        ].iloc[0])
+        else:
+            tsm_id = tsm_details.tsm_id[tsm_details.tsm_name==tsm_name].iloc[0]
+                   
+    #query
     print_out('Querying database ...')
 
-    if (len(tsm_name) == 5):
-        query = """SELECT ts,'%s' as 'tsm_name',times.node_id,xval,yval,zval,batt,accel_id
-                 from (select *, if(type_num in (32,11), 1,if(type_num in (33,12),2,0)) as 'accel_number' from tilt_%s""" %(tsm_name,tsm_name)
+    query = ("SELECT ts,'%s' as 'tsm_name',times.node_id,xval,yval,zval,batt,"
+             " times.accel_number,accel_id, in_use from (select *, if(type_num"
+             " in (32,11) or type_num is NULL, 1,if(type_num in (33,12),2,0)) "
+             " as 'accel_number' from tilt_%s" %(tsm_name,tsm_name))
 
-        query += " WHERE ts>='%s'" %from_time
-        query += " AND ts <= '%s'" %to_time
-              
-        query += " ) times"
-        
-        node_id_query = """ inner join (SELECT  accel_id,accelerometers.tsm_id,tsm_name,node_id,accel_number,voltage_min, voltage_max, in_use,version FROM senslopedb.accelerometers
-                            inner join (select * from tsm_sensors"""
-
-        node_id_query = node_id_query + tsm_query + """ ) tsm on tsm.tsm_id = accelerometers.tsm_id) nodes"""
-        if node_id != '':
-            node_id_query = """ inner join (SELECT  accel_id,accelerometers.tsm_id,tsm_name,node_id,accel_number,voltage_min, voltage_max, in_use,version FROM senslopedb.accelerometers
-                            inner join (select * from tsm_sensors"""
-                
-            node_id_query = node_id_query + tsm_query + """) tsm 
-                            on tsm.tsm_id = accelerometers.tsm_id where node_id=%d) nodes""" %(node_id)
-        query += node_id_query
-                
-        query += " on times.node_id = nodes.node_id and times.accel_number=nodes.accel_number"
-        if type_num in (11,12,32,33):
-            query += " where type_num =%d " %type_num
-
+    query += " WHERE ts >= '%s'" %from_time
+    query += " AND ts <= '%s'" %to_time
+    
+    if node_id != '':
+        #check node_id
+        if ((node_id>tsm_details.number_of_segments
+             [tsm_details.tsm_id==tsm_id].iloc[0]) or (node_id<1)):
+            raise ValueError('Error node_id')
         else:
-            query += """ where if(nodes.version=2,type_num in (32,33),type_num in (11,12))
-                            and in_use=1"""
-
-        if voltf:
-            query += " and batt>voltage_min and batt<voltage_max"        
-
-
-    elif (len(tsm_name) == 4):
-        query = """SELECT ts,'%s' as 'tsm_name',times.node_id,xval,yval,zval,accel_id
-                 from (select * from tilt_%s""" %(tsm_name,tsm_name)
-
-        query += " WHERE ts>='%s'" %from_time
-        query += " AND ts <= '%s'" %to_time
-         
-        query += ") times"
+            query += ' AND node_id = %d' %node_id
         
-        node_id_query = """ inner join (select accelerometers.node_id,accel_id from accelerometers
-                            inner join tsm_sensors on tsm_sensors.tsm_id = accelerometers.tsm_id""" 
-        node_id_query += tsm_query
-        node_id_query +=  ") nodes" 
-        if node_id != '':
-            node_id_query = """ inner join (select accelerometers.node_id,accel_id from accelerometers
-                                inner join tsm_sensors on tsm_sensors.tsm_id = accelerometers.tsm_id""" 
-            node_id_query +=  tsm_query
-            node_id_query +=  " and node_id=%d) nodes" %(node_id)
-        query += node_id_query
-        
-        query += " on times.node_id = nodes.node_id"
+    query += " ) times"
+    
+    node_id_query = " inner join (SELECT * FROM senslopedb.accelerometers"
+
+    node_id_query += " where tsm_id=%d" %tsm_id
+    
+    #check accel_number
+    if accel_number in (1,2):
+        if len(tsm_name)==5:
+            node_id_query += " and accel_number = %d" %accel_number
+            analysis = False
+    elif accel_number == '':
+        pass
+    else:
+        raise ValueError('Error accel_number')
+
+    query += node_id_query + ") nodes"
+            
+    query += (" on times.node_id = nodes.node_id"
+              " and times.accel_number=nodes.accel_number")
 
     if return_db:
         df =  get_db_dataframe(query)
-        if (len(tsm_name) == 5):
-            if (batt == 1):                
-                df.columns = ['ts','tsm_name','node_id','x','y','z','batt','accel_id']
-                df.ts = pd.to_datetime(df.ts)
-                return df
-            else:
-                df = df.drop('batt',axis=1)
-                
-        df.columns = ['ts','tsm_name','node_id','x','y','z','accel_id']
+        df.columns = ['ts','tsm_name','node_id','x','y','z'
+                      ,'batt','accel_number','accel_id','in_use']
         df.ts = pd.to_datetime(df.ts)
+        
+        #filter accel in_use
+        if analysis:
+            df = df[df.in_use==1]
+            df = df.drop(['accel_number','in_use'],axis=1)
+        
+        #voltage filter
+        if voltf:
+            if len(tsm_name)==5:
+                df = df.merge(accelerometers,how='inner', on='accel_id')
+                df = df[(df.batt>=df.voltage_min) & (df.batt<=df.voltage_max)]
+                df = df.drop(['voltage_min','voltage_max'],axis=1)
+        
+        if not batt:                
+            df = df.drop('batt',axis=1)
+
         return df
         
     else:
