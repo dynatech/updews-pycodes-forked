@@ -50,9 +50,10 @@ def accel_to_lin_xz_xy(seg_len,xa,ya,za):
     #xz, xy; array of floats; horizontal linear displacements along the planes defined by xa-za and xa-ya, respectively; units similar to seg_len
     
 
-    x=seg_len/np.sqrt(1+(np.tan(np.arctan(za/(np.sqrt(xa**2+ya**2))))**2+(np.tan(np.arctan(ya/(np.sqrt(xa**2+za**2))))**2)))
-    xz=x*(za/(np.sqrt(xa**2+ya**2)))
-    xy=x*(ya/(np.sqrt(xa**2+za**2)))
+    theta_xz = np.arctan(za/(np.sqrt(xa**2 + ya**2)))
+    theta_xy = np.arctan(ya/(np.sqrt(xa**2 + za**2)))
+    xz = seg_len * np.sin(theta_xz)
+    xy = seg_len * np.sin(theta_xy)
     
     return np.round(xz,4),np.round(xy,4)
 
