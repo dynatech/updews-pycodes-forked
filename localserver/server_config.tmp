@@ -95,6 +95,7 @@ k_ac_ax = 0.1			;minimum value velocity of axis across maximum velocity to consi
 num_nodes_to_check = 2	;number of nodes to check before calling column alert level 2 or 3
 data_dt = 0.5			;length of real-time monitoring window, in days
 roll_window_length = 3.	;length of rolling/moving window operations in hours
+rt_window_length = 3.	;length of real-time monitoring window, in days
 num_roll_window_ops = 2	;number of rolling window operations in the whole monitoring analysis
 col_pos_interval = 4H	;string expression indicating interval between two adjacent column position dates ex: '1D'= 1 day
 num_col_pos = 7         ;number of column position dates to plot 
