@@ -49,7 +49,7 @@ def create_rainfall_priorities():
     
     qdb.execute_query(query)
 
-def to_mysql(df, engine):
+def to_mysql(df):
     site_id = df['site_id'].values[0]
     rain_id = df['rain_id'].values[0]
     query = "SELECT EXISTS(SELECT * FROM rainfall_priorities"
@@ -99,11 +99,10 @@ def main():
         #Create a NOAH table if it doesn't exist yet
         create_rainfall_priorities()
 
-    engine = create_engine('mysql://'+qdb.Userdb+':'+qdb.Passdb+'@'+qdb.Hostdb+':3306/'+qdb.Namedb)
     nearest_rg = nearest_rg.reset_index(drop=True)
     nearest_rg['priority_id'] = range(len(nearest_rg))
     site_nearest_rg = nearest_rg.groupby('priority_id')
-    site_nearest_rg.apply(to_mysql, engine=engine)
+    site_nearest_rg.apply(to_mysql)
 
     return nearest_rg
     
