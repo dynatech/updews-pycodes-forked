@@ -43,7 +43,7 @@ def senslopedb_connect(hostdb='local'):
             cur.execute("use "+ Namedb)
             return db, cur
         except mysqlDriver.OperationalError:
-            print '.',
+            print_out('.')
 
 def print_out(line):
     sc = memcached()
@@ -492,7 +492,7 @@ def alert_to_db(df, table_name):
         elif table_name == 'operational_triggers':
             create_operational_triggers()
         else:
-            print 'unrecognized table:', table_name
+            print_out('unrecognized table : ' + table_name)
             return
 
     if table_name == 'operational_triggers':

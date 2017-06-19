@@ -37,7 +37,7 @@ if not path in sys.path:
     sys.path.insert(1,path)
 del path
 
-import configfileio as cfg
+import querydb as qdb
 
 
 class RTWindow:
@@ -96,11 +96,12 @@ def set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_w
 
     return roll_window_numpts, offsetstart, start, end
 
-def get_window(end=datetime.now(),rt_window_length=cfg.config().io.rt_window_length):
+def get_window(end=datetime.now(),rt_window_length=''):
     
-    s = cfg.config()
-    s.io.rt_window_length = rt_window_length
+    sc = qdb.memcached()
+    if rt_window_length == '':
+        rt_window_length = float(sc['subsurface']['rt_window_length'])
 
-    roll_window_numpts, offsetstart, start, end = set_monitoring_window(s.io.roll_window_length,s.io.data_dt,s.io.rt_window_length,s.io.num_roll_window_ops,endpt=end)
+    roll_window_numpts, offsetstart, start, end = set_monitoring_window(float(sc['subsurface']['roll_window_length']),float(sc['subsurface']['data_dt']),float(rt_window_length),float(sc['subsurface']['num_roll_window_ops']),endpt=end)
     
-    return RTWindow(roll_window_numpts, offsetstart, start, end),s
+    return RTWindow(roll_window_numpts, offsetstart, start, end), sc

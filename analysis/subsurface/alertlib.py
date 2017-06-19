@@ -28,7 +28,7 @@ def get_mode(li):
             n.append(m)
     return n
 
-def validity_check(adj_node_ind, alert, i, col_node, col_alert):
+def validity_check(adj_node_ind, alert, i, vel2, vel3):
 
     #DESCRIPTION
     #used in validating current node alert
@@ -44,35 +44,40 @@ def validity_check(adj_node_ind, alert, i, col_node, col_alert):
     #OUTPUT:
     #col_alert, col_node                             
 
-    adj_node_alert=[]
-    for j in adj_node_ind:
-        if alert['ND'].values[j-1]==0:
-            adj_node_alert.append(-1)
-        else:
-            if alert['vel_alert'].values[i-1]!=0:
+    if alert[alert.node_id == i]['disp_alert'].values[0] == alert[alert.node_id == i]['vel_alert'].values[0] or alert[alert.node_id == i]['vel_alert'].values[0] <= 0:
+        alert.loc[alert.node_id == i, 'col_alert'] = alert[alert.node_id == i]['node_alert'].values[0]
+
+    else:
+        for j in adj_node_ind:
+            if alert[alert.node_id == j]['ND'].values[0]==0:
+                continue
+            else:
                 #comparing current adjacent node velocity with current node velocity
-                if abs(alert['max_vel'].values[j-1])>=abs(alert['max_vel'].values[i-1])*1/(2.**abs(i-j)):
+                if abs(alert[alert.node_id == j]['max_vel'].values[0])>=abs(alert[alert.node_id == i]['max_vel'].values[0])*1/(2.**abs(i-j)):
                     #current adjacent node alert assumes value of current node alert
-                    col_node.append(i-1)
-                    col_alert.append(alert['node_alert'].values[i-1])
-                    break
-                    
-                else:
-                    adj_node_alert.append(0)
-                    col_alert.append(max(get_mode(adj_node_alert)))
+                    alert.loc[alert.node_id == i, 'col_alert'] = alert[alert.node_id == i]['node_alert'].values[0]
                     break
                 
-            else:
-                col_node.append(i-1)
-                col_alert.append(alert['node_alert'].values[i-1])
-                break
+                elif alert[alert.node_id == i]['min_vel'].values[0] >= vel3 and abs(alert[alert.node_id == j]['max_vel'].values[0])>=abs(alert[alert.node_id == i]['min_vel'].values[0])*1/(2.**abs(i-j)):
+                    alert.loc[alert.node_id == i, 'col_alert'] = 2
+                    break
 
-        if j==adj_node_ind[-1]:
-            col_alert.append(max(get_mode(adj_node_alert)))
-        
-    return col_alert, col_node
+                elif alert[alert.node_id == i]['min_vel'].values[0] >= vel2 and abs(alert[alert.node_id == j]['max_vel'].values[0])>=abs(alert[alert.node_id == i]['min_vel'].values[0])*1/(2.**abs(i-j)):
+                    alert.loc[alert.node_id == i, 'col_alert'] = 1
+                    break
+
+                elif alert['disp_alert'].values[i-1] > 0:
+                    alert.loc[alert.node_id == i, 'col_alert'] = alert[alert.node_id == i]['disp_alert'].values[0]
+                    break
+
+                else:
+                    alert.loc[alert.node_id == i, 'col_alert'] = 0
+                    break
+
+            if j==adj_node_ind[-1]:
+                alert.loc[alert.node_id == i, 'col_alert'] = -1
     
-def node_alert(disp_vel, colname, num_nodes, T_disp, T_velL2, T_velL3, k_ac_ax,lastgooddata,window,config):
+def node_alert(disp_vel, colname, num_nodes, disp, vel2, vel3, k_ac_ax, lastgooddata, window, sc):
     valid_data = pd.to_datetime(window.end - timedelta(hours=3))
     #initializing DataFrame object, alert
     alert=pd.DataFrame()
@@ -112,7 +117,7 @@ def node_alert(disp_vel, colname, num_nodes, T_disp, T_velL2, T_velL3, k_ac_ax,l
                                np.abs(alert['xy_disp'].values)), 4)
 
     #checking if displacement threshold is exceeded in either axis    
-    cond = np.asarray((np.abs(alert['xz_disp'].values)>T_disp, np.abs(alert['xy_disp'].values)>T_disp))
+    cond = np.asarray((np.abs(alert['xz_disp'].values)>disp, np.abs(alert['xy_disp'].values)>disp))
     alert['disp_alert']=np.where(np.any(cond, axis=0),
 
                                  #checking if proportional velocity is present across node
@@ -138,10 +143,10 @@ def node_alert(disp_vel, colname, num_nodes, T_disp, T_velL2, T_velL3, k_ac_ax,l
     alert['vel_alert']=np.where(alert['min_vel'].values/alert['max_vel'].values>k_ac_ax,   
 
                                 #checking if max node velocity exceeds threshold velocity for alert 2
-                                np.where(alert['max_vel'].values>=T_velL2,                  
+                                np.where(alert['max_vel'].values>=vel2,                  
 
                                          #checking if max node velocity exceeds threshold velocity for alert 3
-                                         np.where(alert['max_vel'].values>=T_velL3,         
+                                         np.where(alert['max_vel'].values>=vel3,         
 
                                                   #vel alert 3
                                                   3,
@@ -169,7 +174,7 @@ def node_alert(disp_vel, colname, num_nodes, T_disp, T_velL2, T_velL3, k_ac_ax,l
 
     return alert
 
-def column_alert(alert, num_nodes_to_check):
+def column_alert(col_alert, alert, num_nodes_to_check, k_ac_ax, vel2, vel3):
 
     #DESCRIPTION
     #Evaluates column-level alerts from node alert and velocity data
@@ -182,32 +187,18 @@ def column_alert(alert, num_nodes_to_check):
     #OUTPUT:
     #alert:                             Pandas DataFrame object; same as input dataframe "alert" with additional column for column-level alert
 
-#    print alert
-    col_alert=[]
-    col_node=[]
-    #looping through each node
-    for i in range(1,len(alert)+1):
+    i = col_alert['id'].values[0]
+    #checking if current node alert is 2 or 3
+    if alert[alert.node_id == i]['node_alert'].values[0] != 0:
+ 
+        #defining indices of adjacent nodes
+        adj_node_ind=[]
+        for s in range(1,num_nodes_to_check+1):
+            if i-s>0: adj_node_ind.append(i-s)
+            if i+s<=len(alert): adj_node_ind.append(i+s)
 
-        if alert['ND'].values[i-1]==0:
-            col_node.append(i-1)
-            col_alert.append(-1)
-    
-        #checking if current node alert is 2 or 3
-        elif alert['node_alert'].values[i-1]!=0:
-            
-            #defining indices of adjacent nodes
-            adj_node_ind=[]
-            for s in range(1,num_nodes_to_check+1):
-                if i-s>0: adj_node_ind.append(i-s)
-                if i+s<=len(alert): adj_node_ind.append(i+s)
-
-            #looping through adjacent nodes to validate current node alert
-            validity_check(adj_node_ind, alert, i, col_node, col_alert)
-               
-        else:
-            col_node.append(i-1)
-            col_alert.append(alert['node_alert'].values[i-1])
-            
-    alert['col_alert']=np.asarray(col_alert)
-
-    return alert
+        #looping through adjacent nodes to validate current node alert
+        validity_check(adj_node_ind, alert, i, vel2, vel3)
+           
+    else:
+        alert.loc[alert.node_id == i, 'col_alert'] = alert[alert.node_id == i]['node_alert'].values[0]

@@ -34,7 +34,10 @@ def writeOperationalTriggers(site_id, end):
     qdb.alert_to_db(operational_trigger, 'operational_triggers')
 
 def main(tsm_name='', end='', end_mon=False):
-    print tsm_name
+    run_start = datetime.now()
+    qdb.print_out(run_start)
+    qdb.print_out(tsm_name)
+
     if tsm_name == '':
         tsm_name = sys.argv[1].lower()
 
@@ -44,19 +47,23 @@ def main(tsm_name='', end='', end_mon=False):
         except:
             end = datetime.now()
     
-    window,config = rtw.get_window(end)
+    window, sc = rtw.get_window(end)
 
     tsm_props = qdb.get_tsm_list(tsm_name)[0]
-    data = proc.proc_data(tsm_props, window, config, config.io.column_fix)
+    data = proc.proc_data(tsm_props, window, sc)
         
     tilt = data.tilt[window.start:window.end]
     lgd = data.lgd
     tilt = tilt.reset_index().sort_values('ts',ascending=True)
+
     nodal_tilt = tilt.groupby('node_id', as_index=False)     
-    print tilt
-    alert = nodal_tilt.apply(lib.node_alert, colname=tsm_props.tsm_name, num_nodes=tsm_props.nos, T_disp=config.io.t_disp, T_velL2=config.io.t_vell2, T_velL3=config.io.t_vell3, k_ac_ax=config.io.k_ac_ax, lastgooddata=lgd,window=window,config=config).reset_index(drop=True)
-    alert = lib.column_alert(alert, config.io.num_nodes_to_check)
-    print alert
+    alert = nodal_tilt.apply(lib.node_alert, colname=tsm_props.tsm_name, num_nodes=tsm_props.nos, disp=float(sc['subsurface']['disp']), vel2=float(sc['subsurface']['vel2']), vel3=float(sc['subsurface']['vel3']), k_ac_ax=float(sc['subsurface']['k_ac_ax']), lastgooddata=lgd, window=window, sc=sc).reset_index(drop=True)
+    
+    alert['col_alert'] = -1
+    col_alert = pd.DataFrame({'id': range(1, tsm_props.nos+1), 'col_alert': [-1]*tsm_props.nos})
+    node_col_alert = col_alert.groupby('id', as_index=False)
+    node_col_alert.apply(lib.column_alert, alert=alert, num_nodes_to_check=int(sc['subsurface']['num_nodes_to_check']), k_ac_ax=float(sc['subsurface']['k_ac_ax']), vel2=float(sc['subsurface']['vel2']), vel3=float(sc['subsurface']['vel3']))
+
     valid_nodes_alert = alert.loc[~alert.node_id.isin(data.inv)]
     
     if max(valid_nodes_alert['col_alert'].values) > 0:
@@ -88,11 +95,11 @@ def main(tsm_name='', end='', end_mon=False):
 #        plotter.main(proc, window, config, plotvel_start=window.end-timedelta(hours=3), plotvel_end=window.end, realtime=False)
 #
 ########################
-    print tsm_alert
+    qdb.print_out(tsm_alert)
+    
+    qdb.print_out('run time = ' + str(datetime.now()-run_start))
+
 ################################################################################
 
 if __name__ == "__main__":
-    run_start = datetime.now()
-    print run_start
     main()
-    print 'run time =', datetime.now()-run_start

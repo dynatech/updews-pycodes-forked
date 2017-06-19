@@ -66,7 +66,7 @@ def same_bounds(df):
         df['xy_minlist'] = np.nan
     return df
 
-def cml_noise_profiling(df, config, fixpoint, num_nodes):
+def cml_noise_profiling(df, sc, num_nodes):
 #==============================================================================
 #     description
 #     determines peak/s in data distribution to characterize noise, 
@@ -84,7 +84,7 @@ def cml_noise_profiling(df, config, fixpoint, num_nodes):
     
     df2 = df
 
-    if fixpoint == 'top':
+    if sc['subsurface']['column_fix'] == 'top':
         df2[['xz', 'xy']] = df2[['xz', 'xy']].apply(lambda x: -x)
         
 
@@ -95,12 +95,12 @@ def cml_noise_profiling(df, config, fixpoint, num_nodes):
     max_min_df = nodal_df.apply(max_min, num_nodes = num_nodes, mx_mn_df = mx_mn_df)
     max_min_df = max_min_df.reset_index().loc[max_min_df.reset_index().node_id == 1][['level_1', 'xz_maxlist', 'xz_minlist', 'xy_maxlist', 'xy_minlist']].rename(columns = {'level_1': 'node_id'}).set_index('node_id')
     
-    if fixpoint == 'top':
+    if sc['subsurface']['column_fix'] == 'top':
         for_cml = max_min_df.sort_index(ascending = True)
     else:
         for_cml = max_min_df.sort_index(ascending = False)
     max_min_cml = for_cml.cumsum()    
-    if fixpoint == 'top':
+    if sc['subsurface']['column_fix'] == 'top':
         max_min_cml = max_min_cml.sort_index(ascending = False)
             
     max_min_df = max_min_df.reset_index()

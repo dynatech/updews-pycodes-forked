@@ -1,34 +1,25 @@
 import os
 from datetime import datetime, timedelta
-import configfileio as cfg
+import querydb as qdb
 
-output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
+path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
 
-s = cfg.config()
+sc = qdb.memcached()
 
-#local file paths
-RainfallPlotsPath = output_path + s.io.rainfallplotspath 
-OutputFilePath = output_path + s.io.outputfilepath
-GrndMeasPlotsPath = output_path + s.io.grndmeasplotspath
+#output path
+output_path = path + sc['fileio']['output_path']
+rainfall_path = path + sc['fileio']['rainfall_path']
 
+for dirpath, dirnames, filenames in os.walk(output_path):
+    for filename in filenames:
+        curpath = os.path.join(dirpath, filename)
+        file_modified = datetime.fromtimestamp(os.path.getmtime(curpath))
+        if datetime.now() - file_modified > timedelta(days = 10):
+            os.remove(curpath)
 
-for dirpath, dirnames, filenames in os.walk(RainfallPlotsPath):
-    for file in filenames:
-        curpath = os.path.join(dirpath, file)
+for dirpath, dirnames, filenames in os.walk(rainfall_path):
+    for filename in filenames:
+        curpath = os.path.join(dirpath, filename)
         file_modified = datetime.fromtimestamp(os.path.getmtime(curpath))
         if datetime.now() - file_modified > timedelta(days = 1):
-            os.remove(curpath)
-
-for dirpath, dirnames, filenames in os.walk(OutputFilePath):
-    for file in filenames:
-        curpath = os.path.join(dirpath, file)
-        file_modified = datetime.fromtimestamp(os.path.getmtime(curpath))
-        if datetime.now() - file_modified > timedelta(days = 10):
-            os.remove(curpath)
-
-for dirpath, dirnames, filenames in os.walk(GrndMeasPlotsPath):
-    for file in filenames:
-        curpath = os.path.join(dirpath, file)
-        file_modified = datetime.fromtimestamp(os.path.getmtime(curpath))
-        if datetime.now() - file_modified > timedelta(days = 10):
             os.remove(curpath)

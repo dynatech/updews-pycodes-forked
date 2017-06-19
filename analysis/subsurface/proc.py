@@ -59,9 +59,10 @@ def accel_to_lin_xz_xy(seg_len,xa,ya,za):
     #xz, xy; array of floats; horizontal linear displacements along the planes defined by xa-za and xa-ya, respectively; units similar to seg_len
     
 
-    x=seg_len/np.sqrt(1+(np.tan(np.arctan(za/(np.sqrt(xa**2+ya**2))))**2+(np.tan(np.arctan(ya/(np.sqrt(xa**2+za**2))))**2)))
-    xz=x*(za/(np.sqrt(xa**2+ya**2)))
-    xy=x*(ya/(np.sqrt(xa**2+za**2)))
+    theta_xz = np.arctan(za/(np.sqrt(xa**2 + ya**2)))
+    theta_xy = np.arctan(ya/(np.sqrt(xa**2 + za**2)))
+    xz = seg_len * np.sin(theta_xz)
+    xy = seg_len * np.sin(theta_xy)
     
     return np.round(xz,4),np.round(xy,4)
 
@@ -100,7 +101,7 @@ def node_inst_vel(filled_smoothened, roll_window_numpts, start):
         filled_smoothened['vel_xy'] = np.round(lr_xy.beta.x.values[0:len(filled_smoothened)],4)
     
     except:
-        print " ERROR in computing velocity"
+        qdb.print_out(" ERROR in computing velocity")
         filled_smoothened['vel_xz'] = np.zeros(len(filled_smoothened))
         filled_smoothened['vel_xy'] = np.zeros(len(filled_smoothened))
     
@@ -118,7 +119,7 @@ def node_inst_vel(filled_smoothened, roll_window_numpts, start):
 #            dataframe object of the resulting last good data
 def get_last_good_data(df):
     if df.empty:
-        print "Error: Empty dataframe inputted"
+        qdb.print_out("Error: Empty dataframe inputted")
         return
     # groupby node_id
     dfa = df.groupby('node_id')
@@ -127,9 +128,9 @@ def get_last_good_data(df):
     
     return dflgd
 
-def proc_data(tsm_props, window, config, fixpoint, realtime=False, comp_vel=True):
+def proc_data(tsm_props, window, sc, realtime=False, comp_vel=True):
     
-    monitoring = qdb.get_raw_accel_data(tsm_name=tsm_props.tsm_name, from_time=window.offsetstart, to_time=window.end)
+    monitoring = qdb.get_raw_accel_data(tsm_name=tsm_props.tsm_name, from_time=window.offsetstart, to_time=window.end, analysis=True)
     monitoring = monitoring.loc[monitoring.node_id <= tsm_props.nos]
 
     monitoring = filt.apply_filters(monitoring)
@@ -165,7 +166,7 @@ def proc_data(tsm_props, window, config, fixpoint, realtime=False, comp_vel=True
     nodes_nodata = nodes_nodata.set_index('ts')
     monitoring = monitoring.append(nodes_nodata)
     
-    max_min_df, max_min_cml = err.cml_noise_profiling(monitoring, config, fixpoint, tsm_props.nos)
+    max_min_df, max_min_cml = err.cml_noise_profiling(monitoring, sc, tsm_props.nos)
         
     #resamples xz and xy values per node using forward fill
     monitoring = monitoring.groupby('node_id').apply(resample_node, window = window).reset_index(level=1).set_index('ts')
@@ -173,11 +174,11 @@ def proc_data(tsm_props, window, config, fixpoint, realtime=False, comp_vel=True
     nodal_proc_monitoring = monitoring.groupby('node_id')
     
     if not realtime:
-        to_smooth = config.io.to_smooth
-        to_fill = config.io.to_fill
+        to_smooth = int(sc['subsurface']['to_smooth'])
+        to_fill = int(sc['subsurface']['to_fill'])
     else:
-        to_smooth = config.io.rt_to_smooth
-        to_fill = config.io.rt_to_fill
+        to_smooth = int(sc['subsurface']['rt_to_smooth'])
+        to_fill = int(sc['subsurface']['rt_to_fill'])
     
     filled_smoothened = nodal_proc_monitoring.apply(fill_smooth, offsetstart=window.offsetstart, end=window.end, roll_window_numpts=window.numpts, to_smooth=to_smooth, to_fill=to_fill)
     filled_smoothened = filled_smoothened[['xz', 'xy','tsm_name']].reset_index()
