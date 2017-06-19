@@ -2,7 +2,6 @@ from datetime import datetime, timedelta, time, date
 import os
 import pandas as pd
 
-import configfileio as cfg
 import querydb as qdb
 
 def RoundReleaseTime(date_time):
@@ -372,11 +371,11 @@ def main(end=datetime.now()):
     public_json = PublicAlert.to_json(orient="records")
 
     output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
-    s = cfg.config()
-    if not os.path.exists(output_path+s.io.outputfilepath):
-        os.makedirs(output_path+s.io.outputfilepath)
+    sc = qdb.memcached()
+    if not os.path.exists(output_path+sc['fileio']['output_path']):
+        os.makedirs(output_path+sc['fileio']['output_path'])
 
-    with open(output_path+s.io.outputfilepath+'PublicAlertRefDB.json', 'w') as w:
+    with open(output_path+sc['fileio']['output_path']+'PublicAlertRefDB.json', 'w') as w:
         w.write(public_json)
                 
     return PublicAlert
