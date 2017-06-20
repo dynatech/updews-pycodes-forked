@@ -12,13 +12,16 @@ del path
 import vcdgen as vcd
 # import querySenslopeDb as qs
     
-def getDF():
 
-        site = sys.argv[1]
-        fdate = sys.argv[2]
-        tdate = sys.argv[3]
-        df= vcd.vcdgen(site, tdate, fdate,1)
+site = sys.argv[1]
+fdate = sys.argv[2].replace("n",'').replace("T",' ')
+tdate = sys.argv[3].replace("n",'').replace("T",' ')
+if fdate == '':
+	df= vcd.vcdgen(site)
+else:
+	df= vcd.vcdgen(site, tdate, fdate)
 
-        print df
+print df
+
     
-getDF();
+

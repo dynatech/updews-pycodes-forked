@@ -567,7 +567,7 @@ def GetRainList():
         db, cur = SenslopeDBConnect(Namedb)
         cur.execute("use "+ Namedb)
         
-        query = 'SELECT name, max_rain_2year, rain_senslope, rain_arq FROM site_rain_props'
+        query = 'SELECT name, max_rain_2year, rain_senslope, rain_arq FROM rain_props'
         
         df = psql.read_sql(query, db)
         
@@ -639,7 +639,7 @@ def GetRainProps(table_name='site_rain_props'):
 #            dataframe object of the resulting last good data
 def GetLastGoodData(df, nos, fillMissing=False):
     if df.empty:
-        print "Error: Empty dataframe inputted"
+#        print "Error: Empty dataframe inputted"
         return
     # groupby id first
     dfa = df.groupby('id')
@@ -701,12 +701,12 @@ def GetSingleLGDPM(site, node, startTS):
     query = "SELECT timestamp,id, xvalue, yvalue, zvalue"
     if len(site) == 5:
         query = query + ", msgid"
-    query = query + " from %s WHERE id = %s and timestamp < '%s' " % (site, node, startTS)
+    query = query + " from %s WHERE id = %s and timestamp < '%s'  and timestamp >= '%s' " % (site, node, startTS, pd.to_datetime(startTS)-tda(3))
     if len(site) == 5:
         query = query + "and (msgid = 32 or msgid = 11) "
 #        query = query + "ORDER BY timestamp DESC LIMIT 2"
 #    else:
-    query = query + "ORDER BY timestamp DESC LIMIT 240"
+    query = query + "ORDER BY timestamp DESC"
     lgdpm = GetDBDataFrame(query)
     lgdpm['name'] = site 
 

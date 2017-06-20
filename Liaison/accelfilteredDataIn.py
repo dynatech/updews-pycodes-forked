@@ -26,7 +26,7 @@ ms = sys.argv[5]
 #tdate = "2017-02-28"
 #nid = "1-2-3".replace("-",",")
 #ms = "32"
-engine = create_engine('mysql+mysqldb://updews:october50sites@127.0.0.1/senslopedb')
+engine = create_engine('mysql+pymysql://updews:october50sites@127.0.0.1/senslopedb')
 query = "SELECT timestamp,id,msgid,xvalue,yvalue,zvalue,batt FROM senslopedb.%s where id in (%s) and msgid ='%s' and timestamp between '%s ' and '%s'" % (site,nid,ms,fdate,tdate)
 df = pd.io.sql.read_sql(query,engine)
 df.columns = ['ts','id','msgid','x','y','z','v']

@@ -50,9 +50,10 @@ def accel_to_lin_xz_xy(seg_len,xa,ya,za):
     #xz, xy; array of floats; horizontal linear displacements along the planes defined by xa-za and xa-ya, respectively; units similar to seg_len
     
 
-    x=seg_len/np.sqrt(1+(np.tan(np.arctan(za/(np.sqrt(xa**2+ya**2))))**2+(np.tan(np.arctan(ya/(np.sqrt(xa**2+za**2))))**2)))
-    xz=x*(za/(np.sqrt(xa**2+ya**2)))
-    xy=x*(ya/(np.sqrt(xa**2+za**2)))
+    theta_xz = np.arctan(za/(np.sqrt(xa**2 + ya**2)))
+    theta_xy = np.arctan(ya/(np.sqrt(xa**2 + za**2)))
+    xz = seg_len * np.sin(theta_xz)
+    xy = seg_len * np.sin(theta_xy)
     
     return np.round(xz,4),np.round(xy,4)
 
@@ -94,7 +95,7 @@ def node_inst_vel(filled_smoothened, roll_window_numpts, start):
         filled_smoothened['vel_xy'] = np.round(lr_xy.beta.x.values[0:len(filled_smoothened)],4)
     
     except:
-        print " ERROR in computing velocity"
+#        print " ERROR in computing velocity"
         filled_smoothened['vel_xz'] = np.zeros(len(filled_smoothened))
         filled_smoothened['vel_xy'] = np.zeros(len(filled_smoothened))
     
@@ -122,14 +123,14 @@ def genproc(col, window, config, fixpoint, realtime=False, comp_vel=True):
     	
     except:	
         LastGoodData = q.GetLastGoodDataFromDb(col.name)
-        print 'error'		
+#        print 'error'		
         
-    if len(LastGoodData)<col.nos: print col.name, " Missing nodes in LastGoodData"
+#    if len(LastGoodData)<col.nos: print col.name, " Missing nodes in LastGoodData"
     
     monitoring = monitoring.loc[monitoring.id <= col.nos]
     
     invalid_nodes = q.GetNodeStatus(1)
-    invalid_nodes[invalid_nodes.site == 'oslb']['node'].values
+    invalid_nodes = invalid_nodes[invalid_nodes.site == col.name]['node'].values
     monitoring = monitoring.loc[~monitoring.id.isin(invalid_nodes)]
     
     #assigns timestamps from LGD to be timestamp of offsetstart
@@ -173,8 +174,7 @@ def genproc(col, window, config, fixpoint, realtime=False, comp_vel=True):
         nodal_filled_smoothened = filled_smoothened.groupby('id') 
         
         disp_vel = nodal_filled_smoothened.apply(node_inst_vel, roll_window_numpts=window.numpts, start=window.start)
-        disp_vel = disp_vel[['ts', 'xz', 'xy', 'vel_xz', 'vel_xy','name']].reset_index()
-        disp_vel = disp_vel[['ts', 'id', 'xz', 'xy', 'vel_xz', 'vel_xy','name']]
+        disp_vel = disp_vel.reset_index(drop=True)
         disp_vel = disp_vel.set_index('ts')
         disp_vel = disp_vel.sort_values('id', ascending=True)
     else:
