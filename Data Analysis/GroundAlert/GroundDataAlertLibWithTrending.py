@@ -545,6 +545,8 @@ def GroundDataTrendingPlotJSON(site,crack,end = None):
     try:
         sp = UnivariateSpline(cur_t,cur_x,w=w)
         x_n = sp(t_n)
+        v_n = sp.derivative(n=1)(t_n)
+        a_n = sp.derivative(n=2)(t_n)
         v_s = abs(sp.derivative(n=1)(cur_t))
         a_s = abs(sp.derivative(n=2)(cur_t))
         
@@ -568,6 +570,8 @@ def GroundDataTrendingPlotJSON(site,crack,end = None):
         a_t = np.zeros(20)
         a_tu = np.zeros(20)
         a_td = np.zeros(20)
+        v_n = np.zeros(20)
+        a_n = np.zeros(20)
         
     #logarithmic axes
     v_s = np.log(v_s)
@@ -585,7 +589,7 @@ def GroundDataTrendingPlotJSON(site,crack,end = None):
     
     ts_n = map(lambda x: mytime.mktime(x.timetuple())*1000, ts_n)
     cur_ts = map(lambda x: mytime.mktime(x.timetuple())*1000, cur_ts)
-    to_json = {'av' : {'v':list(v_s),'a':list(a_s),'v_threshold':list(v_t),'a_threshold_line':list(a_t),'a_threshold_up':list(a_tu),'a_threshold_down':list(a_td)},'dvt':{'gnd':{'ts':list(cur_ts),'surfdisp':list(cur_x)},'interp':{'ts':list(ts_n),'surfdisp':list(x_n)}}}
+    to_json = {'av' : {'v':list(v_s),'a':list(a_s),'v_threshold':list(v_t),'a_threshold_line':list(a_t),'a_threshold_up':list(a_tu),'a_threshold_down':list(a_td)},'dvt':{'gnd':{'ts':list(cur_ts),'surfdisp':list(cur_x)},'interp':{'ts':list(ts_n),'surfdisp':list(x_n)}},'vat':{'v_n':list(v_n),'a_n':list(a_n),'t_n':list(t_n)}}
     print json.dumps(to_json)
     
 
