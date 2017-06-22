@@ -58,7 +58,8 @@ def parse_surficial_text(text):
     try:
         wrecord = re.search("(?<="+meas[-1]+" )[A-Z]+",data_field).group(0)
         recisvalid = False
-        for keyword in ["ARAW","ULAN","BAGYO","LIMLIM","AMBON","ULAP","SUN","RAIN","CLOUD","DILIM","HAMOG"]:
+        for keyword in ["ARAW","ULAN","BAGYO","LIMLIM","AMBON","ULAP","SUN",
+            "RAIN","CLOUD","DILIM","HAMOG"]:
             if keyword in wrecord:
                 recisvalid = True
                 print "valid"
@@ -84,14 +85,10 @@ def parse_surficial_text(text):
     obv['observer_name'] = observer_name
 
     site_code = sms_list[1].lower()
-    # df_sites = mc.get('df_sites')
-    # site_id = df_sites[df_sites.site_code == sms_list[1].lower()].site_id.values[0]
     sites_dict = mc.get('sites_dict')
     site_id = sites_dict['site_id'][site_code]
     obv['site_id'] = site_id
-    # marker_obervations= "("+ ts + ","+  meas_type +","+ observer_name +","+ str(reliability)+ ","+weather+","+data_source+ "," +site_code+ ")"
     
-    # data_records = pd.DataFrame(columns= ['marker_name', 'measurement', 'so_id'])
     data_records = dict()
     ind= 0
     print "====", meas
@@ -153,7 +150,8 @@ def get_time_from_sms(text):
     #     print 'Time out of bounds. Time too soon' 
     #     raise ValueError
     # el
-    if time_val > dt.strptime("18:00:00","%H:%M:%S").time() or time_val < dt.strptime("05:00:00","%H:%M:%S").time():
+    if (time_val > dt.strptime("18:00:00","%H:%M:%S").time() or time_val < 
+        dt.strptime("05:00:00","%H:%M:%S").time()):
         print 'Time out of bounds. Unrealizable time to measure' 
         raise ValueError
 
@@ -194,7 +192,7 @@ def get_date_from_sms(text):
     return date_str
 
 def get_site_id(code):
-    db, cur = dbio.SenslopeDBConnect('local') 
+    db, cur = dbio.db_connect('local') 
     
     if (code == 'MAN'):
         code= 'MNG'
@@ -218,14 +216,15 @@ def get_site_id(code):
 
 def get_marker_id(site_id,marker_name):
 
-    db, cur = dbio.SenslopeDBConnect('local') 
+    db, cur = dbio.db_connect('local') 
     
     try:
-        query = """SELECT markers.marker_id FROM markers \
-            INNER JOIN marker_history ON markers.site_id = {} \
-            AND marker_history.marker_id = markers.marker_id \
-            INNER JOIN marker_names ON marker_history.history_id = marker_names.history_id \
-            AND marker_names.marker_name = "{}" """
+        query = ("SELECT markers.marker_id FROM markers"
+            "INNER JOIN marker_history ON markers.site_id = {}"
+            "AND marker_history.marker_id = markers.marker_id"
+            "INNER JOIN marker_names ON marker_history.history_id =" 
+            "marker_names.history_id AND marker_names.marker_name = '{}'")
+
         cur.execute(query.format(site_id,marker_name))
         marker_id = cur.fetchone()[0]
         db.close()
@@ -235,19 +234,26 @@ def get_marker_id(site_id,marker_name):
         return marker_id
 
 def insert_new_markers(site_id, marker_name, ts):
-    db, cur = dbio.SenslopeDBConnect() 
+    db, cur = dbio.db_connect() 
     # query = 'INSERT INTO markers (site_id) VALUES ({})'.format(site_id)
     # print query
     # cur.execute(query)
     cur.execute('INSERT INTO markers (site_id) VALUES ({})'.format(site_id))
-    # marker_id = dbio.commitToDb(query,'imd',last_insert=True)
+    # marker_id = dbio.commit_to_db(query,'imd',last_insert=True)
     cur.execute('select last_insert_id()')
     marker_id = cur.fetchone()[0]
     print marker_id
     db.commit()
-    cur.execute('INSERT INTO marker_history(marker_id,ts,event) VALUES (@@IDENTITY,"{}","add")'.format(ts))
+
+    history_query = ("INSERT INTO marker_history(marker_id,ts,event) "
+        "VALUES (@@IDENTITY,'{}','add')".format(ts)
+        )
+    names_query = ('INSERT INTO marker_names(history_id,marker_name) '
+        'VALUES(@@IDENTITY,"{}")'.format(marker_name)
+        )
+    cur.execute(history_query)
     db.commit()
-    cur.execute('INSERT INTO marker_names(history_id,marker_name) VALUES(@@IDENTITY,"{}")'.format(marker_name))
+    cur.execute(names_query)
     db.commit()        
     db.close()
 
@@ -255,28 +261,33 @@ def insert_new_markers(site_id, marker_name, ts):
 
 def update_surficial_observations(obv):
     
-    db, cur = dbio.SenslopeDBConnect('local') 
+    db, cur = dbio.db_connect('local') 
 
     # input marker_observation
-    query = 'INSERT IGNORE INTO marker_observations '\
-        '(ts,meas_type,observer_name,reliability,weather,data_source, site_id) VALUES '\
-        '("{}","{}","{}",{},"{}","{}",{})'.format(obv['ts'],obv['meas_type'],\
-            obv['observer_name'],obv['reliability'],obv['weather'],\
-            obv['data_source'],obv['site_id'])
+    query = ("INSERT IGNORE INTO marker_observations "
+        "(ts,meas_type,observer_name,reliability,weather,data_source, site_id) "
+        "VALUES ('{}','{}','{}',{},'{}','{}',{})".format(obv['ts'],
+            obv['meas_type'], obv['observer_name'], obv['reliability'],
+            obv['weather'], obv['data_source'],obv['site_id'])
+        )
 
-    mo_id = dbio.commitToDb(query, 'uso', last_insert=True)[0][0]
+    mo_id = dbio.commit_to_db(query, 'uso', last_insert=True)[0][0]
+
+    print "mo_id =", mo_id
    
     # check if entry is duplicate
     if mo_id == 0:
         # print 'Duplicate entry'
-        query = 'SELECT marker_observations.mo_id FROM marker_observations WHERE '\
-                'ts = "{}" and site_id = "{}"'.format(obv['ts'],obv['site_id'])    
+        query = ("SELECT marker_observations.mo_id FROM marker_observations "
+            "WHERE 'ts = '{}' and site_id = '{}'".format(obv['ts'],
+            obv['site_id'])
+            )    
         mo_id = dbio.querydatabase(query,'uso')[0][0]
 
     return mo_id
 
 def update_surficial_data(obv, mo_id):
-    db, cur = dbio.SenslopeDBConnect('local') 
+    db, cur = dbio.db_connect('local') 
 
     data_records = obv['data_records']
 
@@ -284,12 +295,16 @@ def update_surficial_data(obv, mo_id):
         marker_id = get_marker_id(obv['site_id'], marker_name)
         if marker_id == 0:
             print "Inserting new marker ID"
-            marker_id = insert_new_markers(obv['site_id'], marker_name, obv['ts'])   
+            marker_id = insert_new_markers(obv['site_id'], marker_name, 
+                obv['ts'])   
 
-        query= 'INSERT INTO marker_data(marker_id,measurement,mo_id) '\
-        'VALUES({},{},{}) ON DUPLICATE KEY UPDATE MEASUREMENT = {}'.format(marker_id, data_records[marker_name], mo_id, data_records[marker_name])
+        query= ("INSERT INTO marker_data(marker_id,measurement,mo_id) "
+            "VALUES({},{},{}) ON DUPLICATE KEY UPDATE "
+            "MEASUREMENT = {}".format(marker_id, data_records[marker_name], 
+            mo_id, data_records[marker_name])
+            )
 
         # print query
-        dbio.commitToDb(query,'usd')
+        dbio.commit_to_db(query,'usd')
 
     db.close()

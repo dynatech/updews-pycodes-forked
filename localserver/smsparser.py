@@ -190,11 +190,14 @@ def process_two_accle_col_data(sms):
     return outl
 
 def write_two_accel_data_to_db(dlist,msgtime):
-    query = """INSERT IGNORE INTO tilt_%s (ts,node_id,type_num,xval,yval,zval,batt) VALUES """ % (str(dlist[0][0].lower()))
+    query = ("INSERT IGNORE INTO tilt_%s (ts,node_id,type_num,xval,yval,zval,"
+        "batt) VALUES ") % (str(dlist[0][0].lower()))
     
     for item in dlist:
         timetowrite = str(item[1])
-        query = query + """('%s',%s,%s,%s,%s,%s,%s),""" % (timetowrite,str(item[2]),str(item[3]),str(item[4]),str(item[5]),str(item[6]),str(item[7]))
+        query = query + """('%s',%s,%s,%s,%s,%s,%s),""" % (timetowrite,
+            str(item[2]),str(item[3]),str(item[4]),str(item[5]),str(item[6]),
+            str(item[7]))
 
     query = query[:-1]
     # print len(query)
@@ -387,7 +390,8 @@ def process_piezometer(sms):
         # try:
     # dbio.create_table(str(msgname), "piezo")
     try:
-      query = """INSERT INTO piezo_%s (ts, frequency_shift, temperature ) VALUES ('%s', %s, %s)""" %(msgname,txtdatetime,str(piezodata), str(tempdata))
+      query = ("INSERT INTO piezo_%s (ts, frequency_shift, temperature ) VALUES"
+      " ('%s', %s, %s)") % (msgname,txtdatetime,str(piezodata), str(tempdata))
       # print query
         # print query
     except ValueError:
@@ -439,7 +443,8 @@ def process_earthquake(msg):
     
     #find magnitude
     if re.search("((?<=M[SBLVOW]\=)|(?<=M\=)|(?<=MLV\=))\d+\.\d+(?= )",line):
-        magstr = re.search("((?<=M[SBLVOW]\=)|(?<=M\=)|(?<=MLV\=))\d+\.\d+(?= )",line).group(0)
+        magstr = re.search("((?<=M[SBLVOW]\=)|(?<=M\=)|(?<=MLV\=))\d+\.\d+(?= )"
+            ,line).group(0)
     else:
         print ">> No magnitude string recognized"
         magstr = 'NULL'
@@ -500,10 +505,11 @@ def process_earthquake(msg):
         print ">> No issuer string recognized"
         issuerstr = 'NULL'
 
-    query = """INSERT INTO earthquake_events (ts, magnitude, depth, latitude, longitude, issuer) \
-        VALUES ('%s',%s,%s,%s,%s,%s,'%s') ON DUPLICATE KEY UPDATE \
-        magnitude=magnitude, depth=depth, latitude=latitude, longitude=longitude, \
-        issuer=issuer;""" % (datetimestr,magstr,depthstr,latstr,longstr,issuerstr)
+    query = ("INSERT INTO earthquake_events (ts, magnitude, depth, latitude, "
+        "longitude, issuer) VALUES ('%s',%s,%s,%s,%s,'%s') ON DUPLICATE KEY "
+        "UPDATE magnitude=magnitude, depth=depth, latitude=latitude, longitude="
+        "longitude, issuer=issuer;") % (datetimestr,magstr,depthstr,
+        latstr,longstr,issuerstr)
 
     print query
 
@@ -574,8 +580,9 @@ def process_arq_weather(sms):
     #     return
 
     try:
-        query = """INSERT INTO rain_%s (ts,rain,temperature,humidity,battery1,battery2,csq)
-        VALUES ('%s',%s,%s,%s,%s,%s,%s)""" % (msgname,txtdatetime,rain,temp,hum,batv1,batv2,csq)
+        query = ("INSERT INTO rain_%s (ts,rain,temperature,humidity,battery1,"
+            "battery2,csq VALUES ('%s',%s,%s,%s,%s,%s,%s)") % (msgname,
+            txtdatetime,rain,temp,hum,batv1,batv2,csq)
         # print query
     except ValueError:
         print '>> Error writing query string.', 
@@ -586,7 +593,8 @@ def process_arq_weather(sms):
     print 'End of Process ARQ weather data'
 
 def check_logger_model(logger_name):
-    query = "SELECT model_id FROM senslopedb.loggers where logger_name = '%s'" % logger_name
+    query = ("SELECT model_id FROM senslopedb.loggers where "
+        "logger_name = '%s'") % logger_name
 
     return dbio.querydatabase(query,'check_logger_model')[0][0]
     
@@ -616,7 +624,8 @@ def process_rain(sms):
         else:
             msgtable = line.split(",")[0][:-1]+'G'
         # msgtable = check_name_of_number(sender)
-        msgdatetime = re.search("\d{02}\/\d{02}\/\d{02},\d{02}:\d{02}:\d{02}",line).group(0)
+        msgdatetime = re.search("\d{02}\/\d{02}\/\d{02},\d{02}:\d{02}:\d{02}",
+            line).group(0)
 
         txtdatetime = dt.strptime(msgdatetime,'%m/%d/%y,%H:%M:%S')
         
@@ -639,7 +648,8 @@ def process_rain(sms):
     # dbio.create_table(str(msgtable),"weather")
 
     try:
-        query = """INSERT INTO rain_%s (ts,rain,csq) VALUES ('%s',%s,%s)""" %(msgtable.lower(),txtdatetime,rain,csq)
+        query = ("INSERT INTO rain_%s (ts,rain,csq) "
+            "VALUES ('%s',%s,%s)") % (msgtable.lower(),txtdatetime,rain,csq)
         # print query            
     except:
         print '>> Error writing weather data to database. ' +  line
@@ -659,7 +669,8 @@ def process_stats(msg):
     
     try:
         msgtable = "stats"
-        items = re.match(r'(\w{4})[-](\d{1,2}[.]\d{02}),(\d{01}),(\d{1,2})/(\d{1,2}),#(\d),(\d),(\d{1,2}),(\d)[*](\d{10})',line)
+        items = re.match(r("(\w{4})[-](\d{1,2}[.]\d{02}),(\d{01}),(\d{1,2})/"
+            "(\d{1,2}),#(\d),(\d),(\d{1,2}),(\d)[*](\d{10})"),line)
         
         site = items.group(1)
         voltage = items.group(2)
@@ -694,8 +705,10 @@ def process_stats(msg):
     dbio.create_table(str(msgtable),"stats")
         
     try:
-        query = """INSERT INTO %s (timestamp,site,voltage,chan,att,retVal,msgs,sim,csq,sd)
-        VALUES ('%s','%s','%s','%s','%s','%s','%s','%s','%s','%s')""" %(str(msgtable),str(msgdatetime),str(site),str(voltage),str(chan),str(att),str(retVal),str(msgs),str(sim),str(csq),str(sd))
+        query = ("INSERT INTO %s (timestamp,site,voltage,chan,att,retVal,msgs,"
+            "sim,csq,sd) VALUES ('%s','%s','%s','%s','%s','%s','%s','%s','%s',"
+            "'%s')") %(str(msgtable),str(msgdatetime),str(site),str(voltage),
+            str(chan),str(att),str(retVal),str(msgs),str(sim),str(csq),str(sd))
             
     except:
         print '>> Error writing status data to database. ' +  line
@@ -710,7 +723,8 @@ def check_message_source(msg):
     c = cfg.config()
     identity = dbio.check_number_if_exists(msg.simnum,'community')
     if identity:
-        smsmsg = "From: %s %s of %s\n" % (identity[0][1],identity[0][0],identity[0][2])
+        smsmsg = "From: %s %s of %s\n" % (identity[0][1],identity[0][0],
+            identity[0][2])
         smsmsg += msg.data
         # server.write_outbox_message_to_db(smsmsg,c.smsalert.communitynum)
         return
@@ -767,24 +781,30 @@ def process_surficial_observation(msg):
     obv = []
     try:
         obv = surfp.parse_surficial_text(msg.data)
-        mo_id = surfp.update_sufricial_obvservations(obv)
+        print 'Updating observations'
+        mo_id = surfp.update_surficial_observations(obv)
         surfp.update_surficial_data(obv,mo_id)
-        server.write_outbox_message_to_db("READ-SUCCESS: \n" + msg.data,c.smsalert.communitynum,'users')
+        server.write_outbox_message_to_db("READ-SUCCESS: \n" + msg.data,
+            c.smsalert.communitynum,'users')
         server.write_outbox_message_to_db(c.reply.successen, msg.simnum,'users')
         proceed_with_analysis = True
     except ValueError as e:
         print str(e)
-        errortype = re.search("(WEATHER|DATE|TIME|GROUND MEASUREMENTS|NAME)", str(e).upper()).group(0)
+        errortype = re.search("(WEATHER|DATE|TIME|GROUND MEASUREMENTS|NAME)", 
+            str(e).upper()).group(0)
         print ">> Error in manual ground measurement SMS", errortype
 
-        server.write_outbox_message_to_db("READ-FAIL: (%s)\n%s" % (errortype,msg.data),c.smsalert.communitynum,'users')
+        server.write_outbox_message_to_db("READ-FAIL: (%s)\n%s" % 
+            (errortype,msg.data),c.smsalert.communitynum,'users')
         server.write_outbox_message_to_db(str(e), msg.simnum,'users')
     except KeyError:
         print '>> Error: Possible site code error'
-        server.write_outbox_message_to_db("READ-FAIL: (site code)\n%s" % (msg.data),c.smsalert.communitynum,'users')
-    except:
-        # pass
-        server.write_outbox_message_to_db("READ-FAIL: (Unhandled) \n" + msg.data,c.smsalert.communitynum,'users')
+        server.write_outbox_message_to_db("READ-FAIL: (site code)\n%s" % 
+            (msg.data),c.smsalert.communitynum,'users')
+    # except:
+    #     # pass
+    #     server.write_outbox_message_to_db("READ-FAIL: (Unhandled) \n" + 
+    #         msg.data,c.smsalert.communitynum,'users')
 
     # spawn surficial measurement analysis
     if proceed_with_analysis:
@@ -834,7 +854,8 @@ def parse_all_messages(args,allmsgs=[]):
                 isMsgProcSuccess = amsg.process_ack_to_alert(msg)   
             elif re.search("^ *(R(O|0)*U*TI*N*E )|(EVE*NT )", msg.data.upper()):
                 process_surficial_observation(msg)                  
-            elif re.search("^[A-Z]{4,5}\*[xyabcXYABC]\*[A-F0-9]+\*[0-9]+T?$",msg.data):
+            elif re.search("^[A-Z]{4,5}\*[xyabcXYABC]\*[A-F0-9]+\*[0-9]+T?$",
+                msg.data):
                 try:
                     dlist = process_two_accle_col_data(msg)
                     if dlist:
@@ -854,14 +875,17 @@ def parse_all_messages(args,allmsgs=[]):
             # elif re.search("^\w{4},[\d\/:,]+,[\d,\.]+$",msg.data):
             elif re.search("^\w{4},[\d\/:,]+",msg.data):
                 process_rain(msg)
-            elif re.search(r'(\w{4})[-](\d{1,2}[.]\d{02}),(\d{01}),(\d{1,2})/(\d{1,2}),#(\d),(\d),(\d{1,2}),(\d)[*](\d{10})',msg.data):
+            elif re.search(r("(\w{4})[-](\d{1,2}[.]\d{02}),(\d{01}),(\d{1,2})/"
+                "(\d{1,2}),#(\d),(\d),(\d{1,2}),(\d)[*](\d{10})"),msg.data):
                 process_stats(msg)
             elif re.search("ARQ\+[0-9\.\+/\- ]+$",msg.data):
                 process_arq_weather(msg)
-            elif msg.data.split('*')[0] == 'COORDINATOR' or msg.data.split('*')[0] == 'GATEWAY':
+            elif (msg.data.split('*')[0] == 'COORDINATOR' or 
+                msg.data.split('*')[0] == 'GATEWAY'):
                 isMsgProcSuccess = process_gateway_msg(msg)
             elif re.search("^MANUAL RESET",msg.data):
-                server.write_outbox_message_to_db("SENSORPOLL SENSLOPE", msg.simnum,'loggers')
+                server.write_outbox_message_to_db("SENSORPOLL SENSLOPE", 
+                    msg.simnum,'loggers')
                 isMsgProcSuccess = True
             else:
                 print '>> Unrecognized message format: '
@@ -890,8 +914,14 @@ def record_surficial_measurements(gnd_meas):
     
     # dbio.create_table("gndmeas","gndmeas")
     
-    query = "INSERT INTO gndmeas (timestamp, meas_type, site_id, observer_name, crack_id, meas, weather) VALUES " + gnd_meas
-    query += "ON DUPLICATE KEY UPDATE meas = values(meas), observer_name = values(observer_name), weather = values(weather);"
+    # query = "INSERT INTO gndmeas (timestamp, meas_type, site_id, observer_name, crack_id, meas, weather) VALUES " + gnd_meas
+    # query += "ON DUPLICATE KEY UPDATE meas = values(meas), observer_name = values(observer_name), weather = values(weather);"
+    
+    query = ("INSERT INTO gndmeas (timestamp, meas_type, site_id, "
+        "observer_name, crack_id, meas, weather) VALUES %s"
+        "ON DUPLICATE KEY UPDATE meas = values(meas), "
+        "observer_name = values(observer_name), weather = values(weather);"
+        % (gnd_meas))
     
     # print query
     
@@ -902,7 +932,8 @@ def record_manual_weather(mw_text):
     
     dbio.create_table("manualweather","manualweather")
     
-    query = "INSERT IGNORE INTO manualweather (timestamp, meas_type, site_id, observer_name, weatherdesc) VALUES " + mw_text
+    query = ("INSERT IGNORE INTO manualweather (timestamp, meas_type, site_id,"
+            " observer_name, weatherdesc) VALUES ") + mw_text
     
     dbio.commit_to_db(query, 'record_manual_weather')
 
