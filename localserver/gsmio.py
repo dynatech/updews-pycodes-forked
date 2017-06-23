@@ -110,7 +110,9 @@ def gsm_cmd(cmd):
             time.sleep(0.5)
         if time.time()>now+30:
             a = '>> Error: GSM Unresponsive'
-            raise CustomGSMResetException(">> Raising exception to reset code from GSM module reset")
+            except_str = (">> Raising exception to reset code "
+                "from GSM module reset")
+            raise CustomGSMResetException()
         return a
     except serial.SerialException:
         print "NO SERIAL COMMUNICATION (gsm_cmd)"
@@ -261,44 +263,28 @@ def get_all_sms(network):
             # log_error("wrong construction\n"+msg[0])
             continue
         
-        # try:
-        #     sender = re.search(r'[0-9]{11,12}',msg[0]).group(0)
-        # except AttributeError:
-        #     print 'Sender unknown.', msg[0]
-        #     sender = "UNK"
-            
-        # try:
-        #     txtdatetimeStr = re.search(r'\d\d/\d\d/\d\d,\d\d:\d\d:\d\d',msg[0]).group(0)
-        #     txtdatetime = dt.strptime(txtdatetimeStr,'%y/%m/%d,%H:%M:%S').strftime('%Y-%m-%d %H:%M:00')
-        # except:
-        #     print "Error in date time conversion"
         txtdatetimeStr = smsdata['date'] + td(hours=8)
 
         txtdatetimeStr = txtdatetimeStr.strftime('%Y-%m-%d %H:%M:%S')
 
 #        print smsdata['text']
         try:        
-            smsItem = sms(txtnum, smsdata['number'].strip('+'), str(smsdata['text']), txtdatetimeStr)
+            smsItem = sms(txtnum, smsdata['number'].strip('+'), 
+                str(smsdata['text']), txtdatetimeStr)
             print str(smsdata['text'])
             msglist.append(smsItem)
         except UnicodeEncodeError:
             print ">> Unknown character error. Skipping message"
             continue
-        # print str(smsdata['text'])
-        
-#        msglist.append(smsItem)
-        
-    
+
     return msglist
 
 
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description="RPI GSM command options")
-    parser.add_argument("-r", "--reset_gsm", help="hard reset of gsm modules", action="store_true")
-    # parser.add_argument("-m", "--msg_id", help="message id", type=int)
-    
-    # check if there is an error in parsing the arguments
+    parser.add_argument("-r", "--reset_gsm", help="hard reset of gsm modules", 
+        action="store_true")
     try:
         args = parser.parse_args()
     except:

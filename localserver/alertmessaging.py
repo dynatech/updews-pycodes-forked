@@ -29,14 +29,16 @@ def check_alert_message():
     server.write_alert_to_db(alertmsg)
 
 def get_alert_staff_numbers():
-    query = """select nickname, numbers from dewslcontacts where grouptags like '%alert%'"""
+    query = ("select nickname, numbers from dewslcontacts "
+        "where grouptags like '%alert%'")
     contacts = dbio.querydatabase(query,'checkalert')
     return contacts
 
 def send_alert_message():
     # check due alert messages
     ts_due = dt.today()
-    query = "select alert_id,alertmsg from smsalerts where ack = 'none' and ts_set <= '%s'" % (ts_due.strftime("%Y-%m-%d %H:%M:%S"))
+    query = ("select alert_id,alertmsg from smsalerts where ack = 'none'"
+        " and ts_set <= '%s'") % (ts_due.strftime("%Y-%m-%d %H:%M:%S"))
 
     alertmsg = dbio.querydatabase(query,'send_alert_message')
 
@@ -56,7 +58,8 @@ def send_alert_message():
     
     # set alert to 15 mins later
     ts_due = ts_due + td(seconds=60*15)
-    query = "update smsalerts set ts_set = '%s' where alert_id = %s" % (ts_due.strftime("%Y-%m-%d %H:%M:%S"),alertmsg[0][0])
+    query = ("update smsalerts set ts_set = '%s' where "
+        "alert_id = %s") % (ts_due.strftime("%Y-%m-%d %H:%M:%S"),alertmsg[0][0])
 
     dbio.commit_to_db(query, 'checkalertmsg')
 
@@ -85,25 +88,31 @@ def process_ack_to_alert(msg):
             return True
 
     try:
-        remarks = re.search("(?<=\d ).+(?=($|\r|\n))",msg.data,re.IGNORECASE).group(0)
+        remarks = re.search("(?<=\d ).+(?=($|\r|\n))",msg.data, 
+            re.IGNORECASE).group(0)
     except:
         errmsg = "Please put in your remarks."
-        server.write_outbox_message_to_db(errmsg,msg.simnum)
+        server.write_outbox_message_to_db(errmsg, msg.simnum)
         return True
 
     try:
-        alert_status = re.search("(in)*valid(ating)*",remarks,re.IGNORECASE).group(0)
+        alert_status = re.search("(in)*valid(ating)*", remarks,
+            re.IGNORECASE).group(0)
         remarks = remarks.replace(alert_status,"").strip()
     except:
-        errmsg = "Please put in the alert status validity. i.e (VALID, INVALID, VALIDATING)"
+        errmsg = ("Please put in the alert status validity."
+            " i.e (VALID, INVALID, VALIDATING)")
         server.write_outbox_message_to_db(errmsg,msg.simnum)
         return True
 
-    query = "update smsalerts set ack = '%s', ts_ack = '%s', remarks = '%s', alertstat = '%s' where alert_id = %s" % (name,msg.dt,remarks,alert_status, alert_id)
+    query = ("update smsalerts set ack = '%s', ts_ack = '%s', remarks = '%s', "
+        "alertstat = '%s' where alert_id = %s") % (name, msg.dt, remarks, 
+        alert_status, alert_id)
     dbio.commit_to_db(query,process_ack_to_alert)
 
     contacts = get_alert_staff_numbers()
-    message = "Alert ID %s ACK by %s on %s\nStatus: %s\nRemarks: %s" % (alert_id,name,msg.dt,alert_status,remarks)
+    message = ("Alert ID %s ACK by %s on %s\nStatus: %s\n"
+        "Remarks: %s") % (alert_id, name, msg.dt, alert_status, remarks)
     
     tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
     for item in contacts:
@@ -117,32 +126,39 @@ def update_shift_tags():
     today = dt.today().strftime("%Y-%m-%d %H:%M:%S")
     print 'Updating shift tags for', today
 
-    query = "update senslopedb.dewslcontacts set grouptags = replace(grouptags,',alert-mon','') where grouptags like '%alert-mon%'"
+    query = ("update senslopedb.dewslcontacts set grouptags = "
+        "replace(grouptags,',alert-mon','') where grouptags like '%alert-mon%'")
     dbio.commit_to_db(query, 'update_shift_tags')
 
     # update the tags of current shifts
-    query = """
-        update dewslcontacts as t1,
-        ( select timestamp,iompmt,iompct,oomps,oompmt,oompct from monshiftsched 
-          where timestamp < '%s' 
-          order by timestamp desc limit 1
-        ) as t2
-        set t1.grouptags = concat(t1.grouptags,',alert-mon')
-        where t1.nickname = t2.iompmt or
-        t1.nickname = t2.iompct or
-        t1.nickname = t2.oomps or
-        t1.nickname = t2.oompmt or
-        t1.nickname = t2.oompct
-    """ % (today)
+    query = (
+        "update dewslcontacts as t1,"
+        "(select timestamp,iompmt,iompct,oomps,oompmt,oompct from monshiftsched"
+        "  where timestamp < '%s' "
+        "  order by timestamp desc limit 1"
+        ") as t2"
+        "set t1.grouptags = concat(t1.grouptags,',alert-mon')"
+        "where t1.nickname = t2.iompmt or"
+        "t1.nickname = t2.iompct or"
+        "t1.nickname = t2.oomps or"
+        "t1.nickname = t2.oompmt or"
+        "t1.nickname = t2.oompct"
+        ) % (today)
     dbio.commit_to_db(query, 'update_shift_tags')
 
 def main():
-    parser = argparse.ArgumentParser(description="Request information from server\n PSIR [-options]")
-    parser.add_argument("-w", "--writetodb", help="write alert to db", action="store_true")
-    parser.add_argument("-c", "--check_alert_message", help="check alert messages from db", action="store_true")
-    parser.add_argument("-s", "--send_alert_message", help="send alert messages from db", action="store_true")
-    parser.add_argument("-u", "--updateshifts", help="update shifts with alert tag", action="store_true")
-    parser.add_argument("-cs", "--checksendalert", help="check alert then send", action="store_true")
+    desc_str = "Request information from server\n PSIR [-options]"
+    parser = argparse.ArgumentParser(description=desc_str)
+    parser.add_argument("-w", "--writetodb", help="write alert to db", 
+        action="store_true")
+    parser.add_argument("-c", "--check_alert_message", 
+        help="check alert messages from db", action="store_true")
+    parser.add_argument("-s", "--send_alert_message", 
+        help="send alert messages from db", action="store_true")
+    parser.add_argument("-u", "--updateshifts", 
+        help="update shifts with alert tag", action="store_true")
+    parser.add_argument("-cs", "--checksendalert", 
+        help="check alert then send", action="store_true")
     
     
     try:

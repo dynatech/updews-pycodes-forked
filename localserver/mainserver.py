@@ -53,14 +53,16 @@ def send_alert_gsm(network,alertmsg):
         print "Error sending all_alerts.txt"
 
 def write_raw_sms_to_db(msglist,sensor_nums):
-    query = "INSERT INTO smsinbox (timestamp,sim_num,sms_msg,read_status,web_flag) VALUES "
+    query = ("INSERT INTO smsinbox (timestamp, sim_num,"
+        "sms_msg,read_status,web_flag) VALUES ")
     for m in msglist:
         if sensor_nums.find(m.simnum[-10:]) == -1:
         # if re.search(m.simnum[-10:],sensor_nums):
             web_flag = 'W'
             print m.data[:20]
             if cfg.config().mode.script_mode == 'gsmserver':
-                ret = dsll.sendReceivedGSMtoDEWS(str(m.dt.replace("/","-")), m.simnum, m.data)
+                ret = dsll.sendReceivedGSMtoDEWS(str(m.dt.replace("/","-")),
+                    m.simnum, m.data)
 
                 #if the SMS Message was sent successfully to the web socket server then,
                 #   change web_flag to 'WS' which means "Websocket Server Sent"
@@ -68,7 +70,8 @@ def write_raw_sms_to_db(msglist,sensor_nums):
                     web_flag = 'WSS'
         else:
             web_flag = 'S'
-        query += "('%s','%s','%s','UNREAD','%s')," % (str(m.dt.replace("/","-")),str(m.simnum),str(m.data.replace("'","\"")),web_flag)
+        query += "('%s','%s','%s','UNREAD','%s')," % (str(m.dt.replace("/","-")), 
+            str(m.simnum),str(m.data.replace("'","\"")),web_flag)
         # query += "('" + str(m.dt.replace("/","-")) + "','" + str(m.simnum) + "','"
         # query += str(m.data.replace("'","\"")) + "','UNREAD'),"
     
@@ -110,13 +113,16 @@ def write_outbox_message_to_db(message='',recepients='',table='users'):
         return
 
     tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
-    query = "insert into smsoutbox_%s (ts_written,sms_msg,source) VALUES ('%s','%s','central')" % (table,tsw,message)
+    query = ("insert into smsoutbox_%s (ts_written,sms_msg,source) VALUES "
+        "('%s','%s','central')") % (table,tsw,message)
     
-    last_insert = dbio.commit_to_db(query,'write_outbox_message_to_db',last_insert=True)[0][0]
+    last_insert = dbio.commit_to_db(query,'write_outbox_message_to_db', 
+        last_insert=True)[0][0]
 
     table_mobile = get_mobile_sim_nums(table)
 
-    query = "INSERT INTO smsoutbox_%s_status (outbox_id,mobile_id,gsm_id) VALUES " % (table[:-1])
+    query = ("INSERT INTO smsoutbox_%s_status (outbox_id,mobile_id,gsm_id)"
+        " VALUES ") % (table[:-1])
             
     for r in recepients.split(","):
         gsm_id = get_gsm_id(r)
@@ -136,7 +142,8 @@ def check_alert_messages():
     c = cfg.config()
     alllines = ''
     print c.fileio.allalertsfile
-    if os.path.isfile(c.fileio.allalertsfile) and os.path.getsize(c.fileio.allalertsfile) > 0:
+    if (os.path.isfile(c.fileio.allalertsfile) 
+        and os.path.getsize(c.fileio.allalertsfile) > 0):
         f = open(c.fileio.allalertsfile,'r')
         alllines = f.read()
         f.close()
@@ -233,14 +240,14 @@ def get_mobile_sim_nums(table):
         if logger_mobile_sim_nums:
             return logger_mobile_sim_nums
 
-        query = """ 
-        SELECT t1.mobile_id,t1.sim_num 
-        FROM logger_mobile AS t1 
-        LEFT OUTER JOIN logger_mobile AS t2 
-            ON t1.sim_num = t2.sim_num 
-                AND (t1.date_activated < t2.date_activated 
-                OR (t1.date_activated = t2.date_activated AND t1.mobile_id < t2.mobile_id)) 
-        WHERE t2.sim_num IS NULL and t1.sim_num is not null"""
+        query = ("SELECT t1.mobile_id,t1.sim_num "
+            "FROM logger_mobile AS t1 "
+            "LEFT OUTER JOIN logger_mobile AS t2 "
+            "ON t1.sim_num = t2.sim_num "
+            "AND (t1.date_activated < t2.date_activated "
+            "OR (t1.date_activated = t2.date_activated "
+            "AND t1.mobile_id < t2.mobile_id)) "
+            "WHERE t2.sim_num IS NULL and t1.sim_num is not null")
 
         nums = dbio.query_database(query,'get_mobile_sim_nums','sandbox')
         nums = {key: value for (value, key) in nums}
@@ -273,7 +280,8 @@ def write_alert_to_db(alertmsg):
 
     today = dt.today().strftime("%Y-%m-%d %H:%M:%S")
 
-    query = "insert into smsalerts (ts_set,alertmsg,remarks) values ('%s','%s','none')" % (today,alertmsg)
+    query = ("insert into smsalerts (ts_set,alertmsg,remarks) "
+        "values ('%s','%s','none')") % (today,alertmsg)
 
     print query
 
@@ -333,8 +341,10 @@ def simulate_gsm(network='simulate'):
     loggers_count = 0
     users_count = 0
     
-    query_loggers = "insert into smsinbox_loggers (ts_received,mobile_id,sms_msg,read_status,gsm_id) values "
-    query_users = "insert into smsinbox_users (ts_received,mobile_id,sms_msg,read_status,gsm_id) values "
+    query_loggers = ("insert into smsinbox_loggers (ts_received, mobile_id, "
+        "sms_msg,read_status,gsm_id) values ")
+    query_users = ("insert into smsinbox_users (ts_received, mobile_id, "
+        "sms_msg,read_status,gsm_id) values ")
 
     print smsinbox_sms
     sms_id_ok = []
@@ -348,11 +358,13 @@ def simulate_gsm(network='simulate'):
         read_status = 0 
     
         if m[2] in logger_mobile_sim_nums.keys():
-            query_loggers += "('%s',%d,'%s',%d,%d)," % (ts_received,logger_mobile_sim_nums[m[2]],sms_msg,read_status,gsm_id)
+            query_loggers += "('%s',%d,'%s',%d,%d)," % (ts_received, 
+                logger_mobile_sim_nums[m[2]], sms_msg, read_status, gsm_id)
             ltr_mobile_id= logger_mobile_sim_nums[m[2]]
             loggers_count += 1
         elif m[2] in user_mobile_sim_nums.keys():
-            query_users += "('%s',%d,'%s',%d,%d)," % (ts_received,user_mobile_sim_nums[m[2]],sms_msg,read_status,gsm_id)
+            query_users += "('%s',%d,'%s',%d,%d)," % (ts_received, 
+                user_mobile_sim_nums[m[2]], sms_msg, read_status, gsm_id)
             users_count += 1
         else:            
             print 'Unknown number', m[2]
@@ -365,7 +377,9 @@ def simulate_gsm(network='simulate'):
     query_users = query_users[:-1]
     
     # print query
-    query_lastText = 'UPDATE last_text_received SET inbox_id = (select max(inbox_id) from smsinbox_loggers) , ts = "{}" where mobile_id= {}'.format(ts_received, ltr_mobile_id)
+    query_lastText = ("UPDATE last_text_received SET inbox_id = "
+        "(select max(inbox_id) from smsinbox_loggers) , ts = '{}' "
+        "where mobile_id= {}'".format(ts_received, ltr_mobile_id))
     # print query_lastText    
     if len(sms_id_ok)>0:
         if loggers_count > 0:
@@ -432,7 +446,8 @@ def run_server(network='simulate',table='loggers'):
             
             detele_messages_from_gsm()
                 
-            print dt.today().strftime("\n" + network + " Server active as of %A, %B %d, %Y, %X")
+            print dt.today().strftime("\n" + network 
+                + " Server active as of %A, %B %d, %Y, %X")
             log_runtime_status(network,"alive")
 
             try_sending_messages(network)
@@ -464,13 +479,10 @@ def run_server(network='simulate',table='loggers'):
 
 def get_arguments():
     parser = argparse.ArgumentParser(description="Run SMS server [-options]")
-    parser.add_argument("-t", "--table", help="smsinbox table (loggers or users)")
-    parser.add_argument("-n", "--network", help="network name (smart/globe/simulate)")
-    # parser.add_argument("-g", "--gsm", help="gsm name")
-    # parser.add_argument("-s", "--status", help="inbox/outbox status",type=int)
-    # parser.add_argument("-l", "--messagelimit", help="maximum number of messages to process at a time",type=int)
-    # parser.add_argument("-r", "--runtest", help="run test function",action="store_true")
-    # parser.add_argument("-b", "--bypasslock", help="bypass lock script function",action="store_true")
+    parser.add_argument("-t", "--table", 
+        help="smsinbox table (loggers or users)")
+    parser.add_argument("-n", "--network", 
+        help="network name (smart/globe/simulate)")
     
     try:
         args = parser.parse_args()

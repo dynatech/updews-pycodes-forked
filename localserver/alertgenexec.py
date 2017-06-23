@@ -7,7 +7,8 @@ from datetime import datetime as dt
 
 
 def count_alert_analysis_instances():
-	p = subprocess.Popen("ps ax | grep alertgen.py -c", stdout=subprocess.PIPE, shell=True, stderr=subprocess.STDOUT)
+	p = subprocess.Popen("ps ax | grep alertgen.py -c", stdout=subprocess.PIPE, 
+		shell=True, stderr=subprocess.STDOUT)
 	out, err = p.communicate()
 	return int(out)
 
@@ -41,12 +42,15 @@ def main():
 		mc.set('alertgenlist',[])
 		mc.set('alertgenlist',alertgenlist)
 
-		command = "python %s %s '%s'" % (c.fileio.alertgenscript,alert_info['tsm_name'],alert_info['ts'])
+		command = "python %s %s '%s'" % (c.fileio.alertgenscript, 
+			alert_info['tsm_name'], alert_info['ts'])
 
 		print "Running", alert_info['tsm_name'], "alertgen"
         
-		if lockscript.get_lock('alertgen for %s' % alert_info['tsm_name'],exitifexist=False):
-			p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, stderr=subprocess.STDOUT)
+		if lockscript.get_lock('alertgen for %s' % alert_info['tsm_name'], 
+			exitifexist=False):
+			p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, 
+				stderr=subprocess.STDOUT)
 		else:
 			continue
 

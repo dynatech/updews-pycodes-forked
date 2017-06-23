@@ -17,13 +17,12 @@ import surficialparser as surfp
 mc = memcache.Client(['127.0.0.1:11211'],debug=0)
 
 def update_last_msg_received_table(txtdatetime,name,sim_num,msg):
-    query = """insert into senslopedb.last_msg_received
-                (timestamp,name,sim_num,last_msg)
-                values ('%s','%s','%s','%s')
-                on DUPLICATE key update
-                timestamp = '%s',
-                sim_num = '%s',
-                last_msg = '%s'""" %(txtdatetime,name,sim_num,msg,txtdatetime,sim_num,msg)
+    query = ("insert into senslopedb.last_msg_received"
+        "(timestamp,name,sim_num,last_msg) values ('%s','%s','%s','%s')"
+        "on DUPLICATE key update timestamp = '%s', sim_num = '%s',"
+        "last_msg = '%s'" % (txtdatetime, name, sim_num, msg, txtdatetime,
+        sim_num,msg)
+        )
                 
     dbio.commit_to_db(query, 'update_last_msg_received_table')
     
@@ -31,8 +30,10 @@ def update_sim_num_table(name,sim_num,date_activated):
     return
     db, cur = dbio.db_connect('local')
     
-    query = """INSERT IGNORE INTO site_column_sim_nums (name,sim_num,date_activated)
-                VALUES ('%s','%s','%s')""" %( name.upper(),sim_num,date_activated)
+    query = ("INSERT IGNORE INTO site_column_sim_nums (name,sim_num, "
+        "date_activated) VALUES ('%s','%s','%s')" % (name.upper(),
+        sim_num, date_activated)
+        )
 
     dbio.commit_to_db(query, 'update_sim_num_table')
 
@@ -41,9 +42,11 @@ def check_name_of_number(number):
     
     while True:
         try:
-            query = """select logger_name from loggers where 
-                logger_id = (select logger_id from logger_mobile 
-                where sim_num = '%s' order by date_activated desc limit 1) """ % (number)
+            query = ("select logger_name from loggers where "
+                "logger_id = (select logger_id from logger_mobile "
+                "where sim_num = '%s' order by date_activated desc limit 1)" 
+                % (number)
+                )
                 
             a = cur.execute(query)
             if a:
@@ -130,10 +133,6 @@ def process_two_accle_col_data(sms):
        return
     
     ts_patterns = ['%y%m%d%H%M%S', '%Y-%m-%d %H:%M:%S']
-    # timestamp = "20"+ts[0:2]+"-"+ts[2:4]+"-"+ts[4:6]+" "+ts[6:8]+":"+ts[8:10]+":00"
-    #print '>>',
-    #print timestamp
-    #timestamp = dt.strptime(txtdatetime,'%y%m%d%H%M').strftime('%Y-%m-%d %H:%M:00')
     timestamp = ''
     ts = re.sub("[^0-9]","",ts)
     for pattern in ts_patterns:
@@ -205,13 +204,16 @@ def write_two_accel_data_to_db(dlist,msgtime):
     dbio.commit_to_db(query, 'write_two_accel_data_to_db')
    
 def write_soms_data_to_db(dlist,msgtime):
-    query = """INSERT IGNORE INTO soms_%s (ts,node_id,type_num,mval1,mval2) VALUES """ % (str(dlist[0][0].lower()))
+    query = ("INSERT IGNORE INTO soms_%s (ts,node_id,type_num,mval1,mval2) "
+        "VALUES " % (str(dlist[0][0].lower()))
+        )
     
     print "site_name", str(dlist[0][0])
     
     for item in dlist:            
         timetowrite = str(item[1])
-        query = query + """('%s',%s,%s,%s,%s),""" % (timetowrite,str(item[2]),str(item[3]),str(item[4]),str(item[5]))
+        query = query + "('%s',%s,%s,%s,%s)," % (timetowrite, str(item[2]), 
+            str(item[3]),str(item[4]),str(item[5]))
 
     query = query[:-1]
     query = query.replace("nan","NULL")
@@ -269,8 +271,12 @@ def process_column_v1(sms):
         
     update_sim_num_table(tsm_name,sender,timestamp[:10])
         
-    query_tilt = """INSERT IGNORE INTO tilt_%s (ts,node_id,xval,yval,zval) VALUES """ % (str(tsm_name.lower()))
-    query_soms = """INSERT IGNORE INTO soms_%s (ts,node_id,mval1) VALUES """ % (str(tsm_name.lower()))
+    query_tilt = ("INSERT IGNORE INTO tilt_%s (ts,node_id,xval,yval,zval) "
+        "VALUES " % (str(tsm_name.lower()))
+        )
+    query_soms = ("INSERT IGNORE INTO soms_%s (ts,node_id,mval1) "
+        "VALUES " % (str(tsm_name.lower()))
+        )
     
     try:    
         i = 0
@@ -314,10 +320,13 @@ def process_column_v1(sms):
 
             valueF = tempf #is this the M VALUE?
 
-            query_tilt += """('%s',%d,%d,%d,%d),""" % (str(timestamp),node_id,valueX,valueY,valueZ)
-            query_soms += """('%s',%d,%d),""" % (str(timestamp),node_id,valueF)
+            query_tilt += ("('%s',%d,%d,%d,%d)," % (str(timestamp), 
+                node_id,valueX,valueY,valueZ)
+                )
+            query_soms += "('%s',%d,%d)," % (str(timestamp),node_id,valueF)
 
-            print "%s\t%s\t%s\t%s\t%s" % (str(node_id),str(valueX),str(valueY),str(valueZ),str(valueF))
+            print "%s\t%s\t%s\t%s\t%s" % (str(node_id), str(valueX),
+                str(valueY), str(valueZ), str(valueF))
             
         query_tilt = query_tilt[:-1]
         query_soms = query_soms[:-1]
@@ -517,9 +526,6 @@ def process_earthquake(msg):
 
     dbio.commit_to_db(query, 'earthquake')
 
-    # subprocess.Popen(["python",cfg.config().fileio.eqprocfile])
-    # p = subprocess.Popen("python "+cfg.config().fileio.eqprocfile, stdout=subprocess.PIPE, shell=True, stderr=subprocess.STDOUT)
-
     return True
 
 
@@ -534,7 +540,6 @@ def process_arq_weather(sms):
     line = re.sub("(?<=\+) (?=\+)","NULL",line)
 
     try:
-    # ARQ+1+3+4.143+4.128+0.0632+5.072+0.060+0000+13+28.1+75.0+55+150727/160058
         #table name
         linesplit = line.split('+')
        
@@ -559,12 +564,6 @@ def process_arq_weather(sms):
         flashp = linesplit[12]
         txtdatetime = dt.strptime(linesplit[13],'%y%m%d/%H%M%S').strftime('%Y-%m-%d %H:%M:00')
 
-        # update_sim_num_table(msgname_contact,sender,txtdatetime[:8])
-            
-        
-        # print str(r15m),str(r24h),batv1, batv2, current, boostv1, boostv2, charge, csq, temp, hum, flashp,txtdatetime 
-
-        
     except IndexError and AttributeError:
         print '\n>> Error: Rain message format is not recognized'
         print line
@@ -809,8 +808,10 @@ def process_surficial_observation(msg):
     # spawn surficial measurement analysis
     if proceed_with_analysis:
         sc = mc.get('server_config')
-        surf_cmd_line = "python %s %s '%s' > %s 2>&1" % (sc['fileio']['gndalert1'],obv['site_id'], obv['ts'], sc['fileio']['surfscriptlogs'])
-        p = subprocess.Popen(surf_cmd_line, stdout=subprocess.PIPE, shell=True, stderr=subprocess.STDOUT)
+        surf_cmd_line = "python %s %s '%s' > %s 2>&1" % (sc['fileio']['gndalert1'],
+            obv['site_id'], obv['ts'], sc['fileio']['surfscriptlogs'])
+        p = subprocess.Popen(surf_cmd_line, stdout=subprocess.PIPE, shell=True, 
+            stderr=subprocess.STDOUT)
 
 
 def parse_all_messages(args,allmsgs=[]):
@@ -837,7 +838,8 @@ def parse_all_messages(args,allmsgs=[]):
                          
             msgname = check_name_of_number(msg.simnum)
             
-            ##### Added for V1 sensors removes unnecessary characters pls see function pre_process_col_v1(data)
+            # Added for V1 sensors removes unnecessary characters 
+            # pls see function pre_process_col_v1(data)
             if re.search("\*FF",msg.data) or re.search("PZ\*",msg.data):
                 process_piezometer(msg)
             # elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*\d+T?$",msg.data):
@@ -914,9 +916,6 @@ def record_surficial_measurements(gnd_meas):
     
     # dbio.create_table("gndmeas","gndmeas")
     
-    # query = "INSERT INTO gndmeas (timestamp, meas_type, site_id, observer_name, crack_id, meas, weather) VALUES " + gnd_meas
-    # query += "ON DUPLICATE KEY UPDATE meas = values(meas), observer_name = values(observer_name), weather = values(weather);"
-    
     query = ("INSERT INTO gndmeas (timestamp, meas_type, site_id, "
         "observer_name, crack_id, meas, weather) VALUES %s"
         "ON DUPLICATE KEY UPDATE meas = values(meas), "
@@ -941,7 +940,9 @@ def record_manual_weather(mw_text):
 def get_router_ids():
     db, cur = dbio.db_connect()
 
-    query = "SELECT `logger_id`,`logger_name` from `loggers` where `model_id` in (SELECT `model_id` FROM `logger_models` where `logger_type`='router') and `logger_name` is not null"
+    query = ("SELECT `logger_id`,`logger_name` from `loggers` where `model_id`"
+        " in (SELECT `model_id` FROM `logger_models` where "
+        "`logger_type`='router') and `logger_name` is not null")
 
     nums = dbio.querydatabase(query,'get_router_ids')
     nums = {key: value for (value, key) in nums}
@@ -974,7 +975,8 @@ def process_gateway_msg(msg):
             query = "INSERT IGNORE INTO router_rssi (ts, logger_id, rssi_val) VALUES "
             tuples = re.findall("[A-Z]+,\d+",rssi_string)
             for item in tuples:
-                query += "('%s',%d,%s)," % (timestamp,routers[item.split(',')[0].lower()],item.split(',')[1] )
+                query += "('%s',%d,%s)," % (timestamp,
+                    routers[item.split(',')[0].lower()], item.split(',')[1])
                 
             query = query[:-1]
 
@@ -994,14 +996,18 @@ def process_gateway_msg(msg):
 
 def get_arguments():
     parser = argparse.ArgumentParser(description="Run SMS parser\n smsparser [-options]")
-    parser.add_argument("-db", "--dbhost", help="host name (check senslope-server-config.txt")
+    parser.add_argument("-db", "--dbhost", 
+        help="host name (check senslope-server-config.txt")
     parser.add_argument("-t", "--table", help="smsinbox table")
     parser.add_argument("-m", "--mode", help="mode to run")
     parser.add_argument("-g", "--gsm", help="gsm name")
     parser.add_argument("-s", "--status", help="inbox/outbox status",type=int)
-    parser.add_argument("-l", "--messagelimit", help="maximum number of messages to process at a time",type=int)
-    parser.add_argument("-r", "--runtest", help="run test function",action="store_true")
-    parser.add_argument("-b", "--bypasslock", help="bypass lock script function",action="store_true")
+    parser.add_argument("-l", "--messagelimit", 
+        help="maximum number of messages to process at a time",type=int)
+    parser.add_argument("-r", "--runtest", 
+        help="run test function",action="store_true")
+    parser.add_argument("-b", "--bypasslock", 
+        help="bypass lock script function",action="store_true")
     
     try:
         args = parser.parse_args()
@@ -1041,12 +1047,14 @@ def main():
 
     # force backup
     while True:
-        allmsgs = dbio.get_all_sms_from_db(host=args.dbhost,table=args.table,read_status=args.status,limit=args.messagelimit)
+        allmsgs = dbio.get_all_sms_from_db(host=args.dbhost, table=args.table,
+            read_status=args.status, limit=args.messagelimit)
         
         if len(allmsgs) > 0:
             msglist = []
             for item in allmsgs:
-                smsItem = gsmio.sms(item[0], str(item[2]), str(item[3]), str(item[1]))
+                smsItem = gsmio.sms(item[0], str(item[2]), str(item[3]), 
+                    str(item[1]))
                 msglist.append(smsItem)
             allmsgs = msglist
 
