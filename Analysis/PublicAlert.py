@@ -307,7 +307,7 @@ def SitePublicAlert(PublicAlert, window):
     extend_nd_rain = False
     try:
         rain_alert = site_alert.loc[(site_alert.source == 'rain') & (site_alert.updateTS >= window.end - timedelta(hours=4))]['alert'].values[0]
-        if public_PrevAlert != 'A0':
+        if public_PrevAlert != 'A0' and window.end in [time(3,30), time(7,30), time(11,30), time(15,30), time(19,30), time(23,30)]:
             query = "SELECT * FROM senslopedb.rain_alerts where site_id = '%s' and ts = '%s'" %(site, window.end)
             rain_alert_df = q.GetDBDataFrame(query)
             if len(rain_alert_df) == 0 and rain_alert != 'nd':
