@@ -467,7 +467,7 @@ def GetPreviousAlert(end):
 
 def GetPreviousAlertNewDB(end):
     try:
-        query = 'SELECT * FROM senslopedb.marker_alerts WHERE timestamp = "{}"'.format(end)
+        query = 'SELECT * FROM senslopedb.marker_alerts WHERE ts = "{}"'.format(end)
         df = GetDBDataFrame(query)
     except:
         df = pd.DataFrame(columns = ['ts','site_code','marker_name','displacement','time_delta','alert'])
