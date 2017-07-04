@@ -70,9 +70,12 @@ def SensorTrigger(df):
             sensor_tech += ['%s (nodes %s)' %(i.upper(), ','.join(sorted(col_df['id'].values)))]
     return ','.join(sensor_tech)
 
-def alertgen(df):
+def alertgen(df, end):
     name = df['name'].values[0]
-    a.main(name, end_mon=True)
+    query = "SELECT max(timestamp) FROM %s" %name
+    ts = pd.to_datetime(q.GetDBDataFrame(query).values[0][0])
+    if ts >= end - timedelta(hours=12):
+        a.main(name, end=ts, end_mon=True)
 
 def SitePublicAlert(PublicAlert, window):
     site = PublicAlert['site'].values[0]
@@ -837,11 +840,11 @@ def SitePublicAlert(PublicAlert, window):
             with open('l0t_alert.txt', 'w') as w:
                 w.write('')
 
-    if (public_CurrAlert == 'A0' and public_PrevAlert != public_CurrAlert) or (public_CurrAlert != 'A0' and window.end.time() in [time(3,30), time(7,30), time(11,30), time(15,30), time(19,30), time(23,30)]):
+    if (public_CurrAlert == 'A0' and public_PrevAlert != public_CurrAlert) or (public_CurrAlert != 'A0' and window.end.time() in [time(7,30), time(19,30)]):
         query = "SELECT * FROM senslopedb.site_column_props where name REGEXP '%s'" %sensor_site
         df = q.GetDBDataFrame(query)
         logger_df = df.groupby('name')
-        logger_df.apply(alertgen)
+        logger_df.apply(alertgen, window.end)
 
     return PublicAlert
 
