@@ -85,8 +85,6 @@ def createTable(table_name, type, instance='local'):
 def setReadStatus(read_status,sms_id_list):
     db, cur = SenslopeDBConnect('gsm')
     
-    print type(sms_id_list)
-
     if type(sms_id_list) is list:
         if len(sms_id_list) == 0:
             return

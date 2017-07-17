@@ -25,7 +25,10 @@ def main():
     
     linecount = 1
     for fname in files:
-        f = open(dirname + '\\' + fname, 'r')
+        try:
+            f = open(dirname + '\\' + fname, 'r')
+        except IOError:
+            f = open(dirname + '/' + fname, 'r')
         alllines = f.readlines()
         f.close()
         accel_dlist = []

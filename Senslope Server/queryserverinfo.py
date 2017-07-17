@@ -141,10 +141,10 @@ def sendEventMonitoringReminder():
 
 	position = ['iompmt','iompct','oomps','oompmt','oompct']
 	position_dict = {}
-	for pos,per in zip(position,shifts[0][2:]):
+	for pos,per in zip(position,shifts[0][1:]):
 		position_dict[per.upper().strip()] = pos
 
-	numbers = getNumbersFromList(str(shifts[0][2:]))
+	numbers = getNumbersFromList(str(shifts[0][1:]))
 	numbers_dict = {}
 	for nick,num in numbers:
 		numbers_dict[nick.upper().strip()] = num

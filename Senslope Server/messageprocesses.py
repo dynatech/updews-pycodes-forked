@@ -553,6 +553,8 @@ def ProcessARQWeather(line,sender):
         return
 
     dbio.commitToDb(query, 'ProcessARQWeather')
+
+    invokeProcessInBgnd("~/anaconda2/bin/python ~/masynckaiser/client/bin/invoke-masync-CtoS-single.py %s > ~/scriptlogs/masync_on_receive.txt 2>&1" % msgname)
            
     print 'End of Process ARQ weather data'
     
@@ -605,6 +607,8 @@ def ProcessRain(line,sender):
     except MySQLdb.ProgrammingError:
         print query[:-2]
         dbio.commitToDb(query[:-2]+')', 'ProcessRain')
+
+    invokeProcessInBgnd("~/anaconda2/bin/python ~/masynckaiser/client/bin/invoke-masync-CtoS-single.py %s > ~/scriptlogs/masync_on_receive.txt 2>&1" % msgtable.lower())
         
     print 'End of Process weather data'
 
@@ -682,11 +686,14 @@ def CheckMessageSource(msg):
 def SpawnAlertGen(tsm_name, timestamp):
     # spawn alert alert_gens
     print "For alertgen.py", tsm_name, timestamp
-    print timestamp
-    timestamp = (dt.strptime(timestamp,'%Y-%m-%d %H:%M:%S')+\
-        td(minutes=10)).strftime('%Y-%m-%d %H:%M:%S')
-    print timestamp
-    # return
+    timestamp_dt = dt.strptime(timestamp,'%Y-%m-%d %H:%M:%S')+\
+        td(minutes=10)
+    timestamp = timestamp_dt.strftime('%Y-%m-%d %H:%M:%S')
+    
+    if timestamp_dt > dt.now() + td(minutes=60):
+        print 'Error: possible timestmap error for', str(timestamp),
+        print 'skipping alert gen'
+        return
 
     alertgenlist = mc.get('alertgenlist')
 
@@ -774,7 +781,7 @@ def ProcessAllMessages(allmsgs,network):
                             WriteSomsDataToDb(dlist,msg.dt)
                         else:
                             WriteTwoAccelDataToDb(dlist,msg.dt)
-                            invokeProcessInBgnd("python ~/masynckaiser/client/bin/invoke-masync-CtoS-single.py %s" % dlist[0][0])
+                            invokeProcessInBgnd("~/anaconda2/bin/python ~/masynckaiser/client/bin/invoke-masync-CtoS-single.py %s > ~/scriptlogs/masync_on_receive.txt 2>&1" % dlist[0][0])
                 except IndexError:
                     print "\n\n>> Error: Possible data type error"
                     print msg.data
