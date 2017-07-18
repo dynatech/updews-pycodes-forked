@@ -42,11 +42,25 @@ def alert_toDB(df, table_name, window, source):
         df2 = q.GetDBDataFrame(query)
     except:
         df2 = pd.DataFrame()        
-    
-    if len(df2) == 0 or df2['alert'].values[0] != df['alert'].values[0]:
+
+    try:
+        same_alert = df2['alert'].values[0] == df['alert'].values[0]
+    except:
+        same_alert = False
+
+    query = "SELECT EXISTS(SELECT * FROM %s" %table_name
+    query += " WHERE timestamp = '%s' AND site = '%s'" %(pd.to_datetime(df['updateTS'].values[0]), df['site'].values[0])
+    query += " AND source = '%s')" %source
+
+    if q.GetDBDataFrame(query).values[0][0] == 1:
+        inDB = True
+    else:
+        inDB = False
+
+    if (len(df2) == 0 or not same_alert) and not inDB:
         engine = create_engine('mysql://'+q.Userdb+':'+q.Passdb+'@'+q.Hostdb+':3306/'+q.Namedb)
         df.to_sql(name = table_name, con = engine, if_exists = 'append', schema = q.Namedb, index = False)
-    elif df2['alert'].values[0] == df['alert'].values[0]:
+    elif same_alert and df2['updateTS'].values[0] < df['updateTS'].values[0]:
         db, cur = q.SenslopeDBConnect(q.Namedb)
         query = "UPDATE senslopedb.%s SET updateTS='%s' WHERE site = '%s' and source = '%s' and alert = '%s' and timestamp = '%s'" %(table_name, window.end, df2.site.values[0], source, df2.alert.values[0], pd.to_datetime(str(df2.timestamp.values[0])))
         cur.execute(query)
@@ -74,15 +88,22 @@ def alertgen(df, end):
     name = df['name'].values[0]
     query = "SELECT max(timestamp) FROM %s" %name
     ts = pd.to_datetime(q.GetDBDataFrame(query).values[0][0])
-    if ts >= end - timedelta(hours=12):
-        a.main(name, end=ts, end_mon=True)
+    if ts > end - timedelta(hours=12):
+        if ts > end:
+            ts = end
+        try:
+            a.main(name, end=ts, end_mon=True)
+        except:
+            pass
 
 def SitePublicAlert(PublicAlert, window):
     site = PublicAlert['site'].values[0]
     print site
     
     # latest alert per source (rain,sensor,ground,internal,public,eq,on demand)*
-    query = "(SELECT * FROM ( SELECT * FROM senslopedb.site_level_alert WHERE ( site = '%s' " %site
+    query = "(SELECT * FROM ( SELECT * FROM senslopedb.site_level_alert WHERE"
+    query += " (updateTS <= '%s' OR (updateTS >= '%s' AND timestamp <= '%s'))" %(window.end, window.end, window.end)
+    query += " AND ( site = '%s' " %site
     if site == 'bto':
         query += "or site = 'bat' "
     elif site == 'mng':
@@ -764,7 +785,10 @@ def SitePublicAlert(PublicAlert, window):
     
     nonND_alert = site_alert.loc[(site_alert.source != 'public')&(site_alert.source != 'internal')].dropna()
     if len(nonND_alert) != 0:
-        PublicAlert.loc[alert_index] = [pd.to_datetime(str(nonND_alert.sort_values('updateTS', ascending = False)['updateTS'].values[0])), PublicAlert['site'].values[0], 'public', public_alert, window.end, palert_source, internal_alert, validity, sensor_alert, rain_alert, ground_alert, retriggerTS, tech_info]
+        ts = pd.to_datetime(str(nonND_alert.sort_values('updateTS', ascending = False)['updateTS'].values[0]))
+        if ts > window.end:
+            ts = window.end
+        PublicAlert.loc[alert_index] = [ts, PublicAlert['site'].values[0], 'public', public_alert, window.end, palert_source, internal_alert, validity, sensor_alert, rain_alert, ground_alert, retriggerTS, tech_info]
     else:
         PublicAlert.loc[alert_index] = [window.end, PublicAlert['site'].values[0], 'public', public_alert, window.end, palert_source, internal_alert, validity, sensor_alert, rain_alert, ground_alert, retriggerTS, tech_info]
         
@@ -816,7 +840,7 @@ def SitePublicAlert(PublicAlert, window):
         
         GSMAlert = GSMAlert[['site', 'alert', 'palert_source']]            
         with open('GSMAlert.txt', 'w') as w:
-            w.write('As of ' + str(datetime.now())[:16] + '\n')
+            w.write('As of ' + str(window.end)[:16] + '\n')
         GSMAlert.to_csv('GSMAlert.txt', header = False, index = None, sep = ':', mode = 'a')
 
         #write text file to db
@@ -858,11 +882,13 @@ def writeAlertToDb(alertfile):
 
     server.writeAlertToDb(alerttxt)
 
-def main():
+def main(end=datetime.now()):
+    start_time = datetime.now()
+    
     with open('GSMAlert.txt', 'w') as w:
         w.write('')
         
-    window,config = rtw.getwindow()
+    window,config = rtw.getwindow(end)
     
     props = q.GetRainProps('rain_props')
     PublicAlert = pd.DataFrame({'timestamp': [window.end]*len(props), 'site': props['name'].values, 'source': ['public']*len(props), 'alert': [np.nan]*len(props), 'updateTS': [window.end]*len(props), 'palert_source': [np.nan]*len(props), 'internal_alert': [np.nan]*len(props), 'validity': [np.nan]*len(props), 'sensor_alert': [[]]*len(props), 'rain_alert': [np.nan]*len(props), 'ground_alert': [np.nan]*len(props), 'retriggerTS': [[]]*len(props), 'tech_info': [{}]*len(props)})
@@ -890,12 +916,12 @@ def main():
 
     with open('PublicAlert.json', 'w') as w:
         w.write(df_json)
-                
+
+    print 'runtime =', datetime.now() - start_time
+
     return PublicAlert
 
 ################################################################################
 
 if __name__ == "__main__":
-    start_time = datetime.now()
     main()
-    print 'runtime =', datetime.now() - start_time

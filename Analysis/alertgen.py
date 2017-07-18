@@ -222,18 +222,33 @@ def getmode(li):
 
 def alert_toDB(df, table_name, window):
     
-    query = "SELECT * FROM senslopedb.%s WHERE site = '%s' and timestamp <= '%s' AND updateTS >= '%s' ORDER BY timestamp DESC LIMIT 1" %(table_name, df.site.values[0], window.end, window.end-timedelta(hours=1))
+    query = "SELECT * FROM %s WHERE site = '%s' and source = 'sensor' and timestamp <= '%s' AND updateTS >= '%s' ORDER BY timestamp DESC LIMIT 1" %(table_name, df.site.values[0], window.end, window.end-timedelta(hours=0.5))
     
     try:
         df2 = q.GetDBDataFrame(query)
     except:
-        df2 = pd.DataFrame()
-    
-    if len(df2) == 0 or df2.alert.values[0] != df.alert.values[0]:
+        df2 = pd.DataFrame()        
+
+    try:
+        same_alert = df2['alert'].values[0] == df['alert'].values[0]
+    except:
+        same_alert = False
+
+    query = "SELECT EXISTS(SELECT * FROM %s" %table_name
+    query += " WHERE timestamp = '%s' AND site = '%s'" %(pd.to_datetime(df['updateTS'].values[0]), df['site'].values[0])
+    if table_name == 'site_level_alert':
+        query += " AND source = 'sensor'"
+    query += ")"
+    if q.GetDBDataFrame(query).values[0][0] == 1:
+        inDB = True
+    else:
+        inDB = False
+
+    if (len(df2) == 0 or not same_alert) and not inDB:
         engine = create_engine('mysql://'+q.Userdb+':'+q.Passdb+'@'+q.Hostdb+':3306/'+q.Namedb)
         df.to_sql(name = table_name, con = engine, if_exists = 'append', schema = q.Namedb, index = False)
         
-    elif df2.alert.values[0] == df.alert.values[0]:
+    elif same_alert and df2['updateTS'].values[0] < df['updateTS'].values[0]:
         db, cur = q.SenslopeDBConnect(q.Namedb)
         query = "UPDATE senslopedb.%s SET updateTS='%s' WHERE site = '%s' and source = 'sensor' and alert = '%s' and timestamp = '%s'" %(table_name, window.end, df2.site.values[0], df2.alert.values[0], pd.to_datetime(str(df2.timestamp.values[0])))
         cur.execute(query)
@@ -280,6 +295,9 @@ def main(name='', end='', end_mon=False):
     if end == '':
         try:
             end = pd.to_datetime(sys.argv[2])
+            if end > start + timedelta(hours=0.5):
+                print 'invalid timestamp'
+                return
         except:
             end = datetime.now()
     
