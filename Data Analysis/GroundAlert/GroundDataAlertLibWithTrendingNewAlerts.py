@@ -155,7 +155,11 @@ def uptoDB_marker_alerts(df,df2):
     engine=create_engine('mysql://'+Userdb+':'+Passdb+'@'+Hostdb+':3306/'+Namedb)
     df3.to_sql(name = 'marker_alerts', con = engine, if_exists = 'append', schema = Namedb, index = True)
 
-
+def get_ground_data_with_recent_cracks(site,end,num_pts):
+    query = "SELECT g1.timestamp, g1.crack_id, g1.site_id,g1.meas, COUNT(*) num FROM gndmeas g1 INNER JOIN gndmeas g2 ON g1.timestamp <= g2.timestamp AND g1.crack_id = g2.crack_id AND g1.site_id = g2.site_id AND g1.site_id = '{}' AND g1.crack_id in (SELECT crack_id FROM gndmeas WHERE site_id = '{}' AND timestamp = (SELECT max(timestamp) FROM gndmeas WHERE timestamp <= '{}' AND site_id = '{}')) GROUP BY g1.crack_id, g1.timestamp,g1.site_id HAVING COUNT(*) <= 10 ORDER by num desc".format(site,site,end,site)
+    
+    df = GetDBDataFrame(query)
+    return df
 
 def get_latest_ground_df(site=None,end = None):
     #INPUT: String containing site name    
@@ -605,15 +609,26 @@ def GenerateGroundDataAlert(site=None,end=None):
     site_DBdf.apply(alert_toDB,end)    
     
     
-    #Step 7: Displacement plot for each crack and site for the last 30 days
-    start = pd.to_datetime(end) - timedelta(days = 30)
-    ground_data_to_plot = get_ground_df(start,end,site)
+#    #Step 7: Displacement plot for each crack and site for the last 30 days
+#    start = pd.to_datetime(end) - timedelta(days = 30)
+#    ground_data_to_plot = get_ground_df(start,end,site)
+#    ground_data_to_plot['site_id'] = map(lambda x: x.lower(),ground_data_to_plot['site_id'])
+#    ground_data_to_plot['crack_id'] = map(lambda x: x.title(),ground_data_to_plot['crack_id'])
+#    
+#    tsn=pd.to_datetime(end).strftime("%Y-%m-%d_%H-%M-%S")
+#    site_data_to_plot = ground_data_to_plot.groupby('site_id')
+#    site_data_to_plot.apply(PlotSite,tsn,print_out_path)
+
+    #Step 7: Displacement plot for each crack and site for last 10 data points of recent cracks with measurement.
+    ground_data_to_plot = get_ground_data_with_recent_cracks(site,end,10)
     ground_data_to_plot['site_id'] = map(lambda x: x.lower(),ground_data_to_plot['site_id'])
     ground_data_to_plot['crack_id'] = map(lambda x: x.title(),ground_data_to_plot['crack_id'])
     
     tsn=pd.to_datetime(end).strftime("%Y-%m-%d_%H-%M-%S")
     site_data_to_plot = ground_data_to_plot.groupby('site_id')
     site_data_to_plot.apply(PlotSite,tsn,print_out_path)
+    
+    
     
     end_time = datetime.now()
     print "time = ",end_time-start_time
