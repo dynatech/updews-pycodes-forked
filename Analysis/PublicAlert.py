@@ -122,7 +122,7 @@ def SitePublicAlert(PublicAlert, window):
     # dataframe of all alerts
     validity_site_alert = site_alert.sort_values('updateTS', ascending = False)
     # dataframe of all alerts for the past 4hrs
-    site_alert = site_alert.loc[site_alert.updateTS >= window.end - timedelta(hours=4)]
+    site_alert = site_alert.loc[site_alert.updateTS >= RoundTime(window.end) - timedelta(hours=4)]
 
     # public alert
     public_PrevAlert = validity_site_alert.loc[validity_site_alert.source == 'public']['alert'].values[0]
@@ -328,7 +328,7 @@ def SitePublicAlert(PublicAlert, window):
     # latest rain alert within 4hrs
     extend_nd_rain = False
     try:
-        rain_alert = site_alert.loc[(site_alert.source == 'rain') & (site_alert.updateTS >= window.end - timedelta(hours=4))]['alert'].values[0]
+        rain_alert = site_alert.loc[(site_alert.source == 'rain')]['alert'].values[0]
         if public_PrevAlert != 'A0':
             query = "SELECT * FROM senslopedb.rain_alerts where site_id = '%s' and ts = '%s'" %(site, window.end)
             rain_alert_df = q.GetDBDataFrame(query)
@@ -756,6 +756,23 @@ def SitePublicAlert(PublicAlert, window):
     #Public Alert A0
     else:
         public_alert = 'A0'
+        # latest alert per source (rain,sensor,ground,internal,public,eq,on demand)*
+        query = "SELECT * FROM ("
+        query += " SELECT * FROM site_level_alert"
+        query += " WHERE site = 'msl' AND"
+        query += " ((source = 'public' and alert != 'A0')"
+        query += " OR (source = 'ground' and timestamp >= '2017-07-19'))"
+        query += " ORDER BY timestamp DESC"
+        query += " ) AS sub GROUP BY source"
+
+        # dataframe of *
+        routine = q.GetDBDataFrame(query)
+        
+        if pd.to_datetime(routine[routine.source == 'public']['updateTS'].values[0]) <= pd.to_datetime(window.end.date()):
+            surficial_alerts = surficial_alerts.append(routine[routine.source == 'ground'])
+            if len(surficial_alerts) != 0:
+                ground_alert = 'g'
+
         if len(subsurface_alerts) != 0 or len(surficial_alerts) != 0:
             internal_alert = 'A0'
         else:
