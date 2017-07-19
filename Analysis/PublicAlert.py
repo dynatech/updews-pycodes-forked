@@ -258,11 +258,15 @@ def SitePublicAlert(PublicAlert, window):
     #surficial ground technical info
     try:
         ground_techTS = retriggers[(retriggers.retrigger == 'l2')|(retriggers.retrigger == 'l3')]['timestamp'].values[0]
-        query = "SELECT * FROM senslopedb.marker_alerts where ts = '%s' and site_code = '%s' and alert != 'l0'" %(ground_techTS, site)
+        query = "SELECT * FROM marker_alerts where ts = '%s' and site_code = '%s' and alert != 'l0'" %(ground_techTS, site)
         ground_tech_df = q.GetDBDataFrame(query)
         ground_tech = []
         for i in set(ground_tech_df['marker_name'].values):
-            ground_tech += ['Crack %s: %s cm difference in %s hours' %(ground_tech_df['marker_name'].values[0], ground_tech_df['displacement'].values[0], np.round(ground_tech_df['time_delta'].values[0], 0))]
+            print i
+            disp = ground_tech_df[ground_tech_df.marker_name == i]['displacement'].values[0]
+            time_delta = ground_tech_df[ground_tech_df.marker_name == i]['time_delta'].values[0]
+            info = 'Crack %s: %s cm difference in %s hours' %(i, disp, time_delta)
+            ground_tech += [info]
         ground_tech = ','.join(ground_tech)
         tech_info['ground_tech'] = ground_tech
     except:
