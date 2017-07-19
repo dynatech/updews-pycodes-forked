@@ -262,7 +262,6 @@ def SitePublicAlert(PublicAlert, window):
         ground_tech_df = q.GetDBDataFrame(query)
         ground_tech = []
         for i in set(ground_tech_df['marker_name'].values):
-            print i
             disp = ground_tech_df[ground_tech_df.marker_name == i]['displacement'].values[0]
             time_delta = ground_tech_df[ground_tech_df.marker_name == i]['time_delta'].values[0]
             info = 'Crack %s: %s cm difference in %s hours' %(i, disp, time_delta)
@@ -315,15 +314,10 @@ def SitePublicAlert(PublicAlert, window):
     except:
         pass
 
-    # latest column alert within 3hrs
-    sensor_site = site
-    if site == 'msl':
-        sensor_site = 'messb|msl'
-    if site == 'msu':
-        sensor_site = 'mesta|msu'
-    query = "SELECT * FROM ( SELECT * FROM senslopedb.column_level_alert WHERE site REGEXP '%s' AND updateTS >= '%s' ORDER BY timestamp DESC) AS sub GROUP BY site" %(sensor_site, window.end - timedelta(hours=4))
+    # latest column alert
+    sensor_site = site + '%'
+    query = "SELECT * FROM ( SELECT * FROM senslopedb.column_level_alert WHERE site LIKE '%s' AND updateTS >= '%s' ORDER BY timestamp DESC) AS sub GROUP BY site" %(sensor_site, window.end - timedelta(hours=0.5))
     sensor_alertDF = q.GetDBDataFrame(query)
-    nonNDsensor = sensor_alertDF[sensor_alertDF.alert != 'ND']
     if len(sensor_alertDF) != 0:
         colsensor_alertDF = sensor_alertDF.groupby('site')
         sensor_alert = []
@@ -360,8 +354,9 @@ def SitePublicAlert(PublicAlert, window):
     except:
         SG_alert = site_alert
 
-    # str; "list" of LLMC ground/sensor alert for the past 4hrs
-    list_ground_alerts = ','.join(SG_alert.loc[SG_alert.timestamp >= window.end - timedelta(hours=4)]['alert'].values)
+    # LLMC ground alert for the past 4hrs and sensor alert
+    surficial_alerts = SG_alert.loc[(SG_alert.updateTS >= RoundTime(window.end) - timedelta(hours=4))&(SG_alert.source == 'ground')]
+    subsurface_alerts = SG_alert.loc[(SG_alert.updateTS >= window.end - timedelta(hours=0.5))&(SG_alert.source == 'sensor')]
 
     #Public Alert A3
     if 'L3' in SG_alert['alert'].values or 'l3' in SG_alert['alert'].values or 'A3' in validity_site_alert['alert'].values:
@@ -388,7 +383,7 @@ def SitePublicAlert(PublicAlert, window):
             # both ground and sensor triggered
             if ('L3' in SG_alert['alert'].values or 'L2' in SG_alert['alert'].values) and ('l3' in SG_alert['alert'].values or 'l2' in SG_alert['alert'].values):
                 # with data
-                if ('L' in list_ground_alerts or len(nonNDsensor) != 0) and 'l' in list_ground_alerts:
+                if len(subsurface_alerts) != 0 and len(surficial_alerts) != 0:
                     #if rainfall above 75%
                     if extend_rain_alert:
                         public_alert = 'A3'
@@ -439,7 +434,7 @@ def SitePublicAlert(PublicAlert, window):
             # sensor triggered
             elif 'L3' in SG_alert['alert'].values:
                 # with data
-                if 'L' in list_ground_alerts or len(nonNDsensor) != 0:
+                if len(subsurface_alerts) != 0:
                     #if rainfall above 75%
                     if extend_rain_alert:
                         public_alert = 'A3'
@@ -490,7 +485,7 @@ def SitePublicAlert(PublicAlert, window):
             # ground triggered
             elif 'l3' in SG_alert['alert'].values:
                 # with data
-                if 'l' in list_ground_alerts:
+                if len(surficial_alerts) != 0:
                     #if rainfall above 75%
                     if extend_rain_alert:
                         public_alert = 'A3'
@@ -559,17 +554,17 @@ def SitePublicAlert(PublicAlert, window):
 
             # both ground and sensor triggered
             if 'L2' in SG_alert['alert'].values and 'l2' in SG_alert['alert'].values:
-                if ('L' in list_ground_alerts or len(nonNDsensor) != 0) and 'l' in list_ground_alerts:
+                if len(subsurface_alerts) != 0 and len(surficial_alerts) != 0:
                     internal_alert = 'A2-sg' + other_alerts
                 else:
-                    if ('L' not in list_ground_alerts and len(nonNDsensor) == 0) and 'l' not in list_ground_alerts:
+                    if len(subsurface_alerts) == 0 and len(surficial_alerts) == 0:
                         internal_alert = 'A2-s0g0' + other_alerts
                     else:
-                        if ('L' in list_ground_alerts or len(nonNDsensor) != 0):
+                        if len(subsurface_alerts) != 0:
                             internal_alert = 'A2-s'
                         else:
                             internal_alert = 'A2-s0'
-                        if 'l' in list_ground_alerts:
+                        if len(surficial_alerts) != 0:
                             internal_alert += 'g'
                         else:
                             internal_alert += 'g0'
@@ -577,14 +572,14 @@ def SitePublicAlert(PublicAlert, window):
             
             # sensor triggered
             elif 'L2' in SG_alert['alert'].values:
-                if 'L' in list_ground_alerts or len(nonNDsensor) != 0:
+                if len(subsurface_alerts) != 0:
                     internal_alert = 'A2-s' + other_alerts
                 else:
                     internal_alert = 'A2-s0' + other_alerts
                     
             # ground triggered
             elif 'l2' in SG_alert['alert'].values:
-                if 'l' in list_ground_alerts:
+                if len(surficial_alerts) != 0:
                     internal_alert = 'A2-g' + other_alerts
                 else:
                     internal_alert = 'A2-g0' + other_alerts
@@ -595,7 +590,7 @@ def SitePublicAlert(PublicAlert, window):
             # both ground and sensor triggered
             if 'L2' in SG_alert['alert'].values and 'l2' in SG_alert['alert'].values:
                 # with data
-                if ('L' in list_ground_alerts or len(nonNDsensor) != 0) and 'l' in list_ground_alerts:
+                if len(subsurface_alerts) != 0 and len(surficial_alerts) != 0:
                     #if rainfall above 75%
                     if extend_rain_alert:
                         public_alert = 'A2'
@@ -612,14 +607,14 @@ def SitePublicAlert(PublicAlert, window):
                     # within 3 days of 4hr-extension
                     if (RoundTime(window.end) - validity < timedelta(3)) or extend_rain_alert:
                         public_alert = 'A2'
-                        if ('L' not in list_ground_alerts and len(nonNDsensor) == 0) and 'l' not in list_ground_alerts:
+                        if len(subsurface_alerts) == 0 and len(surficial_alerts) == 0:
                             internal_alert = 'A2-s0g0' + other_alerts
                         else:
-                            if 'L' in list_ground_alerts or len(nonNDsensor) != 0:
+                            if len(subsurface_alerts) != 0:
                                 internal_alert = 'A2-s'
                             else:
                                 internal_alert = 'A2-s0'
-                            if 'l' in list_ground_alerts:
+                            if len(surficial_alerts) != 0:
                                 internal_alert += 'g'
                             else:
                                 internal_alert += 'g0'
@@ -635,7 +630,7 @@ def SitePublicAlert(PublicAlert, window):
             # sensor triggered
             elif 'L2' in SG_alert['alert'].values:
                 # with data
-                if 'L' in list_ground_alerts or len(nonNDsensor) != 0:
+                if len(subsurface_alerts) != 0:
                     #if rainfall above 75%
                     if extend_rain_alert:
                         public_alert = 'A2'
@@ -665,7 +660,7 @@ def SitePublicAlert(PublicAlert, window):
             # ground triggered
             elif 'l2' in SG_alert['alert'].values:
                 # with data
-                if 'l' in list_ground_alerts:
+                if len(surficial_alerts) != 0:
                     #if rainfall above 75%
                     if extend_rain_alert:
                         public_alert = 'A2'
@@ -702,7 +697,7 @@ def SitePublicAlert(PublicAlert, window):
         if validity > window.end + timedelta(hours=0.5):
             public_alert = 'A1'
             # identifies if with ground data
-            if 'L' in list_ground_alerts or 'l' in list_ground_alerts or len(nonNDsensor) != 0:
+            if len(subsurface_alerts) != 0 or len(surficial_alerts) != 0:
                 internal_alert = 'A1-' + other_alerts
             else:
                 internal_alert = 'ND-' + other_alerts
@@ -710,7 +705,7 @@ def SitePublicAlert(PublicAlert, window):
         # end of A1 validity if with data with no significant mov't
         else:
             # with ground data
-            if 'L' in list_ground_alerts or 'l' in list_ground_alerts or len(nonNDsensor) != 0:
+            if len(subsurface_alerts) != 0 or len(surficial_alerts) != 0:
                 #if rainfall above 75%
                 if extend_rain_alert:
                     public_alert = 'A1'
@@ -761,7 +756,7 @@ def SitePublicAlert(PublicAlert, window):
     #Public Alert A0
     else:
         public_alert = 'A0'
-        if 'L' in list_ground_alerts or 'l' in list_ground_alerts or len(nonNDsensor) != 0:
+        if len(subsurface_alerts) != 0 or len(surficial_alerts) != 0:
             internal_alert = 'A0'
         else:
             internal_alert = 'ND'
@@ -830,7 +825,7 @@ def SitePublicAlert(PublicAlert, window):
 
         #node_level_alert
         if 's' in internal_alert or 'S' in internal_alert:
-            query = "SELECT * FROM senslopedb.node_level_alert WHERE site REGEXP '%s' AND timestamp >= '%s' ORDER BY timestamp DESC" %(sensor_site,start_monitor)
+            query = "SELECT * FROM senslopedb.node_level_alert WHERE site LIKE '%s' AND timestamp >= '%s' ORDER BY timestamp DESC" %(sensor_site,start_monitor)
             allnode_alertDF = q.GetDBDataFrame(query)
             column_name = set(allnode_alertDF['site'].values)
             colnode_source = []
@@ -869,7 +864,7 @@ def SitePublicAlert(PublicAlert, window):
                 w.write('')
 
     if (public_CurrAlert == 'A0' and public_PrevAlert != public_CurrAlert) or (public_CurrAlert != 'A0' and window.end.time() in [time(7,30), time(19,30)]):
-        query = "SELECT * FROM senslopedb.site_column_props where name REGEXP '%s'" %sensor_site
+        query = "SELECT * FROM senslopedb.site_column_props where name LIKE '%s'" %sensor_site
         df = q.GetDBDataFrame(query)
         logger_df = df.groupby('name')
         logger_df.apply(alertgen, window.end)
