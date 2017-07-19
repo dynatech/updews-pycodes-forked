@@ -176,7 +176,7 @@ def SensorPlot(name, col, offsetstart, start, end, tsn, halfmax, twoyrmax, base,
     ins1.set_xlim([start - timedelta(hours=2), end + timedelta(hours=2)])
     cum1.set_xlim([start - timedelta(hours=2), end + timedelta(hours=2)])
     lgd = plt.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize='medium')
-    plt.savefig(RainfallPlotsPath+tsn+"_"+name, dpi=100, 
+    plt.savefig(RainfallPlotsPath++'rainfall_'+tsn+'_'+name, dpi=100, 
         facecolor='w', edgecolor='w',orientation='landscape',mode='w',
         bbox_extra_artists=(lgd,))#, bbox_inches='tight')
     plt.close()
