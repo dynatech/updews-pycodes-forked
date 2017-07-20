@@ -13,11 +13,6 @@ class dbInstance:
        self.user = c.db["user"]
        self.password = c.db["password"]
 
-# localdbinstance = dbInstance(c.localdb.name,c.localdb.host,c.localdb.user,c.localdb.pwd)
-# gsmdbinstance = dbInstance(c.gsmdb.name,c.gsmdb.host,c.gsmdb.user,c.gsmdb.pwd)
-# backupdbinstance = dbInstance(c.backupdb.name,c.backupdb.host,c.backupdb.user,c.backupdb.pwd)
-
-
 # def db_connect():
 # Definition: Connect to senslopedb in mysql
 def db_connect(host='local'):
@@ -25,7 +20,8 @@ def db_connect(host='local'):
 
     while True:
         try:
-            db = MySQLdb.connect(host = dbc.host, user = dbc.user, passwd = dbc.password, db = dbc.name)
+            db = MySQLdb.connect(host = dbc.host, user = dbc.user, 
+                passwd = dbc.password, db = dbc.name)
             cur = db.cursor()
             return db, cur
         except MySQLdb.OperationalError:
@@ -33,54 +29,6 @@ def db_connect(host='local'):
             print '6.',
             time.sleep(2)
             
-def create_table(table_name, type, instance='local'):
-    db, cur = db_connect(instance)
-    # cur.execute("CREATE DATABASE IF NOT EXISTS %s" %Namedb)
-    # cur.execute("USE %s"%Namedb)
-    table_name = table_name.lower()
-    
-    if type == "sensor v1":
-        cur.execute("CREATE TABLE IF NOT EXISTS %s(timestamp datetime, id int, xvalue int, yvalue int, zvalue int, mvalue int, PRIMARY KEY (timestamp, id))" %table_name)
-    elif type == "sensor v2":
-        cur.execute("CREATE TABLE IF NOT EXISTS %s(timestamp datetime, id int, msgid smallint, xvalue int, yvalue int, zvalue int, batt double, PRIMARY KEY (timestamp, id, msgid))" %table_name)
-    elif type == "weather":
-        cur.execute("CREATE TABLE IF NOT EXISTS %s(timestamp datetime, name char(4), temp double,wspd int, wdir int,rain double,batt double, csq int, PRIMARY KEY (timestamp, name))" %table_name)
-    elif type == "arqweather":
-        cur.execute("CREATE TABLE IF NOT EXISTS %s(timestamp datetime, name char(6), r15m double, r24h double, batv1 double, batv2 double, cur double, boostv1 double, boostv2 double, charge int, csq int, temp double, hum double, flashp int, PRIMARY KEY (timestamp, name))" %table_name)
-    elif type == "piezo":
-        cur.execute("CREATE TABLE IF NOT EXISTS %s(timestamp datetime, name char(7), msgid int , freq double, temp double, PRIMARY KEY (timestamp, name))"%table_name)
-    elif type == "stats":
-        cur.execute("CREATE TABLE IF NOT EXISTS %s(timestamp datetime, site char(4), voltage double, chan int, att int, retVal int, msgs int, sim int, csq int, sd int, PRIMARY KEY (timestamp, site))" %table_name)
-    elif type == "soms":
-        cur.execute("CREATE TABLE IF NOT EXISTS %s(timestamp datetime, id int, msgid smallint, mval1 int, mval2 int, PRIMARY KEY (timestamp, id, msgid))" %table_name)
-    elif type == "runtime":
-        cur.execute("CREATE TABLE IF NOT EXISTS %s(timestamp datetime, script_name char(7), status char(10), PRIMARY KEY (timestamp, script_name))" %table_name)
-    elif type == "gndmeas":
-        cur.execute("CREATE TABLE IF NOT EXISTS %s(timestamp datetime, meas_type char(10), site_id char (3), observer_name char(100), crack_id char(1), meas float(6,2), weather char(20), PRIMARY KEY (timestamp, meas_type, site_id, crack_id))" %table_name)
-    elif type == "coordrssi":
-        cur.execute("CREATE TABLE IF NOT EXISTS %s(timestamp datetime, site_name char(5), router_name char(7), rssi_val smallint(20), PRIMARY KEY (timestamp, site_name, router_name))" %table_name)
-    elif type == "smsinbox":
-        cur.execute("CREATE TABLE IF NOT EXISTS %s(sms_id int unsigned not null auto_increment, timestamp datetime, sim_num varchar(20), sms_msg varchar(800), read_status varchar(20), web_flag varchar(5) default 'S', gsm_id varchar(10), PRIMARY KEY (sms_id))" %table_name)
-    elif type == "smsoutbox":
-        cur.execute("CREATE TABLE IF NOT EXISTS %s(sms_id int unsigned not null auto_increment, timestamp_written datetime, timestamp_sent datetime, recepients varchar(255), sms_msg varchar(800), send_status varchar(20), gsm_id varchar(10), PRIMARY KEY (sms_id))" %table_name)
-    elif type == "earthquake":
-        cur.execute("CREATE TABLE IF NOT EXISTS %s(e_id int unsigned not null auto_increment, timestamp datetime, mag float(6,2), depth float (6,2), lat float(6,2), longi float(6,2), dist tinyint unsigned, heading varchar(5), municipality varchar(50), province varchar(50), issuer varchar(10), PRIMARY KEY (e_id,timestamp))" %table_name)
-    elif type == "servermonsched":
-        cur.execute("CREATE TABLE IF NOT EXISTS %s(p_id int unsigned not null auto_increment, date date, nickname varchar(20), primary key (p_id))" %table_name)
-    elif type == "monshiftsched":
-        cur.execute("CREATE TABLE IF NOT EXISTS %s(s_id int unsigned not null auto_increment, timestamp datetime, iompmt varchar(20), iompct varchar(20), oomps varchar(20), oompmt varchar(20), oompct varchar(20), primary key (s_id,timestamp))" %table_name)
-    elif type == "monshiftsched":
-        cur.execute("CREATE TABLE IF NOT EXISTS %s(s_id int unsigned not null auto_increment, timestamp datetime, iompmt varchar(20), iompct varchar(20), oomps varchar(20), oompmt varchar(20), oompct varchar(20), primary key (s_id,timestamp))" %table_name)
-    elif type == "smsalerts":
-        cur.execute("CREATE TABLE IF NOT EXISTS %s(alert_id int unsigned not null auto_increment, ts_set datetime, ts_ack datetime DEFAULT NULL, alertmsg varchar(512), ack varchar (20) DEFAULT 'None', remarks varchar(128), primary key (alert_id))" %table_name)
-    elif type == "dlhealth":
-        cur.execute("CREATE TABLE IF NOT EXISTS %s(case_id int unsigned not null auto_increment, health_case varchar(20), lgr_name varchar(20), timestamp datetime, updated_ts datetime,   primary key (case_id))" %table_name)
-    else:
-        raise ValueError("ERROR: No option for creating table " + type)
-   
-        
-    db.close()
-
 def set_read_status(sms_id_list,read_status=0,table='',instance='local'):
     
     if table == '':
@@ -95,12 +43,14 @@ def set_read_status(sms_id_list,read_status=0,table='',instance='local'):
         if len(sms_id_list) == 0:
             return
         else:
-            where_clause = "where inbox_id in (%s)" % (str(sms_id_list)[1:-1].replace("L",""))
+            where_clause = ("where inbox_id "
+                "in (%s)") % (str(sms_id_list)[1:-1].replace("L",""))
     elif type(sms_id_list) is long:
         where_clause = "where inbox_id = %d" % (sms_id_list)
     else:
         print ">> Unknown type"        
-    query = "update smsinbox_%s set read_status = %d %s" % (table, read_status, where_clause)
+    query = "update smsinbox_%s set read_status = %d %s" % (table, read_status, 
+        where_clause)
     
     # print query
     commit_to_db(query,"set_read_status")
@@ -108,13 +58,15 @@ def set_read_status(sms_id_list,read_status=0,table='',instance='local'):
 def set_send_status(table,status_list):
     db, cur = db_connect('gsm')
     
-    query = "insert into smsoutbox_%s_status (stat_id, send_status, ts_sent) values " % (table[:-1])
+    query = ("insert into smsoutbox_%s_status (stat_id, send_status, ts_sent) "
+        "values ") % (table[:-1])
 
     for stat_id, send_status, ts_sent in status_list:
         query += "(%d,%d,'%s')," % (stat_id, send_status, ts_sent)
 
     query = query[:-1]
-    query += " on duplicate key update stat_id=values(stat_id), send_status=send_status+values(send_status),ts_sent=values(ts_sent)"
+    query += (" on duplicate key update stat_id=values(stat_id), "
+        "send_status=send_status+values(send_status),ts_sent=values(ts_sent)")
     
     commit_to_db(query,"set_send_status")
     
@@ -129,15 +81,13 @@ def get_all_sms_from_db(host='local',read_status=0,table='loggers',limit=200):
     
     while True:
         try:
-            query = """select inbox_id,ts_received,sim_num,sms_msg from
-                        (
-                        select inbox_id,ts_received,mobile_id,sms_msg from smsinbox_%s 
-                        where read_status = %d limit %d
-                        ) as t1
-                        inner join (
-                        select mobile_id, sim_num from %s
-                        ) as t2
-                        on t1.mobile_id = t2.mobile_id""" % (table,read_status,limit,tbl_contacts)
+            query = ("select inbox_id,ts_received,sim_num,sms_msg from "
+                "(select inbox_id,ts_received,mobile_id,sms_msg from smsinbox_%s "
+                "where read_status = %d order by inbox_id desc limit %d) as t1 "
+                "inner join (select mobile_id, sim_num from %s) as t2 "
+                "on t1.mobile_id = t2.mobile_id ") % (table, read_status, limit,
+                tbl_contacts)
+            # print query
         
             a = cur.execute(query)
             out = []
@@ -153,13 +103,13 @@ def get_all_outbox_sms_from_db(table='users',send_status=5,gsm_id=5,limit=10):
     while True:
         try:
             db, cur = db_connect()
-            query = """select t1.stat_id,t1.mobile_id,t2.sms_msg from smsoutbox_%s_status as t1
-                        inner join (select * from smsoutbox_%s) as t2
-                        on t1.outbox_id = t2.outbox_id
-                        where t1.send_status < %d
-                        and t1.gsm_id = %d
-                        limit %d """ % (table[:-1],table,send_status,gsm_id,limit)
-                # where send_status = '%s' and gsm_id = '%s' limit %d""" % (gsmdbinstance.name,send_status,network,limit)
+            query = ("select t1.stat_id,t1.mobile_id,t2.sms_msg from "
+                "smsoutbox_%s_status as t1"
+                "inner join (select * from smsoutbox_%s) as t2"
+                "on t1.outbox_id = t2.outbox_id"
+                "where t1.send_status < %d"
+                "and t1.gsm_id = %d"
+                "limit %d ") % (table[:-1],table,send_status,gsm_id,limit)
                 
             # print query
             a = cur.execute(query)
@@ -176,14 +126,16 @@ def get_all_outbox_sms_from_db(table='users',send_status=5,gsm_id=5,limit=10):
 def get_logger_names(logger_type="all",instance="local"):
     db, cur = db_connect(instance)
 
-    if logger_type == 'soms':
-        query = "SELECT `logger_name` from `loggers` where `model_id` in (SELECT `model_id` FROM `logger_models` where `has_soms`=1) and `logger_name` is not null"
-    elif logger_type == 'piezo':
-        query = "SELECT `logger_name` from `loggers` where `model_id` in (SELECT `model_id` FROM `logger_models` where `has_piezo`=1) and `logger_name` is not null"
-    elif logger_type == 'rain':
-        query = "SELECT `logger_name` from `loggers` where `model_id` in (SELECT `model_id` FROM `logger_models` where `has_rain`=1 or `logger_type`='arq') and `logger_name` is not null"
-    elif logger_type == 'tilt':
+    if logger_type == 'tilt':
         query = "SELECT distinct(tsm_name) FROM tsm_sensors;"
+    elif logger_type in ['soms','piezo']:
+        query = ("SELECT `logger_name` from `loggers` where `model_id` in "
+            "(SELECT `model_id` FROM `logger_models` where `has_%s`=1) "
+            "and `logger_name` is not null") % (logger_type)
+    elif logger_type == 'rain':
+        query = ("SELECT `logger_name` from `loggers` where `model_id` in "
+            "(SELECT `model_id` FROM `logger_models` where `has_%s`=1 "
+            "or `logger_type`='arq') and `logger_name` is not null")
     else:
         print 'Error: No info for logger type', logger_type
         return
@@ -208,58 +160,60 @@ def create_logger_tables(logger_type='all',instance="local"):
 
     if logger_type == 'soms':
         for n in logger_names:
-            query += """CREATE TABLE IF NOT EXISTS `soms_%s` (
-                      `data_id` INT NOT NULL AUTO_INCREMENT,
-                      `ts` TIMESTAMP NULL,
-                      `node_id` TINYINT NULL,
-                      `type_num` SMALLINT UNSIGNED NULL,
-                      `mval1` SMALLINT UNSIGNED NULL,
-                      `mval2` SMALLINT UNSIGNED NULL,
-                      PRIMARY KEY (`data_id`),
-                      UNIQUE INDEX `unique1` (`ts` ASC, `node_id` ASC, `type_num` ASC))
-                    ENGINE = InnoDB;\n\n""" % (n)
+            query += ("CREATE TABLE IF NOT EXISTS `soms_%s` ("
+                "`data_id` INT NOT NULL AUTO_INCREMENT,"
+                "`ts` TIMESTAMP NULL,"
+                "`node_id` TINYINT NULL,"
+                "`type_num` SMALLINT UNSIGNED NULL,"
+                "`mval1` SMALLINT UNSIGNED NULL,"
+                "`mval2` SMALLINT UNSIGNED NULL,"
+                "PRIMARY KEY (`data_id`),"
+                "UNIQUE INDEX `unique1` (`ts` ASC, `node_id` ASC, "
+                "`type_num` ASC)) "
+                "ENGINE = InnoDB;\n\n") % (n)
 
     elif logger_type == 'piezo':
         for n in logger_names:
-            query += """CREATE TABLE IF NOT EXISTS `piezo_%s` (
-                      `data_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-                      `ts` TIMESTAMP NULL DEFAULT NULL,
-                      `frequency_shift` DECIMAL(6,2) UNSIGNED NULL DEFAULT NULL,
-                      `temperature` FLOAT NULL DEFAULT NULL,
-                      PRIMARY KEY (`data_id`),
-                      UNIQUE INDEX `unique1` (`ts` ASC))
-                    ENGINE = InnoDB;\n\n""" % (n)
+            query += ("CREATE TABLE IF NOT EXISTS `piezo_%s` ("
+                "`data_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,"
+                "`ts` TIMESTAMP NULL DEFAULT NULL,"
+                "`frequency_shift` DECIMAL(6,2) UNSIGNED NULL DEFAULT NULL,"
+                "`temperature` FLOAT NULL DEFAULT NULL,"
+                "PRIMARY KEY (`data_id`),"
+                "UNIQUE INDEX `unique1` (`ts` ASC)) "
+                "ENGINE = InnoDB;\n\n") % (n)
 
     elif logger_type == 'rain':
         for n in logger_names:
-            query +=  """CREATE TABLE IF NOT EXISTS `rain_%s` (
-                      `data_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-                      `ts` TIMESTAMP NULL,
-                      `rain` FLOAT NULL DEFAULT NULL,
-                      `temperature` FLOAT NULL DEFAULT NULL,
-                      `humidity` FLOAT NULL DEFAULT NULL,
-                      `battery1` FLOAT NULL DEFAULT NULL,
-                      `battery2` FLOAT NULL DEFAULT NULL,
-                      `csq` TINYINT(3) NULL DEFAULT NULL,
-                      PRIMARY KEY (`data_id`),
-                      UNIQUE INDEX `unique1` (`ts` ASC))
-                    ENGINE = InnoDB;\n\n""" % (n)
+            query +=  ("CREATE TABLE IF NOT EXISTS `rain_%s` ("
+                "`data_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,"
+                "`ts` TIMESTAMP NULL,"
+                "`rain` FLOAT NULL DEFAULT NULL,"
+                "`temperature` FLOAT NULL DEFAULT NULL,"
+                "`humidity` FLOAT NULL DEFAULT NULL,"
+                "`battery1` FLOAT NULL DEFAULT NULL,"
+                "`battery2` FLOAT NULL DEFAULT NULL,"
+                "`csq` TINYINT(3) NULL DEFAULT NULL,"
+                "PRIMARY KEY (`data_id`),"
+                "UNIQUE INDEX `unique1` (`ts` ASC))"
+                "ENGINE = InnoDB;\n\n") % (n)
     
     elif logger_type == 'tilt':
         for n in logger_names:
-            query += """CREATE TABLE IF NOT EXISTS `tilt_%s` (
-              `data_id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
-              `ts` TIMESTAMP NULL DEFAULT NULL,
-              `node_id` TINYINT(3) UNSIGNED NULL DEFAULT NULL,
-              `type_num` TINYINT(3) UNSIGNED NULL DEFAULT NULL,
-              `xval` SMALLINT(6) NULL DEFAULT NULL,
-              `yval` SMALLINT(6) NULL DEFAULT NULL,
-              `zval` SMALLINT(6) NULL DEFAULT NULL,
-              `batt` FLOAT(11) NULL DEFAULT NULL,
-              PRIMARY KEY (`data_id`),
-              UNIQUE INDEX `unique1` (`ts` ASC, `node_id` ASC, `type_num` ASC))
-            ENGINE = InnoDB
-            DEFAULT CHARACTER SET = utf8;\n\n""" % (n)
+            query += ("CREATE TABLE IF NOT EXISTS `tilt_%s` ("
+                "`data_id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,"
+                "`ts` TIMESTAMP NULL DEFAULT NULL,"
+                "`node_id` TINYINT(3) UNSIGNED NULL DEFAULT NULL,"
+                "`type_num` TINYINT(3) UNSIGNED NULL DEFAULT NULL,"
+                "`xval` SMALLINT(6) NULL DEFAULT NULL,"
+                "`yval` SMALLINT(6) NULL DEFAULT NULL,"
+                "`zval` SMALLINT(6) NULL DEFAULT NULL,"
+                "`batt` FLOAT(11) NULL DEFAULT NULL,"
+                "PRIMARY KEY (`data_id`),"
+                "UNIQUE INDEX `unique1` (`ts` ASC, `node_id` ASC, "
+                "`type_num` ASC))"
+                "ENGINE = InnoDB "
+                "DEFAULT CHARACTER SET = utf8;\n\n") % (n)
 
     else:
         print 'Error: No create info for logger type', logger_type
@@ -308,45 +262,49 @@ def commit_to_db(query, identifier, last_insert=False, instance='local'):
         print '>> Error: Writing to database', identifier
     except MySQLdb.IntegrityError:
         print '>> Warning: Duplicate entry detected', identifier
-    # except:
-    #     print '>> Unexpected error in writing to database query', query[0:100], 'from', identifier
-    # finally:
     db.close()
     return b
 
 def query_database(query, identifier='', instance='local'):
     db, cur = db_connect(instance)
     a = ''
+
+    print query, identifier
     try:
         a = cur.execute(query)
         # db.commit()
-        if a:
+        # if a:
+        #     a = cur.fetchall()
+        # else:
+        #     # print '>> Warning: Query has no result set', identifier
+        #     a = None
+        try:
             a = cur.fetchall()
-        else:
-            # print '>> Warning: Query has no result set', identifier
-            a = None
+            return a
+        except ValueError:
+            return None
     except MySQLdb.OperationalError:
         a =  None
     except KeyError:
         a = None
-    except MySQLdb.ProgrammingError:
-        print 'ERROR: Check sql query'
-        a = None
-    finally:
-        db.close()
-        return a
+    # except MySQLdb.ProgrammingError:
+    #     print 'ERROR: Check sql query'
+    #     a = None
+    # finally:
+    #     db.close()
+    #     return a
 
 def check_number_if_exists(simnumber,table='community'):
     simnumber = simnumber[-10:]
     if table == 'community':
-        query = """select lastname,firstname,sitename from %scontacts where
-            number like "%s%s%s"; """ % (table,'%',simnumber,'%')
+        query = ("select lastname,firstname,sitename from %scontacts where "
+            "number like '%s%s%s';") % (table,'%',simnumber,'%')
     elif table == 'dewsl':
-        query = """select lastname,firstname from %scontacts where
-            number like "%s%s%s"; """ % (table,'%',simnumber,'%')
+        query = ("select lastname,firstname from %scontacts where"
+            "number like '%s%s%s';") % (table,'%',simnumber,'%')
     elif table == 'sensor': 
-        query = """select name from site_column_sim_nums where
-            sim_num like "%s%s%s"; """ % ('%',simnumber,'%')
+        query = ("select name from site_column_sim_nums where"
+            "sim_num like '%s%s%s';") % ('%',simnumber,'%')
     else:
         return None
 
@@ -355,9 +313,11 @@ def check_number_if_exists(simnumber,table='community'):
     return identity
 
 def get_arguments():
-    parser = argparse.ArgumentParser(description="senslopedbio\n senslopedbio [-options]")
-    parser.add_argument("-t", "--test", help="run test function",action="store_true")
-    parser.add_argument("-c", "--create_tables", help="run test function")    
+    desc_str = "senslopedbio\n senslopedbio [-options]"
+    parser = argparse.ArgumentParser(description = desc_str)
+    parser.add_argument("-t", "--test", help = "run test function",
+        action = "store_true")
+    parser.add_argument("-c", "--create_tables", help = "run test function")    
     
     try:
         args = parser.parse_args()
