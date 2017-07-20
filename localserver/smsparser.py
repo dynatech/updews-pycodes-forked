@@ -252,7 +252,8 @@ def process_column_v1(sms):
         timestamp = txtdatetime
         print "date & time adjusted " + timestamp
     else:
-        timestamp = dt.strptime(timestamp,'%y%m%d%H%M').strftime('%Y-%m-%d %H:%M:00')
+        timestamp = dt.strptime(timestamp,
+            '%y%m%d%H%M').strftime('%Y-%m-%d %H:%M:00')
         print 'date & time no change'
         
     dlen = len(msgdata) #checks if data length is divisible by 15
@@ -384,9 +385,11 @@ def process_piezometer(sms):
         t2 = int(('0x'+data[8:10]), 16)*.01
         tempdata = t1+t2
         try:
-            txtdatetime = dt.strptime(linesplit[2],'%y%m%d%H%M%S').strftime('%Y-%m-%d %H:%M:00')
+            txtdatetime = dt.strptime(linesplit[2],
+                '%y%m%d%H%M%S').strftime('%Y-%m-%d %H:%M:00')
         except ValueError:
-            txtdatetime = dt.strptime(linesplit[2],'%y%m%d%H%M').strftime('%Y-%m-%d %H:%M:00')
+            txtdatetime = dt.strptime(linesplit[2],
+                '%y%m%d%H%M').strftime('%Y-%m-%d %H:%M:00')
             
     except IndexError and AttributeError:
         print '\n>> Error: Piezometer message format is not recognized'
@@ -405,11 +408,17 @@ def process_piezometer(sms):
         # print query
     except ValueError:
         print '>> Error writing query string.', 
-        return
+        return False
+   
     
-    dbio.commit_to_db(query, 'process_piezometer')
+    try:
+        dbio.commit_to_db(query, 'process_piezometer')
+    except MySQLdb.ProgrammingError:
+        print '>> Unexpected programing error'
+        return False
         
     print 'End of Process Piezometer data'
+    return True
 
 def process_earthquake(msg):
     line = msg.data.upper()
@@ -562,7 +571,8 @@ def process_arq_weather(sms):
         temp = linesplit[10]
         hum = linesplit[11]
         flashp = linesplit[12]
-        txtdatetime = dt.strptime(linesplit[13],'%y%m%d/%H%M%S').strftime('%Y-%m-%d %H:%M:00')
+        txtdatetime = dt.strptime(linesplit[13],
+            '%y%m%d/%H%M%S').strftime('%Y-%m-%d %H:%M:00')
 
     except IndexError and AttributeError:
         print '\n>> Error: Rain message format is not recognized'
@@ -580,9 +590,9 @@ def process_arq_weather(sms):
 
     try:
         query = ("INSERT INTO rain_%s (ts,rain,temperature,humidity,battery1,"
-            "battery2,csq VALUES ('%s',%s,%s,%s,%s,%s,%s)") % (msgname,
+            "battery2,csq) VALUES ('%s',%s,%s,%s,%s,%s,%s)") % (msgname,
             txtdatetime,rain,temp,hum,batv1,batv2,csq)
-        # print query
+        print query
     except ValueError:
         print '>> Error writing query string.', 
         return
@@ -595,7 +605,7 @@ def check_logger_model(logger_name):
     query = ("SELECT model_id FROM senslopedb.loggers where "
         "logger_name = '%s'") % logger_name
 
-    return dbio.querydatabase(query,'check_logger_model')[0][0]
+    return dbio.query_database(query,'check_logger_model')[0][0]
     
 def process_rain(sms):
 
@@ -611,6 +621,7 @@ def process_rain(sms):
         line = re.sub(",(?=$)","",line)
     line = re.sub("(?<=,)(?=(,|$))","NULL",line)
     line = re.sub("(?<=,)NULL(?=,)","0.0",line)
+    line = re.sub("(?<=,).*$","NULL",line)
     print line
 
     try:
@@ -632,7 +643,10 @@ def process_rain(sms):
         
         # data = items.group(3)
         rain = line.split(",")[6]
+        print line
+
         csq = line.split(",")[8]
+
 
     except IndexError and AttributeError:
         print '\n>> Error: Rain message format is not recognized'
@@ -662,62 +676,6 @@ def process_rain(sms):
         
     print 'End of Process weather data'
 
-def process_stats(msg):
-
-    print 'Site status: ' + msg.data
-    
-    try:
-        msgtable = "stats"
-        items = re.match(r("(\w{4})[-](\d{1,2}[.]\d{02}),(\d{01}),(\d{1,2})/"
-            "(\d{1,2}),#(\d),(\d),(\d{1,2}),(\d)[*](\d{10})"),line)
-        
-        site = items.group(1)
-        voltage = items.group(2)
-        chan = items.group(3)
-        att = items.group(4)
-        retVal = items.group(5)
-        msgs = items.group(6)
-        sim = items.group(7)
-        csq = items.group(8)
-        sd = items.group(9)
-
-        #getting date and time
-        msgdatetime = line[-10:]
-        print 'date & time: ' + msgdatetime
-
-        col_list = cfg.get("Misc","AdjustColumnTimeOf").split(',')
-        if site in col_list:
-            msgdatetime = txtdatetime
-            print "date & time adjusted " + msgdatetime
-        else:
-            print 'date & time no change'
-
-
-    except IndexError and AttributeError:
-        print '\n>> Error: Status message format is not recognized'
-        print line
-        return
-    except:
-        print '\n>>Error: Status message format unknown ' + line
-        return
-
-    dbio.create_table(str(msgtable),"stats")
-        
-    try:
-        query = ("INSERT INTO %s (timestamp,site,voltage,chan,att,retVal,msgs,"
-            "sim,csq,sd) VALUES ('%s','%s','%s','%s','%s','%s','%s','%s','%s',"
-            "'%s')") %(str(msgtable),str(msgdatetime),str(site),str(voltage),
-            str(chan),str(att),str(retVal),str(msgs),str(sim),str(csq),str(sd))
-            
-    except:
-        print '>> Error writing status data to database. ' +  line
-        return
-
-    
-    dbio.commit_to_db(query, 'process_stats')
-        
-    print 'End of Process status data'
-
 def check_message_source(msg):
     c = cfg.config()
     identity = dbio.check_number_if_exists(msg.simnum,'community')
@@ -740,11 +698,17 @@ def check_message_source(msg):
 def spawn_alert_gen(tsm_name, timestamp):
     # spawn alert alert_gens
 
+    args = get_arguments()
+
+    if args.nospawn:
+        print ">> Not spawning alert gen"
+        return
+
     print "For alertgen.py", tsm_name, timestamp
-    print timestamp
+    # print timestamp
     timestamp = (dt.strptime(timestamp,'%Y-%m-%d %H:%M:%S')+\
         td(minutes=10)).strftime('%Y-%m-%d %H:%M:%S')
-    print timestamp
+    # print timestamp
     # return
 
     alertgenlist = mc.get('alertgenlist')
@@ -788,7 +752,7 @@ def process_surficial_observation(msg):
         server.write_outbox_message_to_db(c.reply.successen, msg.simnum,'users')
         proceed_with_analysis = True
     except ValueError as e:
-        print str(e)
+        print "stre(e)", str(e)
         errortype = re.search("(WEATHER|DATE|TIME|GROUND MEASUREMENTS|NAME)", 
             str(e).upper()).group(0)
         print ">> Error in manual ground measurement SMS", errortype
@@ -841,7 +805,7 @@ def parse_all_messages(args,allmsgs=[]):
             # Added for V1 sensors removes unnecessary characters 
             # pls see function pre_process_col_v1(data)
             if re.search("\*FF",msg.data) or re.search("PZ\*",msg.data):
-                process_piezometer(msg)
+                isMsgProcSuccess = process_piezometer(msg)
             # elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*\d+T?$",msg.data):
             elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*.*",msg.data):
                msg.data = pre_process_col_v1(msg)
@@ -852,8 +816,8 @@ def parse_all_messages(args,allmsgs=[]):
                 isMsgProcSuccess = qsi.process_server_info_request(msg)
             elif re.search("^SENDGM ",msg.data.upper()):
                 isMsgProcSuccess = qsi.server_messaging(msg)
-            elif re.search("^ACK \d+ .+",msg.data.upper()):
-                isMsgProcSuccess = amsg.process_ack_to_alert(msg)   
+            # elif re.search("^ACK \d+ .+",msg.data.upper()):
+            #     isMsgProcSuccess = amsg.process_ack_to_alert(msg)   
             elif re.search("^ *(R(O|0)*U*TI*N*E )|(EVE*NT )", msg.data.upper()):
                 process_surficial_observation(msg)                  
             elif re.search("^[A-Z]{4,5}\*[xyabcXYABC]\*[A-F0-9]+\*[0-9]+T?$",
@@ -877,9 +841,6 @@ def parse_all_messages(args,allmsgs=[]):
             # elif re.search("^\w{4},[\d\/:,]+,[\d,\.]+$",msg.data):
             elif re.search("^\w{4},[\d\/:,]+",msg.data):
                 process_rain(msg)
-            elif re.search(r("(\w{4})[-](\d{1,2}[.]\d{02}),(\d{01}),(\d{1,2})/"
-                "(\d{1,2}),#(\d),(\d),(\d{1,2}),(\d)[*](\d{10})"),msg.data):
-                process_stats(msg)
             elif re.search("ARQ\+[0-9\.\+/\- ]+$",msg.data):
                 process_arq_weather(msg)
             elif (msg.data.split('*')[0] == 'COORDINATOR' or 
@@ -893,7 +854,7 @@ def parse_all_messages(args,allmsgs=[]):
                 print '>> Unrecognized message format: '
                 print 'NUM: ' , msg.simnum
                 print 'MSG: ' , msg.data
-                check_message_source(msg)            
+                # check_message_source(msg)            
                 isMsgProcSuccess = False
                 
             if isMsgProcSuccess:
@@ -902,12 +863,16 @@ def parse_all_messages(args,allmsgs=[]):
                 read_fail_list.append(msg.num)
     # method for updating the read_status all messages that have been processed
     # so that they will not be processed again in another run
-        except:
-            # print all the traceback routine so that the error can be traced
-            print (traceback.format_exc())
-            print ">> Setting message read_status to fatal error"
-            dbio.set_read_status(cur_num, read_status=-1, table = args.table)
-            continue
+        except KeyboardInterrupt:
+            print '>> User exit'
+            sys.exit()
+        # except:
+        #     # print all the traceback routine so that the error can be traced
+        #     print (traceback.format_exc())
+        #     print ">> Setting message read_status to fatal error"
+        #     # dbio.set_read_status(cur_num, read_status=-1, table = args.table)
+        #     read_fail_list.append(msg.num)
+        #     continue
         
     return read_success_list, read_fail_list
     
@@ -944,7 +909,7 @@ def get_router_ids():
         " in (SELECT `model_id` FROM `logger_models` where "
         "`logger_type`='router') and `logger_name` is not null")
 
-    nums = dbio.querydatabase(query,'get_router_ids')
+    nums = dbio.query_database(query,'get_router_ids')
     nums = {key: value for (value, key) in nums}
 
     return nums
@@ -962,7 +927,8 @@ def process_gateway_msg(msg):
     try:
         datafield = msg.data.split('*')[1]
         timefield = msg.data.split('*')[2]
-        timestamp = dt.strptime(timefield,"%y%m%d%H%M%S").strftime("%Y-%m-%d %H:%M:%S")
+        timestamp = dt.strptime(timefield,
+            "%y%m%d%H%M%S").strftime("%Y-%m-%d %H:%M:%S")
         
         smstype = datafield.split(',')[0]
         # process rssi parameters
@@ -972,17 +938,28 @@ def process_gateway_msg(msg):
             print rssi_string
             # format is
             # <router name>,<rssi value>,...
-            query = "INSERT IGNORE INTO router_rssi (ts, logger_id, rssi_val) VALUES "
+            query = ("INSERT IGNORE INTO router_rssi "
+                "(ts, logger_id, rssi_val) VALUES ")
             tuples = re.findall("[A-Z]+,\d+",rssi_string)
+            count = 0
             for item in tuples:
-                query += "('%s',%d,%s)," % (timestamp,
-                    routers[item.split(',')[0].lower()], item.split(',')[1])
+                try:
+                    query += "('%s',%d,%s)," % (timestamp,
+                        routers[item.split(',')[0].lower()], item.split(',')[1])
+                    count += 1
+                except KeyError:
+                    print 'Key error for', item
+                    continue
                 
             query = query[:-1]
 
             print query
             
-            dbio.commit_to_db(query, 'process_gateway_msg')
+            if count != 0:
+                print 'count', count
+                dbio.commit_to_db(query, 'process_gateway_msg')
+            else:
+                print '>> no data to commit'
 
             return True
         else:
@@ -995,7 +972,8 @@ def process_gateway_msg(msg):
     #     return False
 
 def get_arguments():
-    parser = argparse.ArgumentParser(description="Run SMS parser\n smsparser [-options]")
+    parser = argparse.ArgumentParser(description = ("Run SMS parser\n "
+        "smsparser [-options]"))
     parser.add_argument("-db", "--dbhost", 
         help="host name (check senslope-server-config.txt")
     parser.add_argument("-t", "--table", help="smsinbox table")
@@ -1008,6 +986,9 @@ def get_arguments():
         help="run test function",action="store_true")
     parser.add_argument("-b", "--bypasslock", 
         help="bypass lock script function",action="store_true")
+    parser.add_argument("-ns", "--nospawn", 
+        help="do not spawn alert gen",action="store_true")
+    
     
     try:
         args = parser.parse_args()
@@ -1060,8 +1041,10 @@ def main():
 
             read_success_list, read_fail_list = parse_all_messages(args,allmsgs)
 
-            dbio.set_read_status(read_success_list, read_status=1,table=args.table)
-            dbio.set_read_status(read_fail_list, read_status=-1,table=args.table)
+            dbio.set_read_status(read_success_list, read_status=1,
+                table=args.table)
+            dbio.set_read_status(read_fail_list, read_status=-1,
+                table=args.table)
             # sleeptime = 5
         else:
             # server.logRuntimeStatus("procfromdb","alive")

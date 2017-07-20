@@ -275,18 +275,6 @@ def get_mobile_sim_nums(table):
 
     return nums
 
-def write_alert_to_db(alertmsg):
-    dbio.create_table('smsalerts','smsalerts')
-
-    today = dt.today().strftime("%Y-%m-%d %H:%M:%S")
-
-    query = ("insert into smsalerts (ts_set,alertmsg,remarks) "
-        "values ('%s','%s','none')") % (today,alertmsg)
-
-    print query
-
-    dbio.commit_to_db(query,'write_alert_to_db')
-
 def save_to_cache(key,value):
     mc.set(key,value)
 
@@ -378,8 +366,8 @@ def simulate_gsm(network='simulate'):
     
     # print query
     query_lastText = ("UPDATE last_text_received SET inbox_id = "
-        "(select max(inbox_id) from smsinbox_loggers) , ts = '{}' "
-        "where mobile_id= {}'".format(ts_received, ltr_mobile_id))
+        "(select max(inbox_id) from smsinbox_loggers), ts = '{}' "
+        "where mobile_id= {}".format(ts_received, ltr_mobile_id))
     # print query_lastText    
     if len(sms_id_ok)>0:
         if loggers_count > 0:
