@@ -201,11 +201,11 @@ def SitePublicAlert(PublicAlert, window):
             query += "or site = 'tag' "
         query += ") AND source IN ('sensor', 'ground', 'rain', 'eq', 'on demand') \
             AND alert not in ('ND', 'nd')\
-            AND timestamp >= '%s' ORDER BY timestamp DESC)" %start_monitor
+            AND updateTS >= '%s' AND updateTS <= '%s' ORDER BY timestamp DESC)" %(start_monitor, window.end)
         
         # dataframe of *
         PAlert = q.GetDBDataFrame(query)
-        
+
         SG_alert = PAlert.loc[(PAlert.source == 'sensor')|(PAlert.source == 'ground')]
         RED_alert = PAlert.loc[(PAlert.source == 'rain')|(PAlert.source == 'eq')|(PAlert.source == 'on demand')]
         other_alerts = ''
@@ -759,9 +759,9 @@ def SitePublicAlert(PublicAlert, window):
         # latest alert per source (rain,sensor,ground,internal,public,eq,on demand)*
         query = "SELECT * FROM ("
         query += " SELECT * FROM site_level_alert"
-        query += " WHERE site = 'msl' AND"
+        query += " WHERE site = '%s' AND" %site
         query += " ((source = 'public' and alert != 'A0')"
-        query += " OR (source = 'ground' and timestamp >= '2017-07-19'))"
+        query += " OR (source = 'ground' and timestamp >= '%s'))" %pd.to_datetime(window.end.date())
         query += " ORDER BY timestamp DESC"
         query += " ) AS sub GROUP BY source"
 
