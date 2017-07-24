@@ -301,7 +301,7 @@ def PlotSite(df,tsn,print_out_path):
     plt.legend(loc='upper left',fancybox = True, framealpha = 0.5)
     plt.grid(True)
     plt.xticks(rotation = 45)
-    plt.savefig(print_out_path+tsn+'_'+site_name,dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w',bbox_inches = 'tight')
+    plt.savefig(print_out_path+'surficial_'+tsn+'_'+site_name,dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w',bbox_inches = 'tight')
     plt.close()
 
     
