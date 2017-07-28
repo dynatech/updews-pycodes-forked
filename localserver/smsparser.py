@@ -751,9 +751,9 @@ def process_surficial_observation(msg):
             c.smsalert.communitynum,'users')
         server.write_outbox_message_to_db(c.reply.successen, msg.simnum,'users')
         proceed_with_analysis = True
-    except ValueError as e:
+    except surfp.SurficialParserError as e:
         print "stre(e)", str(e)
-        errortype = re.search("(WEATHER|DATE|TIME|GROUND MEASUREMENTS|NAME)", 
+        errortype = re.search("(WEATHER|DATE|TIME|GROUND MEASUREMENTS|NAME|CODE)", 
             str(e).upper()).group(0)
         print ">> Error in manual ground measurement SMS", errortype
 
@@ -812,8 +812,8 @@ def parse_all_messages(args,allmsgs=[]):
                process_column_v1(msg)
             elif re.search("EQINFO",msg.data.upper()):
                 isMsgProcSuccess = process_earthquake(msg)
-            elif re.search("^PSIR ",msg.data.upper()):
-                isMsgProcSuccess = qsi.process_server_info_request(msg)
+            # elif re.search("^PSIR ",msg.data.upper()):
+            #     isMsgProcSuccess = qsi.process_server_info_request(msg)
             elif re.search("^SENDGM ",msg.data.upper()):
                 isMsgProcSuccess = qsi.server_messaging(msg)
             # elif re.search("^ACK \d+ .+",msg.data.upper()):
