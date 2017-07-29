@@ -156,7 +156,7 @@ def uptoDB_marker_alerts(df,df2):
     df3.to_sql(name = 'marker_alerts', con = engine, if_exists = 'append', schema = Namedb, index = True)
 
 def get_ground_data_with_recent_cracks(site,end,num_pts):
-    query = "SELECT g1.timestamp, g1.crack_id, g1.site_id,g1.meas, COUNT(*) num FROM gndmeas g1 INNER JOIN gndmeas g2 ON g1.timestamp <= g2.timestamp AND g1.crack_id = g2.crack_id AND g1.site_id = g2.site_id AND g1.site_id = '{}' AND g1.crack_id in (SELECT crack_id FROM gndmeas WHERE site_id = '{}' AND timestamp = (SELECT max(timestamp) FROM gndmeas WHERE timestamp <= '{}' AND site_id = '{}')) GROUP BY g1.crack_id, g1.timestamp,g1.site_id HAVING COUNT(*) <= 10 ORDER by num desc".format(site,site,end,site)
+    query = "SELECT g1.timestamp, g1.crack_id, g1.site_id,g1.meas, COUNT(*) num FROM gndmeas g1 INNER JOIN gndmeas g2 ON g1.timestamp <= g2.timestamp AND g1.crack_id = g2.crack_id AND g1.site_id = g2.site_id AND g1.site_id = '{}' AND g1.timestamp <= '{}' AND g2.timestamp <= '{}' AND g1.crack_id in (SELECT crack_id FROM gndmeas WHERE site_id = '{}' AND timestamp = (SELECT max(timestamp) FROM gndmeas WHERE timestamp <= '{}' AND site_id = '{}')) GROUP BY g1.crack_id, g1.timestamp,g1.site_id HAVING COUNT(*) <= 10 ORDER by num desc".format(site,end,end,site,end,site)
     
     df = GetDBDataFrame(query)
     return df
