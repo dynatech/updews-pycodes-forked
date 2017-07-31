@@ -10,8 +10,8 @@ import requests
 def getDF():
 
     rsite = sys.argv[1]
-    fdate = sys.argv[2]
-    tdate = sys.argv[3]
+    fdate = sys.argv[2].replace("%20"," ")
+    tdate = sys.argv[3].replace("%20"," ")
     engine = create_engine('mysql+pymysql://updews:october50sites@127.0.0.1/senslopedb')
     query = "select timestamp, rain from senslopedb.%s where timestamp between '%s' and  '%s'" % (rsite ,fdate,tdate)
     df = pd.io.sql.read_sql(query,engine)

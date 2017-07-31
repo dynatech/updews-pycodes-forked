@@ -11,8 +11,8 @@ import requests
 def getDF():
 
     rsite = sys.argv[1]
-    fdate = sys.argv[2]
-    tdate = sys.argv[3]
+    fdate = sys.argv[2].replace("%20"," ")
+    tdate = sys.argv[3].replace("%20"," ")
     # rsite = "1069"
     # fdate = "2014-04-25"
     # tdate = "2017-04-25"
