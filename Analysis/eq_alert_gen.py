@@ -79,11 +79,6 @@ def getrowDistancetoEQ(df):#,eq_lat,eq_lon):
     
     return df
 
-#def getEQ():    
-#    query = """ SELECT * FROM %s.earthquake order by timestamp desc limit 1 """ % (q.Namedb)
-#    dfeq =  q.GetDBDataFrame(query)
-#    return dfeq.mag[0],dfeq.lat[0],dfeq.longi[0],dfeq.timestamp[0]
-
 def getUnprocessed():
     query = """ select * from %s.earthquake where processed=0 """ % (q.Namedb)
     dfeq =  q.GetDBDataFrame(query)
@@ -109,6 +104,29 @@ def execQuery(query):
         db.commit()
         db.close()
 
+def createTable():
+    query = ''
+    query += 'CREATE TABLE `senslopedb`.`earthquake_alerts` ('
+    query += '`ea_id` SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT,'
+    query += '`eq_id` INT(10) UNSIGNED NOT NULL,'
+    query += '`site_id` TINYINT(3) UNSIGNED NOT NULL,'
+    query += '`distance` DECIMAL(5,3) NULL,'
+    query += 'PRIMARY KEY (`ea_id`),'
+    query += 'UNIQUE INDEX `uq_earthquake_alerts` (`eq_id` ASC,`site_id` ASC),'
+    query += 'INDEX `fk_earthquake_alerts_sites_idx` (`site_id` ASC),'
+    query += 'INDEX `fk_earthquake_alerts_earthquake_events_idx` (`eq_id` ASC),'
+    query += 'CONSTRAINT `fk_earthquake_alerts_sites`'
+    query += '  FOREIGN KEY (`site_id`)'
+    query += '  REFERENCES `senslopedb`.`sites` (`site_id`)'
+    query += '  ON DELETE NO ACTION'
+    query += '  ON UPDATE CASCADE,'
+    query += 'CONSTRAINT `fk_earthquake_alerts_earthquake_events`'
+    query += '  FOREIGN KEY (`eq_id`)'
+    query += '  REFERENCES `senslopedb`.`earthquake_events` (`eq_id`)'
+    query += ' ON DELETE NO ACTION'
+    query += ' ON UPDATE CASCADE);'
+
+    return query
 
     
 output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
@@ -176,7 +194,6 @@ for i in dfeq.index:
             
             try:
                 uptoDB(crits)
-                
                 
             except:
                 pass
