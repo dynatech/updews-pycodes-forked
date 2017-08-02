@@ -22,8 +22,9 @@ def log_errors(errortype, line, dt):
     writefolder=''
     
     x = {
-        0: 'wrong identifier',1: 'wrong node division',
-        2: '2nd text',3: 'unidentified error',4: 'no datetime',10: 'random character'
+        0: 'wrong identifier', 1: 'wrong node division',
+        2: '2nd text', 3: 'unidentified error', 4: 'no datetime',
+        10: 'random character'
     }
     
     error = x[errortype] + '>' + str(dt)+ '>'+ line + '\n'
@@ -102,7 +103,8 @@ def soms_parser(msgline,mode,div,err):
                 rawdata1 = np.NaN
             else:
                 try:    
-                    rawdata1= int('0x'+ data[6+div*i:7+div*i]+data[4+div*i:6+div*i], base=0)
+                    rawdata1= int('0x'+ data[6+div*i:7+div*i] 
+                        + data[4+div*i:6+div*i], base=0)
                 except:
                     log_errors(10,msgline,dt)
                     rawdata1=np.nan
@@ -150,12 +152,13 @@ def soms_parser(msgline,mode,div,err):
                 
         if div == 10 or div == 12 or div == 15:           #if raw data
             try:
-                rawdata2= int('0x' + data[9+div*i:10+div*i]+data[7+div*i:9+div*i], base =0)
+                rawdata2= int('0x' + data[9 + div*i:10 + div*i]
+                    + data[7+ div*i:9 + div*i], base =0)
             except:
-                log_errors(10,msgline,dt)
-                rawdata2=np.nan
+                log_errors(10, msgline, dt)
+                rawdata2 = np.nan
 
-        rawlist.append([site, str(dt),GID,CMD,rawdata1,rawdata2])
+        rawlist.append([site, str(dt), GID, CMD, rawdata1, rawdata2])
 
   
     if len(data)%div!=0:

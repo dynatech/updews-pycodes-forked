@@ -7,8 +7,12 @@ import pandas as pd
 import memcache
 mc = memcache.Client(['127.0.0.1:11211'],debug=0)
 
+c = cfg.config()
+
+class SurficialParserError(Exception):
+    pass
+
 def parse_surficial_text(text):
-    c = cfg.config()
     print '\n\n*******************************************************'  
     print text
       
@@ -31,18 +35,24 @@ def parse_surficial_text(text):
         meas_type = "EVENT"
         
     data_field = re.split(" ",cleanText,maxsplit=2)[2]
+
+    # double check site code
+    site_code = sms_list[1].lower()
+    site_id = get_site_id(site_code)
+    # if site_id is None:
+        
     
-    try:
-        date_str = get_date_from_sms(data_field)
-        print "Date: " + date_str
-    except IndexError:
-        raise ValueError(c.reply.faildateen)
+    # try:
+    date_str = get_date_from_sms(data_field)
+    print "Date: " + date_str
+    # except AttributeError:
+    #     raise ValueError(c.reply.faildateen)
       
-    try:
-        time_str = get_time_from_sms(data_field)
-        print "Time: " + time_str
-    except ValueError:
-        raise ValueError(c.reply.failtimeen)
+    # try:
+    time_str = get_time_from_sms(data_field)
+    print "Time: " + time_str
+    # except AttributeError:
+        # raise ValueError(c.reply.failtimeen)
       
     # get all the measurement pairs
     meas_pattern = "(?<= )[A-Z] *\d{1,3}\.*\d{0,2} *C*M"
@@ -51,29 +61,30 @@ def parse_surficial_text(text):
     if meas:
         pass
     else:
-        raise ValueError(c.reply.failmeasen)
+        raise SurficialParserError(c.reply.failmeasen)
       
       # get all the weather information
     print repr(data_field)
-    try:
-        wrecord = re.search("(?<="+meas[-1]+" )[A-Z]+",data_field).group(0)
-        recisvalid = False
-        for keyword in ["ARAW","ULAN","BAGYO","LIMLIM","AMBON","ULAP","SUN","RAIN","CLOUD","DILIM","HAMOG"]:
-            if keyword in wrecord:
-                recisvalid = True
-                print "valid"
-                break
-        if not recisvalid:
-            raise AttributeError  
-    except AttributeError:
-        raise ValueError(c.reply.failweaen)
+    # try:
+    wrecord = re.search("(?<="+meas[-1]+" )[A-Z]+",data_field).group(0)
+    recisvalid = False
+    for keyword in ["ARAW","ULAN","BAGYO","LIMLIM","AMBON","ULAP","SUN",
+        "RAIN","CLOUD","DILIM","HAMOG"]:
+        if keyword in wrecord:
+            recisvalid = True
+            print "valid"
+            break
+    if not recisvalid:
+        raise SurficialParserError(c.reply.failweaen)
+    # except AttributeError:
+    #     raise ValueError(c.reply.failweaen)
       
     # get all the name of reporter/s  
     try:
         observer_name = re.search("(?<="+wrecord+" ).+$",data_field).group(0)
         # print observer_name
     except AttributeError:
-        raise ValueError(c.reply.failobven)
+        raise SurficialParserError(c.reply.failobven)
 
     obv = dict()
     obv['ts']=  date_str+" "+time_str
@@ -83,15 +94,10 @@ def parse_surficial_text(text):
     obv['data_source'] = 'SMS'
     obv['observer_name'] = observer_name
 
-    site_code = sms_list[1].lower()
-    # df_sites = mc.get('df_sites')
-    # site_id = df_sites[df_sites.site_code == sms_list[1].lower()].site_id.values[0]
     sites_dict = mc.get('sites_dict')
     site_id = sites_dict['site_id'][site_code]
     obv['site_id'] = site_id
-    # marker_obervations= "("+ ts + ","+  meas_type +","+ observer_name +","+ str(reliability)+ ","+weather+","+data_source+ "," +site_code+ ")"
     
-    # data_records = pd.DataFrame(columns= ['marker_name', 'measurement', 'so_id'])
     data_records = dict()
     ind= 0
     print "====", meas
@@ -106,7 +112,7 @@ def parse_surficial_text(text):
             multiplier = 1.00
         except AttributeError:
             # meter
-            unit = 100.00
+            multiplier = 100.00
 
         marker_len = marker_len * multiplier
         
@@ -134,18 +140,27 @@ def get_time_from_sms(text):
         hm + sep + hm + " +" : "%H:%M"
     }
 
-    print text
     time_str = ''
+    count = 0
     for fmt in time_format_dict:
         time_str_search = re.search(fmt,text)
         if time_str_search:
             time_str = time_str_search.group(0)
             time_str = re.sub(";",":",time_str)
             time_str = re.sub("[^APM0-9:]","",time_str)
-            time_str = dt.strptime(time_str,time_format_dict[fmt]).strftime("%H:%M:%S")
+
+            try:
+                time_str = dt.strptime(time_str,time_format_dict[fmt]).strftime("%H:%M:%S")
+            except ValueError:
+                print 'match for', fmt, 'but error in conversion'
+                raise SurficialParserError(c.reply.failtimeen)
             break
         else:
             print 'not', fmt
+        count += 1
+
+    if count == len(time_format_dict):
+        raise SurficialParserError(c.reply.failtimeen)
       
       # sanity check
     time_val = dt.strptime(time_str,"%H:%M:%S").time()
@@ -153,9 +168,10 @@ def get_time_from_sms(text):
     #     print 'Time out of bounds. Time too soon' 
     #     raise ValueError
     # el
-    if time_val > dt.strptime("18:00:00","%H:%M:%S").time() or time_val < dt.strptime("05:00:00","%H:%M:%S").time():
+    if (time_val > dt.strptime("18:00:00","%H:%M:%S").time() or time_val < 
+        dt.strptime("05:00:00","%H:%M:%S").time()):
         print 'Time out of bounds. Unrealizable time to measure' 
-        raise ValueError
+        raise SurficialParserError(c.reply.failtimeen)
 
     return time_str
 
@@ -164,7 +180,7 @@ def get_date_from_sms(text):
   # timetxt = ""
     mon_re1 = "[JFMASOND][AEPUCO][NBRYLGTVCP]"
     mon_re2 = "[A-Z]{4,9}"
-    day_re1 = "\d{1,2}"
+    day_re1 = "((0{0,1}[1-9]{1})|(\d{2}))"
     year_re1 = "(201[678]){0,1}"
 
     cur_year = str(dt.today().year)
@@ -178,35 +194,57 @@ def get_date_from_sms(text):
     }
 
     date_str = ''
+    count = 0
     for fmt in date_format_dict:
         date_str_search = re.search("^" + fmt,text)
         if date_str_search:
             date_str = date_str_search.group(0)
-            date_str = re.sub("[^A-Z0-9]","",date_str)
-            if len(date_str) < 6:
-                date_str = date_str + cur_year 
-            date_str = dt.strptime(date_str,date_format_dict[fmt]).strftime("%Y-%m-%d")
+            date_str = re.sub("[^A-Z0-9]","",date_str).strip()
+            # if len(date_str) < 4:
+            #     date_str = date_str + cur_year 
+            # else:
+            #     print 'len of date(str) not < 4'
+            print date_str
+            try:
+                date_str = dt.strptime(date_str,date_format_dict[fmt]).strftime("%Y-%m-%d")
+            except ValueError:
+                try:
+                    date_str = date_str + cur_year 
+                    date_str = dt.strptime(date_str,date_format_dict[fmt]).strftime("%Y-%m-%d")
+                except ValueError:
+                    raise SurficialParserError(c.reply.faildateen)
             break
+        # else:
+        #     print 'No match for', fmt
+        count += 1
+
+    # no match detected
+    if count == len(date_format_dict):
+        raise SurficialParserError(c.reply.faildateen)
 
     date_val = dt.strptime(date_str,"%Y-%m-%d")
     if date_val > dt.now():
-        raise ValueError          
+        raise SurficialParserError(c.reply.faildateen)        
     return date_str
 
-def get_site_id(code):
-    db, cur = dbio.SenslopeDBConnect('local') 
+def get_site_id(site_code):
+    db, cur = dbio.db_connect('local') 
+
+    site_code = site_code.lower()
     
-    if (code == 'MAN'):
-        code= 'MNG'
-    if (code == 'PAN'):
-        code= 'PNG'
-    if (code == 'POB'):
-        code= "JOR"
-    if (code == 'BAT'):
-        code= 'BTO'
-    # if (code == 'MES'): #(?)
+    if (site_code == 'man'):
+        site_code= 'mng'
+    elif (site_code == 'pan'):
+        site_code= 'png'
+    elif (site_code == 'pob'):
+        site_code= "jor"
+    elif (site_code == 'bat'):
+        site_code= 'bto'
+    elif (site_code == 'tag'):
+        site_code= 'tga'
+    # if (site_code == 'MES'): #(?)
     
-    cur.execute('SELECT site_id FROM sites WHERE site_code = "{}"'.format(code))
+    cur.execute('SELECT site_id FROM sites WHERE site_code = "{}"'.format(site_code))
     
     try:
         site_id = cur.fetchone()[0]
@@ -215,39 +253,53 @@ def get_site_id(code):
     except:
         print "ERROR in sites database"
         db.close()
+        raise SurficialParserError('Error! There is a problem with your SITE CODE (%s). Please check your SMS and try again.' % site_code)
+        # return None
+        
 
 def get_marker_id(site_id,marker_name):
 
-    db, cur = dbio.SenslopeDBConnect('local') 
+    db, cur = dbio.db_connect('local') 
     
     try:
-        query = """SELECT markers.marker_id FROM markers \
-            INNER JOIN marker_history ON markers.site_id = {} \
-            AND marker_history.marker_id = markers.marker_id \
-            INNER JOIN marker_names ON marker_history.history_id = marker_names.history_id \
-            AND marker_names.marker_name = "{}" """
+        query = ("SELECT markers.marker_id FROM markers "
+            "INNER JOIN marker_history ON markers.site_id = {} "
+            "AND marker_history.marker_id = markers.marker_id "
+            "INNER JOIN marker_names ON marker_history.history_id = " 
+            "marker_names.history_id AND marker_names.marker_name "
+            "= '{}'".format(site_id,marker_name))
+
+        # print query
+
         cur.execute(query.format(site_id,marker_name))
         marker_id = cur.fetchone()[0]
         db.close()
         return marker_id
-    except:
+    except TypeError:
         marker_id = 0
         return marker_id
 
 def insert_new_markers(site_id, marker_name, ts):
-    db, cur = dbio.SenslopeDBConnect() 
+    db, cur = dbio.db_connect() 
     # query = 'INSERT INTO markers (site_id) VALUES ({})'.format(site_id)
     # print query
     # cur.execute(query)
     cur.execute('INSERT INTO markers (site_id) VALUES ({})'.format(site_id))
-    # marker_id = dbio.commitToDb(query,'imd',last_insert=True)
+    # marker_id = dbio.commit_to_db(query,'imd',last_insert=True)
     cur.execute('select last_insert_id()')
     marker_id = cur.fetchone()[0]
     print marker_id
     db.commit()
-    cur.execute('INSERT INTO marker_history(marker_id,ts,event) VALUES (@@IDENTITY,"{}","add")'.format(ts))
+
+    history_query = ("INSERT INTO marker_history(marker_id,ts,event) "
+        "VALUES (@@IDENTITY,'{}','add')".format(ts)
+        )
+    names_query = ('INSERT INTO marker_names(history_id,marker_name) '
+        'VALUES(@@IDENTITY,"{}")'.format(marker_name)
+        )
+    cur.execute(history_query)
     db.commit()
-    cur.execute('INSERT INTO marker_names(history_id,marker_name) VALUES(@@IDENTITY,"{}")'.format(marker_name))
+    cur.execute(names_query)
     db.commit()        
     db.close()
 
@@ -255,28 +307,35 @@ def insert_new_markers(site_id, marker_name, ts):
 
 def update_surficial_observations(obv):
     
-    db, cur = dbio.SenslopeDBConnect('local') 
+    db, cur = dbio.db_connect('local') 
 
     # input marker_observation
-    query = 'INSERT IGNORE INTO marker_observations '\
-        '(ts,meas_type,observer_name,reliability,weather,data_source, site_id) VALUES '\
-        '("{}","{}","{}",{},"{}","{}",{})'.format(obv['ts'],obv['meas_type'],\
-            obv['observer_name'],obv['reliability'],obv['weather'],\
-            obv['data_source'],obv['site_id'])
+    query = ("INSERT IGNORE INTO marker_observations "
+        "(ts,meas_type,observer_name,reliability,weather,data_source, site_id) "
+        "VALUES ('{}','{}','{}',{},'{}','{}',{})".format(obv['ts'],
+            obv['meas_type'], obv['observer_name'], obv['reliability'],
+            obv['weather'], obv['data_source'],obv['site_id'])
+        )
 
-    mo_id = dbio.commitToDb(query, 'uso', last_insert=True)[0][0]
+    mo_id = dbio.commit_to_db(query, 'uso', last_insert=True)[0][0]
+
+    print "mo_id =", mo_id
    
     # check if entry is duplicate
     if mo_id == 0:
         # print 'Duplicate entry'
-        query = 'SELECT marker_observations.mo_id FROM marker_observations WHERE '\
-                'ts = "{}" and site_id = "{}"'.format(obv['ts'],obv['site_id'])    
-        mo_id = dbio.querydatabase(query,'uso')[0][0]
+
+        query = ("SELECT marker_observations.mo_id FROM marker_observations "
+            "WHERE ts = '{}' and site_id = '{}'".format(obv['ts'],
+            obv['site_id'])
+            )    
+        print query
+        mo_id = dbio.query_database(query,'uso')[0][0]
 
     return mo_id
 
 def update_surficial_data(obv, mo_id):
-    db, cur = dbio.SenslopeDBConnect('local') 
+    db, cur = dbio.db_connect('local') 
 
     data_records = obv['data_records']
 
@@ -284,12 +343,16 @@ def update_surficial_data(obv, mo_id):
         marker_id = get_marker_id(obv['site_id'], marker_name)
         if marker_id == 0:
             print "Inserting new marker ID"
-            marker_id = insert_new_markers(obv['site_id'], marker_name, obv['ts'])   
+            marker_id = insert_new_markers(obv['site_id'], marker_name, 
+                obv['ts'])   
 
-        query= 'INSERT INTO marker_data(marker_id,measurement,mo_id) '\
-        'VALUES({},{},{}) ON DUPLICATE KEY UPDATE MEASUREMENT = {}'.format(marker_id, data_records[marker_name], mo_id, data_records[marker_name])
+        query= ("INSERT INTO marker_data(marker_id,measurement,mo_id) "
+            "VALUES({},{},{}) ON DUPLICATE KEY UPDATE "
+            "MEASUREMENT = {}".format(marker_id, data_records[marker_name], 
+            mo_id, data_records[marker_name])
+            )
 
         # print query
-        dbio.commitToDb(query,'usd')
+        dbio.commit_to_db(query,'usd')
 
     db.close()
