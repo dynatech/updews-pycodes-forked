@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta, time
 import os
 import pandas as pd
 import sys
@@ -7,7 +7,7 @@ import alertlib as lib
 import proc
 import rtwindow as rtw
 import trendingalert as trend
-#import ColumnPlotter as plotter
+import plotterlib as plotter
 
 #include the path of outer folder for the python scripts searching
 path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -16,6 +16,18 @@ if not path in sys.path:
 del path   
 
 import querydb as qdb
+
+def RoundReleaseTime(date_time):
+    # rounds time to 4/8/12 AM/PM
+    time_hour = int(date_time.strftime('%H'))
+
+    quotient = time_hour / 4
+    if quotient == 5:
+        date_time = datetime.combine(date_time.date() + timedelta(1), time(0,0,0))
+    else:
+        date_time = datetime.combine(date_time.date(), time((quotient+1)*4,0,0))
+            
+    return date_time
 
 def writeOperationalTriggers(site_id, end):
     query = "SELECT op.alert_level, trigger_sym_id FROM (SELECT alert_level, ts, ts_updated FROM"
@@ -60,8 +72,8 @@ def main(tsm_name='', end='', end_mon=False):
     alert = nodal_tilt.apply(lib.node_alert, colname=tsm_props.tsm_name, num_nodes=tsm_props.nos, disp=float(sc['subsurface']['disp']), vel2=float(sc['subsurface']['vel2']), vel3=float(sc['subsurface']['vel3']), k_ac_ax=float(sc['subsurface']['k_ac_ax']), lastgooddata=lgd, window=window, sc=sc).reset_index(drop=True)
     
     alert['col_alert'] = -1
-    col_alert = pd.DataFrame({'id': range(1, tsm_props.nos+1), 'col_alert': [-1]*tsm_props.nos})
-    node_col_alert = col_alert.groupby('id', as_index=False)
+    col_alert = pd.DataFrame({'node_id': range(1, tsm_props.nos+1), 'col_alert': [-1]*tsm_props.nos})
+    node_col_alert = col_alert.groupby('node_id', as_index=False)
     node_col_alert.apply(lib.column_alert, alert=alert, num_nodes_to_check=int(sc['subsurface']['num_nodes_to_check']), k_ac_ax=float(sc['subsurface']['k_ac_ax']), vel2=float(sc['subsurface']['vel2']), vel3=float(sc['subsurface']['vel3']))
 
     valid_nodes_alert = alert.loc[~alert.node_id.isin(data.inv)]
@@ -77,24 +89,25 @@ def main(tsm_name='', end='', end_mon=False):
     qdb.alert_to_db(tsm_alert, 'tsm_alerts')
     
     writeOperationalTriggers(tsm_props.site_id, window.end)
-########################
-#
-#    if tsm_props.tsm_name == 'mesta':
-#        colname = 'msu'
-#    elif tsm_props.tsm_name == 'messb':
-#        colname = 'msl'
-#    else:
-#        colname = tsm_props.tsm_name[0:3]
-#    query = "SELECT * FROM senslopedb.site_level_alert WHERE site = '%s' and source = 'public' and timestamp <= '%s' and updateTS >= '%s' ORDER BY updateTS DESC LIMIT 1" %(colname, window.end, window.end-timedelta(hours=0.5))
-#    public_alert = q.GetDBDataFrame(query)
-#    if public_alert.alert.values[0] != 'A0':
-#        plot_time = ['07:30:00', '19:30:00']
-#        if str(window.end.time()) in plot_time or end_mon:
-#            plotter.main(proc, window, config, plotvel_start=window.end-timedelta(hours=3), plotvel_end=window.end, realtime=False)
-#    elif RoundTime(pd.to_datetime(public_alert.timestamp.values[0])) == RoundTime(window.end):
-#        plotter.main(proc, window, config, plotvel_start=window.end-timedelta(hours=3), plotvel_end=window.end, realtime=False)
-#
-########################
+
+#######################
+
+#    query = "SELECT ts, alert_level, alert_type, ts_updated FROM"
+#    query += " (SELECT * FROM public_alerts WHERE site_id = %s) AS pub" %tsm_props
+#    query += " INNER JOIN public_alert_symbols AS sym"
+#    query += " ON pub.pub_sym_id = sym.pub_sym_id"
+#    query += " ORDER BY ts DESC LIMIT 1"
+#    public_alert = qdb.get_db_dataframe(query)
+#    if ((public_alert['alert_level'].values[0] != 0 or \
+#            public_alert['alert_type'].values[0] == 'event') \
+#            and (str(window.end.time()) in ['07:30:00', '19:30:00'] or end_mon)) \
+#            or (public_alert.alert.values[0] == 'A0'
+#            and RoundReleaseTime(pd.to_datetime(public_alert.timestamp.values[0])) \
+#            == RoundReleaseTime(window.end)):
+    plotter.main(data, tsm_props, window, sc, realtime=False)
+
+#######################
+
     qdb.print_out(tsm_alert)
     
     qdb.print_out('run time = ' + str(datetime.now()-run_start))

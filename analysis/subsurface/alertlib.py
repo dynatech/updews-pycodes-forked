@@ -187,7 +187,7 @@ def column_alert(col_alert, alert, num_nodes_to_check, k_ac_ax, vel2, vel3):
     #OUTPUT:
     #alert:                             Pandas DataFrame object; same as input dataframe "alert" with additional column for column-level alert
 
-    i = col_alert['id'].values[0]
+    i = col_alert['node_id'].values[0]
     #checking if current node alert is 2 or 3
     if alert[alert.node_id == i]['node_alert'].values[0] != 0:
  
