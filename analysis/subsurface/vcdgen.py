@@ -2,16 +2,16 @@ import pandas as pd
 from datetime import date, time, datetime, timedelta
 
 import rtwindow as rtw
-import querySenslopeDb as q
-import genproc as g
-import ColumnPlotter as plotter
+import querydb as qdb
+import proc
+import plotterlib as plotter
 
-def proc(func, colname, endTS, startTS, hour_interval, fixpoint):
-    col = q.GetSensorList(colname)
+def proc_data(tsm_name, endTS, startTS, sc, hour_interval, fixpoint):
+    tsm_props = qdb.get_tsm_list(tsm_name)[0]
     
     #end
     if endTS == '':
-        window, config = rtw.getwindow()
+        window, config = rtw.get_window()
     else:
         end = pd.to_datetime(endTS)
         end_year=end.year
@@ -22,7 +22,7 @@ def proc(func, colname, endTS, startTS, hour_interval, fixpoint):
         if end_minute<30:end_minute=0
         else:end_minute=30
         end=datetime.combine(date(end_year,end_month,end_day),time(end_hour,end_minute,0))
-        window, config = rtw.getwindow(end)
+        window, config = rtw.get_window(end)
 
     if startTS != '':
         #start
@@ -36,162 +36,114 @@ def proc(func, colname, endTS, startTS, hour_interval, fixpoint):
         else:start_minute=30
         window.start=datetime.combine(date(start_year,start_month,start_day),time(start_hour,start_minute,0))
         #offsetstart
-        window.offsetstart = window.start - timedelta(days=(config.io.num_roll_window_ops*window.numpts-1)/48.)
+        window.offsetstart = window.start - timedelta(days=(sc['subsurface']['num_roll_window_ops']*window.numpts-1)/48.)
 
-    if func == 'colpos' or func == 'vcdgen':
-        #colpos interval
-        if hour_interval == '':
-            if int((window.end-window.start).total_seconds() / (3600 * 24)) < 5:
-                hour_interval = 4
-            else:
-                hour_interval = 24
-        config.io.col_pos_interval = str(hour_interval) + 'H'
-        config.io.num_col_pos = int((window.end-window.start).total_seconds() / (3600 * hour_interval)) + 1
-        
-    if func == 'displacement' or func == 'colpos':
-        comp_vel = False
-    else:
-        comp_vel = True
+    #colpos interval
+    if hour_interval == '':
+        if int((window.end-window.start).total_seconds() / (3600 * 24)) <= 5:
+            hour_interval = 4
+        else:
+            hour_interval = 24
+            
+    sc['subsurface']['col_pos_interval'] = str(hour_interval) + 'H'
+    sc['subsurface']['num_col_pos'] = int((window.end-window.start).total_seconds() / (3600 * hour_interval)) + 1
     
-    monitoring = g.genproc(col[0], window, config, fixpoint, comp_vel=comp_vel)
+    if fixpoint in ['top', 'bottom']:
+        sc['subsurface']['column_fic'] = fixpoint
 
-    num_nodes = monitoring.colprops.nos
-    seg_len = monitoring.colprops.seglen
-    if comp_vel == True:
-        monitoring_vel = monitoring.vel.reset_index()[['ts', 'id', 'xz', 'xy', 'vel_xz', 'vel_xy']]
-    else:
-        monitoring_vel = monitoring.vel.reset_index()[['ts', 'id', 'xz', 'xy']]
-    monitoring_vel = monitoring_vel.loc[(monitoring_vel.ts >= window.start)&(monitoring_vel.ts <= window.end)]
+    data = proc.proc_data(tsm_props, window, sc)
 
-    return monitoring_vel, window, config, num_nodes, seg_len
+    num_nodes = tsm_props.nos
+    seg_len = tsm_props.seglen
+    
+    tilt = data.tilt[window.start:window.end]
+    tilt = tilt.reset_index().sort_values('ts',ascending=True)
+    tilt = tilt[['ts', 'node_id', 'xz', 'xy', 'vel_xz', 'vel_xy']]
 
-def colpos_json(monitoring_vel, window, config, num_nodes, seg_len, fixpoint):
+    return tilt, window, sc, tsm_props
+
+def colpos(tilt, window, sc, tsm_props):
     # compute column position
-    colposdf = plotter.compute_colpos(window, config, monitoring_vel, num_nodes, seg_len, fixpoint=fixpoint)
-    colposdfj = colposdf.rename(columns = {'cs_xz': 'downslope', 'cs_xy': 'latslope', 'x': 'depth'})
-    colposdfj['ts'] = colposdfj['ts'].apply(lambda x: str(x))
+    colposdf = plotter.compute_colpos(window, sc, tilt, tsm_props)
+    colposdf = colposdf.rename(columns = {'cs_xz': 'downslope', 'cs_xy': 'latslope', 'x': 'depth'})
+    colposdf['ts'] = colposdf['ts'].apply(lambda x: str(x))
+    colposdf = colposdf[['ts', 'node_id', 'depth', 'latslope', 'downslope']]
+    
+    return colposdf
 
-#    colposdfj = colposdfj[0:3]
-
-    colposdf_json = colposdfj[['ts', 'id', 'downslope', 'latslope', 'depth']].to_json(orient="records", date_format="iso")
-    return colposdf, colposdf_json
-
-def colpos(colname, endTS='', startTS='', hour_interval='', fixpoint='bottom'):
-
-    monitoring_vel, window, config, num_nodes, seg_len = proc('colpos', colname, endTS, startTS, hour_interval, fixpoint)
-    colposdf, colposdf_json = colpos_json(monitoring_vel, window, config, num_nodes, seg_len, fixpoint)
-
-#    #############################
-#    show_part_legend = False
-#    plotter.plot_column_positions(colposdf,colname,window.end, show_part_legend, config)
-#    #############################
-
-    return colposdf_json
-
-def velocity_json(monitoring_vel, window, config, num_nodes):
+def velocity(tilt, window, sc, num_nodes):
     #velplots
-    vel = monitoring_vel.loc[(monitoring_vel.ts >= window.start) & (monitoring_vel.ts <= window.end)]
+    vel = tilt.loc[(tilt.ts >= window.start) & (tilt.ts <= window.end)]
     #vel_xz
-    vel_xz = vel[['ts', 'vel_xz', 'id']]
-    velplot_xz,L2_xz,L3_xz = plotter.vel_classify(vel_xz, config, num_nodes, linearvel=False)
+    vel_xz = vel[['ts', 'vel_xz', 'node_id']]
+    velplot_xz,L2_xz,L3_xz = plotter.vel_classify(vel_xz, sc, num_nodes, linearvel=False)
     #vel_xy
-    vel_xy = vel[['ts', 'vel_xy', 'id']]
-    velplot_xy,L2_xy,L3_xy = plotter.vel_classify(vel_xy, config, num_nodes, linearvel=False)
+    vel_xy = vel[['ts', 'vel_xy', 'node_id']]
+    velplot_xy,L2_xy,L3_xy = plotter.vel_classify(vel_xy, sc, num_nodes, linearvel=False)
 
-    velplot = velplot_xz, velplot_xy, L2_xz, L2_xy, L3_xz, L3_xy
-    
     L2 = L2_xz.append(L2_xy)
-    L3 = L3_xz.append(L3_xy)  
-    L2['ts'] = L2['ts'].apply(lambda x: str(x))
-    L3['ts'] = L3['ts'].apply(lambda x: str(x))    
-
-#    L2 = L2[0:3]
-#    L3 = L3[0:3]
+    L3 = L3_xz.append(L3_xy) 
     
-    L2_json = L2.to_json(orient="records", date_format="iso")
-    L3_json = L3.to_json(orient="records", date_format="iso")
-    velocity = dict({'L2': L2_json, 'L3': L3_json})
-    velocity = '[' + str(velocity).replace('\'', '').replace('L2', '"L2"').replace('L3', '"L3"') + ']'
+    L2['ts'] = L2['ts'].apply(lambda x: str(x))
+    L3['ts'] = L3['ts'].apply(lambda x: str(x))
+    
+    veldf = pd.DataFrame({'L2': [L2], 'L3': [L3]})
 
-    return velplot, velocity
+    return veldf
 
-def velocity(colname, endTS='', startTS=''):
-
-    monitoring_vel, window, config, num_nodes, seg_len = proc('velocity', colname, endTS, startTS, '', '')    
-    velplot, velocity = velocity_json(monitoring_vel, window, config, num_nodes)
-
-#    #############################
-#    plotvel = True
-#    empty = pd.DataFrame({'ts':[], 'id':[]})
-#    xzd_plotoffset = 0
-#    plotter.plot_disp_vel(empty, empty, empty, colname, window, config, plotvel, xzd_plotoffset, num_nodes, velplot, False)
-#    #############################
-
-    return velocity
-
-def displacement_json(monitoring_vel, window, config, num_nodes, fixpoint):
+def displacement(tilt, window, sc, num_nodes):
     # displacement plot offset
-    xzd_plotoffset = 0
+    xzd_plotoffset = plotter.plotoffset(tilt, disp_offset = 'mean')
 
     #zeroing and offseting xz,xy
-    df0off = plotter.disp0off(monitoring_vel, window, config, xzd_plotoffset, num_nodes, fixpoint=fixpoint)
-    df0offj = df0off.rename(columns = {'xz': 'downslope', 'xy': 'latslope'})
-    df0offj = df0offj.reset_index()
-    df0offj['ts'] = df0offj['ts'].apply(lambda x: str(x))
-
-#    df0offj = df0offj[0:3]
-
-    df0off_json = df0offj[['ts', 'id', 'downslope', 'latslope']].to_json(orient="records", date_format="iso")
-
-    return df0off, df0off_json
-
-def displacement(colname, endTS='', startTS='', fixpoint='bottom'):
+    df0off = plotter.disp0off(tilt, window, sc, xzd_plotoffset, num_nodes)
+    df0off = df0off.rename(columns = {'xz': 'downslope', 'xy': 'latslope'})
+    df0off = df0off.reset_index()
+    df0off['ts'] = df0off['ts'].apply(lambda x: str(x))
+    df0off = df0off[['ts', 'node_id', 'downslope', 'latslope']]
     
-    monitoring_vel, window, config, num_nodes, seg_len = proc('displacement', colname, endTS, startTS, '', fixpoint)    
-    df0off, df0off_json = displacement_json(monitoring_vel, window, config, num_nodes, fixpoint)
-
-#    #############################
-#    velplot = ''
-#    xzd_plotoffset = 0
-#    plotvel = False
-#    empty = pd.DataFrame({'ts':[], 'id':[]})
-#    plotter.plot_disp_vel(empty, df0off, empty, colname, window, config, plotvel, xzd_plotoffset, num_nodes, velplot, False)
-#    #############################
-
-    return df0off_json
-
-def vcdgen(colname, endTS='', startTS='', hour_interval='', fixpoint='bottom'):
+    inc_df = plotter.node_annotation(tilt, num_nodes)
+    inc_df = inc_df.rename(columns = {'text_xz': 'downslope_annotation', 'text_xy': 'latslope_annotation'})
+    inc_df = inc_df[['node_id', 'downslope_annotation', 'latslope_annotation']]
     
-    monitoring_vel, window, config, num_nodes, seg_len = proc('vcdgen', colname, endTS, startTS, hour_interval, fixpoint)    
+    cs_df = plotter.cum_surf(tilt, xzd_plotoffset, num_nodes)
+    cs_df = cs_df.rename(columns = {'xz': 'downslope', 'xy': 'latslope'})
+    cs_df = cs_df.reset_index()
+    cs_df['ts'] = cs_df['ts'].apply(lambda x: str(x))
+    cs_df = cs_df[['ts', 'downslope', 'latslope']]
+        
+    dispdf = pd.DataFrame({'disp': [df0off], 'annotation': [inc_df], 'cumulative': [cs_df], 'cml_base': [xzd_plotoffset * num_nodes]})
 
-    colposdf, colposdf_json = colpos_json(monitoring_vel, window, config, num_nodes, seg_len, fixpoint)
+    return dispdf
 
-#    #############################
-#    show_part_legend = False
-#    plotter.plot_column_positions(colposdf,colname,window.end, show_part_legend, config)
-#    #############################
+def vcdgen(tsm_name, endTS='', startTS='', hour_interval='', fixpoint='bottom'):
     
-    df0off, df0off_json = displacement_json(monitoring_vel, window, config, num_nodes, fixpoint)
-    velplot, velocity = velocity_json(monitoring_vel, window, config, num_nodes)
-
-#    #############################
-#    plotvel = True
-#    xzd_plotoffset = 0
-#    empty = pd.DataFrame({'ts':[], 'id':[]})
-#    plotter.plot_disp_vel(empty, df0off, empty, colname, window, config, plotvel, xzd_plotoffset, num_nodes, velplot, False)
-#    #############################
-
-    vcd = dict({'v': velocity, 'c': colposdf_json, 'd': df0off_json})
-    vcd = '[' + str(vcd).replace('\'', '').replace('v:', '"v":').replace('c:', '"c":').replace('d:', '"d":') + ']'
-
-    return vcd
+    sc = qdb.memcached()
     
-######################################
-#    
-#if __name__ == '__main__':
-#    start = datetime.now()
-#    v=velocity('magta', endTS='2016-10-12 12:00')
-#    c=colpos('magta', endTS='2016-10-12 12:00')
-#    d=displacement('magta', endTS='2016-10-12 12:00')
-#    vcd=vcdgen('magta', endTS='2016-10-12 12:00')
-#    print "runtime =", str(datetime.now() - start)
+    tilt, window, sc, tsm_props = proc_data(tsm_name, endTS, startTS, sc, hour_interval, fixpoint)    
+
+    dispdf = displacement(tilt, window, sc, tsm_props.nos)
+    
+    colposdf = colpos(tilt, window, sc, tsm_props)
+    veldf = velocity(tilt, window, sc, tsm_props.nos)
+
+    vcd = pd.DataFrame({'v': [veldf], 'c': [colposdf], 'd': [dispdf]})
+    vcd_json = vcd.to_json(orient="records", date_format="iso")
+
+    return vcd_json
+    
+################################################################################
+    
+if __name__ == '__main__':
+    
+    json = vcdgen('magta', endTS='2017-06-09 19:30')
+
+    v_L2 = pd.DataFrame(pd.read_json(json)['v'].values[0][0]['L2']).sort_values(['node_id', 'ts'])
+    v_L3 = pd.DataFrame(pd.read_json(json)['v'].values[0][0]['L3']).sort_values(['node_id', 'ts'])
+    
+    c = pd.DataFrame(pd.read_json(json)['c'].values[0])
+    
+    d_disp = pd.DataFrame(pd.DataFrame(pd.read_json(json)['d'].values[0])['disp'].values[0]).sort_values(['node_id', 'ts'])
+    d_annotation = pd.DataFrame(pd.DataFrame(pd.read_json(json)['d'].values[0])['annotation'].values[0])
+    d_cumulative = pd.DataFrame(pd.DataFrame(pd.read_json(json)['d'].values[0])['cumulative'].values[0])
+    d_cml_base = pd.DataFrame(pd.read_json(json)['d'].values[0])['cml_base'].values[0]
