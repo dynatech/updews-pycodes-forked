@@ -10,8 +10,8 @@ import json
 
 #
 gsite = sys.argv[1]
-fdate = sys.argv[2]
-tdate = sys.argv[3]
+fdate = sys.argv[2].replace("%20"," ")
+tdate = sys.argv[3].replace("%20"," ")
 
 #gsite = 'bar'
 #fdate = '2013-01-01'
