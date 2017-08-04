@@ -186,5 +186,8 @@ def updateNOAHTables():
     
 ######################################
 
-if __name__ == "__main__":    
+if __name__ == "__main__":  
+    from datetime import datetime
+    start_time = datetime.now()
     updateNOAHTables()
+    print datetime.now() - start_time

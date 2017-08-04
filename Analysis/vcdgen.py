@@ -132,3 +132,17 @@ def vcdgen(colname, endTS='', startTS='', hour_interval='', fixpoint='bottom'):
     vcd_json = vcd.to_json(orient="records", date_format="iso")
 
     return vcd_json
+
+if __name__ == '__main__':
+
+    json = vcdgen('magta', endTS='2017-06-09 19:30')
+
+    v_L2 = pd.DataFrame(pd.read_json(json)['v'].values[0][0]['L2']).sort_values(['id', 'ts'])
+    v_L3 = pd.DataFrame(pd.read_json(json)['v'].values[0][0]['L3']).sort_values(['id', 'ts'])
+    
+    c = pd.DataFrame(pd.read_json(json)['c'].values[0])
+    
+    d_disp = pd.DataFrame(pd.DataFrame(pd.read_json(json)['d'].values[0])['disp'].values[0]).sort_values(['id', 'ts'])
+    d_annotation = pd.DataFrame(pd.DataFrame(pd.read_json(json)['d'].values[0])['annotation'].values[0])
+    d_cumulative = pd.DataFrame(pd.DataFrame(pd.read_json(json)['d'].values[0])['cumulative'].values[0])
+    d_cml_base = pd.DataFrame(pd.read_json(json)['d'].values[0])['cml_base'].values[0]
