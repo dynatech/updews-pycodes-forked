@@ -14,12 +14,16 @@ import vcdgen as vcd
     
 
 site = sys.argv[1]
-fdate = sys.argv[2].replace("n",'').replace("T",' ')
-tdate = sys.argv[3].replace("n",'').replace("T",' ')
+fdate = sys.argv[2].replace("n",'').replace("T",' ').replace("%20"," ")
+tdate = sys.argv[3].replace("n",'').replace("T",' ').replace("%20"," ")
+        
 if fdate == '':
-	df= vcd.vcdgen(site)
+    if tdate == '':
+        df= vcd.vcdgen(site)
+    else:
+        df= vcd.vcdgen(site, tdate, fdate)
 else:
-	df= vcd.vcdgen(site, tdate, fdate)
+    df= vcd.vcdgen(site, tdate, fdate)
 
 print df
 
