@@ -1,11 +1,11 @@
 import os
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 
 import rtwindow as rtw
 import querySenslopeDb as q
 
-def output_file_path(site, plot_type, initial_trigger=False, end=datetime.now()):
+def output_file_path(site, plot_type, monitoring_end=False, initial_trigger=False, end=datetime.now()):
     
     output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
 
@@ -25,8 +25,10 @@ def output_file_path(site, plot_type, initial_trigger=False, end=datetime.now())
 
     if initial_trigger:
         path = config.io.outputfilepath + (site + window.end.strftime(' %d %b %Y')).upper()
-    
-    elif len(public_alert) == 0 or pd.to_datetime(public_alert['updateTS'].values[0]) < window.end - timedelta(hours=0.5):
+
+    elif not monitoring_end and (pd.to_datetime(public_alert['updateTS'].values[0]) \
+            < window.end - timedelta(hours=0.5) or (public_alert['alert'].values[0] != 'A0' \
+            and plot_type == 'rainfall' and window.end.time() not in [time(7, 30), time(19, 30)])):
         if plot_type == 'rainfall':
             path = config.io.rainfallplotspath
         elif plot_type == 'subsurface':
@@ -40,6 +42,8 @@ def output_file_path(site, plot_type, initial_trigger=False, end=datetime.now())
             return
 
     else:
+        public_alert = public_alert[public_alert.alert != 'A0']
+        
         # one prev alert
         if len(public_alert) == 1:
             start_monitor = public_alert['timestamp'].values[0]
