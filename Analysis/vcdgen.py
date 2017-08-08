@@ -58,9 +58,9 @@ def proc(func, colname, endTS, startTS, hour_interval, fixpoint):
     num_nodes = monitoring.colprops.nos
     seg_len = monitoring.colprops.seglen
     if comp_vel == True:
-        monitoring_vel = monitoring.vel.reset_index()[['ts', 'id', 'xz', 'xy', 'vel_xz', 'vel_xy']]
+        monitoring_vel = monitoring.disp_vel.reset_index()[['ts', 'id', 'depth', 'xz', 'xy', 'vel_xz', 'vel_xy']]
     else:
-        monitoring_vel = monitoring.vel.reset_index()[['ts', 'id', 'xz', 'xy']]
+        monitoring_vel = monitoring.disp_vel.reset_index()[['ts', 'id', 'depth', 'xz', 'xy']]
     monitoring_vel = monitoring_vel.loc[(monitoring_vel.ts >= window.start)&(monitoring_vel.ts <= window.end)]
 
     return monitoring_vel, window, config, num_nodes, seg_len
@@ -68,7 +68,7 @@ def proc(func, colname, endTS, startTS, hour_interval, fixpoint):
 def colpos(monitoring_vel, window, config, num_nodes, seg_len, fixpoint):
     # compute column position
     colposdf = plotter.compute_colpos(window, config, monitoring_vel, num_nodes, seg_len, fixpoint=fixpoint)
-    colposdf = colposdf.rename(columns = {'cs_xz': 'downslope', 'cs_xy': 'latslope', 'x': 'depth'})
+    colposdf = colposdf.rename(columns = {'cs_xz': 'downslope', 'cs_xy': 'latslope'})
     colposdf['ts'] = colposdf['ts'].apply(lambda x: str(x))
     colposdf = colposdf[['ts', 'id', 'depth', 'latslope', 'downslope']]
     
