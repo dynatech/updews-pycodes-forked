@@ -36,6 +36,10 @@ DotProductThreshold = 0.09
 ############################
 OutputFilePath = /MonitoringOutput/
 RainfallPlotsPath = /MonitoringOutput/RainfallPlots/
+SubsurfacePlotsPath = /MonitoringOutput/SubsurfacePlots/
+SurficialPlotsPath = /MonitoringOutput/SurficialPlots/
+TrendingSurficialPlotsPath = /MonitoringOutput/SurficialPlots/TrendingPlots/
+EQPlotsPath = /MonitoringOutput/EQPlots/
 GrndMeasPlotsPath = /MonitoringOutput/GrndMeasPlots/
 
 #############################

@@ -68,6 +68,7 @@ class config:
 		self.io.trendingsurficialplotspath = cfg.get("I/O","trendingsurficialplotspath")
 		self.io.subsurfaceplotspath = cfg.get("I/O","subsurfaceplotspath")
 		self.io.grndmeasplotspath = cfg.get("I/O","grndmeasplotspath")
+		self.io.eqplotspath = cfg.get("I/O","eqplotspath")
           
 		self.io.t_disp = cfg.getfloat("I/O","t_disp")
 		self.io.t_vell2 = cfg.getfloat("I/O","t_vell2")

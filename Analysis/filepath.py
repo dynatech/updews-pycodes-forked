@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, time
 import rtwindow as rtw
 import querySenslopeDb as q
 
-def output_file_path(site, plot_type, monitoring_end=False, initial_trigger=False, end=datetime.now()):
+def output_file_path(site, plot_type, monitoring_end=False, positive_trigger=False, end=datetime.now()):
     
     output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
 
@@ -15,20 +15,21 @@ def output_file_path(site, plot_type, monitoring_end=False, initial_trigger=Fals
     query = "SELECT * FROM senslopedb.site_level_alert"
     query += " WHERE site = '%s'" %site
     query += " AND source = 'public'"
-    query += " AND alert != 'A0'"
     query += " AND (updateTS <= '%s'" %window.end
     query += "  OR (updateTS >= '%s'" %window.end
     query += "  AND timestamp <= '%s'))" %window.end
-    query += " ORDER BY timestamp DESC LIMIT 3"
+    query += " ORDER BY timestamp DESC LIMIT 4"
     
     public_alert = q.GetDBDataFrame(query)
+    
+    print public_alert['alert'].values[0] == 'A0' and not monitoring_end
 
-    if initial_trigger:
+    if positive_trigger and public_alert['alert'].values[0] == 'A0':
         path = config.io.outputfilepath + (site + window.end.strftime(' %d %b %Y')).upper()
 
-    elif not monitoring_end and (pd.to_datetime(public_alert['updateTS'].values[0]) \
-            < window.end - timedelta(hours=0.5) or (public_alert['alert'].values[0] != 'A0' \
-            and plot_type == 'rainfall' and window.end.time() not in [time(7, 30), time(19, 30)])):
+    elif (public_alert['alert'].values[0] == 'A0' and not monitoring_end) \
+            or (not monitoring_end and public_alert['alert'].values[0] != 'A0' \
+            and plot_type == 'rainfall' and window.end.time() not in [time(7, 30), time(19, 30)]):
         if plot_type == 'rainfall':
             path = config.io.rainfallplotspath
         elif plot_type == 'subsurface':
@@ -37,6 +38,8 @@ def output_file_path(site, plot_type, monitoring_end=False, initial_trigger=Fals
             path = config.io.surficialplotspath
         elif plot_type == 'trending_surficial':
             path = config.io.trendingsurficialplotspath
+        elif plot_type == 'eq':
+            path = config.io.eqplotspath
         else:
             print 'unrecognized plot type; print to %s' %(output_path + config.io.outputfilepath)
             return
