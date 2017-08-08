@@ -8,10 +8,9 @@ import filterSensorData as flt
 import errorAnalysis as err
 
 class procdata:
-    def __init__ (self, colprops, disp, vel, max_min_df, max_min_cml):
+    def __init__ (self, colprops, disp_vel, max_min_df, max_min_cml):
         self.colprops = colprops
-        self.vel = vel
-        self.disp = disp
+        self.disp_vel = disp_vel
         self.max_min_df = max_min_df
         self.max_min_cml = max_min_cml
         
@@ -50,14 +49,14 @@ def accel_to_lin_xz_xy(seg_len,xa,ya,za):
     #xz, xy; array of floats; horizontal linear displacements along the planes defined by xa-za and xa-ya, respectively; units similar to seg_len
     
 
-    theta_xz = np.arctan(za/(np.sqrt(xa**2 + ya**2)))
-    theta_xy = np.arctan(ya/(np.sqrt(xa**2 + za**2)))
+    theta_xz = np.arctan2(za,(np.sqrt(xa**2 + ya**2)))
+    theta_xy = np.arctan2(ya,(np.sqrt(xa**2 + za**2)))
     xz = seg_len * np.sin(theta_xz)
     xy = seg_len * np.sin(theta_xy)
     
-    return np.round(xz,4),np.round(xy,4)
+    return xz, xy
 
-def fill_smooth (df, offsetstart, end, roll_window_numpts, to_smooth, to_fill):    
+def fill_smooth(df, offsetstart, end, roll_window_numpts, to_smooth, to_fill):    
     if to_fill:
         # filling NAN values
         df = df.fillna(method = 'pad')
@@ -65,7 +64,7 @@ def fill_smooth (df, offsetstart, end, roll_window_numpts, to_smooth, to_fill):
         #Checking, resolving and reporting fill process    
 #        print 'Post-filling report: '
         if df.isnull().values.any():
-            for n in ['xz', 'xy']:
+            for n in ['x', 'xz', 'xy']:
                 if df[n].isnull().values.all():
 #                    print '     ',n, 'NaN all values'
                     df[n]=0
@@ -80,7 +79,7 @@ def fill_smooth (df, offsetstart, end, roll_window_numpts, to_smooth, to_fill):
     
     if to_smooth and len(df)>1:
         df=pd.rolling_mean(df,window=roll_window_numpts,min_periods=1)[roll_window_numpts-1:]
-        return np.round(df, 4)
+        return df
     else:
         return df
         
@@ -135,20 +134,19 @@ def genproc(col, window, config, fixpoint, realtime=False, comp_vel=True):
     
     #assigns timestamps from LGD to be timestamp of offsetstart
     monitoring.loc[(monitoring.ts < window.offsetstart)|(pd.isnull(monitoring.ts)), ['ts']] = window.offsetstart
-    
-    monitoring['xz'],monitoring['xy'] = accel_to_lin_xz_xy(col.seglen,monitoring.x.values,monitoring.y.values,monitoring.z.values)
-    
-    monitoring = monitoring.drop(['x','y','z'],axis=1)
-    monitoring = monitoring.drop_duplicates(['ts', 'id'])
-    monitoring = monitoring.set_index('ts')
-    monitoring = monitoring[['name','id','xz','xy']]
 
     nodes_noval = GetNodesWithNoData(monitoring, col.nos)
-    nodes_nodata = pd.DataFrame({'name': [0]*len(nodes_noval), 'id': nodes_noval, 'xy': [np.nan]*len(nodes_noval), 'xz': [np.nan]*len(nodes_noval), 'ts': [window.offsetstart]*len(nodes_noval)})
-    nodes_nodata = nodes_nodata.set_index('ts')
+    nodes_nodata = pd.DataFrame({'name': [0]*len(nodes_noval), 'id': nodes_noval,
+                'x': [np.nan]*len(nodes_noval), 'y': [np.nan]*len(nodes_noval),
+                'z': [np.nan]*len(nodes_noval), 'ts': [window.offsetstart]*len(nodes_noval)})
     monitoring = monitoring.append(nodes_nodata)
-    
+
     max_min_df, max_min_cml = err.cml_noise_profiling(monitoring, config, fixpoint, col.nos)
+    
+    monitoring['xz'], monitoring['xy'] = accel_to_lin_xz_xy(col.seglen,monitoring.x.values,monitoring.y.values,monitoring.z.values)
+    
+    monitoring = monitoring.drop_duplicates(['ts', 'id'])
+    monitoring = monitoring.set_index('ts')
         
     #resamples xz and xy values per node using forward fill
     monitoring = monitoring.groupby('id').apply(resamplenode, window = window).reset_index(level=1).set_index('ts')
@@ -163,12 +161,15 @@ def genproc(col, window, config, fixpoint, realtime=False, comp_vel=True):
         to_fill = config.io.rt_to_fill
     
     filled_smoothened = nodal_proc_monitoring.apply(fill_smooth, offsetstart=window.offsetstart, end=window.end, roll_window_numpts=window.numpts, to_smooth=to_smooth, to_fill=to_fill)
-    filled_smoothened = filled_smoothened[['xz', 'xy','name']].reset_index()
-    
+    filled_smoothened = filled_smoothened[['xz', 'xy', 'x', 'y', 'z', 'name']].reset_index()
+            
+    filled_smoothened['depth'] = filled_smoothened['x']/np.abs(filled_smoothened['x']) * np.sqrt(col.seglen**2 - filled_smoothened['xz']**2 - filled_smoothened['xy']**2)
+    filled_smoothened['depth'] = filled_smoothened['depth'].fillna(value=col.seglen)
+
     monitoring = filled_smoothened.set_index('ts')   
-    
+
     if comp_vel == True:
-        filled_smoothened['td'] = filled_smoothened.ts.values - filled_smoothened.ts.values[0]
+        filled_smoothened['td'] = filled_smoothened['ts'].values - filled_smoothened['ts'].values[0]
         filled_smoothened['td'] = filled_smoothened['td'].apply(lambda x: x / np.timedelta64(1,'D'))
         
         nodal_filled_smoothened = filled_smoothened.groupby('id') 
@@ -180,4 +181,4 @@ def genproc(col, window, config, fixpoint, realtime=False, comp_vel=True):
     else:
         disp_vel = monitoring
     
-    return procdata(col,monitoring.sort(),disp_vel.sort(),max_min_df,max_min_cml)
+    return procdata(col,disp_vel.sort(),max_min_df,max_min_cml)

@@ -308,7 +308,7 @@ def main(name='', end='', end_mon=False):
     lgd = q.GetLastGoodDataFromDb(monitoring.colprops.name)
     
     
-    monitoring_vel = monitoring.vel[window.start:window.end]
+    monitoring_vel = monitoring.disp_vel[window.start:window.end]
     monitoring_vel = monitoring_vel.reset_index().sort_values('ts',ascending=True)
     nodal_dv = monitoring_vel.groupby('id')     
     

@@ -19,14 +19,14 @@ def col_pos(colpos_dfts):
 
 def compute_depth(colpos_dfts):
     colpos_dfts = colpos_dfts.drop_duplicates()
-    cumsum_df = colpos_dfts[['x']].cumsum()
-    cumsum_df['x'] = cumsum_df['x'] - min(cumsum_df.x)
-    colpos_dfts['x'] = cumsum_df.x.values
+    cumsum_df = colpos_dfts[['depth']].cumsum()
+    cumsum_df['depth'] = cumsum_df['depth'] - min(cumsum_df.depth)
+    colpos_dfts['depth'] = cumsum_df['depth'].values
     return np.round(colpos_dfts, 4)
 
 def adjust_depth(colpos_dfts, max_depth):
-    depth = max_depth - max(colpos_dfts['x'].values)
-    colpos_dfts['x'] = colpos_dfts['x'] + depth
+    depth = max_depth - max(colpos_dfts['depth'].values)
+    colpos_dfts['depth'] = colpos_dfts['depth'] + depth
     return colpos_dfts
 
 def compute_colpos(window, config, monitoring_vel, num_nodes, seg_len, fixpoint=''):
@@ -37,14 +37,12 @@ def compute_colpos(window, config, monitoring_vel, num_nodes, seg_len, fixpoint=
     colposdates = pd.date_range(end=window.end, freq=config.io.col_pos_interval, periods=config.io.num_col_pos, name='ts', closed=None)
 
     mask = monitoring_vel['ts'].isin(colposdates)
-    colpos_df = monitoring_vel[mask][['ts', 'id', 'xz', 'xy']]
-    colpos_df['x'] = np.sqrt(seg_len**2 - np.power(colpos_df['xz'], 2) - np.power(colpos_df['xy'], 2))
-    colpos_df['x'] = colpos_df['x'].fillna(seg_len)
+    colpos_df = monitoring_vel[mask][['ts', 'id', 'depth', 'xz', 'xy']]
     
     if column_fix == 'top':
-        colpos_df0 = pd.DataFrame({'ts': colposdates, 'id': [0]*len(colposdates), 'xz': [0]*len(colposdates), 'xy': [0]*len(colposdates), 'x': [0]*len(colposdates)})
+        colpos_df0 = pd.DataFrame({'ts': colposdates, 'id': [0]*len(colposdates), 'xz': [0]*len(colposdates), 'xy': [0]*len(colposdates), 'depth': [0]*len(colposdates)})
     elif column_fix == 'bottom':
-        colpos_df0 = pd.DataFrame({'ts': colposdates, 'id': [num_nodes+1]*len(colposdates), 'xz': [0]*len(colposdates), 'xy': [0]*len(colposdates), 'x': [seg_len]*len(colposdates)})
+        colpos_df0 = pd.DataFrame({'ts': colposdates, 'id': [num_nodes+1]*len(colposdates), 'xz': [0]*len(colposdates), 'xy': [0]*len(colposdates), 'depth': [seg_len]*len(colposdates)})
     
     colpos_df = colpos_df.append(colpos_df0, ignore_index = True)
     
@@ -61,11 +59,11 @@ def compute_colpos(window, config, monitoring_vel, num_nodes, seg_len, fixpoint=
     colposdf = colpos_dfts.apply(compute_depth)
     
     if column_fix == 'bottom':
-        max_depth = max(colposdf['x'].values)
+        max_depth = max(colposdf['depth'].values)
         colposdfts = colposdf.groupby('ts')
         colposdf = colposdfts.apply(adjust_depth, max_depth=max_depth)
     
-    colposdf['x'] = colposdf['x'].apply(lambda x: -x)
+    colposdf['depth'] = colposdf['depth'].apply(lambda x: -x)
     
     return colposdf
 
@@ -77,9 +75,9 @@ def nonrepeat_colors(ax,NUM_COLORS,color='gist_rainbow'):
     
 def subplot_colpos(dfts, ax_xz, ax_xy, show_part_legend, config, colposTS):
     i = colposTS.loc[colposTS.ts == dfts.ts.values[0]]['index'].values[0]
-    
+
     #current column position x
-    curcolpos_x = dfts.x.values
+    curcolpos_x = dfts['depth'].values
 
     #current column position xz
     curax = ax_xz
@@ -129,7 +127,7 @@ def plot_column_positions(df,colname,end, show_part_legend, config, num_nodes=0,
     
 #        try:
 #            max_min_cml = max_min_cml.apply(lambda x: x*1000)
-#            xl = df.loc[(df.ts == end)&(df.id <= num_nodes)&(df.id >= 1)]['x'].values[::-1]
+#            xl = df.loc[(df.ts == end)&(df.id <= num_nodes)&(df.id >= 1)]['depth'].values[::-1]
 #            ax_xz.fill_betweenx(xl, max_min_cml['xz_maxlist'].values, max_min_cml['xz_minlist'].values, where=max_min_cml['xz_maxlist'].values >= max_min_cml['xz_minlist'].values, facecolor='0.7',linewidth=0)
 #            ax_xy.fill_betweenx(xl, max_min_cml['xy_maxlist'].values, max_min_cml['xy_minlist'].values, where=max_min_cml['xy_maxlist'].values >= max_min_cml['xy_minlist'].values, facecolor='0.7',linewidth=0)
 #        except:
@@ -590,10 +588,11 @@ def main(monitoring, window, config, plotvel_start='', plotvel_end='', plotvel=T
     colname = monitoring.colprops.name
     num_nodes = monitoring.colprops.nos
     seg_len = monitoring.colprops.seglen
+
     if comp_vel == True:
-        monitoring_vel = monitoring.vel.reset_index()[['ts', 'id', 'xz', 'xy', 'vel_xz', 'vel_xy']]
+        monitoring_vel = monitoring.disp_vel.reset_index()[['ts', 'id', 'depth', 'xz', 'xy', 'vel_xz', 'vel_xy']]
     else:
-        monitoring_vel = monitoring.vel.reset_index()[['ts', 'id', 'xz', 'xy']]
+        monitoring_vel = monitoring.disp_vel.reset_index()[['ts', 'id', 'depth', 'xz', 'xy']]
     monitoring_vel = monitoring_vel.loc[(monitoring_vel.ts >= window.start)&(monitoring_vel.ts <= window.end)]
 
     output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
