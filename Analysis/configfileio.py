@@ -64,6 +64,10 @@ class config:
 		self.io = Container()
 		self.io.outputfilepath = cfg.get("I/O","outputfilepath")
 		self.io.rainfallplotspath = cfg.get("I/O","rainfallplotspath")
+		self.io.surficialplotspath = cfg.get("I/O","surficialplotspath")
+		self.io.trendingsurficialplotspath = cfg.get("I/O","trendingsurficialplotspath")
+		self.io.subsurfaceplotspath = cfg.get("I/O","subsurfaceplotspath")
+		self.io.grndmeasplotspath = cfg.get("I/O","grndmeasplotspath")
           
 		self.io.t_disp = cfg.getfloat("I/O","t_disp")
 		self.io.t_vell2 = cfg.getfloat("I/O","t_vell2")
