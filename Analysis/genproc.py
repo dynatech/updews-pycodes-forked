@@ -137,14 +137,14 @@ def genproc(col, window, config, fixpoint, realtime=False, comp_vel=True):
 
     nodes_noval = GetNodesWithNoData(monitoring, col.nos)
     nodes_nodata = pd.DataFrame({'name': [0]*len(nodes_noval), 'id': nodes_noval,
-                'x': [np.nan]*len(nodes_noval), 'y': [np.nan]*len(nodes_noval),
-                'z': [np.nan]*len(nodes_noval), 'ts': [window.offsetstart]*len(nodes_noval)})
+                'x': [0]*len(nodes_noval), 'y': [0]*len(nodes_noval),
+                'z': [0]*len(nodes_noval), 'ts': [window.offsetstart]*len(nodes_noval)})
     monitoring = monitoring.append(nodes_nodata)
 
     max_min_df, max_min_cml = err.cml_noise_profiling(monitoring, config, fixpoint, col.nos)
-    
+
     monitoring['xz'], monitoring['xy'] = accel_to_lin_xz_xy(col.seglen,monitoring.x.values,monitoring.y.values,monitoring.z.values)
-    
+
     monitoring = monitoring.drop_duplicates(['ts', 'id'])
     monitoring = monitoring.set_index('ts')
         
