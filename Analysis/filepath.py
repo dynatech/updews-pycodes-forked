@@ -23,7 +23,7 @@ def output_file_path(site, plot_type, monitoring_end=False, positive_trigger=Fal
     public_alert = q.GetDBDataFrame(query)
 
     if positive_trigger and public_alert['alert'].values[0] == 'A0':
-        path = config.io.outputfilepath + (site + window.end.strftime(' %d %b %Y')).upper()
+        path = config.io.outputfilepath + (site + window.end.strftime(' %d %b %Y') + '/').upper()
 
     elif (public_alert['alert'].values[0] == 'A0' and not monitoring_end) \
             or (not monitoring_end and public_alert['alert'].values[0] != 'A0' \
@@ -67,7 +67,7 @@ def output_file_path(site, plot_type, monitoring_end=False, positive_trigger=Fal
             else:
                 start_monitor = pd.to_datetime(public_alert['timestamp'].values[0])
 
-        path = config.io.outputfilepath + (site + start_monitor.strftime(' %d %b %Y')).upper()
+        path = config.io.outputfilepath + (site + start_monitor.strftime(' %d %b %Y') + '/').upper()
 
     if not os.path.exists(output_path+path):
         os.makedirs(output_path+path)
