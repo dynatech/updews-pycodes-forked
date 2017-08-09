@@ -885,6 +885,7 @@ def SitePublicAlert(PublicAlert, window):
         df = q.GetDBDataFrame(query)
         logger_df = df.groupby('name')
         logger_df.apply(alertgen, window.end)
+        main(site=site, end=window.end, monitoring_end=True)
 
     return PublicAlert
 

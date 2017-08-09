@@ -9,8 +9,8 @@ from datetime import timedelta
 import pandas as pd
 import numpy as np
 
+import filepath
 import querySenslopeDb as q
-
 
 def stitch_intervals(ranges):
     result = []
@@ -129,7 +129,8 @@ def PlotData(rain_gauge_col, offsetstart, start, end, sub, col, insax, cumax, fi
     fig.subplots_adjust(top=0.93, right=0.8, left=0.08, bottom=0.08, hspace=0.23, wspace=0.13)
     fig.suptitle(name+" as of "+str(end),fontsize='xx-large')
 
-def SensorPlot(name, col, offsetstart, start, end, tsn, halfmax, twoyrmax, base, RainfallPlotsPath):
+def SensorPlot(name, col, offsetstart, start, end, tsn, halfmax, twoyrmax, base, \
+            monitoring_end, positive_trigger):
     
     ##INPUT:
     ##name; str; site name
@@ -176,14 +177,15 @@ def SensorPlot(name, col, offsetstart, start, end, tsn, halfmax, twoyrmax, base,
     ins1.set_xlim([start - timedelta(hours=2), end + timedelta(hours=2)])
     cum1.set_xlim([start - timedelta(hours=2), end + timedelta(hours=2)])
     lgd = plt.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize='medium')
-    plt.savefig(RainfallPlotsPath+'rainfall_'+tsn+'_'+name, dpi=100, 
+    plt.savefig(filepath.output_file_path(name, 'rainfall', monitoring_end=monitoring_end, \
+        positive_trigger=positive_trigger, end=end) + 'rainfall_' + tsn + '_' + name, dpi=100, 
         facecolor='w', edgecolor='w',orientation='landscape',mode='w',
         bbox_extra_artists=(lgd,))#, bbox_inches='tight')
     plt.close()
 
 ################################     MAIN     ################################
 
-def main(siterainprops, offsetstart, start, end, tsn, s, output_path):
+def main(siterainprops, offsetstart, start, end, tsn, s, monitoring_end, summary):
 
     ##INPUT:
     ##siterainprops; DataFrameGroupBy; contains rain noah ids of noah rain gauge near the site, one and three-day rainfall threshold
@@ -214,4 +216,6 @@ def main(siterainprops, offsetstart, start, end, tsn, s, output_path):
     col = pd.DataFrame({'rain_gauge': col, 'd': d})
     col = col.dropna()
     col.index = range(len(col))
-    SensorPlot(name, col, offsetstart, start, end, tsn, halfmax, twoyrmax, base, output_path+s.io.RainfallPlotsPath)
+    positive_trigger = summary[summary.index == name]['positive_trigger'].values[0]
+    SensorPlot(name, col, offsetstart, start, end, tsn, halfmax, twoyrmax, base, \
+            monitoring_end, positive_trigger)

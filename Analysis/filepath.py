@@ -21,8 +21,6 @@ def output_file_path(site, plot_type, monitoring_end=False, positive_trigger=Fal
     query += " ORDER BY timestamp DESC LIMIT 4"
     
     public_alert = q.GetDBDataFrame(query)
-    
-    print public_alert['alert'].values[0] == 'A0' and not monitoring_end
 
     if positive_trigger and public_alert['alert'].values[0] == 'A0':
         path = config.io.outputfilepath + (site + window.end.strftime(' %d %b %Y')).upper()

@@ -43,7 +43,7 @@ def get_rt_window(rt_window_length,roll_window_length,end=datetime.now()):
 
 ################################     MAIN     ################################
 
-def main(site='', Print=True, end=datetime.now()):
+def main(site='', Print=True, end=datetime.now(), monitoring_end=False):
 
     output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
     
@@ -82,7 +82,8 @@ def main(site='', Print=True, end=datetime.now()):
 
     
         if s.io.PrintPlot:
-            siterainprops.apply(RP.main, offsetstart=offsetstart, start=start, end=end, tsn=tsn, s=s, output_path=output_path)
+            summary['positive_trigger'] = summary['alert'].map({'r1': True, 'r0': False, 'nd': False})
+            siterainprops.apply(RP.main, offsetstart=offsetstart, start=start, end=end, tsn=tsn, s=s, monitoring_end=monitoring_end, summary=summary)
     
     return summary_json
 
