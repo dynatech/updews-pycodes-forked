@@ -47,7 +47,7 @@ def output_file_path(site, plot_type, monitoring_end=False, positive_trigger=Fal
         
         # one prev alert
         if len(public_alert) == 1:
-            start_monitor = public_alert['timestamp'].values[0]
+            start_monitor = pd.to_datetime(public_alert['timestamp'].values[0])
         # two prev alert
         elif len(public_alert) == 2:
             # one event with two prev alert

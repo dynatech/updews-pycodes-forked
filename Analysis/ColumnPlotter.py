@@ -10,6 +10,8 @@ import pandas as pd
 import numpy as np
 from scipy.stats import spearmanr
 
+import filepath
+
 def col_pos(colpos_dfts):  
     colpos_dfts = colpos_dfts.drop_duplicates()
     cumsum_df = colpos_dfts[['xz','xy']].cumsum()
@@ -583,7 +585,9 @@ def df_add_offset_col(df, offset, num_nodes):
     return np.round(df,4)
     
     
-def main(monitoring, window, config, plotvel_start='', plotvel_end='', plotvel=True, show_part_legend = False, realtime=True, plot_inc=True, comp_vel=True):
+def main(monitoring, window, config, plotvel_start='', plotvel_end='', \
+            plotvel=True, show_part_legend = False, realtime=True, \
+            plot_inc=True, comp_vel=True, end_mon=False):
 
     colname = monitoring.colprops.name
     num_nodes = monitoring.colprops.nos
@@ -595,10 +599,15 @@ def main(monitoring, window, config, plotvel_start='', plotvel_end='', plotvel=T
         monitoring_vel = monitoring.disp_vel.reset_index()[['ts', 'id', 'depth', 'xz', 'xy']]
     monitoring_vel = monitoring_vel.loc[(monitoring_vel.ts >= window.start)&(monitoring_vel.ts <= window.end)]
 
-    output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
-
-    if not os.path.exists(output_path+config.io.outputfilepath+'realtime/'):
-        os.makedirs(output_path+config.io.outputfilepath+'realtime/')
+    if realtime:    
+        output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
+        output_path = output_path+config.io.outputfilepath+'realtime/'
+        if not os.path.exists(output_path):
+            os.makedirs(output_path)
+    
+    else:
+        output_path = filepath.output_file_path(colname[0:3], 'subsurface', monitoring_end=end_mon, \
+            positive_trigger=True, end=window.end)
 
     # noise envelope
     max_min_df = monitoring.max_min_df
@@ -615,7 +624,7 @@ def main(monitoring, window, config, plotvel_start='', plotvel_end='', plotvel=T
     if realtime:
         config.io.outputfilepath = config.io.outputfilepath+'realtime/'
     
-    plt.savefig(output_path+config.io.outputfilepath+colname+'ColPos_'+str(window.end.strftime('%Y-%m-%d_%H-%M'))+'.png',
+    plt.savefig(output_path+colname+'_ColPos_'+str(window.end.strftime('%Y-%m-%d_%H-%M'))+'.png',
                 dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w', bbox_extra_artists=(lgd,))
     
     inc_df = node_annotation(monitoring_vel, num_nodes)
@@ -649,5 +658,5 @@ def main(monitoring, window, config, plotvel_start='', plotvel_end='', plotvel=T
     
     # plot displacement and velocity
     plot_disp_vel(noise_df, df0off, cs_df, colname, window, config, plotvel, xzd_plotoffset, num_nodes, velplot, plot_inc, inc_df=inc_df)
-    plt.savefig(output_path+config.io.outputfilepath+colname+'_DispVel_'+str(window.end.strftime('%Y-%m-%d_%H-%M'))+'.png',
+    plt.savefig(output_path+colname+'_DispVel_'+str(window.end.strftime('%Y-%m-%d_%H-%M'))+'.png',
                 dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
