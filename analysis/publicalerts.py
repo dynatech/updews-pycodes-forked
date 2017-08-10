@@ -30,6 +30,16 @@ def data_ts(endpt):
     end = datetime.combine(date(year, month, day), time(hour, minute))
     return end
 
+def old_internal(df, routine):
+    pub = df['public_alert'].values[0]
+    internal = df['internal_alert'].values[0]
+    if pub not in routine:
+        add = '-'
+    else:
+        add = ''
+    df['internal_alert'] = pub[0:2] + add+ internal
+    return df
+
 def internal_alert_symbol(positive_trigger, optrigger_withdata, intsym, 
                           rainfall_alert):
     highest_trigger = positive_trigger.sort_values('alert_level', \
@@ -428,7 +438,21 @@ def main(end=datetime.now()):
  
     PublicAlert['ts'] = PublicAlert['ts'].apply(lambda x: str(x))
     PublicAlert['validity'] = PublicAlert['validity'].apply(lambda x: str(x))
+    
+    #################### transform public_alert and internal_alert #############
+    #################### to be similar to dyna public alert ####################
+    
+    PublicAlertSymbols.loc[PublicAlertSymbols.alert_type == 'routine', ['alert_level']] = 0
+    PublicAlertSymbols['alert_level'] = np.abs(PublicAlertSymbols['alert_level']).apply(lambda x: 'A'+str(x))
+    pub_map = PublicAlertSymbols[['alert_symbol', 'alert_level']].set_index('alert_symbol').to_dict()['alert_level']
 
+    SitePublicAlert = PublicAlert.groupby('site_code')
+    routine = PublicAlertSymbols[PublicAlertSymbols.alert_type == 'routine']['alert_symbol'].values
+    PublicAlert = SitePublicAlert.apply(old_internal, routine=routine)
+    PublicAlert['public_alert'] = PublicAlert['public_alert'].map(pub_map)
+    
+    ############################################################################
+    
     all_alerts = pd.DataFrame({'invalids': [np.nan], 'alerts': [PublicAlert]})
     
     public_json = all_alerts.to_json(orient="records")
@@ -449,3 +473,6 @@ def main(end=datetime.now()):
 
 if __name__ == "__main__":
     main()
+#    output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
+#    sc = qdb.memcached()
+#    df = pd.DataFrame(pd.read_json(output_path+sc['fileio']['output_path']+'PublicAlertRefDB.json')['alerts'][0])
