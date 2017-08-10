@@ -599,14 +599,15 @@ def main(monitoring, window, config, plotvel_start='', plotvel_end='', \
         monitoring_vel = monitoring.disp_vel.reset_index()[['ts', 'id', 'depth', 'xz', 'xy']]
     monitoring_vel = monitoring_vel.loc[(monitoring_vel.ts >= window.start)&(monitoring_vel.ts <= window.end)]
 
-    if realtime:    
+    if realtime:
+        file_path = {'event': np.nan}
         output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
-        output_path = output_path+config.io.outputfilepath+'realtime/'
-        if not os.path.exists(output_path):
-            os.makedirs(output_path)
+        file_path['monitoring_output'] = output_path + config.io.outputfilepath+'realtime/'
+        if not os.path.exists(file_path['monitoring_output']):
+            os.makedirs(file_path['monitoring_output'])
     
     else:
-        output_path = filepath.output_file_path(colname[0:3], 'subsurface', monitoring_end=end_mon, \
+        file_path = filepath.output_file_path(colname[0:3], 'subsurface', monitoring_end=end_mon, \
             positive_trigger=True, end=window.end)
 
     # noise envelope
@@ -624,9 +625,17 @@ def main(monitoring, window, config, plotvel_start='', plotvel_end='', \
     if realtime:
         config.io.outputfilepath = config.io.outputfilepath+'realtime/'
     
-    plt.savefig(output_path+colname+'_ColPos_'+str(window.end.strftime('%Y-%m-%d_%H-%M'))+'.png',
-                dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w', bbox_extra_artists=(lgd,))
-    
+    plt.savefig(file_path['monitoring_output'] + colname + '_ColPos_' + \
+            str(window.end.strftime('%Y-%m-%d_%H-%M')) + '.png', dpi=160, 
+            facecolor='w', edgecolor='w', orientation='landscape', mode='w',
+            bbox_extra_artists=(lgd,))
+
+    if file_path['event'] != None:
+        plt.savefig(file_path['event'] + colname + '_ColPos_' + \
+                str(window.end.strftime('%Y-%m-%d_%H-%M')) + '.png', dpi=160,
+                facecolor='w', edgecolor='w', orientation='landscape', mode='w',
+                bbox_extra_artists=(lgd,))
+
     inc_df = node_annotation(monitoring_vel, num_nodes)
 
     # displacement plot offset
@@ -658,5 +667,11 @@ def main(monitoring, window, config, plotvel_start='', plotvel_end='', \
     
     # plot displacement and velocity
     plot_disp_vel(noise_df, df0off, cs_df, colname, window, config, plotvel, xzd_plotoffset, num_nodes, velplot, plot_inc, inc_df=inc_df)
-    plt.savefig(output_path+colname+'_DispVel_'+str(window.end.strftime('%Y-%m-%d_%H-%M'))+'.png',
-                dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
+    plt.savefig(file_path['monitoring_output'] + colname + '_DispVel_' + \
+            str(window.end.strftime('%Y-%m-%d_%H-%M')) + '.png', dpi=160, 
+            facecolor='w', edgecolor='w',orientation='landscape',mode='w')
+                
+    if file_path['event'] != None:
+        plt.savefig(file_path['event'] + colname + '_DispVel_' + \
+                str(window.end.strftime('%Y-%m-%d_%H-%M')) + '.png', dpi=160, 
+                facecolor='w', edgecolor='w',orientation='landscape',mode='w')

@@ -172,15 +172,21 @@ def SensorPlot(name, col, offsetstart, start, end, tsn, halfmax, twoyrmax, base,
     sub['half of 2yr max rainfall'] = halfmax  
     sub['2yr max rainfall'] = twoyrmax
     
-    rain_gauge_col.apply(PlotData, offsetstart=offsetstart, start=start, end=end, sub=sub, col=col, insax=insax, cumax=cumax, fig=fig, name=name) 
+    rain_gauge_col.apply(PlotData, offsetstart=offsetstart, start=start, 
+        end=end, sub=sub, col=col, insax=insax, cumax=cumax, fig=fig, name=name) 
     
     ins1.set_xlim([start - timedelta(hours=2), end + timedelta(hours=2)])
     cum1.set_xlim([start - timedelta(hours=2), end + timedelta(hours=2)])
     lgd = plt.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize='medium')
-    plt.savefig(filepath.output_file_path(name, 'rainfall', monitoring_end=monitoring_end, \
-        positive_trigger=positive_trigger, end=end) + 'rainfall_' + tsn + '_' + name, dpi=100, 
-        facecolor='w', edgecolor='w',orientation='landscape',mode='w',
+    file_path = filepath.output_file_path(name, 'rainfall', monitoring_end=monitoring_end, 
+        positive_trigger=positive_trigger, end=end)
+    plt.savefig(file_path['monitoring_output'] + 'rainfall_' + tsn + '_' + name, 
+        dpi=100, facecolor='w', edgecolor='w',orientation='landscape',mode='w',
         bbox_extra_artists=(lgd,))#, bbox_inches='tight')
+    if file_path['event'] != None:
+        plt.savefig(file_path['event'] + 'rainfall_' + tsn + '_' + name, dpi=100, 
+            facecolor='w', edgecolor='w',orientation='landscape',mode='w',
+            bbox_extra_artists=(lgd,))#, bbox_inches='tight')
     plt.close()
 
 ################################     MAIN     ################################

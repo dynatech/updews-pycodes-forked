@@ -1,3 +1,4 @@
+import numpy as np
 import os
 import pandas as pd
 from datetime import datetime, timedelta, time
@@ -22,25 +23,27 @@ def output_file_path(site, plot_type, monitoring_end=False, positive_trigger=Fal
     
     public_alert = q.GetDBDataFrame(query)
 
+    if plot_type == 'rainfall':
+        monitoring_output_path = output_path + config.io.rainfallplotspath
+    elif plot_type == 'subsurface':
+        monitoring_output_path = output_path + config.io.subsurfaceplotspath
+    elif plot_type == 'surficial':
+        monitoring_output_path = output_path + config.io.surficialplotspath
+    elif plot_type == 'trending_surficial':
+        monitoring_output_path = output_path + config.io.trendingsurficialplotspath
+    elif plot_type == 'eq':
+        monitoring_output_path = output_path + config.io.eqplotspath
+    else:
+        monitoring_output_path = output_path + config.io.outputfilepath
+        print 'unrecognized plot type; print to %s' %(monitoring_output_path)
+
     if positive_trigger and public_alert['alert'].values[0] == 'A0':
-        path = config.io.outputfilepath + (site + window.end.strftime(' %d %b %Y') + '/').upper()
+        event_path = output_path + config.io.outputfilepath + (site + window.end.strftime(' %d %b %Y') + '/').upper()
 
     elif (public_alert['alert'].values[0] == 'A0' and not monitoring_end) \
             or (not monitoring_end and public_alert['alert'].values[0] != 'A0' \
             and plot_type == 'rainfall' and window.end.time() not in [time(7, 30), time(19, 30)]):
-        if plot_type == 'rainfall':
-            path = config.io.rainfallplotspath
-        elif plot_type == 'subsurface':
-            path = config.io.subsurfaceplotspath
-        elif plot_type == 'surficial':
-            path = config.io.surficialplotspath
-        elif plot_type == 'trending_surficial':
-            path = config.io.trendingsurficialplotspath
-        elif plot_type == 'eq':
-            path = config.io.eqplotspath
-        else:
-            print 'unrecognized plot type; print to %s' %(output_path + config.io.outputfilepath)
-            return
+        event_path = None
 
     else:
         public_alert = public_alert[public_alert.alert != 'A0']
@@ -67,9 +70,13 @@ def output_file_path(site, plot_type, monitoring_end=False, positive_trigger=Fal
             else:
                 start_monitor = pd.to_datetime(public_alert['timestamp'].values[0])
 
-        path = config.io.outputfilepath + (site + start_monitor.strftime(' %d %b %Y') + '/').upper()
+        event_path = output_path + config.io.outputfilepath + \
+                (site + start_monitor.strftime(' %d %b %Y') + '/').upper()
 
-    if not os.path.exists(output_path+path):
-        os.makedirs(output_path+path)
+    for i in [monitoring_output_path, event_path]:
+        if not os.path.exists(str(i)):
+            os.makedirs(str(i))
 
-    return output_path + path
+    file_path = {'event': event_path, 'monitoring_output': monitoring_output_path}
+
+    return file_path
