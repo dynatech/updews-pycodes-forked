@@ -343,7 +343,7 @@ def SitePublicAlert(PublicAlert, window):
         rain_alert = 'nd'
     
     #surficial data presence
-    ground_alert = validity_site_alert.loc[(validity_site_alert.source == 'ground')&(validity_site_alert.updateTS >= window.end - timedelta(hours=4))]
+    ground_alert = validity_site_alert.loc[(validity_site_alert.source == 'ground')&(validity_site_alert.updateTS >= RoundTime(window.end) - timedelta(hours=4))]
     if len(ground_alert) != 0:
         ground_alert = 'g'
     else:
