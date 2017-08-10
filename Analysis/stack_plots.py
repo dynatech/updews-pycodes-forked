@@ -77,8 +77,8 @@ def get_rain_df(rain_gauge, start, end):
 
 # rainfall plot
 def plot_rain(ax, df, site):
-    ax.plot(df.ts, df.one, color='blue', label='1-day cml', alpha=1)
-    ax.plot(df.ts,df.three, color='red', label='3-day cml', alpha=1)
+    ax.plot(df.ts, df.one, color='green', label='1-day cml', alpha=1)
+    ax.plot(df.ts,df.three, color='blue', label='3-day cml', alpha=1)
 #    ax2=ax.twinx()
 #    width=0.01
 #    ins_df = df.dropna()
@@ -88,8 +88,8 @@ def plot_rain(ax, df, site):
     twoyrmax = qdb.GetDBDataFrame(query)['max_rain_2year'].values[0]
     halfmax = twoyrmax/2
     
-    ax.plot(df.ts, [halfmax]*len(df.ts), color='blue', label='half of 2-yr max', alpha=1, linestyle='--')
-    ax.plot(df.ts, [twoyrmax]*len(df.ts), color='red', label='2-yr max', alpha=1, linestyle='--')
+    ax.plot(df.ts, [halfmax]*len(df.ts), color='green', label='half of 2-yr max', alpha=1, linestyle='--')
+    ax.plot(df.ts, [twoyrmax]*len(df.ts), color='blue', label='2-yr max', alpha=1, linestyle='--')
     
     ax.set_title("%s Rainfall Data" %site.upper(), fontsize='medium')  
     ax.set_ylabel('1D, 3D Rain\n(mm)', fontsize='small')  
@@ -144,6 +144,8 @@ def plot_cml(ax, df, axis, tsm_name):
 def plot_disp(ax, df, axis, node_lst, tsm_name):
     for node in node_lst:
         node_df = df[df.id == node]
+        print 'node', node
+        print node_df[['ts', 'zeroed_'+axis]].sort_values('ts')
         ax.plot(node_df.ts, node_df['zeroed_'+axis].values, label='Node '+str(node))
     ax.set_ylabel('Displacement\n(cm)', fontsize='small')
     ax.set_title('%s Subsurface %s Displacement' %(tsm_name.upper(), axis.upper()), fontsize='medium')
@@ -199,7 +201,8 @@ def main(site, start, end, rainfall_props, surficial_props, subsurface_props, ev
             subplot -= 1
         except:
             ax = fig.add_subplot(subplot)
-        ax.xaxis.set_visible(False)
+        if rainfall_props['to_plot']:
+            ax.xaxis.set_visible(False)
         plot_surficial(ax, surficial, surficial_props['markers'])
         for event in event_lst:
             plot_single_event(ax, event)
@@ -208,6 +211,7 @@ def main(site, start, end, rainfall_props, surficial_props, subsurface_props, ev
         disp = subsurface_props['disp']['disp_tsm_axis']
         for tsm_name in disp.keys():
             tsm_data = get_tsm_data(tsm_name, start, end, 'disp', 'all')
+            return_data = tsm_data
             axis_lst = disp[tsm_name]
             for axis in axis_lst.keys():
                 try:
@@ -251,6 +255,7 @@ def main(site, start, end, rainfall_props, surficial_props, subsurface_props, ev
     plt.savefig(site + "_event_timeline", dpi=200,mode='w')#, 
 #        facecolor='w', edgecolor='w',orientation='landscape')
 
+    return return_data
 
 ############################################################
 
@@ -258,14 +263,14 @@ if __name__ == '__main__':
     
     site = 'mag'
 #    start = '2016-02-23'
-    start = '2017-04-08'
-    end = '2017-05-12'
+    start = '2016-02-23'
+    end = '2017-03-31'
     
     # annotate events
-    event_lst = ['2017-04-30 01:30', '2017-04-09 05:20']
+    event_lst = []#'2017-04-30 01:30', '2016-10-10 01:56']
     
     # rainfall plot
-    rainfall = True                                 ### True if to plot rainfall
+    rainfall = False                                 ### True if to plot rainfall
     rain_gauge = 'rain_noah_505'                    ### specifiy rain gauge
     rainfall_props = {'to_plot': rainfall, 'rain_gauge': rain_gauge}
 
@@ -279,8 +284,8 @@ if __name__ == '__main__':
     # subsurface displacement
     disp = True                    ### True if to plot subsurface displacement
     ### specifiy tsm name and axis; 'all' if all nodes
-    disp_tsm_axis = {'magta': {'xy': range(13,18), 'xz': range(13,18)},
-                            'magtb': {'xy': range(11,16), 'xz': range(11,16)}}
+    disp_tsm_axis = {'magta': {'xz': range(13,17)},
+                            'magtb': {'xz': [10, 11, 14, 15]}}
     
     # subsurface cumulative displacement
     cml = False          ### True if to plot subsurface cumulative displacement
@@ -291,4 +296,4 @@ if __name__ == '__main__':
     subsurface_props = {'disp': {'to_plot': disp, 'disp_tsm_axis': disp_tsm_axis},
                         'cml': {'to_plot': cml, 'cml_tsm_axis': cml_tsm_axis}}
     
-    main(site, start, end, rainfall_props, surficial_props, subsurface_props, event_lst)
+    df = main(site, start, end, rainfall_props, surficial_props, subsurface_props, event_lst)
