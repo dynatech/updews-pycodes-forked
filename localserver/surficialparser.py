@@ -38,8 +38,12 @@ def parse_surficial_text(text):
 
     # double check site code
     site_code = sms_list[1].lower()
-    site_id = get_site_id(site_code)
+    # site_id = get_site_id(site_code)
     # if site_id is None:
+    sites_dict = mc.get('sites_dict')
+    site_code = adjust_site_code(site_code)
+    site_id = sites_dict['site_id'][site_code]
+    
         
     
     # try:
@@ -64,15 +68,17 @@ def parse_surficial_text(text):
         raise SurficialParserError(c.reply.failmeasen)
       
       # get all the weather information
-    print repr(data_field)
+    print meas[-1], repr(data_field)
     # try:
-    wrecord = re.search("(?<="+meas[-1]+" )[A-Z]+",data_field).group(0)
+    try:
+        wrecord = re.search("(?<="+meas[-1]+" )[A-Z]+",data_field).group(0)
+    except AttributeError:
+        raise SurficialParserError(c.reply.failweaen)
     recisvalid = False
     for keyword in ["ARAW","ULAN","BAGYO","LIMLIM","AMBON","ULAP","SUN",
         "RAIN","CLOUD","DILIM","HAMOG"]:
         if keyword in wrecord:
             recisvalid = True
-            print "valid"
             break
     if not recisvalid:
         raise SurficialParserError(c.reply.failweaen)
@@ -94,13 +100,10 @@ def parse_surficial_text(text):
     obv['data_source'] = 'SMS'
     obv['observer_name'] = observer_name
 
-    sites_dict = mc.get('sites_dict')
-    site_id = sites_dict['site_id'][site_code]
     obv['site_id'] = site_id
     
     data_records = dict()
     ind= 0
-    print "====", meas
     for m in meas: #loop for each
         marker_name = m[0]
         marker_len = float(re.search("\d{1,3}\.*\d{0,2}",m[1:]).group(0))
@@ -120,8 +123,6 @@ def parse_surficial_text(text):
         # data_records.set_value(ind, 'measurement', cm)
         # ind = ind+1
         data_records[marker_name] = marker_len
-
-        print '---'
 
     obv['data_records'] = data_records
 
@@ -155,8 +156,8 @@ def get_time_from_sms(text):
                 print 'match for', fmt, 'but error in conversion'
                 raise SurficialParserError(c.reply.failtimeen)
             break
-        else:
-            print 'not', fmt
+        # else:
+        #     print 'not', fmt
         count += 1
 
     if count == len(time_format_dict):
@@ -175,12 +176,22 @@ def get_time_from_sms(text):
 
     return time_str
 
+def adjust_site_code(site_code):
+    translation_dict = {
+        'man':'mng','bat':'bto','tag':'tga','pan':'png','pob':'jor'
+    }
+
+    if site_code in translation_dict.keys():
+        return translation_dict[site_code]
+    else:
+        return site_code
+
         
 def get_date_from_sms(text):
   # timetxt = ""
     mon_re1 = "[JFMASOND][AEPUCO][NBRYLGTVCP]"
     mon_re2 = "[A-Z]{4,9}"
-    day_re1 = "((0{0,1}[1-9]{1})|(\d{2}))"
+    day_re1 = "(([0-3]{0,1})([0-9]{1}))"
     year_re1 = "(201[678]){0,1}"
 
     cur_year = str(dt.today().year)
@@ -319,8 +330,6 @@ def update_surficial_observations(obv):
 
     mo_id = dbio.commit_to_db(query, 'uso', last_insert=True)[0][0]
 
-    print "mo_id =", mo_id
-   
     # check if entry is duplicate
     if mo_id == 0:
         # print 'Duplicate entry'
@@ -329,7 +338,6 @@ def update_surficial_observations(obv):
             "WHERE ts = '{}' and site_id = '{}'".format(obv['ts'],
             obv['site_id'])
             )    
-        print query
         mo_id = dbio.query_database(query,'uso')[0][0]
 
     return mo_id
@@ -352,7 +360,6 @@ def update_surficial_data(obv, mo_id):
             mo_id, data_records[marker_name])
             )
 
-        # print query
         dbio.commit_to_db(query,'usd')
 
     db.close()
