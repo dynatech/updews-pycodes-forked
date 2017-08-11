@@ -99,7 +99,7 @@ def site_public_alert(PublicAlert, end, pubsym, intsym, opsym):
         #Create a public_alerts table if it doesn't exist yet
         qdb.create_public_alerts()
         
-    query = "SELECT ts, site_id, alert_level, alert_symbol, ts_updated FROM"
+    query = "SELECT ts, site_id, alert_level, alert_type, alert_symbol, ts_updated FROM"
     query += " (SELECT * FROM public_alerts WHERE site_id = %s" %site_id
     query += " AND ts <= '%s' AND ts_updated >= '%s') pub" %(end, \
             end - timedelta(hours=0.5))
@@ -157,7 +157,7 @@ def site_public_alert(PublicAlert, end, pubsym, intsym, opsym):
                 start_monitor = pd.to_datetime(PosPubAlert['ts'].values[0])
     # previous public alert level 0
     else:
-        start_monitor = release_time(end) - timedelta(hours=4)
+        start_monitor = pd.to_datetime(end.date())
 
     query = "SELECT ts, site_id, trigger_source,"
     query += " alert_level, alert_symbol, ts_updated FROM"
@@ -180,12 +180,17 @@ def site_public_alert(PublicAlert, end, pubsym, intsym, opsym):
     last_positive_trigger = positive_trigger.drop_duplicates(['trigger_source', \
             'alert_level'])
     # with ground data
-    with_ground_data = recent_op_trigger[(recent_op_trigger.alert_level != -1) & \
-            ((recent_op_trigger.trigger_source == 'surficial') | \
-            ((recent_op_trigger.trigger_source == 'subsurface') & \
-            (recent_op_trigger.ts_updated >= end)))]
+    if PubAlert['alert_type'].values[0] == 'routine':
+        surficial_ts = start_monitor
+    else:
+        surficial_ts = release_time(end)-timedelta(hours=4)
+    with_ground_data = op_trigger[(op_trigger.alert_level != -1) & \
+            ( ((op_trigger.trigger_source == 'surficial') & \
+               (op_trigger.ts_updated >= surficial_ts)) | \
+              ((op_trigger.trigger_source == 'subsurface') & \
+               (op_trigger.ts_updated >= end)) )]
 
-    if PrevPubAlert <= 0 and len(positive_trigger) != 0:
+    if PubAlert['alert_type'].values[0] == 'routine' and len(positive_trigger) != 0:
         ts_onset = min(positive_trigger['ts'].values)
     
     # most recent retrigger of positive operational triggers
@@ -278,8 +283,7 @@ def site_public_alert(PublicAlert, end, pubsym, intsym, opsym):
             if i in positive_trigger['trigger_source'].values:
                 if i not in with_ground_data['trigger_source'].values:
                      withdata += [False]
-    elif 'subsurface' not in with_ground_data['trigger_source'].values and \
-            'surficial' not in with_ground_data['trigger_source'].values:
+    elif len(with_ground_data) == 0:
         withdata += [False]
     withdata = all(withdata)
 
@@ -473,6 +477,6 @@ def main(end=datetime.now()):
 
 if __name__ == "__main__":
     main()
-#    output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
-#    sc = qdb.memcached()
-#    df = pd.DataFrame(pd.read_json(output_path+sc['fileio']['output_path']+'PublicAlertRefDB.json')['alerts'][0])
+    output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
+    sc = qdb.memcached()
+    df = pd.DataFrame(pd.read_json(output_path+sc['fileio']['output_path']+'PublicAlertRefDB.json')['alerts'][0])
