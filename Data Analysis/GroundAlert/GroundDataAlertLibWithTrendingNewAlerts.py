@@ -41,7 +41,17 @@ def up_one(p):
     out = os.path.abspath(os.path.join(p, '..'))
     return out  
 
+#Include the path of "Analysis"folder for the python scrips searching
+path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+analysis_path = up_one(path)+'/Analysis/'
 
+if not analysis_path in sys.path:
+    sys.path.insert(1,analysis_path)
+del analysis_path
+
+#Import file output path creator
+from filepath import output_file_path                   
+    
 def CreateMarkerAlerts(Hostdb,Userdb,Passdb,Namedb):
     db = mysqlDriver.connect(host = Hostdb, user = Userdb, passwd = Passdb)
     cur = db.cursor()
@@ -532,7 +542,6 @@ def GenerateGroundDataAlert(site=None,end=None):
     
     #Retrieving important declaration files
     printtostdout = True
-    output_file_path = cfg.get('I/O','OutputFilePath')
     PrintJSON = cfg.get('I/O','PrintJSON')
     PrintGAlert = cfg.get('I/O','PrintGAlert')
     Namedb = cfg.get('DB I/O','Namedb')
@@ -544,6 +553,8 @@ def GenerateGroundDataAlert(site=None,end=None):
     GrndMeasPlotsPath = cfg.get('I/O','GrndMeasPlotsPath')
     print_out_path = out_path + GrndMeasPlotsPath
     print_out_path2 = out_path + GrndMeasPlotsPath + 'TrendingPlots/'
+    
+    
     for path in [print_out_path,print_out_path2]:
         if not os.path.exists(path):
             os.makedirs(path)
@@ -627,7 +638,19 @@ def GenerateGroundDataAlert(site=None,end=None):
     tsn=pd.to_datetime(end).strftime("%Y-%m-%d_%H-%M-%S")
     site_data_to_plot = ground_data_to_plot.groupby('site_id')
     site_data_to_plot.apply(PlotSite,tsn,print_out_path)
-    
+
+    ### Event folder plotting
+    if max(map(lambda x:x in ('l2','l0t','l3'),new_db_release.alert.values)*1):
+        positive_trigger = True
+    else:
+        positive_trigger = False
+        
+    event_out_path = output_file_path(site,'surficial',end = pd.to_datetime(end),positive_trigger = positive_trigger)['event']
+
+    #### Plot to event folder file if site is currently at event monitoring or positive trigger
+    if event_out_path:
+        site_data_to_plot.apply(PlotSite,tsn,event_out_path)
+        crack_alerts = df.groupby(['site_id','crack_id']).apply(crack_eval,event_out_path,end).reset_index()
     
     
     end_time = datetime.now()
