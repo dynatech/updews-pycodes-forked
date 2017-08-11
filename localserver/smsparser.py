@@ -529,7 +529,7 @@ def process_earthquake(msg):
         "longitude, issuer=issuer;") % (datetimestr,magstr,depthstr,
         latstr,longstr,issuerstr)
 
-    print query
+    # print query
 
     query.replace("'NULL'","NULL")
 
@@ -592,7 +592,7 @@ def process_arq_weather(sms):
         query = ("INSERT INTO rain_%s (ts,rain,temperature,humidity,battery1,"
             "battery2,csq) VALUES ('%s',%s,%s,%s,%s,%s,%s)") % (msgname,
             txtdatetime,rain,temp,hum,batv1,batv2,csq)
-        print query
+        # print query
     except ValueError:
         print '>> Error writing query string.', 
         return
@@ -876,32 +876,6 @@ def parse_all_messages(args,allmsgs=[]):
         
     return read_success_list, read_fail_list
     
-def record_surficial_measurements(gnd_meas):
-    # print gnd_meas
-    
-    # dbio.create_table("gndmeas","gndmeas")
-    
-    query = ("INSERT INTO gndmeas (timestamp, meas_type, site_id, "
-        "observer_name, crack_id, meas, weather) VALUES %s"
-        "ON DUPLICATE KEY UPDATE meas = values(meas), "
-        "observer_name = values(observer_name), weather = values(weather);"
-        % (gnd_meas))
-    
-    # print query
-    
-    dbio.commit_to_db(query, 'record_surficial_measurements')
-
-def record_manual_weather(mw_text):
-    # print gnd_meas
-    
-    dbio.create_table("manualweather","manualweather")
-    
-    query = ("INSERT IGNORE INTO manualweather (timestamp, meas_type, site_id,"
-            " observer_name, weatherdesc) VALUES ") + mw_text
-    
-    dbio.commit_to_db(query, 'record_manual_weather')
-
-
 def get_router_ids():
     db, cur = dbio.db_connect()
 
@@ -953,7 +927,7 @@ def process_gateway_msg(msg):
                 
             query = query[:-1]
 
-            print query
+            # print query
             
             if count != 0:
                 print 'count', count
