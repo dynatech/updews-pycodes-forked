@@ -261,7 +261,7 @@ def site_public_alert(PublicAlert, end, pubsym, intsym, opsym):
     
     # most recent surficial alert ts after previous release
     try:
-        surficial = recent_op_trigger[(recent_op_trigger.trigger_source == \
+        surficial = with_ground_data[(with_ground_data.trigger_source == \
                 'surficial')]['alert_symbol'].values[0]
     except:
         surficial = opsym[(opsym.alert_level == -1)&(opsym.trigger_source == \
