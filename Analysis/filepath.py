@@ -1,4 +1,3 @@
-import numpy as np
 import os
 import pandas as pd
 from datetime import datetime, timedelta, time
@@ -11,6 +10,13 @@ def output_file_path(site, plot_type, monitoring_end=False, positive_trigger=Fal
     output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
 
     window,config = rtw.getwindow(pd.to_datetime(end))
+    
+    if window.end.time() > time(8, 0) and window.end.time() <= time(20, 0):
+        shift_start = window.end.strftime('%d %b %Y AM')
+    elif window.end.time() > time(20, 0):
+        shift_start = window.end.strftime('%d %b %Y PM')
+    else:
+        shift_start = (window.end - timedelta(1)).strftime('%d %b %Y PM')
     
     # 3 most recent non-A0 public alert
     query = "SELECT * FROM senslopedb.site_level_alert"
@@ -38,7 +44,8 @@ def output_file_path(site, plot_type, monitoring_end=False, positive_trigger=Fal
         print 'unrecognized plot type; print to %s' %(monitoring_output_path)
 
     if positive_trigger and public_alert['alert'].values[0] == 'A0':
-        event_path = output_path + config.io.outputfilepath + (site + window.end.strftime(' %d %b %Y') + '/').upper()
+        event_path = output_path + config.io.outputfilepath + 'EventMonitoring/' \
+                + (shift_start + '/' + site + '/').upper()
 
     elif (public_alert['alert'].values[0] == 'A0' and not monitoring_end) \
             or (not monitoring_end and public_alert['alert'].values[0] != 'A0' \
@@ -46,32 +53,8 @@ def output_file_path(site, plot_type, monitoring_end=False, positive_trigger=Fal
         event_path = None
 
     else:
-        public_alert = public_alert[public_alert.alert != 'A0']
-        
-        # one prev alert
-        if len(public_alert) == 1:
-            start_monitor = pd.to_datetime(public_alert['timestamp'].values[0])
-        # two prev alert
-        elif len(public_alert) == 2:
-            # one event with two prev alert
-            if pd.to_datetime(public_alert['timestamp'].values[0]) - pd.to_datetime(public_alert['updateTS'].values[1]) <= timedelta(hours=0.5):
-                start_monitor = pd.to_datetime(public_alert['timestamp'].values[1])
-            else:
-                start_monitor = pd.to_datetime(public_alert['timestamp'].values[0])
-        # three prev alert
-        else:
-            if pd.to_datetime(public_alert['timestamp'].values[0]) - pd.to_datetime(public_alert['updateTS'].values[1]) <= timedelta(hours=0.5):
-                # one event with three prev alert
-                if pd.to_datetime(public_alert['timestamp'].values[1]) - pd.to_datetime(public_alert['updateTS'].values[2]) <= timedelta(hours=0.5):
-                    start_monitor = pd.to_datetime(public_alert.timestamp.values[2])
-                # one event with two prev alert
-                else:
-                    start_monitor = pd.to_datetime(public_alert['timestamp'].values[1])
-            else:
-                start_monitor = pd.to_datetime(public_alert['timestamp'].values[0])
-
-        event_path = output_path + config.io.outputfilepath + \
-                (site + start_monitor.strftime(' %d %b %Y') + '/').upper()
+        event_path = output_path + config.io.outputfilepath + 'EventMonitoring/' \
+                + (shift_start + '/' + site + '/').upper()
 
     for i in set([monitoring_output_path, event_path]) - set([None]):
         if not os.path.exists(str(i)):
