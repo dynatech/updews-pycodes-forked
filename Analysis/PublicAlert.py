@@ -7,6 +7,7 @@ import sys
 import rtwindow as rtw
 import querySenslopeDb as q
 import alertgen as a
+import AllRainfall as rain
 
 def RoundTime(date_time):
     # rounds time to 4/8/12 AM/PM
@@ -885,7 +886,7 @@ def SitePublicAlert(PublicAlert, window):
         df = q.GetDBDataFrame(query)
         logger_df = df.groupby('name')
         logger_df.apply(alertgen, window.end)
-        main(site=site, end=window.end, monitoring_end=True)
+        rain.main(site=site, end=window.end, monitoring_end=True)
 
     return PublicAlert
 

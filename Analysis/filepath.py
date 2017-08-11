@@ -73,7 +73,7 @@ def output_file_path(site, plot_type, monitoring_end=False, positive_trigger=Fal
         event_path = output_path + config.io.outputfilepath + \
                 (site + start_monitor.strftime(' %d %b %Y') + '/').upper()
 
-    for i in [monitoring_output_path, event_path]:
+    for i in set([monitoring_output_path, event_path]) - set([None]):
         if not os.path.exists(str(i)):
             os.makedirs(str(i))
 
