@@ -561,7 +561,7 @@ def alert_to_db(df, table_name):
             same_alert = False
         query = "SELECT EXISTS(SELECT * FROM operational_triggers"
         query += " WHERE ts = '%s' AND site_id = %s" %(df['ts_updated'].values[0], df['site_id'].values[0])
-        query += " AND trigger_sym_id)" %df['trigger_sym_id'].values[0]
+        query += " AND trigger_sym_id = %s)" %df['trigger_sym_id'].values[0]
         if get_db_dataframe(query).values[0][0] == 1:
             inDB = True
         else:
