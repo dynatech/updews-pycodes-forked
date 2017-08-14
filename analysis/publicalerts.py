@@ -111,8 +111,13 @@ def site_public_alert(PublicAlert, end, pubsym, intsym, opsym):
     PubAlert = qdb.get_db_dataframe(query)
     try:
         PrevPubAlert = PubAlert['alert_level'].values[0]
+        if PubAlert['alert_type'].values[0] == 'routine':
+            routine = True
+        else:
+            routine = False
     except:
         PrevPubAlert = 0
+        routine = True
     
     # with previous positive alert
     if PrevPubAlert > 0:
@@ -180,8 +185,8 @@ def site_public_alert(PublicAlert, end, pubsym, intsym, opsym):
     last_positive_trigger = positive_trigger.drop_duplicates(['trigger_source', \
             'alert_level'])
     # with ground data
-    if PubAlert['alert_type'].values[0] == 'routine':
-        surficial_ts = start_monitor
+    if routine:
+        surficial_ts = pd.to_datetime(end.date())
     else:
         surficial_ts = release_time(end)-timedelta(hours=4)
     with_ground_data = op_trigger[(op_trigger.alert_level != -1) & \
@@ -190,7 +195,7 @@ def site_public_alert(PublicAlert, end, pubsym, intsym, opsym):
               ((op_trigger.trigger_source == 'subsurface') & \
                (op_trigger.ts_updated >= end)) )]
 
-    if PubAlert['alert_type'].values[0] == 'routine' and len(positive_trigger) != 0:
+    if routine and len(positive_trigger) != 0:
         ts_onset = min(positive_trigger['ts'].values)
     
     # most recent retrigger of positive operational triggers
@@ -270,9 +275,6 @@ def site_public_alert(PublicAlert, end, pubsym, intsym, opsym):
     # internal alert
     internal_alert = internal_alert_symbol(positive_trigger, recent_op_trigger, \
             intsym, rainfall_alert)
-    internal_alerts_df = pd.DataFrame({'ts': [end], 'site_id': [site_id], \
-            'internal_sym': [internal_alert], 'ts_updated': [end]})
-    qdb.alert_to_db(internal_alerts_df, 'internal_alerts')
 
     # checks if surficial and subsurface triggers have current alert level 0
     withdata = []
@@ -476,7 +478,4 @@ def main(end=datetime.now()):
 ################################################################################
 
 if __name__ == "__main__":
-    main()
-    output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
-    sc = qdb.memcached()
-    df = pd.DataFrame(pd.read_json(output_path+sc['fileio']['output_path']+'PublicAlertRefDB.json')['alerts'][0])
+    main(pd.to_datetime('2017-08-14 11:00'))
