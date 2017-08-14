@@ -23,4 +23,9 @@ df.columns = ['ts','crack_id','meas']
 df = df.set_index(['ts'])
 dfajson = df.reset_index().to_json(orient='records',date_format='iso')
 dfajson = dfajson.replace("T"," ").replace("Z","").replace(".000","")
-print dfajson
+
+try:
+    dfajson_data = dfajson
+    print dfajson_data
+except Exception:
+   pass
