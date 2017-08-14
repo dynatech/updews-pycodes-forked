@@ -34,7 +34,10 @@ def parse_surficial_text(text):
     else:
         meas_type = "EVENT"
         
-    data_field = re.split(" ",cleanText,maxsplit=2)[2]
+    try:
+        data_field = re.split(" ",cleanText,maxsplit=2)[2]
+    except IndexError:
+        raise SurficialParserError(c.reply.failmeasen)
 
     # double check site code
     site_code = sms_list[1].lower()
