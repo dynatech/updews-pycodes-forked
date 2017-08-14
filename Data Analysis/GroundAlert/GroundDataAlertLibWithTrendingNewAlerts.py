@@ -549,10 +549,11 @@ def GenerateGroundDataAlert(site=None,end=None):
     roll_window_length = cfg.getfloat('I/O','roll_window_length')
     data_dt = cfg.getfloat('I/O','data_dt')
     num_roll_window_ops = cfg.getfloat('I/O','num_roll_window_ops')
-    
-    GrndMeasPlotsPath = cfg.get('I/O','GrndMeasPlotsPath')
-    print_out_path = out_path + GrndMeasPlotsPath
-    print_out_path2 = out_path + GrndMeasPlotsPath + 'TrendingPlots/'
+        
+    ### Use filepath.py to get output folder
+    monitoring_out_path = output_file_path(site,'surficial',end = pd.to_datetime(end))['monitoring_output']
+    print_out_path = monitoring_out_path
+    print_out_path2 = monitoring_out_path + 'TrendingPlots/'
     
     
     for path in [print_out_path,print_out_path2]:
