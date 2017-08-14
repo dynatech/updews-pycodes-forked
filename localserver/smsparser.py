@@ -740,7 +740,8 @@ def spawn_alert_gen(tsm_name, timestamp):
 
 def process_surficial_observation(msg):
     c = cfg.config()
-    proceed_with_analysis = False
+    sc = mc.get('server_config')
+    
     obv = []
     try:
         obv = surfp.parse_surficial_text(msg.data)
@@ -749,7 +750,7 @@ def process_surficial_observation(msg):
         surfp.update_surficial_data(obv,mo_id)
         server.write_outbox_message_to_db("READ-SUCCESS: \n" + msg.data,
             c.smsalert.communitynum,'users')
-        server.write_outbox_message_to_db(c.reply.successen, msg.simnum,'users')
+        # server.write_outbox_message_to_db(c.reply.successen, msg.simnum,'users')
         proceed_with_analysis = True
     except surfp.SurficialParserError as e:
         print "stre(e)", str(e)
@@ -759,7 +760,7 @@ def process_surficial_observation(msg):
 
         server.write_outbox_message_to_db("READ-FAIL: (%s)\n%s" % 
             (errortype,msg.data),c.smsalert.communitynum,'users')
-        server.write_outbox_message_to_db(str(e), msg.simnum,'users')
+        # server.write_outbox_message_to_db(str(e), msg.simnum,'users')
     except KeyError:
         print '>> Error: Possible site code error'
         server.write_outbox_message_to_db("READ-FAIL: (site code)\n%s" % 
@@ -770,9 +771,10 @@ def process_surficial_observation(msg):
     #         msg.data,c.smsalert.communitynum,'users')
 
     # spawn surficial measurement analysis
+    proceed_with_analysis = sc['subsurface']['enable_analysis']
+    # proceed_with_analysis = False
     if proceed_with_analysis:
-        sc = mc.get('server_config')
-        surf_cmd_line = "python %s %s '%s' > %s 2>&1" % (sc['fileio']['gndalert1'],
+        surf_cmd_line = "python %s %d '%s' > %s 2>&1" % (sc['fileio']['gndalert1'],
             obv['site_id'], obv['ts'], sc['fileio']['surfscriptlogs'])
         p = subprocess.Popen(surf_cmd_line, stdout=subprocess.PIPE, shell=True, 
             stderr=subprocess.STDOUT)

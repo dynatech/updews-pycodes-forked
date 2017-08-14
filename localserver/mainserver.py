@@ -135,7 +135,7 @@ def write_outbox_message_to_db(message='',recepients='',table='users'):
             # print query
     
     query = query[:-1]
-    print query        
+    # print query        
     dbio.commit_to_db(query, "write_outbox_message_to_db")
     
 def check_alert_messages():
