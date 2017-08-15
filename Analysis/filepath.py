@@ -6,7 +6,18 @@ import rtwindow as rtw
 import querySenslopeDb as q
 
 def output_file_path(site, plot_type, monitoring_end=False, positive_trigger=False, end=datetime.now()):
-    
+
+    if site == 'bat':
+        site = 'bto'
+    elif site == 'man':
+        site = 'mng'
+    elif site == 'pan':
+        site = 'png'
+    elif site == 'pob':
+        site= 'jor'
+    elif site == 'tag':
+        site = 'tga'
+
     output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
 
     window,config = rtw.getwindow(pd.to_datetime(end))
