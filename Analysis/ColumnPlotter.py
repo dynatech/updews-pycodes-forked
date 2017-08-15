@@ -600,7 +600,7 @@ def main(monitoring, window, config, plotvel_start='', plotvel_end='', \
     monitoring_vel = monitoring_vel.loc[(monitoring_vel.ts >= window.start)&(monitoring_vel.ts <= window.end)]
 
     if realtime:
-        file_path = {'event': np.nan}
+        file_path = {'event': None}
         output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
         file_path['monitoring_output'] = output_path + config.io.outputfilepath+'realtime/'
         if not os.path.exists(file_path['monitoring_output']):
@@ -630,7 +630,7 @@ def main(monitoring, window, config, plotvel_start='', plotvel_end='', \
             facecolor='w', edgecolor='w', orientation='landscape', mode='w',
             bbox_extra_artists=(lgd,))
 
-    if file_path['event'] != None:
+    if file_path['event']:
         plt.savefig(file_path['event'] + colname + '_ColPos_' + \
                 str(window.end.strftime('%Y-%m-%d_%H-%M')) + '.png', dpi=160,
                 facecolor='w', edgecolor='w', orientation='landscape', mode='w',
