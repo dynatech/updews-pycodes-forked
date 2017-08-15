@@ -43,9 +43,14 @@ def heatmap(col, t_timestamp, t_win = '1d'):
 		timew = 24
 		interval = '30T'
 	elif (t_win == '3d'):
-		for_base = 0      
-		timew = 72
-		interval = '120T'
+         if (int(t_timestamp[11]+t_timestamp[12]) == 30):
+		    for_base = 90      
+		    timew = 72
+		    interval = '120T'
+         else:
+		    for_base = 60      
+		    timew = 72
+		    interval = '120T'             
 	elif (t_win == '30d'):
 		for_base = int(t_timestamp[11]+t_timestamp[12])  
 		timew = 720
