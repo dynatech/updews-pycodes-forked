@@ -808,13 +808,7 @@ def SitePublicAlert(PublicAlert, window):
         PublicAlert.loc[alert_index] = [ts, PublicAlert['site'].values[0], 'public', public_alert, window.end, palert_source, internal_alert, validity, sensor_alert, rain_alert, ground_alert, retriggerTS, tech_info]
     else:
         PublicAlert.loc[alert_index] = [window.end, PublicAlert['site'].values[0], 'public', public_alert, window.end, palert_source, internal_alert, validity, sensor_alert, rain_alert, ground_alert, retriggerTS, tech_info]
-        
-    InternalAlert = PublicAlert.loc[PublicAlert.site == site][['timestamp', 'site', 'internal_alert', 'updateTS']]
-    InternalAlert['source'] = 'internal'
-    InternalAlert = InternalAlert.rename(columns = {'internal_alert': 'alert'})
-    InternalAlert = InternalAlert[['timestamp', 'site', 'source', 'alert', 'updateTS']]
-    alert_toDB(InternalAlert, 'site_level_alert', window, 'internal')
-    
+            
     SitePublicAlert = PublicAlert.loc[PublicAlert.site == site][['timestamp', 'site', 'source', 'alert', 'updateTS']]
     try:
         SitePublicAlert['timestamp'] = alertTS

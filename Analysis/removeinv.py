@@ -32,10 +32,6 @@ def removeinvpub(df):
         query += " and timestamp = '%s'" %ts
         cur.execute(query)
         db.commit()
-        query = "DELETE FROM site_level_alert where site = '%s' and source = 'internal' and alert like '%s'" %(df['site'].values[0], df['alert'].values[0] + '%')
-        query += " and timestamp = '%s'" %ts
-        cur.execute(query)
-        db.commit()
         db.close()
     except:
         pass
@@ -89,7 +85,7 @@ def main_inv(ts=datetime.now()):
     alertdf = alertdf.reset_index(drop=True)
     alertdf = alertdf.loc[(alertdf.alert != 'l0t')]
     
-    # remove invalid public and internal alert in db
+    # remove invalid public alert in db
     invalertdf = alertdf.loc[alertdf.timestamp >= ts - timedelta(hours=3)]
     invalertdf = invalertdf[~(invalertdf.source.str.contains('sensor'))]
     invalertdf = invalertdf.loc[(invalertdf.alert != 'A1')]
