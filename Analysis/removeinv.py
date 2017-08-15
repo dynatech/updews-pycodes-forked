@@ -102,6 +102,7 @@ def main_inv(ts=datetime.now()):
     withalert = q.GetDBDataFrame(query)
     sitewithalert = withalert.groupby('site')
     alertdf = alertdf[alertdf.site.isin(withalert['site'].values)]
+    alertdf = alertdf[alertdf.source != 'ground']
     finaldf = sitewithalert.apply(currentinv, df=alertdf)
     finaldf = finaldf.sort('timestamp', ascending=False).drop_duplicates(['site','source'], keep='first').reset_index(drop='True')
     finaldf.to_csv('InvalidAlert.txt', sep=':', header=True, index=False, mode='w')
