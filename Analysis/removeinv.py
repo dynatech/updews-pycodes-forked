@@ -73,7 +73,7 @@ def currentinv(withalert, df):
 
 def main_inv(ts=datetime.now()):
     # sites with invalid alert
-    query = "SELECT * FROM smsalerts where ts_set >= '%s' and alertstat = 'invalid'" %(pd.to_datetime(ts) - timedelta(1))
+    query = "SELECT * FROM smsalerts where ts_set >= '%s' and alertstat = 'invalid'" %(pd.to_datetime(ts) - timedelta(30))
     df = q.GetDBDataFrame(query)
     
     # wrong format in db
@@ -134,6 +134,6 @@ def main_l0t(ts=datetime.now()):
 
 if __name__ == '__main__':
     start = datetime.now()
-#    main_l0t()
+    main_l0t()
     main_inv()
     print 'runtime =', str(datetime.now() - start)
