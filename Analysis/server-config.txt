@@ -1,6 +1,6 @@
 [DB I/O]
-Hostdb = 192.168.150.129
-#Hostdb = 127.0.0.1
+#Hostdb = 192.168.150.129
+Hostdb = 127.0.0.1
 Userdb = root
 Passdb = senslope
 Namedb = senslopedb

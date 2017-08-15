@@ -11,7 +11,7 @@ def output_file_path(site, plot_type, monitoring_end=False, positive_trigger=Fal
 
     window,config = rtw.getwindow(pd.to_datetime(end))
     
-    if window.end.time() > time(8, 0) and window.end.time() <= time(20, 0):
+    if window.end.time() >= time(8, 0) and window.end.time() < time(20, 0):
         shift_start = window.end.strftime('%d %b %Y AM')
     elif window.end.time() > time(20, 0):
         shift_start = window.end.strftime('%d %b %Y PM')
