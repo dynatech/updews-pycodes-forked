@@ -104,7 +104,7 @@ def main(tsm_name='', end='', end_mon=False):
 #            or (public_alert.alert.values[0] == 'A0'
 #            and RoundReleaseTime(pd.to_datetime(public_alert.timestamp.values[0])) \
 #            == RoundReleaseTime(window.end)):
-    plotter.main(data, tsm_props, window, sc, realtime=False)
+#    plotter.main(data, tsm_props, window, sc, realtime=False)
 
 #######################
 
