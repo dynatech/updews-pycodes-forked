@@ -33,7 +33,6 @@ from datetime import timedelta
 #t_win = raw_input('select monitoring window[1d, 3d, 30d]: ').lower()
 
 def heatmap(col, t_timestamp, t_win = '1d'):
-	
 	df_merge = pd.DataFrame()
 	smin=0; smax=255;mini = 0; maxi = 1300
 	
@@ -43,16 +42,17 @@ def heatmap(col, t_timestamp, t_win = '1d'):
 		timew = 24
 		interval = '30T'
 	elif (t_win == '3d'):
-         if (int(t_timestamp[11]+t_timestamp[12]) == 30):
-		    for_base = 90      
+         if (int(t_timestamp[14]+t_timestamp[15]) == 30):  
+#		    print int(t_timestamp[14]+t_timestamp[15])		                                                           
+		    for_base = 90   
 		    timew = 72
 		    interval = '120T'
-         else:
-		    for_base = 60      
+         else:                     
+		    for_base = 60     
 		    timew = 72
 		    interval = '120T'             
-	elif (t_win == '30d'):
-		for_base = int(t_timestamp[11]+t_timestamp[12])  
+	elif (t_win == '30d'):     
+		for_base = 30
 		timew = 720
 		interval = '24H'
 	else:
@@ -107,10 +107,15 @@ def heatmap(col, t_timestamp, t_win = '1d'):
 				
 	
 
+#
+#site = sys.argv[1]
+#tdate = sys.argv[2].replace('T',' ').replace('%20',' ') #"2017-08-14 17:30:00"
+#days = sys.argv[3]
 
-site = sys.argv[1]
-tdate = sys.argv[2].replace("T"," ").replace("%20"," ")
-days = sys.argv[3]
-	
+
+
+site = 'hinsa'
+tdate = "2017-08-14 19:30:00"
+days = '30d'	
 
 heatmap(site, tdate, t_win = days)
