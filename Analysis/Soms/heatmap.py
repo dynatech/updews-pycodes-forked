@@ -54,7 +54,7 @@ def heatmap(col, t_timestamp, t_win = '1d'):
 	elif (t_win == '30d'):     
 		for_base = 30
 		timew = 720
-		interval = '24H'
+		interval = 'D'
 	else:
 		print "invalid monitoring window"
 	
@@ -108,14 +108,14 @@ def heatmap(col, t_timestamp, t_win = '1d'):
 	
 
 #
-#site = sys.argv[1]
-#tdate = sys.argv[2].replace('T',' ').replace('%20',' ') #"2017-08-14 17:30:00"
-#days = sys.argv[3]
+site = sys.argv[1]
+tdate = sys.argv[2].replace('T',' ').replace('%20',' ') #"2017-08-14 17:30:00"
+days = sys.argv[3]
 
 
 
-site = 'hinsa'
-tdate = "2017-08-14 19:30:00"
-days = '30d'	
+#site = 'hinsa'
+#tdate = "2017-08-14 19:30:00"
+#days = '30d'	
 
 heatmap(site, tdate, t_win = days)
