@@ -379,40 +379,23 @@ def get_single_lgdpm(tsm_name, node_id, startTS):
 
     return lgdpm
 
-#create_sms_alerts
-#    creates table named 'sms_alerts' which contains details for alert validation
-def create_sms_alerts():    
-    query = "CREATE TABLE `sms_alerts` ("
-    query += "  `alert_id` INT(7) UNSIGNED NOT NULL AUTO_INCREMENT,"
-    query += "  `ts_set` TIMESTAMP NULL,"
-    query += "  `ts_ack` TIMESTAMP NULL,"
-    query += "  `trigger_id` INT(10) UNSIGNED NULL,"
-    query += "  PRIMARY KEY (`alert_id`),"
-    query += "  INDEX `fk_sms_alerts_operational_triggers1_idx` (`trigger_id` ASC),"
-    query += "  CONSTRAINT `fk_sms_alerts_operational_triggers1`"
-    query += "    FOREIGN KEY (`trigger_id`)"
-    query += "    REFERENCES `operational_triggers` (`trigger_id`)"
-    query += "    ON DELETE NO ACTION"
-    query += "    ON UPDATE CASCADE)"
-    
-    execute_query(query)
-
 #create_alert_status
 #    creates table named 'alert_status' which contains alert valid/invalid status
 def create_alert_status():
     query = "CREATE TABLE `alert_status` ("
     query += "  `stat_id` INT(7) UNSIGNED NOT NULL AUTO_INCREMENT,"
-    query += "  `alert_id` INT(7) UNSIGNED NULL,"
-    query += "  `ts` TIMESTAMP NULL,"
+    query += "  `ts_last_retrigger` TIMESTAMP NULL,"
+    query += "  `trigger_id` INT(10) UNSIGNED NULL,"
+    query += "  `ts_set` TIMESTAMP NULL,"
+    query += "  `ts_ack` TIMESTAMP NULL,"
     query += "  `alert_status` TINYINT(1) UNSIGNED NULL,"
-    query += "  `ts_updated` TIMESTAMP NULL,"
     query += "  `remarks` VARCHAR(450) NULL,"
     query += "  `user_id` SMALLINT(6) UNSIGNED NULL,"
     query += "  PRIMARY KEY (`stat_id`),"
-    query += "  INDEX `fk_alert_status_sms_alerts1_idx` (`alert_id` ASC),"
-    query += "  CONSTRAINT `fk_alert_status_sms_alerts1`"
-    query += "    FOREIGN KEY (`alert_id`)"
-    query += "    REFERENCES `sms_alerts` (`alert_id`)"
+    query += "  INDEX `fk_alert_status_operational_triggers1_idx` (`trigger_id` ASC),"
+    query += "  CONSTRAINT `fk_alert_status_operational_triggers1`"
+    query += "    FOREIGN KEY (`trigger_id`)"
+    query += "    REFERENCES `operational_triggers` (`trigger_id`)"
     query += "    ON DELETE NO ACTION"
     query += "    ON UPDATE CASCADE,"
     query += "  INDEX `fk_alert_status_users1_idx` (`user_id` ASC),"
@@ -420,7 +403,10 @@ def create_alert_status():
     query += "    FOREIGN KEY (`user_id`)"
     query += "    REFERENCES `users` (`user_id`)"
     query += "    ON DELETE NO ACTION"
-    query += "    ON UPDATE CASCADE)"
+    query += "    ON UPDATE CASCADE,"
+    query += "  UNIQUE INDEX `uq_alert_status`"
+    query += "    (`ts_last_retrigger` ASC, `trigger_id` ASC))"
+
     
     execute_query(query)
 
