@@ -42,6 +42,7 @@ def site_alerts(curr_trig, ts, release_data_ts):
     alert_status = site_curr_trig[['ts_updated', 'trigger_id']]                
     alert_status = alert_status.rename(columns = {'ts_updated': 
             'ts_last_retrigger'})
+    alert_status['ts_set'] = datetime.now()
     qdb.push_db_dataframe(alert_status, 'alert_status', index=False)
 
 def main():
