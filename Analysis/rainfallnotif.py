@@ -25,11 +25,10 @@ def get_end_ts():
 
 def popupmsg(msg):
     popup = tk.Tk()
-    popup.wm_title("!")
+    popup.wm_title("Rainfall Notification")
     label = ttk.Label(popup, text=msg, font=("Verdana", 15))
     label.pack(side="top", fill="x", pady=10)
-    B1 = ttk.Button(popup, text="Okay", command = popup.destroy)
-    B1.pack()
+    ttk.Button(popup, text="Okay", command = popup.destroy).pack()
     popup.mainloop()
 
 def to_write_notif(site, end):
