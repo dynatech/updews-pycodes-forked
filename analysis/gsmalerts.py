@@ -10,20 +10,22 @@ def site_alerts(curr_trig, ts, release_data_ts):
     query = "SELECT site_id, stat.trigger_id, trigger_source, alert_level FROM"
     query += "  (SELECT * FROM alert_status"
     query += "  WHERE ts_last_retrigger >= '%s') as stat" %(ts - timedelta(1))
-    query += "    LEFT JOIN"
+    query += "    INNER JOIN"
     query += "  (SELECT trigger_id, site_id, trigger_source, alert_level FROM"
     query += "    (SELECT * FROM operational_triggers"
     query += "     WHERE site_id = %s) as op" %site_id
     query += "      INNER JOIN"
-    query += "    operational_trigger_symbols as sym) as sub"
+    query += "    operational_trigger_symbols as sym"
+    query += "	  ON op.trigger_sym_id = sym.trigger_sym_id) as sub"
     query += "  ON stat.trigger_id = sub.trigger_id"
-    sent_alert = qdb.get_db_dataframe(query)        
+    sent_alert = qdb.get_db_dataframe(query)
 
     site_curr_trig = curr_trig[~curr_trig.trigger_id.isin(sent_alert.trigger_id)]
     site_curr_trig = site_curr_trig.sort_values('alert_level', ascending=False)
     site_curr_trig = site_curr_trig.drop_duplicates('trigger_source')
 
     if len(site_curr_trig) == 0:
+        qdb.print_out('no new trigger for site_id %s' %site_id)
         return
 
     if len(sent_alert) == 0:
@@ -39,8 +41,8 @@ def site_alerts(curr_trig, ts, release_data_ts):
         site_curr_trig = site_curr_trig[site_curr_trig.alert_level >
                 max(sent_alert.alert_level)]
         
-    alert_status = site_curr_trig[['ts_updated', 'trigger_id']]                
-    alert_status = alert_status.rename(columns = {'ts_updated': 
+    alert_status = site_curr_trig[['ts', 'trigger_id']]                
+    alert_status = alert_status.rename(columns = {'ts': 
             'ts_last_retrigger'})
     alert_status['ts_set'] = datetime.now()
     qdb.push_db_dataframe(alert_status, 'alert_status', index=False)
@@ -67,7 +69,7 @@ def main():
     except:
         curr_trig = pd.DataFrame()
         qdb.create_operational_triggers()
-        
+
     if len(curr_trig) == 0:
         qdb.print_out('no new trigger')
         return
