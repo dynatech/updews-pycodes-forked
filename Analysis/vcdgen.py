@@ -74,9 +74,12 @@ def colpos(monitoring_vel, window, config, num_nodes, seg_len, fixpoint):
     
     return colposdf
 
-def velocity(monitoring_vel, window, config, num_nodes):
+def velocity(monitoring_vel, window, config, num_nodes, vel_start):
+    if vel_start == '':
+        vel_start = window.end - timedelta(hours=3)
+    
     #velplots
-    vel = monitoring_vel.loc[(monitoring_vel.ts >= window.start) & (monitoring_vel.ts <= window.end)]
+    vel = monitoring_vel.loc[(monitoring_vel.ts >= vel_start) & (monitoring_vel.ts <= window.end)]
     #vel_xz
     vel_xz = vel[['ts', 'vel_xz', 'id']]
     velplot_xz,L2_xz,L3_xz = plotter.vel_classify(vel_xz, config, num_nodes, linearvel=False)
@@ -119,14 +122,14 @@ def displacement(monitoring_vel, window, config, num_nodes, fixpoint):
 
     return dispdf
 
-def vcdgen(colname, endTS='', startTS='', hour_interval='', fixpoint='bottom'):
+def vcdgen(colname, endTS='', startTS='', hour_interval='', fixpoint='bottom', vel_start=''):
     
     monitoring_vel, window, config, num_nodes, seg_len = proc('vcdgen', colname, endTS, startTS, hour_interval, fixpoint)    
 
     dispdf = displacement(monitoring_vel, window, config, num_nodes, fixpoint)
     
     colposdf = colpos(monitoring_vel, window, config, num_nodes, seg_len, fixpoint)
-    veldf = velocity(monitoring_vel, window, config, num_nodes)
+    veldf = velocity(monitoring_vel, window, config, num_nodes, vel_start)
 
     vcd = pd.DataFrame({'v': [veldf], 'c': [colposdf], 'd': [dispdf]})
     vcd_json = vcd.to_json(orient="records", date_format="iso")
