@@ -181,7 +181,7 @@ def getGndMeas(text):
 
 def test():
 
-  ret = getGndMeas("ROUTINE CAR MAR 11 2017 11:10AM E 91CM F 83CM G 57.5CM H 111CM UMUULAN JUNJUNMLUAR")
+  ret = getGndMeas("ROUTINE BAT SEP 11 2017 7:30 AM A 139.7 CM B 230.7 CM C 126.8 CM MAARAW CECILIO CABARDO ANABEL PAJUAY ")
 
 
 if __name__ == "__main__":

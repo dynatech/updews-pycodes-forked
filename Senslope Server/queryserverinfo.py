@@ -137,8 +137,9 @@ def getNumbersFromList(personnel_list):
 def sendEventMonitoringReminder():
 	next_shift = dt.today()+td(hours=13)
 	shifts = getShifts(next_shift)
-	report_dt = shifts[0][1]
-
+	report_dt = shifts[0][0]
+	# print shifts
+	
 	position = ['iompmt','iompct','oomps','oompmt','oompct']
 	position_dict = {}
 	for pos,per in zip(position,shifts[0][1:]):
