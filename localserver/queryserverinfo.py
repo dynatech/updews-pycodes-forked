@@ -57,12 +57,12 @@ def get_number_of_reporter(datedt):
 	return num
 
 def get_name_of_staff(number):
-	query = """select nickname from dewslcontacts 
-		where numbers like '%s%s%s' """ % ('%',number[-7:],'%')
+	query =  ("select t1.user_id, t2.nickname from user_mobile t1 inner join users t2 on "
+		"t1.user_id = t2.user_id where t1.sim_num = '%s';") % (number)
 
-	print query
+	# print query
 
-	name = dbio.query_database(query,'customquery')[0][0]
+	name = dbio.query_database(query,'customquery')[0]
 
 	return name
 
