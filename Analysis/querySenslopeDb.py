@@ -727,7 +727,7 @@ def GetSingleLGDPM(site, node, startTS):
         lgdpm.columns = ['ts','id','x','y','z','name']
     lgdpm = lgdpm[['ts', 'id', 'x', 'y', 'z','name']]
 
-    lgdpm = filterSensorData.applyFilters(lgdpm)
+    lgdpm = filterSensorData.applyFilters(lgdpm, True, True, False, False, False)
     lgdpm = lgdpm.sort_index(ascending = False)[0:1]
     
     return lgdpm
