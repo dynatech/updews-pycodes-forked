@@ -32,7 +32,7 @@ for site in df.name:
    print filtered_data
 new_df = pd.DataFrame(all_data)
 new_df.columns = ['site','count','latest']
-new_df.to_csv('//var//www//htdocs//temp//data//sensor_data.csv')
+new_df.to_csv('//var//www//html//temp//data//sensor_data.csv')
 #dfajson = new_df.reset_index().to_json(orient="records",date_format='iso')
 #dfajson = dfajson.replace("T"," ").replace("Z","").replace(".000","")
 #print dfajson
