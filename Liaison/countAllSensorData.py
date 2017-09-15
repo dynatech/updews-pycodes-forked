@@ -29,7 +29,7 @@ for site in df.name:
         filtered_data.append('null')
         
    all_data.append(filtered_data)
-   
+   print filtered_data
 new_df = pd.DataFrame(all_data)
 new_df.columns = ['site','count','latest']
 new_df.to_csv('//var//www//htdocs//temp//data//sensor_data.csv')
