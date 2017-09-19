@@ -20,7 +20,7 @@ for i, day in enumerate(list_days):
     fdate = tdate - td(days=t_num[i])
     print fdate,tdate
     engine = create_engine('mysql+pymysql://root:senslope@127.0.0.1/senslopedb')
-     query = "SELECT name FROM senslopedb.site_column_props order by name asc"
+    query = "SELECT name FROM senslopedb.site_column_props order by name asc"
     df = pd.io.sql.read_sql(query,engine)
     all_data= []
     for site in df.name:
