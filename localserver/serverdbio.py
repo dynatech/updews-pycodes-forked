@@ -269,7 +269,7 @@ def query_database(query, identifier='', instance='local'):
     db, cur = db_connect(instance)
     a = ''
 
-    print query, identifier
+    # print query, identifier
     try:
         a = cur.execute(query)
         # db.commit()

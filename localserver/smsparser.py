@@ -556,6 +556,9 @@ def process_arq_weather(sms):
         if msgname:
             print ">> Number registered as", msgname
             msgname_contact = msgname
+        else:
+            print ">> None type"
+            return
             
         # else:
             # print ">> New number", sender
@@ -741,6 +744,7 @@ def spawn_alert_gen(tsm_name, timestamp):
 def process_surficial_observation(msg):
     c = cfg.config()
     sc = mc.get('server_config')
+    has_parse_error = False
     
     obv = []
     try:
@@ -757,6 +761,7 @@ def process_surficial_observation(msg):
         errortype = re.search("(WEATHER|DATE|TIME|GROUND MEASUREMENTS|NAME|CODE)", 
             str(e).upper()).group(0)
         print ">> Error in manual ground measurement SMS", errortype
+        has_parse_error = True
 
         server.write_outbox_message_to_db("READ-FAIL: (%s)\n%s" % 
             (errortype,msg.data),c.smsalert.communitynum,'users')
@@ -765,6 +770,7 @@ def process_surficial_observation(msg):
         print '>> Error: Possible site code error'
         server.write_outbox_message_to_db("READ-FAIL: (site code)\n%s" % 
             (msg.data),c.smsalert.communitynum,'users')
+        has_parse_error = True
     # except:
     #     # pass
     #     server.write_outbox_message_to_db("READ-FAIL: (Unhandled) \n" + 
@@ -773,7 +779,7 @@ def process_surficial_observation(msg):
     # spawn surficial measurement analysis
     proceed_with_analysis = sc['subsurface']['enable_analysis']
     # proceed_with_analysis = False
-    if proceed_with_analysis:
+    if proceed_with_analysis and not has_parse_error:
         surf_cmd_line = "python %s %d '%s' > %s 2>&1" % (sc['fileio']['gndalert1'],
             obv['site_id'], obv['ts'], sc['fileio']['surfscriptlogs'])
         p = subprocess.Popen(surf_cmd_line, stdout=subprocess.PIPE, shell=True, 
@@ -818,8 +824,8 @@ def parse_all_messages(args,allmsgs=[]):
             #     isMsgProcSuccess = qsi.process_server_info_request(msg)
             elif re.search("^SENDGM ",msg.data.upper()):
                 isMsgProcSuccess = qsi.server_messaging(msg)
-            # elif re.search("^ACK \d+ .+",msg.data.upper()):
-            #     isMsgProcSuccess = amsg.process_ack_to_alert(msg)   
+            elif re.search("^SANDBOX ACK \d+ .+",msg.data.upper()):
+                isMsgProcSuccess = amsg.process_ack_to_alert(msg)   
             elif re.search("^ *(R(O|0)*U*TI*N*E )|(EVE*NT )", msg.data.upper()):
                 process_surficial_observation(msg)                  
             elif re.search("^[A-Z]{4,5}\*[xyabcXYABC]\*[A-F0-9]+\*[0-9]+T?$",
