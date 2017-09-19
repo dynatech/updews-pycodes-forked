@@ -6,7 +6,7 @@ import publicalerts as pub
 
 def site_alerts(curr_trig, ts, release_data_ts):
     site_id = curr_trig['site_id'].values[0]
-    
+
     query = "SELECT site_id, stat.trigger_id, trigger_source, alert_level FROM"
     query += "  (SELECT * FROM alert_status"
     query += "  WHERE ts_last_retrigger >= '%s') as stat" %(ts - timedelta(1))
@@ -20,7 +20,12 @@ def site_alerts(curr_trig, ts, release_data_ts):
     query += "  ON stat.trigger_id = sub.trigger_id"
     sent_alert = qdb.get_db_dataframe(query)
 
-    site_curr_trig = curr_trig[~curr_trig.trigger_id.isin(sent_alert.trigger_id)]
+    query = "SELECT * FROM alert_status"
+    query += " WHERE trigger_id in (%s)" \
+            %(','.join(map(lambda x: str(x), set(curr_trig['trigger_id'].values))))
+    written = qdb.get_db_dataframe(query)
+
+    site_curr_trig = curr_trig[~curr_trig.trigger_id.isin(written.trigger_id)]
     site_curr_trig = site_curr_trig.sort_values('alert_level', ascending=False)
     site_curr_trig = site_curr_trig.drop_duplicates('trigger_source')
 
