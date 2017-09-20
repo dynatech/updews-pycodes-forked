@@ -9,8 +9,9 @@ import sys
 import requests
 import csv
 import json
+import os
 
-list_days =['3days','1week','2weeks','1month','3months','6months']
+list_days =['3days']
 t_num =[3,7,14,31,90,180]
 total_data = []
 for i, day in enumerate(list_days):
@@ -24,14 +25,21 @@ for i, day in enumerate(list_days):
     df = pd.io.sql.read_sql(query,engine)
     all_data= []
     for site in df.name:
-       filtered_data =[]
-       query_latest = "select * from senslopedb.%s  where timestamp between '%s' and '%s' order by timestamp desc"%(site,fdate,tdate)
+       collected = []
+       query_latest = "select timestamp,id from senslopedb.%s  where timestamp between '%s' and '%s' order by timestamp desc"%(site,fdate,tdate)
        df_latest = pd.io.sql.read_sql(query_latest,engine)
-       print site
-       filtered_data.append(site)
-       filtered_data.append(len(df_latest))   
-       all_data.append(filtered_data)
-    new_df = pd.DataFrame(all_data)
-    new_df.columns = ['site','count']
-    new_df['range']= days
-    new_df.to_csv('//var//www//html//temp//data//sensor_data_%s.csv'%(list_days[i]))
+       dfa = pd.DataFrame(df_latest)
+       dfajson = dfa.reset_index().to_json(orient="records",date_format='iso')
+       dfajson = dfajson.replace("T"," ").replace("Z","").replace(".000","")
+       collected.append({'site':site,'data':dfajson})
+       all_data.append({'item':collected})
+    all_data = pd.DataFrame(all_data)
+    dfajson_all = all_data.to_json(orient="records",date_format='iso')
+    dfajson_all = dfajson_all.replace("T"," ").replace("Z","").replace(".000","")
+#    print dfajson_all
+    script_dir = os.path.dirname(__file__)
+    file_path = os.path.join(script_dir, '//var//www//html//temp//data//json_sensor_data.json')
+    with open(file_path, "w") as json_file:
+       json_string = json.dumps(dfajson_all)
+       json_file.write(json_string)
+       
