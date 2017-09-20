@@ -29,17 +29,6 @@ for i, day in enumerate(list_days):
        query_latest = "select timestamp,id from senslopedb.%s  where timestamp between '%s' and '%s' order by timestamp desc"%(site,fdate,tdate)
        df_latest = pd.io.sql.read_sql(query_latest,engine)
        dfa = pd.DataFrame(df_latest)
-       dfajson = dfa.reset_index().to_json(orient="records",date_format='iso')
-       dfajson = dfajson.replace("T"," ").replace("Z","").replace(".000","")
-       collected.append({'site':site,'data':dfajson})
-       all_data.append({'item':collected})
-    all_data = pd.DataFrame(all_data)
-    dfajson_all = all_data.to_json(orient="records",date_format='iso')
-    dfajson_all = dfajson_all.replace("T"," ").replace("Z","").replace(".000","")
-#    print dfajson_all
-    script_dir = os.path.dirname(__file__)
-    file_path = os.path.join(script_dir, '//var//www//html//temp//data//json_sensor_data.json')
-    with open(file_path, "w") as json_file:
-       json_string = json.dumps(dfajson_all)
-       json_file.write(json_string)
+       dfa.to_csv('//var//www//html//temp//data//json_sensor//%s_json_3days.csv'%(site))
+       
        
