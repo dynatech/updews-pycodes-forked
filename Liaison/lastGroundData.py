@@ -35,6 +35,8 @@ gndmeas_table = gndmeas_table.reset_index(level=1, drop=True).reset_index()
 gndmeas_table['crack_id'] = gndmeas_table['level_1']
 gndmeas_table = gndmeas_table.set_index('crack_id')[sorted(last10ts)]
 gndmeas_table = gndmeas_table[len(gndmeas_table.index) - len(set(gndmeas_table.index)) : len(gndmeas_table.index)]
+gndmeas_table = gndmeas_table.fillna('nd')
+
 
 dfajson = gndmeas_table.reset_index().to_json(orient='records',date_format='iso')
 dfajson = dfajson.replace("T"," ").replace("Z","").replace(".000","")
