@@ -42,6 +42,7 @@ def compReadQuery(schema, query):
     request = """{"dir":0,"action":"read",
                   "query":"%s",
                   "schema":"%s"}""" % (query, schema)
+    # print request
     return request
 
 #Modifier Query sent to Web Socket Server

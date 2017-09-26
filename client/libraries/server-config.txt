@@ -1,0 +1,6 @@
+[DB I/O]
+Hostdb = 192.168.150.129
+Userdb = root
+Passdb = senslope
+NamedbMasync = masynckaiser
+Printtostdout = True
