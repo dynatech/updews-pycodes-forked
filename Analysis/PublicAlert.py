@@ -89,6 +89,8 @@ def alertgen(df, end):
     name = df['name'].values[0]
     query = "SELECT max(timestamp) FROM %s" %name
     ts = pd.to_datetime(q.GetDBDataFrame(query).values[0][0])
+    if ts == None:
+        return
     if ts > end - timedelta(hours=12):
         if ts > end:
             ts = end
