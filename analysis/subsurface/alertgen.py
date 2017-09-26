@@ -58,6 +58,8 @@ def main(tsm_name='', end='', end_mon=False):
             end = pd.to_datetime(sys.argv[2])
         except:
             end = datetime.now()
+    else:
+        end = pd.to_datetime(end)
     
     window, sc = rtw.get_window(end)
 

@@ -366,16 +366,10 @@ def get_node_status(tsm_id, status=4):
 #   Output:
 #       returns the dataframe for the last good data prior to the monitoring window
     
-def get_single_lgdpm(tsm_name, node_id, startTS):
-    query = "SELECT ts,node_id, xval, yval, zval "
-    query += "FROM %s WHERE node_id IN (%s) AND ts < '%s' AND ts >= '%s' " %('tilt_'+tsm_name, ','.join(map(str, node_id)), startTS, startTS-timedelta(3))
-    if len(tsm_name) == 5:
-        query += "and (type_num = 32 or type_num = 11) "        
-    query += "ORDER BY ts DESC"
-    
-    lgdpm = get_db_dataframe(query)   
-    lgdpm.columns = ['ts','node_id','x','y','z']        
-    lgdpm['tsm_name'] = tsm_name
+def get_single_lgdpm(tsm_name, no_init_val, offsetstart, analysis=True):
+    lgdpm = get_raw_accel_data(tsm_name=tsm_name, from_time=offsetstart-timedelta(3),
+                               to_time=offsetstart, analysis=analysis)
+    lgdpm = lgdpm[lgdpm.node_id.isin(no_init_val)]
 
     return lgdpm
 
@@ -559,6 +553,9 @@ def alert_to_db(df, table_name):
             inDB = True
         else:
             inDB = False
+        #check if ts, site_id, trigger_source combination exists
+        
+        
 
     if (len(df2) == 0 or not same_alert) and not inDB:
         push_db_dataframe(df, table_name, index=False)
