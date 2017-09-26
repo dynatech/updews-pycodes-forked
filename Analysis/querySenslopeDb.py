@@ -699,37 +699,9 @@ def GetLastGoodDataFromDb(col):
 #   Output:
 #       returns the dataframe for the last good data prior to the monitoring window
     
-def GetSingleLGDPM(site, node, startTS):
-    query = "SELECT timestamp,id, xvalue, yvalue, zvalue"
-    if len(site) == 5:
-        query = query + ", msgid"
-    query = query + " from %s WHERE id = %s and timestamp < '%s'  and timestamp >= '%s' " % (site, node, startTS, pd.to_datetime(startTS)-tda(3))
-    if len(site) == 5:
-        query = query + "and (msgid = 32 or msgid = 11) "
-#        query = query + "ORDER BY timestamp DESC LIMIT 2"
-#    else:
-    query = query + "ORDER BY timestamp DESC"
-    lgdpm = GetDBDataFrame(query)
-    lgdpm['name'] = site 
-
-#    if len(site) == 5:
-#        if len(set(lgdpm.timestamp)) == 1:
-#            lgdpm.loc[(lgdpm.msgid == 11) | (lgdpm.msgid == 32)]
-#        else:
-#            try:
-#                lgdpm = lgdpm.loc[lgdpm.timestamp == lgdpm.timestamp[0]]
-#            except:
-#                print 'no data for node ' + str(node) + ' of ' + site
-    
-    if len(site) == 5:
-        lgdpm.columns = ['ts','id','x','y','z', 'msgid','name']
-    else:
-        lgdpm.columns = ['ts','id','x','y','z','name']
-    lgdpm = lgdpm[['ts', 'id', 'x', 'y', 'z','name']]
-
-    lgdpm = filterSensorData.applyFilters(lgdpm, True, True, False, False, False)
-    lgdpm = lgdpm.sort_index(ascending = False)[0:1]
-    
+def GetSingleLGDPM(name, nodes, offsetstart):
+    lgdpm = GetRawAccelData(name, offsetstart-tda(3), offsetstart)
+    lgdpm = lgdpm[lgdpm.id.isin(nodes)]
     return lgdpm
     
 #PushLastGoodData(df,name):

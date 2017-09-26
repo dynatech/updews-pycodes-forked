@@ -37,7 +37,7 @@ def node_alert2(disp_vel, colname, num_nodes, T_disp, T_velL2, T_velL3, k_ac_ax,
 
     #checking for nodes with no data
     lastgooddata=lastgooddata.loc[lastgooddata.id == node_id]
-#    print "lastgooddata", lastgooddata
+
     try:
         cond = pd.to_datetime(lastgooddata.ts.values[0]) < valid_data
     except IndexError:
@@ -300,6 +300,8 @@ def main(name='', end='', end_mon=False):
                 return
         except:
             end = datetime.now()
+    else:
+        end = pd.to_datetime(end)
     
     window,config = rtw.getwindow(end)
 

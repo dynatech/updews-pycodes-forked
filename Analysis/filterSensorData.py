@@ -50,7 +50,7 @@ def switch_node(df):
     try:
         querys = ("SELECT site, id, accel, start_ts, if (end_ts is NULL, NOW(), "
                   "end_ts) as end_ts, switch_to FROM senslopedb.data_events "
-                  "where site='%s' and tag='switch'" %df.name[0])
+                  "where site='%s' and tag='switch'" %df['name'].values[0])
         dfs = qdb.GetDBDataFrame(querys)
         
         dft=df.copy()
