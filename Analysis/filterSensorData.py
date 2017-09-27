@@ -34,7 +34,7 @@ def delete_history(df):
     try:
         queryd = ("SELECT site, id, accel, start_ts, if (end_ts is NULL, NOW(), "
                   "end_ts) as end_ts, switch_to FROM senslopedb.data_events "
-                  "where site='%s' and tag='error'" %df.name[0])
+                  "where site='%s' and tag='error'" %df['name'].values[0])
         dfd = qdb.GetDBDataFrame(queryd)
         
         for i in dfd.index:
