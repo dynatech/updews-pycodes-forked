@@ -276,7 +276,7 @@ def get_soms_raw(tsm_name = "", from_time = "", to_time = "", type_num="", node_
         df = df.drop('mval1-n', axis=1, inplace=False)
     
     #df = df.replace("-inf", "NAN")         
-    df = df.drop('mval2', axis=1, inplace=False)
+#    df = df.drop('mval2', axis=1, inplace=False)
 
     return df
     
