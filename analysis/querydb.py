@@ -264,7 +264,7 @@ def get_soms_raw(tsm_name = "", from_time = "", to_time = "", type_num="", node_
     
     df.ts = pd.to_datetime(df.ts)
     
-    if (df_accel.version[0] == 2):
+    if ((df_accel.version[0] == 2) and (type_num == 111)):
         if (tsm_name== 'nagsa'):
             df['mval1-n'] =(((8000000/(df.mval1))-(8000000/(df.mval2)))*4)/10
         else:
