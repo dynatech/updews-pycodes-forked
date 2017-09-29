@@ -17,7 +17,7 @@ total_data = []
 for i, day in enumerate(list_days):
     
     days = day
-    tdate = dt.strptime('2017-09-18', "%Y-%m-%d")
+    tdate = dt.strptime('2017-09-28', "%Y-%m-%d")
     fdate = tdate - td(days=t_num[i])
     print fdate,tdate
     engine = create_engine('mysql+pymysql://root:senslope@127.0.0.1/senslopedb')
