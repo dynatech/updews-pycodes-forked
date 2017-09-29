@@ -726,7 +726,7 @@ def SpawnAlertGen(tsm_name, timestamp):
 
 def invokeProcessInBgnd(exec_line):
     # PANB: testing command lines produced when trying to invoke
-    print 'invokeProcessInBgnd: %s' % (exec_line)
+    print '\n\n\n ---------> invokeProcessInBgnd: %s <---------- \n\n\n' % (exec_line)
     p = subprocess.Popen(exec_line, stdout=subprocess.PIPE, shell=True, stderr=subprocess.STDOUT)
 
 def ProcessAllMessages(allmsgs,network):
