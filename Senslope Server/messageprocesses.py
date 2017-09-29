@@ -310,6 +310,8 @@ def ProcessColumn(line,txtdatetime,sender):
         if i!=0:
             dbio.createTable(str(msgtable), "sensor v1")
             dbio.commitToDb(query, 'ProcessColumn')
+            # PANB: Inserted invoke function here to upload text messages for columns
+            invokeProcessInBgnd("~/anaconda2/bin/python ~/masynckaiser/client/bin/invoke-masync-CtoS-single.py %s > ~/scriptlogs/masync_on_receive.txt 2>&1" % msgtable.lower())
 
         SpawnAlertGen(msgtable,msgdatetime)
                 
@@ -783,7 +785,11 @@ def ProcessAllMessages(allmsgs,network):
                             WriteSomsDataToDb(dlist,msg.dt)
                         else:
                             WriteTwoAccelDataToDb(dlist,msg.dt)
-                            invokeProcessInBgnd("~/anaconda2/bin/python ~/masynckaiser/client/bin/invoke-masync-CtoS-single.py %s > ~/scriptlogs/masync_on_receive.txt 2>&1" % dlist[0][0])
+                            # PANB: commented out for the meantime to check proper path for invoke function
+                            # invokeProcessInBgnd("~/anaconda2/bin/python ~/masynckaiser/client/bin/invoke-masync-CtoS-single.py %s > ~/scriptlogs/masync_on_receive.txt 2>&1" % dlist[0][0])
+
+                        # PANB: Moved invoke function here since it is applicable for Subsurface and SOMS data
+                        invokeProcessInBgnd("~/anaconda2/bin/python ~/masynckaiser/client/bin/invoke-masync-CtoS-single.py %s > ~/scriptlogs/masync_on_receive.txt 2>&1" % dlist[0][0])
                 except IndexError:
                     print "\n\n>> Error: Possible data type error"
                     print msg.data
