@@ -145,7 +145,7 @@ def get_surficial_data(site_id,ts,num_pts):
     Dataframe
         Dataframe containing surficial data with columns [ts, marker_id, measurement]
     """
-    query = "SELECT ts, md1.marker_id, md1.measurement, COUNT(*) num FROM marker_data md1 JOIN marker_data md2 ON md1.mo_id <= md2.mo_id AND md1.marker_id = md2.marker_id AND md1.marker_id in (SELECT marker_id FROM marker_data INNER JOIN marker_observations ON marker_data.mo_id = marker_observations.mo_id AND ts = (SELECT max(ts) FROM marker_observations WHERE site_id = {} AND ts <= '{}')) INNER JOIN marker_observations ON marker_observations.mo_id = md1.mo_id AND ts <= '{}' GROUP BY md1.marker_id, md1.mo_id HAVING COUNT(*) <= {} ORDER by ts desc".format(site_id,ts,ts,num_pts)
+    query = "SELECT mo1.ts, md1.marker_id, md1.measurement, COUNT(*) num FROM marker_data md1 INNER JOIN marker_data md2 INNER JOIN marker_observations mo1 INNER JOIN marker_observations mo2 ON mo1.mo_id = md1.mo_id AND mo2.mo_id = mo2.mo_id AND mo1.site_id = mo2.site_id AND md1.marker_id = md2.marker_id AND md1.data_id = md2.data_id AND mo1.ts <= mo2.ts AND mo1.ts <= '{}' AND mo2.ts <= '{}' AND md1.marker_id in (SELECT marker_id FROM marker_data INNER JOIN marker_observations ON marker_data.mo_id = marker_observations.mo_id AND site_id = {} WHERE ts = (SELECT max(ts) FROM marker_observations WHERE site_id = {} AND ts <= '{}')) GROUP BY md1.marker_id, md1.mo_id, mo1.site_id, mo1.mo_id,mo1.ts HAVING COUNT(*) <= {} ORDER by mo1.ts DESC".format(ts,ts,site_id,site_id,ts,num_pts)
     return qdb.get_db_dataframe(query)
 
 def get_surficial_data_window(site_id,ts_start,ts_end):
