@@ -12,12 +12,12 @@ import json
 import os
 
 list_days =['3days']
-t_num =[3,7,14,31,90,180]
+t_num =[3]
 total_data = []
 for i, day in enumerate(list_days):
     
     days = day
-    tdate = dt.strptime('2017-09-30', "%Y-%m-%d")
+    tdate = dt.strptime('2017-10-2 21:00:00', "%Y-%m-%d %H:%M:%S")
     fdate = tdate - td(days=t_num[i])
     print fdate,tdate
     engine = create_engine('mysql+pymysql://root:senslope@127.0.0.1/senslopedb')
