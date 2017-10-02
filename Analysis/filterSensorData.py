@@ -41,7 +41,7 @@ def delete_history(df):
             df=df.drop(df.index[(df.id==dfd.id[i]) & (df.accel==dfd.accel[i]) &
                             (df.ts>=dfd.start_ts[i]) & (df.ts<=dfd.end_ts[i])])
             
-            print(dfd.site[i]+str(dfd.id[i]))
+            #print(dfd.site[i]+str(dfd.id[i]))
     except IndexError:
         print('no data')
     return df
@@ -58,7 +58,7 @@ def switch_node(df):
         for i in dfs.index:
             dft.id[(df.id==dfs.id[i]) & (df.accel==dfs.accel[i])&
                    (df.ts>=dfs.start_ts[i]) & (df.ts<=dfs.end_ts[i])] = dfs.switch_to[i]
-            print(dfs.site[i]+str(dfs.id[i]))
+            #print(dfs.site[i]+str(dfs.id[i]))
     except IndexError:
         print('no data')
     return dft
