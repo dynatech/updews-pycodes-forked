@@ -53,16 +53,16 @@ def compute_colpos(window, config, monitoring_vel, num_nodes, seg_len, fixpoint=
     elif column_fix == 'bottom':
         colpos_df = colpos_df.sort('id', ascending = False)
     
-    colpos_dfts = colpos_df.groupby('ts')
+    colpos_dfts = colpos_df.groupby('ts', as_index=False)
     colposdf = colpos_dfts.apply(col_pos)
     
     colposdf = colposdf.sort('id', ascending = True)
-    colpos_dfts = colposdf.groupby('ts')
+    colpos_dfts = colposdf.groupby('ts', as_index=False)
     colposdf = colpos_dfts.apply(compute_depth)
     
     if column_fix == 'bottom':
         max_depth = max(colposdf['depth'].values)
-        colposdfts = colposdf.groupby('ts')
+        colposdfts = colposdf.groupby('ts', as_index=False)
         colposdf = colposdfts.apply(adjust_depth, max_depth=max_depth)
     
     colposdf['depth'] = colposdf['depth'].apply(lambda x: -x)
@@ -124,7 +124,7 @@ def plot_column_positions(df,colname,end, show_part_legend, config, num_nodes=0,
     
         colposTS = pd.DataFrame({'ts': sorted(set(df.ts)), 'index': range(len(set(df.ts)))})
         
-        dfts = df.groupby('ts')
+        dfts = df.groupby('ts', as_index=False)
         dfts.apply(subplot_colpos, ax_xz=ax_xz, ax_xy=ax_xy, show_part_legend=show_part_legend, config=config, colposTS=colposTS)
     
 #        try:
@@ -160,16 +160,16 @@ def plot_column_positions(df,colname,end, show_part_legend, config, num_nodes=0,
         print colname, "ERROR in plotting column position"
     return ax_xz,ax_xy
 
-def vel_plot(df, velplot, num_nodes):
-    velplot[df.id.values[0]] = num_nodes - df.id.values[0] + 1
-    return velplot
-
+def linear_vel(df, num_nodes):
+    df[df.columns[0]] = num_nodes - df.columns[0] + 1
+    return df
+    
 def vel_classify(df, config, num_nodes, linearvel=True):
     if linearvel:
-        vel=pd.DataFrame(index=sorted(set(df.ts)))
-        nodal_df = df.groupby('id')
-        velplot = nodal_df.apply(vel_plot, velplot=vel, num_nodes=num_nodes)
-        velplot = velplot.reset_index().loc[velplot.reset_index().id == len(set(df.id))][['level_1'] + range(1, len(set(df.id))+1)].rename(columns = {'level_1': 'ts'}).set_index('ts')
+        vel = pd.DataFrame(columns=range(1, num_nodes+1), index=sorted(set(df.ts)))
+        vel.index.name = 'ts'
+        nodal_df = vel.groupby(vel.columns, axis=1)
+        velplot = nodal_df.apply(linear_vel, num_nodes=num_nodes)
     else:
         velplot = ''
     df = df.set_index(['ts', 'id'])
@@ -187,7 +187,7 @@ def noise_envelope(df, tsdf):
 
 def plotoffset(df, disp_offset = 'mean'):
     #setting up zeroing and offseting parameters
-    nodal_df = df.groupby('id')
+    nodal_df = df.groupby('id', as_index=False)
 
     if disp_offset == 'max':
         xzd_plotoffset = nodal_df['xz'].apply(lambda x: x.max() - x.min()).max()
@@ -220,10 +220,10 @@ def noise_env(df, max_min_df, window, num_nodes, xzd_plotoffset):
         
     max_min_df = max_min_df.reset_index()
     max_min_df = max_min_df.append([max_min_df] * (len(set(df.ts))-1), ignore_index = True)
-    nodal_max_min_df = max_min_df.groupby('id')
+    nodal_max_min_df = max_min_df.groupby('id', as_index=False)
 
     noise_df = nodal_max_min_df.apply(noise_envelope, tsdf = sorted(set(df.ts)))
-    nodal_noise_df = noise_df.groupby('id')
+    nodal_noise_df = noise_df.groupby('id', as_index=False)
     noise_df = nodal_noise_df.apply(df_add_offset_col, offset = xzd_plotoffset, num_nodes = num_nodes)
     noise_df = noise_df.set_index('ts')
 
@@ -244,9 +244,9 @@ def disp0off(df, window, config, xzd_plotoffset, num_nodes, fixpoint=''):
     if column_fix == 'top':
         df['xz'] = df['xz'].apply(lambda x: -x)
         df['xy'] = df['xy'].apply(lambda x: -x)
-    nodal_df = df.groupby('id')
+    nodal_df = df.groupby('id', as_index=False)
     df0 = nodal_df.apply(df_zero_initial_row, window = window)
-    nodal_df0 = df0.groupby('id')
+    nodal_df0 = df0.groupby('id', as_index=False)
     df0off = nodal_df0.apply(df_add_offset_col, offset = xzd_plotoffset, num_nodes = num_nodes)
     df0off = df0off.set_index('ts')
     
@@ -330,7 +330,7 @@ def node_annotation(monitoring_vel, num_nodes):
     
     inc_df = pd.DataFrame({'id': range(1, num_nodes+1), 'inc_xz': [np.nan]*num_nodes, 'inc_xy': [np.nan]*num_nodes, 'diff_xz': [np.nan]*num_nodes, 'diff_xy': [np.nan]*num_nodes})
     inc_df = inc_df[['id', 'inc_xz', 'inc_xy', 'diff_xz', 'diff_xy']]
-    nodal_monitoring_vel = check_inc_df.groupby('id')
+    nodal_monitoring_vel = check_inc_df.groupby('id', as_index=False)
     nodal_monitoring_vel.apply(check_increasing, inc_df=inc_df)
     
     nodal_inc_df = inc_df.groupby('id', as_index=False)
@@ -354,9 +354,9 @@ def plot_disp_vel(noise_df, df0off, cs_df, colname, window, config, plotvel, xzd
     if plotvel:
         vel_xz, vel_xy, L2_xz, L2_xy, L3_xz, L3_xy = velplot
 
-    nodal_noise_df = noise_df.groupby('id')
+    nodal_noise_df = noise_df.groupby('id', as_index=False)
     
-    nodal_df0off = df0off.groupby('id')
+    nodal_df0off = df0off.groupby('id', as_index=False)
     
 #    try:
     fig=plt.figure()
@@ -461,11 +461,11 @@ def plot_disp_vel(noise_df, df0off, cs_df, colname, window, config, plotvel, xzd
         vel_xz.plot(ax=curax,marker='.',legend=False)
 
         L2_xz = L2_xz.sort_values('ts', ascending = True).set_index('ts')
-        nodal_L2_xz = L2_xz.groupby('id')
+        nodal_L2_xz = L2_xz.groupby('id', as_index=False)
         nodal_L2_xz.apply(lambda x: x['id'].plot(marker='^',ms=8,mfc='y',lw=0,ax = curax))
 
         L3_xz = L3_xz.sort_values('ts', ascending = True).set_index('ts')
-        nodal_L3_xz = L3_xz.groupby('id')
+        nodal_L3_xz = L3_xz.groupby('id', as_index=False)
         nodal_L3_xz.apply(lambda x: x['id'].plot(marker='^',ms=10,mfc='r',lw=0,ax = curax))
         
         y = sorted(range(1, num_nodes+1), reverse = True)
@@ -482,11 +482,11 @@ def plot_disp_vel(noise_df, df0off, cs_df, colname, window, config, plotvel, xzd
         vel_xy.plot(ax=curax,marker='.',legend=False)
         
         L2_xy = L2_xy.sort_values('ts', ascending = True).set_index('ts')
-        nodal_L2_xy = L2_xy.groupby('id')
+        nodal_L2_xy = L2_xy.groupby('id', as_index=False)
         nodal_L2_xy.apply(lambda x: x['id'].plot(marker='^',ms=8,mfc='y',lw=0,ax = curax))
 
         L3_xy = L3_xy.sort_values('ts', ascending = True).set_index('ts')
-        nodal_L3_xy = L3_xy.groupby('id')
+        nodal_L3_xy = L3_xy.groupby('id', as_index=False)
         nodal_L3_xy.apply(lambda x: x['id'].plot(marker='^',ms=10,mfc='r',lw=0,ax = curax))
                
         y = range(1, num_nodes+1)

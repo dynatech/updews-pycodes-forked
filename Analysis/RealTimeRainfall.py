@@ -64,7 +64,7 @@ def main(end='', site=''):
     rainfall = rainfall[(rainfall.index >= start)&(rainfall.index <= end)]
 
     try:
-        one,three = A.onethree_val_writer(rainfall)
+        one,three = A.onethree_val_writer(rainfall, end)
         return end, site, one, halfmax, three, twoyrmax, gauge_ids, gauge
     except:
         one, three = '', ''

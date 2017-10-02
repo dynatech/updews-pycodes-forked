@@ -110,11 +110,11 @@ def get_tsm_data(tsm_name, start, end, plot_type, node_lst):
         config.io.to_smooth = 1
         config.io.to_fill = 1
     else:
-        config.io.to_smooth = 0
+        config.io.to_smooth = 1
         config.io.to_fill = 0
-        
+
     monitoring = proc.genproc(col, window, config, 'bottom', comp_vel=False)
-    df = monitoring.vel.reset_index()[['ts', 'id', 'xz', 'xy']]
+    df = monitoring.disp_vel.reset_index()[['ts', 'id', 'xz', 'xy']]
     df = df.loc[(df.ts >= window.start)&(df.ts <= window.end)]
     df = df.sort_values('ts')
     
@@ -144,8 +144,6 @@ def plot_cml(ax, df, axis, tsm_name):
 def plot_disp(ax, df, axis, node_lst, tsm_name):
     for node in node_lst:
         node_df = df[df.id == node]
-        print 'node', node
-        print node_df[['ts', 'zeroed_'+axis]].sort_values('ts')
         ax.plot(node_df.ts, node_df['zeroed_'+axis].values, label='Node '+str(node))
     ax.set_ylabel('Displacement\n(cm)', fontsize='small')
     ax.set_title('%s Subsurface %s Displacement' %(tsm_name.upper(), axis.upper()), fontsize='medium')
@@ -250,6 +248,7 @@ def main(site, start, end, rainfall_props, surficial_props, subsurface_props, ev
                 for event in event_lst:
                     plot_single_event(ax, event)
 
+    ax.set_xlim([start, end])
     fig.subplots_adjust(top=0.9, right=0.95, left=0.15, bottom=0.05, hspace=0.3)
     fig.suptitle(site.upper() + " Event Timeline",fontsize='x-large')
     plt.savefig(site + "_event_timeline", dpi=200,mode='w')#, 
@@ -261,22 +260,21 @@ def main(site, start, end, rainfall_props, surficial_props, subsurface_props, ev
 
 if __name__ == '__main__':
     
-    site = 'mag'
-#    start = '2016-02-23'
-    start = '2016-02-23'
-    end = '2017-03-31'
+    site = 'pin'
+    start = '2017-09-11 12:00'
+    end = '2017-09-26 12:00'
     
     # annotate events
-    event_lst = []#'2017-04-30 01:30', '2016-10-10 01:56']
+    event_lst = []#'2017-09-11 12:30:00', '2017-09-12 06:30:00']
     
     # rainfall plot
-    rainfall = False                                 ### True if to plot rainfall
-    rain_gauge = 'rain_noah_505'                    ### specifiy rain gauge
+    rainfall = True                                 ### True if to plot rainfall
+    rain_gauge = 'umiw'                           ### specifiy rain gauge
     rainfall_props = {'to_plot': rainfall, 'rain_gauge': rain_gauge}
 
     # surficial plot
-    surficial = True                  ### True if to plot surficial
-    markers = ['B', 'C', 'D', 'E']    ### specifiy markers; 'all' if all markers
+    surficial = False                  ### True if to plot surficial
+    markers = ['A', 'B']    ### specifiy markers; 'all' if all markers
     surficial_props = {'to_plot': surficial, 'markers': markers}
     
     # subsurface plot
@@ -284,8 +282,7 @@ if __name__ == '__main__':
     # subsurface displacement
     disp = True                    ### True if to plot subsurface displacement
     ### specifiy tsm name and axis; 'all' if all nodes
-    disp_tsm_axis = {'magta': {'xz': range(13,17)},
-                            'magtb': {'xz': [10, 11, 14, 15]}}
+    disp_tsm_axis = {'umita': {'xz': range(1,21)}}
     
     # subsurface cumulative displacement
     cml = False          ### True if to plot subsurface cumulative displacement
@@ -297,3 +294,36 @@ if __name__ == '__main__':
                         'cml': {'to_plot': cml, 'cml_tsm_axis': cml_tsm_axis}}
     
     df = main(site, start, end, rainfall_props, surficial_props, subsurface_props, event_lst)
+    
+################################################################################
+    
+#    def ts_range(df, lst):
+#        lst.append((pd.to_datetime(df['ts'].values[0]), pd.to_datetime(df['ts'].values[0]) + timedelta(hours=0.5)))
+#        return lst
+#    
+#    def stitch_intervals(ranges):
+#        result = []
+#        cur_start = -1
+#        cur_stop = -1
+#        for start, stop in sorted(ranges):
+#            if start != cur_stop:
+#                result.append((start,stop))
+#                cur_start, cur_stop = start, stop
+#            else:
+#                result[-1] = (cur_start,stop)
+#                cur_stop = max(cur_stop,stop)
+#        return result
+#    
+#    rain = get_rain_df('pintaw', '2016-03-15', '2017-09-13')
+#    query = "SELECT * FROM rain_props where name = '%s'" %'pin'
+#    twoyrmax = qdb.GetDBDataFrame(query)['max_rain_2year'].values[0]
+#    halfmax = twoyrmax/2
+#    
+#    halfT = rain[(rain.one >= halfmax/2)|(rain.three >= halfmax)]
+#    
+#    lst = []
+#    halfTts = halfT.groupby('ts', as_index=False)
+#    rain_ts_range = halfTts.apply(ts_range, lst=lst)
+#    rain_ts_range = rain_ts_range[0]
+#    rain_ts_range = rain_ts_range[1::]
+#    halfT_range = stitch_intervals(rain_ts_range)

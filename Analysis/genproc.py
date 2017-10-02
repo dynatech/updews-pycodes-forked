@@ -104,28 +104,28 @@ def genproc(col, window, config, fixpoint, realtime=False, comp_vel=True):
     
     monitoring = q.GetRawAccelData(col.name, window.offsetstart, window.end)
     
+    monitoring = flt.applyFilters(monitoring)
+    
+    try:
+        LastGoodData = q.GetLastGoodData(monitoring,col.nos)
+        q.PushLastGoodData(LastGoodData,col.name)		
+        LastGoodData = q.GetLastGoodDataFromDb(col.name)
+    except:	
+        LastGoodData = q.GetLastGoodDataFromDb(col.name)
+   
     #identify the node ids with no data at start of monitoring window
     NodesNoInitVal=GetNodesWithNoInitialData(monitoring,col.nos,window.offsetstart)
     
     #get last good data prior to the monitoring window (LGDPM)
-    lgdpm = pd.DataFrame()
-    for node in NodesNoInitVal:
-        temp = q.GetSingleLGDPM(col.name, node, window.offsetstart.strftime("%Y-%m-%d %H:%M"))
-        lgdpm = lgdpm.append(temp,ignore_index=True)
-    monitoring=monitoring.append(lgdpm)
-    
-    try:
-        monitoring = flt.applyFilters(monitoring)
-        LastGoodData = q.GetLastGoodData(monitoring,col.nos)
-        q.PushLastGoodData(LastGoodData,col.name)		
-        LastGoodData = q.GetLastGoodDataFromDb(col.name)
-    	
-    except:	
-        LastGoodData = q.GetLastGoodDataFromDb(col.name)
-#        print 'error'		
+    if len(NodesNoInitVal) != 0:
+        lgdpm = q.GetSingleLGDPM(col.name, NodesNoInitVal, window.offsetstart)
+        if len(lgdpm) != 0:
+            lgdpm = flt.applyFilters(lgdpm)
+            lgdpm = lgdpm.sort_index(ascending = False).drop_duplicates('id')
         
-#    if len(LastGoodData)<col.nos: print col.name, " Missing nodes in LastGoodData"
-    
+        if len(lgdpm) != 0:
+            monitoring=monitoring.append(lgdpm)
+        
     monitoring = monitoring.loc[monitoring.id <= col.nos]
     
     invalid_nodes = q.GetNodeStatus(1)

@@ -21,14 +21,18 @@ host = "www.dewslandslide.com"
 #host = "sandbox"
 port = 5055
 schema = "senslopedb"
+maxRows = 5000
+
+# Quick Fix for data gaps due to delayed received SMS (get 5th highest PK value on web)
+rankOffset = 9
 
 if len(sys.argv) >= 2:
     table = sys.argv[1]
-    print "UPDATING TABLE: %s" % (table)
+    print "UPDATING TABLE: %s, rankOffset: %s" % (table, rankOffset)
     
     # Call this function to update selected table and sync the data from the client
     #   machine to the Masync Web Socket Server (dewslandslide.com)
-    masync.interfaceUpdateTableOfWSS(host, port, schema, table)
+    masync.interfaceUpdateTableOfWSS(host, port, schema, table, maxRows, rankOffset)
 else:
     print """%s: Needs only 1 argument, the name of the table to be updated on 
         the server side""" % (__file__)

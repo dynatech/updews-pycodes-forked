@@ -205,7 +205,7 @@ def getmode(li):
 
 def trending_alertgen(trending_alert, monitoring, lgd, window, config):
     endTS = pd.to_datetime(trending_alert['timestamp'].values[0])
-    monitoring_vel = monitoring.vel[endTS-timedelta(3):endTS]
+    monitoring_vel = monitoring.disp_vel[endTS-timedelta(3):endTS]
     monitoring_vel = monitoring_vel.reset_index().sort_values('ts',ascending=True)
     nodal_dv = monitoring_vel.groupby('id', as_index=False)     
     
