@@ -14,11 +14,13 @@ import os
 list_days =['3days']
 t_num =[3]
 total_data = []
+tdata = raw_input('from: ')
+fdata = raw_input('to: ')
 for i, day in enumerate(list_days):
     
     days = day
-    tdate = dt.strptime('2017-10-2 21:00:00', "%Y-%m-%d %H:%M:%S")
-    fdate = tdate - td(days=t_num[i])
+    tdate = dt.strptime(fdata, "%Y-%m-%d %H:%M:%S")
+    fdate = dt.strptime(tdata, "%Y-%m-%d %H:%M:%S")
     print fdate,tdate
     engine = create_engine('mysql+pymysql://root:senslope@127.0.0.1/senslopedb')
     query = "SELECT name FROM senslopedb.site_column_props order by name asc"
