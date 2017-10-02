@@ -264,7 +264,7 @@ def get_soms_raw(tsm_name = "", from_time = "", to_time = "", type_num="", node_
     
     df.ts = pd.to_datetime(df.ts)
     
-    if (df_accel.version[0] == 2):
+    if ((df_accel.version[0] == 2) and (type_num == 111)):
         if (tsm_name== 'nagsa'):
             df['mval1-n'] =(((8000000/(df.mval1))-(8000000/(df.mval2)))*4)/10
         else:
@@ -276,7 +276,7 @@ def get_soms_raw(tsm_name = "", from_time = "", to_time = "", type_num="", node_
         df = df.drop('mval1-n', axis=1, inplace=False)
     
     #df = df.replace("-inf", "NAN")         
-    df = df.drop('mval2', axis=1, inplace=False)
+#    df = df.drop('mval2', axis=1, inplace=False)
 
     return df
     
@@ -366,24 +366,50 @@ def get_node_status(tsm_id, status=4):
 #   Output:
 #       returns the dataframe for the last good data prior to the monitoring window
     
-def get_single_lgdpm(tsm_name, node_id, startTS):
-    query = "SELECT ts,node_id, xval, yval, zval "
-    query += "FROM %s WHERE node_id IN (%s) AND ts < '%s' AND ts >= '%s' " %('tilt_'+tsm_name, ','.join(map(str, node_id)), startTS, startTS-timedelta(3))
-    if len(tsm_name) == 5:
-        query += "and (type_num = 32 or type_num = 11) "        
-    query += "ORDER BY ts DESC"
-    
-    lgdpm = get_db_dataframe(query)   
-    lgdpm.columns = ['ts','node_id','x','y','z']        
-    lgdpm['tsm_name'] = tsm_name
+def get_single_lgdpm(tsm_name, no_init_val, offsetstart, analysis=True):
+    lgdpm = get_raw_accel_data(tsm_name=tsm_name, from_time=offsetstart-timedelta(3),
+                               to_time=offsetstart, analysis=analysis)
+    lgdpm = lgdpm[lgdpm.node_id.isin(no_init_val)]
 
     return lgdpm
+
+#create_alert_status
+#    creates table named 'alert_status' which contains alert valid/invalid status
+def create_alert_status():
+    query = "CREATE TABLE `alert_status` ("
+    query += "  `stat_id` INT(7) UNSIGNED NOT NULL AUTO_INCREMENT,"
+    query += "  `ts_last_retrigger` TIMESTAMP NULL,"
+    query += "  `trigger_id` INT(10) UNSIGNED NULL,"
+    query += "  `ts_set` TIMESTAMP NULL,"
+    query += "  `ts_ack` TIMESTAMP NULL,"
+    query += "  `alert_status` TINYINT(1) NULL"
+    query += "      COMMENT 'alert_status:\n-1 invalid\n0 validating\n1 valid',"
+    query += "  `remarks` VARCHAR(450) NULL,"
+    query += "  `user_id` SMALLINT(6) UNSIGNED NULL,"
+    query += "  PRIMARY KEY (`stat_id`),"
+    query += "  INDEX `fk_alert_status_operational_triggers1_idx` (`trigger_id` ASC),"
+    query += "  CONSTRAINT `fk_alert_status_operational_triggers1`"
+    query += "    FOREIGN KEY (`trigger_id`)"
+    query += "    REFERENCES `operational_triggers` (`trigger_id`)"
+    query += "    ON DELETE NO ACTION"
+    query += "    ON UPDATE CASCADE,"
+    query += "  INDEX `fk_alert_status_users1_idx` (`user_id` ASC),"
+    query += "  CONSTRAINT `fk_alert_status_users1`"
+    query += "    FOREIGN KEY (`user_id`)"
+    query += "    REFERENCES `users` (`user_id`)"
+    query += "    ON DELETE NO ACTION"
+    query += "    ON UPDATE CASCADE,"
+    query += "  UNIQUE INDEX `uq_alert_status`"
+    query += "    (`ts_last_retrigger` ASC, `trigger_id` ASC))"
+
+    
+    execute_query(query)
 
 #create_tsm_alerts
 #    creates table named 'tsm_alerts' which contains alerts for all tsm
 def create_tsm_alerts():    
     query = "CREATE TABLE `tsm_alerts` ("
-    query += "  `ta_id` INT(5) UNSIGNED NOT NULL AUTO_INCREMENT,"
+    query += "  `ta_id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,"
     query += "  `ts` TIMESTAMP NULL,"
     query += "  `tsm_id` SMALLINT(5) UNSIGNED NOT NULL,"
     query += "  `alert_level` TINYINT(2) NOT NULL,"
@@ -403,7 +429,7 @@ def create_tsm_alerts():
 #    creates table named 'operational_triggers' which contains alerts for all operational triggers
 def create_operational_triggers():
     query = "CREATE TABLE `operational_triggers` ("
-    query += "  `trigger_id` INT(5) UNSIGNED NOT NULL AUTO_INCREMENT,"
+    query += "  `trigger_id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,"
     query += "  `ts` TIMESTAMP NULL,"
     query += "  `site_id` TINYINT(3) UNSIGNED NOT NULL,"
     query += "  `trigger_sym_id` TINYINT(2) UNSIGNED NOT NULL,"
@@ -451,33 +477,12 @@ def create_public_alerts():
     
     execute_query(query)
 
-#create_internal_alerts
-#    creates table named 'internal_alerts' which contains alerts for all internal alerts
-def create_internal_alerts():
-    query = "CREATE TABLE `internal_alerts` ("
-    query += "  `internal_id` INT(5) UNSIGNED NOT NULL AUTO_INCREMENT,"
-    query += "  `ts` TIMESTAMP NULL,"
-    query += "  `site_id` TINYINT(3) UNSIGNED NOT NULL,"
-    query += "  `internal_sym` VARCHAR(9) NULL,"
-    query += "  `ts_updated` TIMESTAMP NULL,"
-    query += "  PRIMARY KEY (`internal_id`),"
-    query += "  UNIQUE INDEX `uq_internal_alerts` (`ts` ASC, `site_id` ASC),"
-    query += "  INDEX `fk_internal_alerts_sites_idx` (`site_id` ASC),"
-    query += "  CONSTRAINT `fk_internal_alerts_sites`"
-    query += "    FOREIGN KEY (`site_id`)"
-    query += "    REFERENCES `sites` (`site_id`)"
-    query += "    ON DELETE NO ACTION"
-    query += "    ON UPDATE CASCADE)"
-    
-    execute_query(query)
-
 #alert_to_db
 #    writes to alert tables
 #    Inputs:
 #        df- dataframe to be written in table_name
 #        table_name- str; name of table in database ('tsm_alerts' or 'operational_triggers')
 def alert_to_db(df, table_name):
-    
     if does_table_exist(table_name) == False:
         #Create a tsm_alerts table if it doesn't exist yet
         if table_name == 'tsm_alerts':
@@ -485,9 +490,6 @@ def alert_to_db(df, table_name):
         #Create a public_alerts table if it doesn't exist yet
         elif table_name == 'public_alerts':
             create_public_alerts()
-        #Create a internal_alerts table if it doesn't exist yet
-        elif table_name == 'internal_alerts':
-            create_internal_alerts()
         #Create a operational_triggers table if it doesn't exist yet
         elif table_name == 'operational_triggers':
             create_operational_triggers()
@@ -507,8 +509,6 @@ def alert_to_db(df, table_name):
         query += " tsm_id = '%s'" %df['tsm_id'].values[0]
     elif table_name == 'public_alerts':
         query += " site_id = '%s'" %(df['site_id'].values[0])
-    elif table_name == 'internal_alerts':
-        query += " site_id = '%s'" %(df['site_id'].values[0])
     else:
         query += " site_id = '%s' and trigger_sym_id in (%s)" %(df['site_id'].values[0], trigger_sym_ids)
 
@@ -522,7 +522,7 @@ def alert_to_db(df, table_name):
         except:
             same_alert = False
         query = "SELECT EXISTS(SELECT * FROM tsm_alerts"
-        query += " WHERE ts = '%s' AND tsm_id = %s)" %(df['ts_updated'].values[0], df['tsm_id'].values[0])
+        query += " WHERE ts = '%s' AND tsm_id = %s)" %(df['ts'].values[0], df['tsm_id'].values[0])
         if get_db_dataframe(query).values[0][0] == 1:
             inDB = True
         else:
@@ -534,21 +534,8 @@ def alert_to_db(df, table_name):
         except:
             same_alert = False
         query = "SELECT EXISTS(SELECT * FROM public_alerts"
-        query += " WHERE ts = '%s' AND site_id = %s" %(df['ts_updated'].values[0], df['site_id'].values[0])
+        query += " WHERE ts = '%s' AND site_id = %s" %(df['ts'].values[0], df['site_id'].values[0])
         query += " AND pub_sym_id)" %df['pub_sym_id'].values[0]
-        if get_db_dataframe(query).values[0][0] == 1:
-            inDB = True
-        else:
-            inDB = False
-
-    elif table_name == 'internal_alerts':
-        try:
-            same_alert = df2['internal_sym'].values[0] == df['internal_sym'].values[0]
-        except:
-            same_alert = False
-        query = "SELECT EXISTS(SELECT * FROM internal_alerts"
-        query += " WHERE ts = '%s' AND site_id = %s" %(df['ts_updated'].values[0], df['site_id'].values[0])
-        query += " AND internal_sym = '%s')" %df['internal_sym'].values[0]
         if get_db_dataframe(query).values[0][0] == 1:
             inDB = True
         else:
@@ -560,12 +547,15 @@ def alert_to_db(df, table_name):
         except:
             same_alert = False
         query = "SELECT EXISTS(SELECT * FROM operational_triggers"
-        query += " WHERE ts = '%s' AND site_id = %s" %(df['ts_updated'].values[0], df['site_id'].values[0])
+        query += " WHERE ts = '%s' AND site_id = %s" %(df['ts'].values[0], df['site_id'].values[0])
         query += " AND trigger_sym_id = %s)" %df['trigger_sym_id'].values[0]
         if get_db_dataframe(query).values[0][0] == 1:
             inDB = True
         else:
             inDB = False
+        #check if ts, site_id, trigger_source combination exists
+        
+        
 
     if (len(df2) == 0 or not same_alert) and not inDB:
         push_db_dataframe(df, table_name, index=False)
