@@ -160,7 +160,7 @@ relative location:
 username = 'phivolcs_dost'
 url = 'http://www.phivolcs.dost.gov.ph/html/update_SOEPD/EQLatest.html'
 keyword = "#EarthquakePH"
-time_interval = 300
+time_interval = 5
 ##########################################
 
 
