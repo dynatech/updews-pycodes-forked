@@ -27,7 +27,7 @@ maxRows = 5000
 rankOffset = 9
 
 if len(sys.argv) >= 2:
-    table = sys.argv[1]
+    table = sys.argv[1].lower()
     print "UPDATING TABLE: %s, rankOffset: %s" % (table, rankOffset)
     
     # Call this function to update selected table and sync the data from the client
