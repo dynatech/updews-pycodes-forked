@@ -27,8 +27,8 @@ maxRows = 5000
 rankOffset = 9
 
 if len(sys.argv) >= 2:
-    table = sys.argv[1]
-    print "UPDATING TABLE: %s, rankOffset: %s" % (table, rankOffset)
+    table = sys.argv[1].lower()
+    print "[%s] UPDATING TABLE: %s, rankOffset: %s" % (datetime.now(), table, rankOffset)
     
     # Call this function to update selected table and sync the data from the client
     #   machine to the Masync Web Socket Server (dewslandslide.com)
