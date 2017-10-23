@@ -21,7 +21,7 @@ def getDF():
     df.columns = ['ts','r15m','r24h']
     df = df.set_index(['ts'])
     df = df["r15m"].astype(float)
-    df = df.resample('15Min', how = "sum")
+    df = df.resample('30Min', how = "sum")
     dfs = pd.rolling_sum(df,96,min_periods=1)
     dfs1 = pd.rolling_sum(df,288,min_periods=1)
     dfs = dfs[dfs>=0]

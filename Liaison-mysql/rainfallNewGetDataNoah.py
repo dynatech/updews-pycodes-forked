@@ -23,7 +23,7 @@ def getDF():
     df = df.set_index(['ts'])
     df = df["rval"].astype(float)
     df = df[df>= 0]
-    df = df.resample('15Min', how = "sum")
+    df = df.resample('30Min', how = "sum")
     dfs = pd.rolling_sum(df,96,min_periods=1)
     dfs1 = pd.rolling_sum(df,288,min_periods=1)
     dfs = dfs[dfs>=0]
