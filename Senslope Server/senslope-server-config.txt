@@ -42,6 +42,7 @@ FailTimeEN = Error! There is a problem with your TIME format. Please check your 
 FailMeasEN = Error! There is a problem with your ground measurements format.  Please check your SMS and try again.
 FailWeaEN = Error! There is no weather information sent.  Please check your SMS and try again.
 FailObvEN = Error! You did not put your name on the text message.  Please check your SMS and try again.
+FailOobEN = Error! Your date or time value is either too late or too early. Please check your SMS and try again.
 
 [FileIO]
 allalertsfile = /home/dynaslope/Desktop/updews-pycodes/Analysis/GSMAlert.txt

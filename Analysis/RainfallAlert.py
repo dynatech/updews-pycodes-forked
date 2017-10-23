@@ -31,8 +31,7 @@ def GetResampledData(r, offsetstart, start, end):
             blankdf=blankdf.set_index('ts')
             rainfall=rainfall.append(blankdf)
         rainfall=rainfall.resample('30min',how='sum', label='right')
-        rainfall=rainfall[(rainfall.index>=start)]
-        rainfall=rainfall[(rainfall.index<=end)]    
+        rainfall=rainfall[(rainfall.index>=start)&(rainfall.index<=end)]
         return rainfall
     except:
         return pd.DataFrame(data=None)
@@ -59,7 +58,7 @@ def GetUnemptyOtherRGdata(col, offsetstart, start, end):
                 return OtherRGdata, r
     return pd.DataFrame(data = None), r
 
-def onethree_val_writer(rainfall):
+def onethree_val_writer(rainfall, end):
 
     ##INPUT:
     ##one; dataframe; one-day cumulative rainfall
@@ -69,16 +68,8 @@ def onethree_val_writer(rainfall):
     ##one, three; float; cumulative sum for one day and three days
 
     #getting the rolling sum for the last24 hours
-    rainfall2=pd.rolling_sum(rainfall,48,min_periods=1)
-    rainfall2=np.round(rainfall2,4)
-    
-    #getting the rolling sum for the last 3 days
-    rainfall3=pd.rolling_sum(rainfall,144,min_periods=1)
-    rainfall3=np.round(rainfall3,4)
-
-            
-    one = float(rainfall2.rain[-1:])
-    three = float(rainfall3.rain[-1:])
+    one = rainfall[(rainfall.index >= end - timedelta(1)) & (rainfall.index <= end)]['rain'].sum()
+    three = rainfall[(rainfall.index >= end - timedelta(3)) & (rainfall.index <= end)]['rain'].sum()
     
     return one,three
         
@@ -99,7 +90,7 @@ def summary_writer(r,datasource,twoyrmax,halfmax,rainfall,end,write_alert):
     ##one; dataframe; one-day cumulative rainfall
     ##three; dataframe; three-day cumulative rainfall        
     
-    one,three = onethree_val_writer(rainfall)
+    one,three = onethree_val_writer(rainfall, end)
 
     #threshold is reached
     if one>=halfmax or three>=twoyrmax:

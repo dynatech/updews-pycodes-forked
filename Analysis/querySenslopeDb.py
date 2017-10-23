@@ -246,7 +246,7 @@ def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid
     if (len(siteid) == 5):
         if not msgid:
             # print "inside ----> if not msgid:"
-            query = " SELECT timestamp,'%s' as 'name',id,xvalue,yvalue,zvalue,batt  FROM senslopedb.%s"  % (siteid,siteid)
+            query = " SELECT timestamp,'%s' as 'name',id,xvalue,yvalue,zvalue,batt,1 as 'accel'  FROM senslopedb.%s"  % (siteid,siteid)
             
             targetnode_query = " WHERE id IN (SELECT node_id FROM senslopedb.node_accel_table WHERE site_name = '%s' and accel = 1)" %siteid 
             if targetnode != '':
@@ -255,7 +255,7 @@ def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid
         
             query = query + " AND msgid in (11, 32)"
             if not fromTime:
-                fromTime = "2010-01-01"
+                fromTime = "2014-12-01"
             query = query + " AND timestamp >= '%s'" %fromTime
             
             toTime_query = ''
@@ -267,7 +267,7 @@ def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid
                 
             query = query + toTime_query
             query = query + " UNION ALL"
-            query = query + " SELECT timestamp,'%s' as 'name',id,xvalue,yvalue,zvalue,batt  FROM senslopedb.%s"  % (siteid,siteid)
+            query = query + " SELECT timestamp,'%s' as 'name',id,xvalue,yvalue,zvalue,batt,2 as 'accel'  FROM senslopedb.%s"  % (siteid,siteid)
     
             targetnode_query = " WHERE id IN (SELECT node_id FROM senslopedb.node_accel_table WHERE site_name = '%s' and accel = 2)" %siteid 
             if targetnode != '':
@@ -280,12 +280,14 @@ def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid
             
         elif msgid in (11,12,32,33):
             # print "inside ----> elif msgid in (11,12,32,33):"
-            query = " SELECT timestamp,'%s' as 'name',id,xvalue,yvalue,zvalue,batt  FROM senslopedb.%s WHERE msgid = %d"  % (siteid,siteid,msgid)
+            query = (" SELECT timestamp,'%s' as 'name',id,xvalue,yvalue,zvalue,batt,if(msgid"
+             " in (32,11), 1,if(msgid in (33,12),2,0)) "
+             " as 'accel'  FROM senslopedb.%s WHERE msgid = %d"  % (siteid,siteid,msgid))
             if (targetnode != ""):
                 query = query + " AND id = %d" %(targetnode)
                 
             if not fromTime:
-                fromTime = "2010-01-01"
+                fromTime = "2014-12-01"
             query = query + " AND timestamp >= '%s'" %fromTime
             
             toTime_query = ''
@@ -298,7 +300,7 @@ def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid
             query = query + toTime_query
 
     elif (len(siteid) == 4):
-        query = "select timestamp,'%s' as 'name',id,xvalue,yvalue,zvalue from senslopedb.%s " % (siteid,siteid)
+        query = "select timestamp,'%s' as 'name',id,xvalue,yvalue,zvalue,1 as 'accel' from senslopedb.%s " % (siteid,siteid)
         
         if not fromTime:
             fromTime = "2010-01-01"
@@ -321,7 +323,7 @@ def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid
 #            df = df.apply(filterSensorData.volt_filter) #function in filterSensorData
 #            df = df.reset_index(drop=True)
             if (batt == 1):                
-                df.columns = ['ts','name','id','x','y','z','batt']
+                df.columns = ['ts','name','id','x','y','z','accel','batt']
                 df.ts = pd.to_datetime(df.ts)
                 return df
             else:
@@ -330,7 +332,7 @@ def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid
         else:
             df =  GetDBDataFrame(query)
         
-        df.columns = ['ts','name','id','x','y','z']
+        df.columns = ['ts','name','id','x','y','z','accel']
         df.ts = pd.to_datetime(df.ts)
         return df
         
@@ -697,37 +699,9 @@ def GetLastGoodDataFromDb(col):
 #   Output:
 #       returns the dataframe for the last good data prior to the monitoring window
     
-def GetSingleLGDPM(site, node, startTS):
-    query = "SELECT timestamp,id, xvalue, yvalue, zvalue"
-    if len(site) == 5:
-        query = query + ", msgid"
-    query = query + " from %s WHERE id = %s and timestamp < '%s'  and timestamp >= '%s' " % (site, node, startTS, pd.to_datetime(startTS)-tda(3))
-    if len(site) == 5:
-        query = query + "and (msgid = 32 or msgid = 11) "
-#        query = query + "ORDER BY timestamp DESC LIMIT 2"
-#    else:
-    query = query + "ORDER BY timestamp DESC"
-    lgdpm = GetDBDataFrame(query)
-    lgdpm['name'] = site 
-
-#    if len(site) == 5:
-#        if len(set(lgdpm.timestamp)) == 1:
-#            lgdpm.loc[(lgdpm.msgid == 11) | (lgdpm.msgid == 32)]
-#        else:
-#            try:
-#                lgdpm = lgdpm.loc[lgdpm.timestamp == lgdpm.timestamp[0]]
-#            except:
-#                print 'no data for node ' + str(node) + ' of ' + site
-    
-    if len(site) == 5:
-        lgdpm.columns = ['ts','id','x','y','z', 'msgid','name']
-    else:
-        lgdpm.columns = ['ts','id','x','y','z','name']
-    lgdpm = lgdpm[['ts', 'id', 'x', 'y', 'z','name']]
-
-    lgdpm = filterSensorData.applyFilters(lgdpm)
-    lgdpm = lgdpm.sort_index(ascending = False)[0:1]
-    
+def GetSingleLGDPM(name, nodes, offsetstart):
+    lgdpm = GetRawAccelData(name, offsetstart-tda(3), offsetstart)
+    lgdpm = lgdpm[lgdpm.id.isin(nodes)]
     return lgdpm
     
 #PushLastGoodData(df,name):

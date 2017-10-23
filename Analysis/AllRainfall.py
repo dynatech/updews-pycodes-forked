@@ -74,7 +74,7 @@ def main(site='', Print=True, end=datetime.now(), monitoring_end=False):
     summary_json = summary_json.to_json(orient="records")
 
     if Print == True:
-        if s.io.PrintSummaryAlert:
+        if s.io.PrintSummaryAlert and not monitoring_end:
             summary.to_csv(output_path+s.io.RainfallPlotsPath+'SummaryOfRainfallAlertGenerationFor'+tsn+s.io.CSVFormat,sep=',',mode='w')
             
             with open(output_path+s.io.RainfallPlotsPath+'summary'+tsn+'.json', 'w') as w:

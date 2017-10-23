@@ -30,6 +30,39 @@ def volt_filter(dfc):
     df = df[(df.batt >= vmin) & (df.batt <= vmax)]
     return df
 
+def delete_history(df):
+    try:
+        queryd = ("SELECT site, id, accel, start_ts, if (end_ts is NULL, NOW(), "
+                  "end_ts) as end_ts, switch_to FROM senslopedb.data_events "
+                  "where site='%s' and tag='error'" %df['name'].values[0])
+        dfd = qdb.GetDBDataFrame(queryd)
+        
+        for i in dfd.index:
+            df=df.drop(df.index[(df.id==dfd.id[i]) & (df.accel==dfd.accel[i]) &
+                            (df.ts>=dfd.start_ts[i]) & (df.ts<=dfd.end_ts[i])])
+            
+            #print(dfd.site[i]+str(dfd.id[i]))
+    except IndexError:
+        print('no data')
+    return df
+
+def switch_node(df):
+    try:
+        querys = ("SELECT site, id, accel, start_ts, if (end_ts is NULL, NOW(), "
+                  "end_ts) as end_ts, switch_to FROM senslopedb.data_events "
+                  "where site='%s' and tag='switch'" %df['name'].values[0])
+        dfs = qdb.GetDBDataFrame(querys)
+        
+        dft=df.copy()
+
+        for i in dfs.index:
+            dft.id[(df.id==dfs.id[i]) & (df.accel==dfs.accel[i])&
+                   (df.ts>=dfs.start_ts[i]) & (df.ts<=dfs.end_ts[i])] = dfs.switch_to[i]
+            #print(dfs.site[i]+str(dfs.id[i]))
+    except IndexError:
+        print('no data')
+    return dft
+
 def checkAccelDrift(df):
     df['mag'] = np.nan
     df['ave'] = np.nan
@@ -173,11 +206,20 @@ def resample_df(df):
     df = df.reset_index()
     return df
     
-def applyFilters(dfl, orthof=True, rangef=True, outlierf=True):
+def applyFilters(dfl, orthof=True, rangef=True, outlierf=True, deleteh=True,switchn=True):
 
     if dfl.empty:
         return dfl[['ts','name','id','x','y','z']]
-        
+    
+    if deleteh:
+        dfl=delete_history(dfl)
+        if dfl.empty:
+            return dfl[['ts','name','id','x','y','z']]
+    
+    if switchn:
+        dfl=switch_node(dfl)
+        if dfl.empty:
+            return dfl[['ts','name','id','x','y','z']]
   
     if rangef:
         dfl = dfl.groupby(['id'])

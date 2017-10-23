@@ -150,21 +150,27 @@ def getDataUpdateList(ws=None, schema=None, table=None, limit=10, withKey=True):
 #       False - if there is no need to update the websocket server
 #       Primary Key and the WSS Max Value - if the websocket server needs
 #               to be updated
-def comparePKValuesSCandWSS(ws=None, schema=None, table=None):
+def comparePKValuesSCandWSS(ws=None, schema=None, table=None, rankOffset=None):
     # Get latest PK Value from Local Server
     mainPKandVal = getLatestPKValue(schema, table)
 
     # TODO: Check latest value available on WSS
     mainPK = None
     pkValLocalMax = None
+    qWSSPKval = None
 
     try:
         for key, value in mainPKandVal.iteritems():
             mainPK = key 
             pkValLocalMax = value
 
-        qWSSPKval = "SELECT MAX(%s) as %s FROM %s" % (mainPK, mainPK, table)
-        # print "WSS Query: %s" % (qWSSPKval)
+        if rankOffset > 0 and rankOffset is not None:
+            # Quick fix in case we want the Nth highest PK for delayed received SMS
+            qWSSPKval = "SELECT DISTINCT(%s) as %s FROM %s ORDER BY %s DESC LIMIT 1 OFFSET %s" % (mainPK, mainPK, table, mainPK, rankOffset)
+        else:
+            qWSSPKval = "SELECT MAX(%s) as %s FROM %s" % (mainPK, mainPK, table)
+
+        print "WSS Query: %s, rankOffset: %s" % (qWSSPKval, rankOffset)
         wsspkvalCmd = masyncSR.compReadQuery(schema, qWSSPKval)
         # print wsspkvalCmd
         if wsspkvalCmd:
@@ -189,9 +195,10 @@ def comparePKValuesSCandWSS(ws=None, schema=None, table=None):
         return False
 
 # Get Latest Data from localhost that will be transferred to the Websocket Server
-def getInsertQueryForServerTX(ws=None, schema=None, table=None, limit=10):
+#   rankOffset is only applied on the first comparison of PK values
+def getInsertQueryForServerTX(ws=None, schema=None, table=None, limit=10, rankOffset=None):
     # Compare PK Values of Special Client (localhost) and Websocket Server
-    wssPKandVal = comparePKValuesSCandWSS(ws, schema, table)
+    wssPKandVal = comparePKValuesSCandWSS(ws, schema, table, rankOffset)
 
     # Collect latest data to be transferred to WSS from Special Client
     if wssPKandVal:
@@ -241,7 +248,7 @@ def getInsertQueryForServerTX(ws=None, schema=None, table=None, limit=10):
 
         # Compose data insertion query
         query = queryHeader + queryValues
-        # return query
+        # print query
 
         # Transfer data from Special Client to WSS
         requestMsg = masyncSR.modifierQuery(schema, query)

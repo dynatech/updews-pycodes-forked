@@ -575,7 +575,7 @@ def syncStartUp(host, port, batchRows=200):
     ws.close()
 
 
-def interfaceUpdateTableOfWSS(host=None, port=None, schema=None, table=None, batchRows=1000):
+def interfaceUpdateTableOfWSS(host=None, port=None, schema=None, table=None, batchRows=1000, rankOffset=None):
     if (host == None) or (port == None) or (schema == None) or (table == None):
         print "Error (%s): Please check your input values for host, port, schema or table" % (common.whoami())
         return -1
@@ -584,10 +584,10 @@ def interfaceUpdateTableOfWSS(host=None, port=None, schema=None, table=None, bat
     ws = create_connection(url)
 
     # Update the selected database table from the selected schema
-    updateTableOfWSS(ws, schema, table, batchRows)
+    updateTableOfWSS(ws, schema, table, batchRows, rankOffset)
 
 
-def updateTableOfWSS(ws, schema, table, batchRows=200):
+def updateTableOfWSS(ws, schema, table, batchRows=200, rankOffset=None):
     # Check if table target exists on WSS
     doesExist = masyncGD.findTableExistence(ws, schema, table)
     if doesExist:
@@ -598,7 +598,7 @@ def updateTableOfWSS(ws, schema, table, batchRows=200):
         ret = masyncPD.pushTableCreation(ws, schema, table)
 
     # Collect latest data to be transferred to WSS from Special Client
-    masyncGD.getInsertQueryForServerTX(ws, schema, table, batchRows)
+    masyncGD.getInsertQueryForServerTX(ws, schema, table, batchRows, rankOffset)
 
 
 # Update Data based on table and schema

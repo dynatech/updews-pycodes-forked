@@ -89,6 +89,8 @@ def alertgen(df, end):
     name = df['name'].values[0]
     query = "SELECT max(timestamp) FROM %s" %name
     ts = pd.to_datetime(q.GetDBDataFrame(query).values[0][0])
+    if ts == None:
+        return
     if ts > end - timedelta(hours=12):
         if ts > end:
             ts = end
@@ -119,7 +121,6 @@ def SitePublicAlert(PublicAlert, window):
 
     # dataframe of *
     site_alert = q.GetDBDataFrame(query)
-    
     # dataframe of all alerts
     validity_site_alert = site_alert.sort_values('updateTS', ascending = False)
     # dataframe of all alerts for the past 4hrs
@@ -127,10 +128,10 @@ def SitePublicAlert(PublicAlert, window):
 
     # public alert
     public_PrevAlert = validity_site_alert.loc[validity_site_alert.source == 'public']['alert'].values[0]
-    
+
     # timestamp of start of monitoring
     # alert is still in effect or continuing operational trigger
-    if 'A0' not in validity_site_alert['alert'].values:
+    if 'A0' != public_PrevAlert:
         query = "SELECT * FROM senslopedb.site_level_alert WHERE site = '%s' AND source = 'public' AND alert != 'A0' ORDER BY timestamp DESC LIMIT 3" %site
         prev_PAlert = q.GetDBDataFrame(query)
         print 'Public Alert-', prev_PAlert['alert'].values[0]
