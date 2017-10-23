@@ -316,6 +316,7 @@ def PlotSite(df,tsn,print_out_path):
 
     
 def PlotCrack(df):
+    df.sort_values('timestamp',inplace = True)
     disp = df.meas.values
     time = df.timestamp.values
     crack_name = ''.join(list(np.unique(df.crack_id.values)))
