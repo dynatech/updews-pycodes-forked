@@ -24,9 +24,9 @@ nid = sys.argv[4].replace("-",",")
 #tdate = "2016-06-25"
 #nid = "1-2-3".replace("-",",")
 engine = create_engine('mysql+mysqldb://updews:october50sites@127.0.0.1/senslopedb')
-query = "SELECT * FROM senslopedb.%s where timestamp between '%s ' and '%s' and id in (%s)" % (site,fdate,tdate,nid)
+query = "SELECT *,1 as 'accel' FROM senslopedb.%s where timestamp between '%s ' and '%s' and id in (%s)" % (site,fdate,tdate,nid)
 df = pd.io.sql.read_sql(query,engine)
-df.columns = ['ts','id','x','y','z','s']
+df.columns = ['ts','id','x','y','z','s','accel']
 df['name'] = site
 df_filt = filterSensorData.applyFilters(df, orthof=True, rangef=True, outlierf=True)
 dfajson = df_filt.reset_index().to_json(orient='records',date_format='iso')
