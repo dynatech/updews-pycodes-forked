@@ -16,25 +16,25 @@ df = pd.io.sql.read_sql(query,engine)
 #print df
 all_rainguage = []
 all_data= []
-for name in df.rain_senslope:
-    if(name != None):
-         all_rainguage.append(name)
-         
-for name in df.rain_arq:
+#for name in df.rain_senslope:
+#    if(name != None):
+#         all_rainguage.append(name)
+#         
+#for name in df.rain_arq:
+#    if(name != None):
+#         all_rainguage.append(name)
+
+for name in df.RG1:
     if(name != None):
          all_rainguage.append(name)
 
-#for name in df.RG1:
-#    if(name != None):
-#         all_rainguage.append(name)
-#
-#for name in df.RG2:
-#    if(name != None):
-#         all_rainguage.append(name)
-#
-#for name in df.RG3:
-#    if(name != None):
-#         all_rainguage.append(name)
+for name in df.RG2:
+    if(name != None):
+         all_rainguage.append(name)
+
+for name in df.RG3:
+    if(name != None):
+         all_rainguage.append(name)
          
 for site in all_rainguage:
    print site
