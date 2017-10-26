@@ -12,13 +12,15 @@ import json
 import os
 
 list_days =['3days']
-t_num =[3,7,14,31,90,180]
+t_num =[3]
 total_data = []
+tdata = raw_input('from: ')
+fdata = raw_input('to: ')
 for i, day in enumerate(list_days):
     
     days = day
-    tdate = dt.strptime('2017-09-28', "%Y-%m-%d")
-    fdate = tdate - td(days=t_num[i])
+    tdate = dt.strptime(fdata, "%Y-%m-%d %H:%M:%S")
+    fdate = dt.strptime(tdata, "%Y-%m-%d %H:%M:%S")
     print fdate,tdate
     engine = create_engine('mysql+pymysql://root:senslope@127.0.0.1/senslopedb')
     query = "SELECT name FROM senslopedb.site_column_props order by name asc"

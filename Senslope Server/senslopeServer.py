@@ -177,7 +177,7 @@ def SendMessagesFromDb(network,limit=10):
         # print ">> No messages in outbox"
         return
     
-    print ">> Sending messagess from db"
+    # print ">> Sending messagess from db"
         
     msglist = []
     for item in allmsgs:
@@ -215,7 +215,7 @@ def SendMessagesFromDb(network,limit=10):
     #Get all outbox messages with send_status "SENT" and attempt to send
     #   chatterbox acknowledgements
     #   send_status will be changed to "SENT-WSS" if successful
-    dsll.sendAllAckSentGSMtoDEWS()    
+    dsll.sendAllAckGSMToDEWS()  
     
 def getSensorNumbers():
     querys = "SELECT sim_num from site_column_sim_nums"

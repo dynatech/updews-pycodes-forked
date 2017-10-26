@@ -255,7 +255,7 @@ def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid
         
             query = query + " AND msgid in (11, 32)"
             if not fromTime:
-                fromTime = "2010-01-01"
+                fromTime = "2014-12-01"
             query = query + " AND timestamp >= '%s'" %fromTime
             
             toTime_query = ''
@@ -287,7 +287,7 @@ def GetRawAccelData(siteid = "", fromTime = "", toTime = "", maxnode = 40, msgid
                 query = query + " AND id = %d" %(targetnode)
                 
             if not fromTime:
-                fromTime = "2010-01-01"
+                fromTime = "2014-12-01"
             query = query + " AND timestamp >= '%s'" %fromTime
             
             toTime_query = ''
