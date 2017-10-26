@@ -100,18 +100,23 @@ def node_inst_vel(filled_smoothened, roll_window_numpts, start):
     
     return filled_smoothened
 
+def remove_invalid(stat, df):
+    invalid = df[df.id == stat['node'].values[0]]
+    invalid = invalid[invalid.ts >= stat['post_timestamp'].values[0]]
+    df = df[~(df.id == stat['node'].values[0])].append(invalid)
+    return df
+
 def genproc(col, window, config, fixpoint, realtime=False, comp_vel=True):
     
     monitoring = q.GetRawAccelData(col.name, window.offsetstart, window.end)
-    
+        
     monitoring = flt.applyFilters(monitoring)
     
     try:
         LastGoodData = q.GetLastGoodData(monitoring,col.nos)
         q.PushLastGoodData(LastGoodData,col.name)		
-        LastGoodData = q.GetLastGoodDataFromDb(col.name)
     except:	
-        LastGoodData = q.GetLastGoodDataFromDb(col.name)
+        pass
    
     #identify the node ids with no data at start of monitoring window
     NodesNoInitVal=GetNodesWithNoInitialData(monitoring,col.nos,window.offsetstart)
@@ -127,13 +132,14 @@ def genproc(col, window, config, fixpoint, realtime=False, comp_vel=True):
             monitoring=monitoring.append(lgdpm)
         
     monitoring = monitoring.loc[monitoring.id <= col.nos]
-    
-    invalid_nodes = q.GetNodeStatus(1)
-    invalid_nodes = invalid_nodes[invalid_nodes.site == col.name]['node'].values
-    monitoring = monitoring.loc[~monitoring.id.isin(invalid_nodes)]
-    
+        
     #assigns timestamps from LGD to be timestamp of offsetstart
     monitoring.loc[(monitoring.ts < window.offsetstart)|(pd.isnull(monitoring.ts)), ['ts']] = window.offsetstart
+
+    invalid_nodes = q.GetNodeStatus(1)
+    invalid_nodes = invalid_nodes[invalid_nodes.site == col.name]
+    stat = invalid_nodes.groupby('node', as_index=False)
+    monitoring = stat.apply(remove_invalid, df=monitoring)
 
     nodes_noval = GetNodesWithNoData(monitoring, col.nos)
     nodes_nodata = pd.DataFrame({'name': [0]*len(nodes_noval), 'id': nodes_noval,

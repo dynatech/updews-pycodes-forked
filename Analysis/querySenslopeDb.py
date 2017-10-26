@@ -545,8 +545,8 @@ def GetNodeStatus(statusid = 1):
         status = "Special Case"
     
     try:
-        query = 'SELECT ns1.site, ns1.node, ns1.status FROM node_status ns1 '
-        query += 'WHERE ns1.post_id = '
+        query = 'SELECT ns1.site, ns1.node, ns1.status, ns1.post_timestamp '
+        query += 'FROM node_status ns1 WHERE ns1.post_id = '
         query += '(SELECT max(ns2.post_id) FROM node_status ns2 '
         query += 'WHERE ns2.site = ns1.site AND ns2.node = ns1.node) '
         query += 'AND ns1.status = "%s" ' % (status)
