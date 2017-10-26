@@ -102,7 +102,7 @@ def node_inst_vel(filled_smoothened, roll_window_numpts, start):
 
 def remove_invalid(stat, df):
     invalid = df[df.id == stat['node'].values[0]]
-    invalid = invalid[invalid.ts >= stat['post_timestamp'].values[0]]
+    invalid = invalid[invalid.ts >= pd.to_datetime(stat['post_timestamp'].values[0])]
     df = df[~(df.id == stat['node'].values[0])].append(invalid)
     return df
 
@@ -138,8 +138,9 @@ def genproc(col, window, config, fixpoint, realtime=False, comp_vel=True):
 
     invalid_nodes = q.GetNodeStatus(1)
     invalid_nodes = invalid_nodes[invalid_nodes.site == col.name]
-    stat = invalid_nodes.groupby('node', as_index=False)
-    monitoring = stat.apply(remove_invalid, df=monitoring)
+    if len(invalid_nodes) != 0:
+        stat = invalid_nodes.groupby('node', as_index=False)
+        monitoring = stat.apply(remove_invalid, df=monitoring)
 
     nodes_noval = GetNodesWithNoData(monitoring, col.nos)
     nodes_nodata = pd.DataFrame({'name': [0]*len(nodes_noval), 'id': nodes_noval,
