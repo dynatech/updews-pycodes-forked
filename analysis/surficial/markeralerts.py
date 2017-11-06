@@ -166,7 +166,7 @@ def get_surficial_data_window(site_id,ts_start,ts_end):
     Dataframe
         Dataframe containing surficial data with columns [ts, marker_id, measurement]
     """
-    query = "SELECT ts, marker_id, measurement FROM marker_data INNER JOIN marker_observations ON marker_observations.mo_id = marker_data.mo_id AND ts <= '{}' AND ts >= '{}' AND marker_id in (SELECT marker_id FROM marker_data INNER JOIN marker_observations ON marker_data.mo_id = marker_observations.mo_id WHERE ts = (SELECT max(ts) FROM marker_observations WHERE site_id = {} AND ts <= '{}')) ORDER by ts DESC".format(ts_end,ts_start,site_id,ts_end)
+    query = "SELECT ts, marker_id, measurement FROM marker_data INNER JOIN marker_observations ON marker_observations.mo_id = marker_data.mo_id AND ts <= '{}' AND ts >= '{}' AND marker_id in (SELECT marker_id FROM marker_data INNER JOIN marker_observations ON marker_data.mo_id = marker_observations.mo_id WHERE site_id = {} AND ts = (SELECT max(ts) FROM marker_observations WHERE site_id = {} AND ts <= '{}')) ORDER by ts DESC".format(ts_end,ts_start,site_id,site_id,ts_end)
     return qdb.get_db_dataframe(query)
 
 def get_marker_details(marker_id):
