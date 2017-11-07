@@ -16,18 +16,32 @@ def getDF():
 #    tdate = "2016-03-29"
 #    rsite = 'agbtaw '
     engine = create_engine('mysql+pymysql://updews:october50sites@127.0.0.1/senslopedb')
-    query = "select timestamp, r15m, r24h from senslopedb.%s where timestamp between '%s' and '%s'" % (rsite ,fdate ,tdate)
+    query = "select timestamp, r15m from senslopedb.%s " %rsite
+    query += "where timestamp between '%s' and '%s'" %(pd.to_datetime(fdate)-td(3), tdate)
     df = pd.io.sql.read_sql(query,engine)
-    df.columns = ['ts','r15m','r24h']
+    df.columns = ['ts','rain']
+    df = df[df.rain >= 0]
     df = df.set_index(['ts'])
-    df = df["r15m"].astype(float)
-    df = df.resample('30Min', how = "sum")
-    dfs = pd.rolling_sum(df,48,min_periods=1)
-    dfs1 = pd.rolling_sum(df,144,min_periods=1)
-    dfs = dfs[dfs>=0]
-    dfs1 = dfs1[dfs1>=0]
-    dfa = pd.DataFrame({"rval":df,"hrs24":dfs,"hrs72":dfs1})
-    dfajson = dfa.reset_index().to_json(orient="records",date_format='iso')
+    df = df.resample('30Min').sum()
+    
+    df_inst = df.resample('30Min').sum()
+    
+    if max(df_inst.index) < pd.to_datetime(tdate):
+        new_data = pd.DataFrame({'ts': [pd.to_datetime(tdate)], 'rain': [0]})
+        new_data = new_data.set_index(['ts'])
+        df = df.append(new_data)
+        df = df.resample('30Min').sum()
+          
+    df1 = pd.rolling_sum(df,48,min_periods=1)
+    df3 = pd.rolling_sum(df,144,min_periods=1)
+    
+    df['rval'] = df_inst
+    df['hrs24'] = df1
+    df['hrs72'] = df3
+    
+    df = df[(df.index >= fdate)&(df.index <= tdate)]
+       
+    dfajson = df.reset_index().to_json(orient="records",date_format='iso')
     dfajson = dfajson.replace("T"," ").replace("Z","").replace(".000","")
     print dfajson
     
