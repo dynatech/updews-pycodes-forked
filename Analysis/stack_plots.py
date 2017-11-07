@@ -22,6 +22,11 @@ import rtwindow as rtw
 mpl.rcParams['xtick.labelsize'] = 8
 mpl.rcParams['ytick.labelsize'] = 8
 
+def nonrepeat_colors(ax,NUM_COLORS,color='jet'):
+    cm = plt.get_cmap(color)
+    ax.set_color_cycle([cm(1.*(NUM_COLORS-i-1)/NUM_COLORS) for i in range(NUM_COLORS)[::-1]])
+    return ax
+
 def zeroed(df, column):
     df['zeroed_'+column] = df[column] - df[column].values[0]
     return df
@@ -48,6 +53,7 @@ def get_surficial_df(site, start, end):
 def plot_surficial(ax, df, marker_lst):
     if marker_lst == 'all':
         marker_lst = set(df.crack_id)
+    ax = nonrepeat_colors(ax,len(marker_lst))
     for marker in marker_lst:
         marker_df = df[df.crack_id == marker]
         ax.plot(marker_df.timestamp, marker_df.zeroed_meas, marker='o',
@@ -111,7 +117,7 @@ def get_tsm_data(tsm_name, start, end, plot_type, node_lst):
         config.io.to_fill = 1
     else:
         config.io.to_smooth = 1
-        config.io.to_fill = 0
+        config.io.to_fill = 1
 
     monitoring = proc.genproc(col, window, config, 'bottom', comp_vel=False)
     df = monitoring.disp_vel.reset_index()[['ts', 'id', 'xz', 'xy']]
@@ -142,6 +148,7 @@ def plot_cml(ax, df, axis, tsm_name):
     
 # subsurface displacemnt plot
 def plot_disp(ax, df, axis, node_lst, tsm_name):
+    ax = nonrepeat_colors(ax,len(node_lst))
     for node in node_lst:
         node_df = df[df.id == node]
         ax.plot(node_df.ts, node_df['zeroed_'+axis].values, label='Node '+str(node))
@@ -153,8 +160,11 @@ def plot_disp(ax, df, axis, node_lst, tsm_name):
 
 def plot_single_event(ax, ts):
     ax.axvline(ts, color='red', linestyle='--', alpha=1)    
+    
+def plot_span(ax, start, end, color):
+    ax.axvspan(start, end, facecolor=color, alpha=0.2, edgecolor=None,linewidth=0)
 
-def main(site, start, end, rainfall_props, surficial_props, subsurface_props, event_lst):
+def main(site, start, end, rainfall_props, surficial_props, subsurface_props, event_lst, span_list):
     # count of subplots in subsurface displacement
     disp = subsurface_props['disp']['to_plot']
     num_disp = 0
@@ -192,6 +202,9 @@ def main(site, start, end, rainfall_props, surficial_props, subsurface_props, ev
         for event in event_lst:
             plot_single_event(ax, event)
         
+        for startTS, endTS, color in span_list:
+            plot_span(ax, startTS, endTS, color)
+        
     if surficial_props['to_plot']:
         surficial = get_surficial_df(site, start, end)
         try:
@@ -204,6 +217,9 @@ def main(site, start, end, rainfall_props, surficial_props, subsurface_props, ev
         plot_surficial(ax, surficial, surficial_props['markers'])
         for event in event_lst:
             plot_single_event(ax, event)
+            
+        for startTS, endTS, color in span_list:
+            plot_span(ax, startTS, endTS, color)
 
     if subsurface_props['disp']['to_plot']:
         disp = subsurface_props['disp']['disp_tsm_axis']
@@ -221,6 +237,9 @@ def main(site, start, end, rainfall_props, surficial_props, subsurface_props, ev
                 plot_disp(ax, tsm_data, axis, axis_lst[axis], tsm_name)
                 for event in event_lst:
                     plot_single_event(ax, event)
+          
+                for startTS, endTS, color in span_list:
+                    plot_span(ax, startTS, endTS, color)
 
     if subsurface_props['cml']['to_plot']:
         cml = subsurface_props['cml']['cml_tsm_axis']
@@ -247,25 +266,36 @@ def main(site, start, end, rainfall_props, surficial_props, subsurface_props, ev
                 plot_cml(ax, tsm_data, axis, tsm_name)
                 for event in event_lst:
                     plot_single_event(ax, event)
+                
+                for startTS, endTS, color in span_list:
+                    plot_span(ax, startTS, endTS, color)
 
     ax.set_xlim([start, end])
     fig.subplots_adjust(top=0.9, right=0.95, left=0.15, bottom=0.05, hspace=0.3)
     fig.suptitle(site.upper() + " Event Timeline",fontsize='x-large')
     plt.savefig(site + "_event_timeline", dpi=200,mode='w')#, 
 #        facecolor='w', edgecolor='w',orientation='landscape')
-
+    
     return return_data
+
 
 ############################################################
 
 if __name__ == '__main__':
     
-    site = 'pin'
-    start = '2017-09-11 12:00'
-    end = '2017-09-26 12:00'
+    site = 'umi'
+    start = '2017-09-05'
+    end = '2017-09-25'
     
     # annotate events
-    event_lst = []#'2017-09-11 12:30:00', '2017-09-12 06:30:00']
+    event_lst = []#'2017-06-05 06:30', '2017-06-05 19:30:00']
+    
+    span_starts = []#'2017-09-10 13:30','2017-09-21 11:30:00','2017-09-25 20:00:00','2017-09-26 00:00:00'] 
+    span_ends = []#'2017-09-15 20:00','2017-09-22 16:00:00','2017-09-26 00:00:00','2017-09-26 12:00']
+    alert = []#'green', 'yellow', 'orange', 'red']
+    span_colors = []#alert[1], alert[1], alert[1], alert[3]]
+    span_list = zip(span_starts, span_ends, span_colors)
+    
     
     # rainfall plot
     rainfall = True                                 ### True if to plot rainfall
@@ -273,8 +303,8 @@ if __name__ == '__main__':
     rainfall_props = {'to_plot': rainfall, 'rain_gauge': rain_gauge}
 
     # surficial plot
-    surficial = False                  ### True if to plot surficial
-    markers = ['A', 'B']    ### specifiy markers; 'all' if all markers
+    surficial = False                ### True if to plot surficial
+    markers = ['A', 'B', 'C']    ### specifiy markers; 'all' if all markers
     surficial_props = {'to_plot': surficial, 'markers': markers}
     
     # subsurface plot
@@ -282,7 +312,7 @@ if __name__ == '__main__':
     # subsurface displacement
     disp = True                    ### True if to plot subsurface displacement
     ### specifiy tsm name and axis; 'all' if all nodes
-    disp_tsm_axis = {'umita': {'xz': range(1,21)}}
+    disp_tsm_axis = {'umita': {'xz': [1, 7, 12], 'xy': [1, 7, 12]}}
     
     # subsurface cumulative displacement
     cml = False          ### True if to plot subsurface cumulative displacement
@@ -293,7 +323,7 @@ if __name__ == '__main__':
     subsurface_props = {'disp': {'to_plot': disp, 'disp_tsm_axis': disp_tsm_axis},
                         'cml': {'to_plot': cml, 'cml_tsm_axis': cml_tsm_axis}}
     
-    df = main(site, start, end, rainfall_props, surficial_props, subsurface_props, event_lst)
+    df = main(site, start, end, rainfall_props, surficial_props, subsurface_props, event_lst, span_list)
     
 ################################################################################
     

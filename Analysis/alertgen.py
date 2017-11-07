@@ -144,7 +144,7 @@ def column_alert(col_alert, alert, num_nodes_to_check, k_ac_ax, T_velL2, T_velL3
 
     i = col_alert['id'].values[0]
     #checking if current node alert is 2 or 3
-    if alert[alert.id == i]['node_alert'].values[0] != 0:
+    if alert[alert.id == i]['node_alert'].values[0] >= 0:
  
         #defining indices of adjacent nodes
         adj_node_ind=[]
@@ -179,8 +179,12 @@ def validity_check(adj_node_ind, alert, i, T_velL2, T_velL3):
 
     else:
         for j in adj_node_ind:
+            if j==adj_node_ind[-1]:
+                alert.loc[alert.id == i, 'col_alert'] = -1
+
             if alert[alert.id == j]['ND'].values[0]==0:
                 continue
+
             else:
                 #comparing current adjacent node velocity with current node velocity
                 if abs(alert[alert.id == j]['max_vel'].values[0])>=abs(alert[alert.id == i]['max_vel'].values[0])*1/(2.**abs(i-j)):
@@ -204,8 +208,6 @@ def validity_check(adj_node_ind, alert, i, T_velL2, T_velL3):
                     alert.loc[alert.id == i, 'col_alert'] = 0
                     break
 
-            if j==adj_node_ind[-1]:
-                alert.loc[alert.id == i, 'col_alert'] = -1
 
 def getmode(li):
     li.sort()
@@ -322,7 +324,7 @@ def main(name='', end='', end_mon=False):
 
     alert['node_alert']=alert['node_alert'].map({-1:'ND',0:'L0',1:'L2',2:'L3'})
     alert['col_alert']=alert['col_alert'].map({-1:'ND',0:'L0',1:'L2',2:'L3'})
-
+    print alert
     not_working = q.GetNodeStatus(1).loc[q.GetNodeStatus(1).site == name].node.values
     
     for i in not_working:
