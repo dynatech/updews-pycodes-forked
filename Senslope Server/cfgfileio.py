@@ -78,6 +78,8 @@ class config:
 		self.fileio.queryoutput = cfg.get("FileIO","querylatestreportoutput")
 		self.fileio.alertgenscript = cfg.get("FileIO","alertgenscript")
 		self.fileio.alertanalysisscript = cfg.get("FileIO","alertanalysisscript")
+		self.fileio.masyncscript = cfg.get("FileIO","masyncscript")
+		self.fileio.masynclogs = cfg.get("FileIO","masynclogs")
 		self.fileio.websocketdir = cfg.get("FileIO","websocketdir")
 		self.fileio.gndalert1 = cfg.get("FileIO","gndalert1")
 		self.fileio.gndalert2 = cfg.get("FileIO","gndalert2")

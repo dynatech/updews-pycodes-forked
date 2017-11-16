@@ -206,6 +206,8 @@ def WriteSomsDataToDb(dlist,msgtime):
 
     query = query[:-1]
     query = query.replace("nan","NULL")
+
+    syncTable(dlist[0][0])
     
     dbio.commitToDb(query, 'WriteSomsDataToDb')
     
@@ -310,8 +312,7 @@ def ProcessColumn(line,txtdatetime,sender):
         if i!=0:
             dbio.createTable(str(msgtable), "sensor v1")
             dbio.commitToDb(query, 'ProcessColumn')
-            # PANB: Inserted invoke function here to upload text messages for columns
-            invokeProcessInBgnd("~/anaconda2/bin/python ../client/bin/invoke-masync-CtoS-single.py %s > ~/scriptlogs/masync_on_receive.txt 2>&1" % msgtable.lower())
+            syncTable(msgtable.lower())
 
         SpawnAlertGen(msgtable,msgdatetime)
                 
@@ -556,8 +557,9 @@ def ProcessARQWeather(line,sender):
 
     dbio.commitToDb(query, 'ProcessARQWeather')
 
-    invokeProcessInBgnd("~/anaconda2/bin/python ../client/bin/invoke-masync-CtoS-single.py %s > ~/scriptlogs/masync_on_receive.txt 2>&1" % msgname)
-           
+    # for updating
+    syncTable(msgname)
+
     print 'End of Process ARQ weather data'
     
 def ProcessRain(line,sender):
@@ -610,7 +612,7 @@ def ProcessRain(line,sender):
         print query[:-2]
         dbio.commitToDb(query[:-2]+')', 'ProcessRain')
 
-    invokeProcessInBgnd("~/anaconda2/bin/python ../client/bin/invoke-masync-CtoS-single.py %s > ~/scriptlogs/masync_on_receive.txt 2>&1" % msgtable.lower())
+    syncTable(msgtable.lower())
         
     print 'End of Process weather data'
 
@@ -725,9 +727,11 @@ def SpawnAlertGen(tsm_name, timestamp):
         mc.set('alertgenlist',alertgenlist)
 
 def invokeProcessInBgnd(exec_line):
-    # PANB: testing command lines produced when trying to invoke
-    print '\n\n\n ---------> invokeProcessInBgnd: %s <---------- \n\n\n' % (exec_line)
     p = subprocess.Popen(exec_line, stdout=subprocess.PIPE, shell=True, stderr=subprocess.STDOUT)
+
+def syncTable(table):
+    c = cfg.config()
+    invokeProcessInBgnd("~/anaconda2/bin/python %s %s > %s 2>&1" % (c.fileio.masyncscript, table, c.fileio.masynclogs))
 
 def ProcessAllMessages(allmsgs,network):
     c = cfg.config()
@@ -765,6 +769,7 @@ def ProcessAllMessages(allmsgs,network):
                 try:
                     gm = gndmeas.getGndMeas(msg.data)
                     RecordGroundMeasurements(gm)
+                    syncTable(gndmeas)
                     # server.WriteOutboxMessageToDb("READ-SUCCESS: \n" + msg.data,c.smsalert.communitynum)
                     server.WriteOutboxMessageToDb(c.reply.successen, msg.simnum)
                 except ValueError as e:
@@ -785,11 +790,8 @@ def ProcessAllMessages(allmsgs,network):
                             WriteSomsDataToDb(dlist,msg.dt)
                         else:
                             WriteTwoAccelDataToDb(dlist,msg.dt)
-                            # PANB: commented out for the meantime to check proper path for invoke function
-                            # invokeProcessInBgnd("~/anaconda2/bin/python ../client/bin/invoke-masync-CtoS-single.py %s > ~/scriptlogs/masync_on_receive.txt 2>&1" % dlist[0][0])
 
-                        # PANB: Moved invoke function here since it is applicable for Subsurface and SOMS data
-                        invokeProcessInBgnd("~/anaconda2/bin/python ../client/bin/invoke-masync-CtoS-single.py %s > ~/scriptlogs/masync_on_receive.txt 2>&1" % dlist[0][0])
+                        syncTable(dlist[0][0])
                 except IndexError:
                     print "\n\n>> Error: Possible data type error"
                     print msg.data
