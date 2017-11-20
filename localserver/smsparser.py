@@ -74,7 +74,7 @@ def twos_comp(hexstr):
     else:
         return num
 
-def process_two_accle_col_data(sms):
+def process_two_accel_col_data(sms):
     msg = sms.data
     sender = sms.simnum
     txtdatetime = sms.dt
@@ -365,6 +365,9 @@ def process_piezometer(sms):
         msgname = re.sub("due","",msgname)
         msgname = re.sub("pz","",msgname)
         msgname = re.sub("ff","",msgname)
+
+        if len(msgname) == 3:
+            msgname = msgname + 'pz'
         
         print 'msg_name: ' + msgname
         data = linesplit[1]
@@ -404,7 +407,7 @@ def process_piezometer(sms):
     try:
       query = ("INSERT INTO piezo_%s (ts, frequency_shift, temperature ) VALUES"
       " ('%s', %s, %s)") % (msgname,txtdatetime,str(piezodata), str(tempdata))
-      # print query
+      print query
         # print query
     except ValueError:
         print '>> Error writing query string.', 
@@ -577,10 +580,10 @@ def process_arq_weather(sms):
         txtdatetime = dt.strptime(linesplit[13],
             '%y%m%d/%H%M%S').strftime('%Y-%m-%d %H:%M:00')
 
-    except IndexError and AttributeError:
-        print '\n>> Error: Rain message format is not recognized'
-        print line
-        return
+    # except IndexError and AttributeError:
+    #     print '\n>> Error: Rain message format is not recognized'
+    #     print line
+    #     return
     except ValueError:    
         print '>> Error: Possible conversion mismatch ' + line
         return
@@ -624,8 +627,8 @@ def process_rain(sms):
         line = re.sub(",(?=$)","",line)
     line = re.sub("(?<=,)(?=(,|$))","NULL",line)
     line = re.sub("(?<=,)NULL(?=,)","0.0",line)
-    line = re.sub("(?<=,).*$","NULL",line)
-    print line
+    # line = re.sub("(?<=,).*$","NULL",line)
+    print "line:", line
 
     try:
     
@@ -651,10 +654,10 @@ def process_rain(sms):
         csq = line.split(",")[8]
 
 
-    except IndexError and AttributeError:
-        print '\n>> Error: Rain message format is not recognized'
-        print line
-        return
+    # except IndexError and AttributeError:
+    #     print '\n>> Error: Rain message format is not recognized'
+    #     print line
+    #     return
     except KeyboardInterrupt:
         print '\n>>Error: Weather message format unknown ' + line
         return
@@ -755,7 +758,7 @@ def process_surficial_observation(msg):
         server.write_outbox_message_to_db("READ-SUCCESS: \n" + msg.data,
             c.smsalert.communitynum,'users')
         # server.write_outbox_message_to_db(c.reply.successen, msg.simnum,'users')
-        proceed_with_analysis = True
+        # proceed_with_analysis = True
     except surfp.SurficialParserError as e:
         print "stre(e)", str(e)
         errortype = re.search("(WEATHER|DATE|TIME|GROUND MEASUREMENTS|NAME|CODE)", 
@@ -785,6 +788,15 @@ def process_surficial_observation(msg):
         p = subprocess.Popen(surf_cmd_line, stdout=subprocess.PIPE, shell=True, 
             stderr=subprocess.STDOUT)
 
+def check_number_in_users(num):
+    query = "select user_id from user_mobile where sim_num = '%s'" % (num)
+
+    user_id = dbio.query_database(query,'cnin')
+
+    print user_id
+
+    return user_id
+
 
 def parse_all_messages(args,allmsgs=[]):
     c = cfg.config()
@@ -794,6 +806,7 @@ def parse_all_messages(args,allmsgs=[]):
     print "table:", args.table
 
     cur_num = 0
+    ref_count = 0
 
     if allmsgs==[]:
         print 'Error: No message to Parse'
@@ -809,6 +822,15 @@ def parse_all_messages(args,allmsgs=[]):
             cur_num = msg.num
                          
             msgname = check_name_of_number(msg.simnum)
+            if len(msgname) == 0:
+                print ">> Error unknown logger number:", msg.simnum
+            
+                if check_number_in_users(msg.simnum):
+                    print '>> User number'
+                else:
+                    print '>> Number not in loggers or user mobile'
+                    read_fail_list.append(msg.num)
+                    continue
             
             # Added for V1 sensors removes unnecessary characters 
             # pls see function pre_process_col_v1(data)
@@ -831,7 +853,7 @@ def parse_all_messages(args,allmsgs=[]):
             elif re.search("^[A-Z]{4,5}\*[xyabcXYABC]\*[A-F0-9]+\*[0-9]+T?$",
                 msg.data):
                 try:
-                    dlist = process_two_accle_col_data(msg)
+                    dlist = process_two_accel_col_data(msg)
                     if dlist:
                         if len(dlist[0]) < 7:
                             write_soms_data_to_db(dlist,msg)
@@ -869,6 +891,9 @@ def parse_all_messages(args,allmsgs=[]):
                 read_success_list.append(msg.num)
             else:
                 read_fail_list.append(msg.num)
+
+            ref_count += 1
+            print ">> SMS count processed:", ref_count
     # method for updating the read_status all messages that have been processed
     # so that they will not be processed again in another run
         except KeyboardInterrupt:

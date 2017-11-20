@@ -112,7 +112,7 @@ def process_ack_to_alert(msg):
     except:
         errmsg = "Error in parsing alert id. Please try again"
         # server.write_outbox_message_to_db(errmsg,msg.simnum)
-        return True
+        return False
 
     # check to see if message from chatter box
     # try:
@@ -130,9 +130,12 @@ def process_ack_to_alert(msg):
     #         return True
 
     user_id, nickname = qsi.get_name_of_staff(msg.simnum)
-    print user_id, nickname
+    print user_id, nickname, msg.data
     if re.search("server",nickname.lower()):
-        nickname = re.search("(?>=-).+(?= from)").group(0)
+        try:
+            nickname = re.search("(?<=-).+(?= from)", msg.data).group(0)
+        except AttributeError:
+            print "Error in processing nickname"
     # else:
     #     name = nickname
 
