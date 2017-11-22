@@ -57,11 +57,11 @@ def PlotData(rain_gauge_col, offsetstart, start, end, sub, col, insax, cumax, fi
     data = GetData(rain_gauge_col['rain_gauge'].values[0], offsetstart, end)
     
     #getting the rolling sum for the last24 hours
-    rainfall2=pd.rolling_sum(data,49,min_periods=1)
+    rainfall2=pd.rolling_sum(data,48,min_periods=1)
     rainfall2=np.round(rainfall2,4)
     
     #getting the rolling sum for the last 3 days
-    rainfall3=pd.rolling_sum(data,145,min_periods=1)
+    rainfall3=pd.rolling_sum(data,144,min_periods=1)
     rainfall3=np.round(rainfall3,4)
 
     data['24hr cumulative rainfall'] = rainfall2.rain

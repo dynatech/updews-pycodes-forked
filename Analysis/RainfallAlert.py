@@ -68,8 +68,8 @@ def onethree_val_writer(rainfall, end):
     ##one, three; float; cumulative sum for one day and three days
 
     #getting the rolling sum for the last24 hours
-    one = rainfall[(rainfall.index >= end - timedelta(1)) & (rainfall.index <= end)]['rain'].sum()
-    three = rainfall[(rainfall.index >= end - timedelta(3)) & (rainfall.index <= end)]['rain'].sum()
+    one = rainfall[(rainfall.index > end - timedelta(1)) & (rainfall.index <= end)]['rain'].sum()
+    three = rainfall[(rainfall.index > end - timedelta(3)) & (rainfall.index <= end)]['rain'].sum()
     
     return one,three
         
