@@ -559,7 +559,7 @@ def df_add_offset_col(df, offset, num_nodes):
     
     
 def main(data, tsm_props, window, sc, plotvel=True, show_part_legend = False,
-         realtime=True, plot_inc=True, comp_vel=True):
+         realtime=True, plot_inc=True):
 
     output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
 
