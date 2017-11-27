@@ -559,7 +559,7 @@ def df_add_offset_col(df, offset, num_nodes):
     
     
 def main(data, tsm_props, window, sc, plotvel=True, show_part_legend = False,
-         realtime=True, plot_inc=True):
+         realtime=True, plot_inc=True, three_day_window=True):
 
     output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
 
@@ -608,8 +608,11 @@ def main(data, tsm_props, window, sc, plotvel=True, show_part_legend = False,
 
     if plotvel:
         #velplots
-        vel = tilt.loc[(tilt.ts >= window.end-timedelta(hours=3)) \
-                & (tilt.ts <= window.end)]
+        if three_day_window:
+            vel = tilt.loc[(tilt.ts >= window.end-timedelta(hours=3)) \
+                    & (tilt.ts <= window.end)]
+        else:
+            vel = tilt
         #vel_xz
         vel_xz = vel[['ts', 'vel_xz', 'node_id']]
         velplot_xz,L2_xz,L3_xz = vel_classify(vel_xz, sc, tsm_props.nos)

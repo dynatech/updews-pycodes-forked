@@ -175,10 +175,12 @@ def main():
             plotvel = True
         else:
             plotvel = False
-            
+        
+        three_day_window = False            
     else:
         plotvel = True
         show_part_legend = True
+        three_day_window = True
 
     # asks which point to fix in column position plots
     while True:
@@ -192,10 +194,10 @@ def main():
         column_fix = 'bottom'        
     sc['subsurface']['column_fix'] = column_fix
             
-    data = proc.proc_data(tsm_props, window, sc, realtime=True, comp_vel=plotvel)       
+    data = proc.proc_data(tsm_props, window, sc, realtime=True, comp_vel=plotvel)
     plotter.main(data, tsm_props, window, sc, plotvel=plotvel,
                  show_part_legend = show_part_legend, realtime=True,
-                 plot_inc=False)
+                 plot_inc=False, three_day_window=three_day_window)
 
 ##########################################################
 if __name__ == "__main__":
