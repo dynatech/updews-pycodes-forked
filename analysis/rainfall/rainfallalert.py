@@ -63,11 +63,11 @@ def get_raw_rain_data(gauge_name, fromTime="", toTime=""):
         return df
         
     except UnboundLocalError:
-        print 'No ' + gauge_name + ' table in SQL'    
+        qdb.print_out('No ' + gauge_name + ' table in SQL')
 
     return
 
-def get_resampled_data(gauge_name, offsetstart, start, end):
+def get_resampled_data(gauge_name, offsetstart, start, end, check_nd=True):
     
     ##INPUT:
     ##r; str; site
@@ -82,21 +82,27 @@ def get_resampled_data(gauge_name, offsetstart, start, end):
     rainfall = rainfall.set_index('ts')
     rainfall = rainfall.loc[rainfall['rain']>=0]
 
-    try:
-        if rainfall.index[-1] <= end-timedelta(1):
-            return pd.DataFrame()
-        
-        #data resampled to 30mins
-        if rainfall.index[-1]<end:
-            blankdf=pd.DataFrame({'ts': [end], 'rain': [0]})
-            blankdf=blankdf.set_index('ts')
-            rainfall=rainfall.append(blankdf)
-        rainfall=rainfall.resample('30min').sum()
-        rainfall=rainfall[(rainfall.index>=start)]
-        rainfall=rainfall[(rainfall.index<=end)]    
-        return rainfall
+    try:    
+        time_checker = rainfall.index[-1] <= end-timedelta(1)
     except:
+        time_checker = True
+
+    #returns blank dataframe if no data within the past hour
+    if check_nd and time_checker:
         return pd.DataFrame()
+
+    #add data to start and end of monitoring
+    blankdf = pd.DataFrame({'ts': [end, offsetstart], 'rain': [np.nan, np.nan]})
+    blankdf = blankdf.set_index('ts')
+    rainfall = rainfall.append(blankdf)
+    rainfall = rainfall.sort_index()
+    
+    #data resampled to 30mins
+    rainfall = rainfall.resample('30min').sum()
+    rainfall = rainfall[(rainfall.index >= offsetstart)]
+    rainfall = rainfall[(rainfall.index <= end)]    
+    
+    return rainfall
         
 def get_unempty_rg_data(rain_props, offsetstart, start, end):
     
@@ -122,7 +128,7 @@ def get_unempty_rg_data(rain_props, offsetstart, start, end):
                 return RGdata, gauge_name, rain_id
     return pd.DataFrame()
 
-def one_three_val_writer(rainfall):
+def one_three_val_writer(rainfall, end):
 
     ##INPUT:
     ##one; dataframe; one-day cumulative rainfall
@@ -131,20 +137,16 @@ def one_three_val_writer(rainfall):
     ##OUTPUT:
     ##one, three; float; cumulative sum for one day and three days
 
-    #getting the rolling sum for the last24 hours
-    rainfall2 = rainfall.rolling(min_periods=1,window=48,center=False).sum()
-    rainfall2 = np.round(rainfall2,4)
+    if len(rainfall.dropna()) == 0:
+        return np.nan, np.nan
     
-    #getting the rolling sum for the last 3 days
-    rainfall3 = rainfall.rolling(min_periods=1,window=144,center=False).sum()
-    rainfall3 = np.round(rainfall3,4)
-
-    one = float(rainfall2.rain[-1:])
-    three = float(rainfall3.rain[-1:])
+    #getting the rolling sum for the last24 hours
+    one = rainfall[(rainfall.index > end - timedelta(1)) & (rainfall.index <= end)]['rain'].sum()
+    three = rainfall[(rainfall.index > end - timedelta(3)) & (rainfall.index <= end)]['rain'].sum()
     
     return one,three
         
-def summary_writer(site_id,gauge_name,rain_id,twoyrmax,halfmax,rainfall,end,write_alert):
+def summary_writer(site_id,site_code,gauge_name,rain_id,twoyrmax,halfmax,rainfall,end,write_alert):
 
     ##DESCRIPTION:
     ##inserts data to summary
@@ -154,8 +156,8 @@ def summary_writer(site_id,gauge_name,rain_id,twoyrmax,halfmax,rainfall,end,writ
     ##halfmax; float; half of 2-yr max rainfall, threshold for one day cumulative rainfall
     ##one; dataframe; one-day cumulative rainfall
     ##three; dataframe; three-day cumulative rainfall        
-    
-    one,three = one_three_val_writer(rainfall)
+
+    one,three = one_three_val_writer(rainfall, end)
 
     #threshold is reached
     if one>=halfmax or three>=twoyrmax:
@@ -197,7 +199,11 @@ def summary_writer(site_id,gauge_name,rain_id,twoyrmax,halfmax,rainfall,end,writ
                     df = pd.DataFrame({'ts': [end], 'site_id': [site_id], 'rain_id': [rain_id], 'rain_alert': ['b'], 'cumulative': [three], 'threshold': [round(twoyrmax,2)]})
                     qdb.push_db_dataframe(df, 'rainfall_alerts', index = False)
 
-    summary = pd.DataFrame({'site_id': [site_id], '1D cml': [one], 'half of 2yr max': [round(halfmax,2)], '3D cml': [three], '2yr max': [round(twoyrmax,2)], 'DataSource': [gauge_name], 'rain_id': [rain_id], 'alert': [ralert], 'advisory': [advisory]})
+    summary = pd.DataFrame({'site_id': [site_id], 'site_code': [site_code],
+                        '1D cml': [one], 'half of 2yr max': [round(halfmax,2)],
+                        '3D cml': [three], '2yr max': [round(twoyrmax,2)],
+                        'DataSource': [gauge_name], 'rain_id': [rain_id],
+                        'alert': [ralert], 'advisory': [advisory]})
     
     return summary
 
@@ -211,6 +217,7 @@ def main(rain_props, end, sc, trigger_symbol):
     
     #rainfall properties
     site_id = rain_props['site_id'].values[0]
+    site_code = rain_props['site_code'].values[0]
     twoyrmax = rain_props['threshold_value'].values[0]
     halfmax=twoyrmax/2
     
@@ -231,15 +238,19 @@ def main(rain_props, end, sc, trigger_symbol):
 
     try:
         #data is gathered from nearest rain gauge
-        rainfall, gauge_name, rain_id = get_unempty_rg_data(rain_props, offsetstart, start, end)
-        summary = summary_writer(site_id,gauge_name,rain_id,twoyrmax,halfmax,rainfall,end,write_alert)
+        rainfall, gauge_name, rain_id = get_unempty_rg_data(rain_props,
+                                                            offsetstart, start,
+                                                            end)
+        summary = summary_writer(site_id, site_code, gauge_name, rain_id,
+                                 twoyrmax, halfmax, rainfall, end, write_alert)
     except:
         #if no data for all rain gauge
         rainfall = pd.DataFrame({'ts': [end], 'rain': [np.nan]})
         rainfall = rainfall.set_index('ts')
         gauge_name="No Alert! No ASTI/SENSLOPE Data"
         rain_id="No Alert! No ASTI/SENSLOPE Data"
-        summary = summary_writer(site_id,gauge_name,rain_id,twoyrmax,halfmax,rainfall,end,write_alert)
+        summary = summary_writer(site_id, site_code, gauge_name, rain_id,
+                                 twoyrmax, halfmax, rainfall, end, write_alert)
 
     operational_trigger = summary[['site_id', 'alert']]
     operational_trigger['alert'] = operational_trigger['alert'].map({-1:trigger_symbol[trigger_symbol.alert_level == -1]['trigger_sym_id'].values[0], 0:trigger_symbol[trigger_symbol.alert_level == 0]['trigger_sym_id'].values[0], 1:trigger_symbol[trigger_symbol.alert_level == 1]['trigger_sym_id'].values[0]})
