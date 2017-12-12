@@ -66,7 +66,7 @@ for site in dfnew.rain_senslope:
                 rain_senslope.append({'from':fdate,'to':tdate,'site':site,'time':'no data','data_lenght':'0'})  
 
 rain_senslope = pd.DataFrame(rain_senslope)
-rain_senslope.to_csv('/home/ubuntu/www/var/html/temp/data/rain_senslope_execution.csv')
+rain_senslope.to_csv('//var//www//html//temp//data//rain_senslope_execution.csv')
 
 for site_arq in dfnew.rain_arq:
         if site_arq != None :
@@ -109,7 +109,7 @@ for site_arq in dfnew.rain_arq:
                 rain_arq.append({'from':fdate,'to':tdate,'site':site_arq,'time':(end - start),'data_lenght':'0'}) 
                 
 rain_arq = pd.DataFrame(rain_arq)
-rain_arq.to_csv('/home/ubuntu/www/var/html/temp/data/rain_arq_execution.csv')
+rain_arq.to_csv('//var//www//html//temp//data//rain_arq_execution.csv')
  
 for name in dfnew.RG1:
     if(name != None and len(name) >= 10):
@@ -164,5 +164,5 @@ for site_noah in all_rainguage_noah:
                 rain_noah.append({'from':fdate,'to':tdate,'site':site_noah,'time':(end - start),'data_lenght':'0'}) 
                 
 rain_noah = pd.DataFrame(rain_noah)
-rain_noah.to_csv('/home/ubuntu/www/var/html/temp/data/rain_noah_execution.csv')
+rain_noah.to_csv('//var//www//html//temp//data//rain_noah_execution.csv')
  
