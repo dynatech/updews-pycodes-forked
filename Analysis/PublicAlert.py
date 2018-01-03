@@ -426,7 +426,11 @@ def SitePublicAlert(PublicAlert, end):
             validity += timedelta(2)
         else:
             validity += timedelta(1)
-        
+
+        internal_alert = public_alert + '-' + internal_alert
+        if public_alert == 'A1' and len(sensor_alert[sensor_alert.alert != 'ND']) == 0 and ground_alert == 'g0' and moms == 'nd':
+            internal_alert = internal_alert.replace('A1', 'ND')
+
         # A3 is still valid
         if validity > end + timedelta(hours=0.5):
             pass
@@ -443,13 +447,7 @@ def SitePublicAlert(PublicAlert, end):
         validity = ''
         if len(sensor_alert[sensor_alert.alert != 'ND']) == 0 and ground_alert == 'g0' and moms == 'nd':
             internal_alert = 'ND'
-    
-    if public_alert != 'A0':
-        internal_alert = public_alert + '-' + internal_alert
-    if public_alert == 'A1' and len(sensor_alert[sensor_alert.alert != 'ND']) == 0 and ground_alert == 'g0' and moms == 'nd':
-        internal_alert = internal_alert.replace('A1', 'ND')
-
-            
+                
     source = []
     if 's' in internal_alert.lower():
         source += ['sensor']
