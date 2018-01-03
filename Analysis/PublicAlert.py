@@ -433,7 +433,7 @@ def SitePublicAlert(PublicAlert, end):
 
         # A3 is still valid
         if validity > end + timedelta(hours=0.5):
-            pass
+            internal_alert = internal_alert.replace('rx', '').replace('Rx', 'R')
         elif ((end + timedelta(3) > validity) and ('0' in internal_alert.lower() or 'nd' in internal_alert.lower())) or 'x' in internal_alert.lower():
             validity = round_release_time(end)
         else:
