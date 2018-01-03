@@ -130,7 +130,7 @@ def getShifts(datedt):
 
 def getNumbersFromList(personnel_list):
 
-	query = """select nickname,numbers from dewslcontacts where nickname in %s""" % (personnel_list)
+	query = """select nickname,numbers from dewslcontacts where nickname in %s""" % (str(personnel_list))
 
 	return dbio.querydatabase(query,'customquery')
 
@@ -138,14 +138,17 @@ def sendEventMonitoringReminder():
 	next_shift = dt.today()+td(hours=13)
 	shifts = getShifts(next_shift)
 	report_dt = shifts[0][0]
-	# print shifts
 	
 	position = ['iompmt','iompct','oomps','oompmt','oompct']
 	position_dict = {}
 	for pos,per in zip(position,shifts[0][1:]):
-		position_dict[per.upper().strip()] = pos
-
-	numbers = getNumbersFromList(str(shifts[0][1:]))
+		try:
+			position_dict[per.upper().strip()] = pos
+		except AttributeError:
+			print 'Skiping position'
+			continue
+	names = tuple([name for name in shifts[0][1:] if name is not None])
+	numbers = getNumbersFromList(names)
 	numbers_dict = {}
 	for nick,num in numbers:
 		numbers_dict[nick.upper().strip()] = num
