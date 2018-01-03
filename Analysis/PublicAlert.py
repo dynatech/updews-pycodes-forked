@@ -430,7 +430,7 @@ def SitePublicAlert(PublicAlert, end):
         # A3 is still valid
         if validity > end + timedelta(hours=0.5):
             pass
-        elif (end + timedelta(3) > validity) and '0' in internal_alert.lower():
+        elif (end + timedelta(3) > validity) and ('0' in internal_alert.lower() or 'ND' in internal_alert.lower()):
             validity = round_release_time(end)
         else:
             public_alert = 'A0'
@@ -496,50 +496,50 @@ def SitePublicAlert(PublicAlert, end):
         alert_toDB(SitePublicAlert, 'site_level_alert', end, 'public')
     except:
         print 'duplicate'
-    
+
+
     public_CurrAlert = SitePublicAlert['alert'].values[0]
-        
-    if public_CurrAlert != 'A0' and public_PrevAlert != public_CurrAlert:
+
+    if public_CurrAlert != 'A0' or public_PrevAlert != public_CurrAlert:
         
         query =  "SELECT * FROM smsalerts "
-        query += "where ts_set >= '%s'" %(end - timedelta(1))
+        query += "where ts_set > '%s'" %(start_monitor - timedelta(1))
         prev_sms = q.GetDBDataFrame(query)
-        
         init_triggers = site_alert[(site_alert.source != 'public') & (~site_alert.alert.str.contains('0'))]
-        
         for i in range(len(init_triggers)):
+            
             curr_source = init_triggers['source'].values[i]
             alertmsg = init_triggers['alert'].values[i][-1] + ':' + curr_source
-            prev_source_sms = prev_sms[prev_sms.alertmsg.contains(alertmsg)]
-            if len(prev_source_sms) != 0:
+            prev_source_sms = prev_sms[prev_sms.alertmsg.str.contains(alertmsg)&prev_sms.alertmsg.str.contains(site)]
+            if len(prev_source_sms) == 0:
                 GSMAlert = pd.DataFrame({'site': [site], 'alert': [public_CurrAlert], 'palert_source': [curr_source]})
 
-            #node_level_alert
-            if curr_source == 'sensor':
-                query =  "SELECT * FROM senslopedb.node_level_alert "
-                query += "WHERE site LIKE '%s' " %sensor_site
-                query += "AND timestamp >= '%s' ORDER BY timestamp DESC" %start_monitor
-                allnode_alertDF = q.GetDBDataFrame(query)
-                column_name = set(allnode_alertDF['site'].values)
-                colnode_source = []
-                for i in column_name:
-                    node_alertDF = allnode_alertDF.loc[allnode_alertDF.site == i]
-                    node_alert = list(set(node_alertDF['id'].values))
-                    node_alert = str(node_alert)[1:len(str(node_alert))-1].replace(' ', '')
-                    colnode_source += [str(i) + '-' + node_alert]
-                colnode_source = 'sensor(' + ','.join(colnode_source) + ')'
-                GSMAlert['palert_source'] = [GSMAlert['palert_source'].values[0].replace('sensor', colnode_source)]
+                #node_level_alert
+                if curr_source == 'sensor':
+                    query =  "SELECT * FROM senslopedb.node_level_alert "
+                    query += "WHERE site LIKE '%s' " %sensor_site
+                    query += "AND timestamp >= '%s' ORDER BY timestamp DESC" %start_monitor
+                    allnode_alertDF = q.GetDBDataFrame(query)
+                    column_name = set(allnode_alertDF['site'].values)
+                    colnode_source = []
+                    for i in column_name:
+                        node_alertDF = allnode_alertDF.loc[allnode_alertDF.site == i]
+                        node_alert = list(set(node_alertDF['id'].values))
+                        node_alert = str(node_alert)[1:len(str(node_alert))-1].replace(' ', '')
+                        colnode_source += [str(i) + '-' + node_alert]
+                    colnode_source = 'sensor(' + ','.join(colnode_source) + ')'
+                    GSMAlert['palert_source'] = [GSMAlert['palert_source'].values[0].replace('sensor', colnode_source)]
+            
+                GSMAlert = GSMAlert[['site', 'alert', 'palert_source']]            
+                with open('GSMAlert.txt', 'w') as w:
+                    w.write('As of ' + str(end)[:16] + '\n')
+                GSMAlert.to_csv('GSMAlert.txt', header = False, index = None, sep = ':', mode = 'a')
         
-            GSMAlert = GSMAlert[['site', 'alert', 'palert_source']]            
-            with open('GSMAlert.txt', 'w') as w:
-                w.write('As of ' + str(end)[:16] + '\n')
-            GSMAlert.to_csv('GSMAlert.txt', header = False, index = None, sep = ':', mode = 'a')
-    
-            #write text file to db
-            writeAlertToDb('GSMAlert.txt')
-        
-            with open('GSMAlert.txt', 'w') as w:
-                w.write('')
+                #write text file to db
+                writeAlertToDb('GSMAlert.txt')
+            
+                with open('GSMAlert.txt', 'w') as w:
+                    w.write('')
             
     if (public_CurrAlert == 'A0' and public_PrevAlert != public_CurrAlert) or (public_CurrAlert != 'A0' and end.time() in [time(7,30), time(19,30)]):
         query = "SELECT * FROM senslopedb.site_column_props where name LIKE '%s'" %sensor_site
@@ -562,6 +562,7 @@ def writeAlertToDb(alertfile):
 
 def main(end=datetime.now()):
     start_time = datetime.now()
+    print start_time
     
     with open('GSMAlert.txt', 'w') as w:
         w.write('')
