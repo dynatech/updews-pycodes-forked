@@ -324,11 +324,13 @@ def ProcessColumn(line,txtdatetime,sender):
         print '\n>>Error: Unknown'
         return
 
-def ProcessPiezometer(line,sender):    
+def ProcessPiezometer(line,sender,msgdatetime):    
     #msg = message
     print 'Piezometer data: ' + line
     try:
     #PUGBPZ*13173214*1511091800 
+        line = re.sub("\*\*","*",line)
+        print line, msgdatetime
         linesplit = line.split('*')
         msgname = linesplit[0].lower()
         msgname = re.sub("due","",msgname)
@@ -344,10 +346,14 @@ def ProcessPiezometer(line,sender):
         t1 = int(('0x'+data[10:12]), 16)
         t2 = int(('0x'+data[12:14]), 16)*.01
         tempdata = t1+t2
+
         try:
             txtdatetime = dt.strptime(linesplit[2],'%y%m%d%H%M%S').strftime('%Y-%m-%d %H:%M:00')
         except ValueError:
             txtdatetime = dt.strptime(linesplit[2],'%y%m%d%H%M').strftime('%Y-%m-%d %H:%M:00')
+
+        if int(txtdatetime[0:4]) < 2009:
+            txtdatetime = msgdatetime
             
     except IndexError and AttributeError:
         print '\n>> Error: Piezometer message format is not recognized'
@@ -752,7 +758,7 @@ def ProcessAllMessages(allmsgs,network):
             msgname = checkNameOfNumber(msg.simnum)
             ##### Added for V1 sensors removes unnecessary characters pls see function PreProcessColumnV1(data)
             if re.search("\*FF",msg.data):
-                ProcessPiezometer(msg.data, msg.simnum)
+                ProcessPiezometer(msg.data, msg.simnum, msg.dt)
             # elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*\d+T?$",msg.data):
             elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*.*",msg.data):
                msg.data = PreProcessColumnV1(msg.data)
@@ -811,7 +817,7 @@ def ProcessAllMessages(allmsgs,network):
             elif msg.data.split('*')[0] == 'COORDINATOR' or msg.data.split('*')[0] == 'GATEWAY':
                 isMsgProcSuccess = ProcessCoordinatorMsg(msg.data, msg.simnum)
             elif re.search("^MANUAL RESET",msg.data):
-                server.WriteOutboxMessageToDb("SENSORPOLL SENSLOPE", msg.simnum)
+                # server.WriteOutboxMessageToDb("SENSORPOLL SENSLOPE", msg.simnum)
                 isMsgProcSuccess = True
             else:
                 print '>> Unrecognized message format: '
