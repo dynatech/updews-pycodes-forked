@@ -155,7 +155,7 @@ def SitePublicAlert(PublicAlert, end):
 
     # dataframe of public alert and triggers within 24 hours
     site_alert = q.GetDBDataFrame(query)
-    site_alert = site_alert[(site_alert.source == 'public') | ((site_alert.source != 'public') & (site_alert.updateTS >= end))]
+    site_alert = site_alert[(site_alert.source == 'public') | ((site_alert.source != 'public') & (site_alert.updateTS >= end - timedelta(1)))]
     site_alert = site_alert[~site_alert.source.isin(['internal', 'noadjfilt', 'netvel'])]
     site_alert = site_alert[~site_alert.alert.isin(['nd', 'ND'])]
 
