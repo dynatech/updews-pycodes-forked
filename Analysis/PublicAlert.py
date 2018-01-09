@@ -378,25 +378,6 @@ def SitePublicAlert(PublicAlert, end):
         rain_alert = op_trigger.loc[(op_trigger.source == 'rain')]['alert'].values[0]
     except:
         rain_alert = 'nd'
-    if public_PrevAlert != 'A0':
-        if rain_alert == 'nd' and 'r' in internal_alert.lower():
-            query =  "SELECT * FROM site_level_alert "
-            query += "WHERE site = '%s' AND source = 'rain' " %site
-            query += "ORDER BY timestamp DESC LIMIT 2"
-            prev_rain_alert = q.GetDBDataFrame(query)['alert'].values[-1]
-            if prev_rain_alert == 'nd':
-                internal_alert = internal_alert.replace('R', 'R0')
-        elif rain_alert == 'r0':
-            query =  "SELECT * FROM senslopedb.rain_alerts "
-            query += "where site_id = '%s' and ts = '%s'" %(site, end)
-            rain_alert_df = q.GetDBDataFrame(query)
-            if len(rain_alert_df) == 0 and 'r' in internal_alert.lower():
-                internal_alert = internal_alert.replace('R', 'Rx')
-            elif len(rain_alert_df) == 0:
-                internal_alert += 'rx'
-                internal_alert = internal_alert.replace('EDrx', 'rxED')
-                internal_alert = internal_alert.replace('Drx', 'rxD')
-                internal_alert = internal_alert.replace('Erx', 'rxE')
     
     # surficial data presence
     ground_alert = op_trigger.loc[(op_trigger.source == 'ground') & (op_trigger.updateTS >= round_release_time(end) - timedelta(hours=4))]
@@ -430,10 +411,30 @@ def SitePublicAlert(PublicAlert, end):
         internal_alert = public_alert + '-' + internal_alert
         if public_alert == 'A1' and len(sensor_alert[sensor_alert.alert != 'ND']) == 0 and ground_alert == 'g0' and moms == 'nd':
             internal_alert = internal_alert.replace('A1', 'ND')
+            
+        if rain_alert == 'nd' and 'r' in internal_alert.lower():
+            query =  "SELECT * FROM site_level_alert "
+            query += "WHERE site = '%s' AND source = 'rain' " %site
+            query += "ORDER BY timestamp DESC LIMIT 2"
+            prev_rain_alert = q.GetDBDataFrame(query)['alert'].values[-1]
+            if prev_rain_alert == 'nd':
+                internal_alert = internal_alert.replace('R', 'R0')
+        elif rain_alert == 'r0' and end > validity - timedelta(hours=0.5):
+            query =  "SELECT * FROM senslopedb.rain_alerts "
+            query += "where site_id = '%s' and ts = '%s'" %(site, end)
+            rain_alert_df = q.GetDBDataFrame(query)
+            if len(rain_alert_df) == 0 and 'r' in internal_alert.lower():
+                internal_alert = internal_alert.replace('R', 'Rx')
+            elif len(rain_alert_df) == 0:
+                internal_alert += 'rx'
+                internal_alert = internal_alert.replace('EDrx', 'rxED')
+                internal_alert = internal_alert.replace('Drx', 'rxD')
+                internal_alert = internal_alert.replace('Erx', 'rxE')
+
 
         # A3 is still valid
         if validity > end + timedelta(hours=0.5):
-            internal_alert = internal_alert.replace('rx', '').replace('Rx', 'R')
+            pass
         elif ((end + timedelta(3) > validity) and ('0' in internal_alert.lower() or 'nd' in internal_alert.lower())) or 'x' in internal_alert.lower():
             validity = round_release_time(end)
         else:

@@ -105,11 +105,17 @@ def summary_writer(r,datasource,twoyrmax,halfmax,rainfall,end,write_alert):
         ralert='r0'
         advisory='---'
 
-    if (write_alert and end.time() in [time(3,30), time(7,30), time(11,30), time(15,30), time(19,30), time(23,30)]) or ralert == 'r1':
+    if write_alert or ralert == 'r1':
         engine = create_engine('mysql://'+q.Userdb+':'+q.Passdb+'@'+q.Hostdb+':3306/'+q.Namedb)
         if ralert == 'r0':
-            if one < halfmax*0.75 and three < twoyrmax*0.75:
-                df = pd.DataFrame({'ts': [end,end], 'site_id': [r,r], 'rain_source': [datasource,datasource], 'rain_alert': ['r0a','r0b'], 'cumulative': [one,three], 'threshold': [round(halfmax,2),round(twoyrmax,2)]})
+            if one >= halfmax*0.75:
+                df = pd.DataFrame({'ts': [end], 'site_id': [r], 'rain_source': [datasource], 'rain_alert': ['rxa'], 'cumulative': [one], 'threshold': [round(halfmax,2)]})
+                try:
+                    df.to_sql(name = 'rain_alerts', con = engine, if_exists = 'append', schema = q.Namedb, index = False)
+                except:
+                    pass
+            if three >= twoyrmax*0.75:
+                df = pd.DataFrame({'ts': [end], 'site_id': [r], 'rain_source': [datasource], 'rain_alert': ['rxb'], 'cumulative': [three], 'threshold': [round(twoyrmax,2)]})
                 try:
                     df.to_sql(name = 'rain_alerts', con = engine, if_exists = 'append', schema = q.Namedb, index = False)
                 except:
@@ -156,13 +162,53 @@ def RainfallAlert(siterainprops, end, s):
     offsetstart = start - timedelta(hours=0.5)
 
     try:
-        query = "SELECT * FROM senslopedb.site_level_alert where site = '%s' and source in ('public') order by timestamp desc limit 1" %name
-        df = q.GetDBDataFrame(query)
-        currAlert = df['alert'].values[0]
+        query = "SELECT * FROM senslopedb.site_level_alert WHERE site = '%s' AND source = 'public' AND alert != 'A0' ORDER BY timestamp DESC LIMIT 3" %name
+        prev_PAlert = q.GetDBDataFrame(query)
+        currAlert = prev_PAlert['alert'].values[0]
+
         if currAlert != 'A0':
-            write_alert = True
+
+            # one prev alert
+            if len(prev_PAlert) == 1:
+                start_monitor = pd.to_datetime(prev_PAlert.timestamp.values[0])
+            # two prev alert
+            elif len(prev_PAlert) == 2:
+                # one event with two prev alert
+                if pd.to_datetime(prev_PAlert['timestamp'].values[0]) - pd.to_datetime(prev_PAlert['updateTS'].values[1]) <= timedelta(hours=0.5):
+                    start_monitor = pd.to_datetime(prev_PAlert['timestamp'].values[1])
+                else:
+                    start_monitor = pd.to_datetime(prev_PAlert['timestamp'].values[0])
+            # three prev alert
+            else:
+                if pd.to_datetime(prev_PAlert['timestamp'].values[0]) - pd.to_datetime(prev_PAlert['updateTS'].values[1]) <= timedelta(hours=0.5):
+                    # one event with three prev alert
+                    if pd.to_datetime(prev_PAlert['timestamp'].values[1]) - pd.to_datetime(prev_PAlert['updateTS'].values[2]) <= timedelta(hours=0.5):
+                        start_monitor = pd.to_datetime(prev_PAlert.timestamp.values[2])
+                    # one event with two prev alert
+                    else:
+                        start_monitor = pd.to_datetime(prev_PAlert['timestamp'].values[1])
+                else:
+                    start_monitor = pd.to_datetime(prev_PAlert['timestamp'].values[0])
+                    
+            query =  "SELECT * FROM site_level_alert "
+            query += "WHERE site = '%s' " %name
+            query += "and alert not regexp '0|nd' "
+            query += "and source != 'public' "
+            query += "and timestamp >= '%s' " %start_monitor
+            query += "and timestamp <= '%s'" %end
+            triggers = q.GetDBDataFrame(query)
+            validity = max(triggers['updateTS'].values) + timedelta(1)
+            if currAlert == 'A3':
+                validity += timedelta(1)
+
+            if end > validity:
+                write_alert = True
+            else:
+                write_alert = False
+
         else:
             write_alert = False
+
     except:
         write_alert = False
 
