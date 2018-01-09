@@ -423,19 +423,18 @@ def SitePublicAlert(PublicAlert, end):
             query =  "SELECT * FROM senslopedb.rain_alerts "
             query += "where site_id = '%s' and ts = '%s'" %(site, end)
             rain_alert_df = q.GetDBDataFrame(query)
-            if len(rain_alert_df) == 0 and 'r' in internal_alert.lower():
+            if len(rain_alert_df) != 0 and 'r' in internal_alert.lower():
                 internal_alert = internal_alert.replace('R', 'Rx')
-            elif len(rain_alert_df) == 0:
+            elif len(rain_alert_df) != 0:
                 internal_alert += 'rx'
                 internal_alert = internal_alert.replace('EDrx', 'rxED')
                 internal_alert = internal_alert.replace('Drx', 'rxD')
                 internal_alert = internal_alert.replace('Erx', 'rxE')
 
-
         # A3 is still valid
         if validity > end + timedelta(hours=0.5):
             pass
-        elif ((end + timedelta(3) > validity) and ('0' in internal_alert.lower() or 'nd' in internal_alert.lower())) or 'x' in internal_alert.lower():
+        elif ((validity + timedelta(3) > end + timedelta(hours=0.5)) and ('0' in internal_alert.lower() or 'nd' in internal_alert.lower())) or 'x' in internal_alert.lower():
             validity = round_release_time(end)
         else:
             public_alert = 'A0'
@@ -460,7 +459,7 @@ def SitePublicAlert(PublicAlert, end):
         source += ['rain']
     if 'e' in internal_alert.lower():
         source += ['eq']
-    if 'd' in internal_alert.lower():
+    if 'd' in internal_alert.lower().replace('nd', ''):
         source += ['on demand']
     source = ','.join(source)
 
@@ -473,8 +472,8 @@ def SitePublicAlert(PublicAlert, end):
         PublicAlert['timestamp'] = [end]
     
     PublicAlert['source'] = ['public']
-    PublicAlert['alert'] = public_alert
-    PublicAlert['updateTS'] = end
+    PublicAlert['alert'] = [public_alert]
+    PublicAlert['updateTS'] = [end]
     PublicAlert['palert_source'] = [source]
     PublicAlert['internal_alert'] = [internal_alert]
     PublicAlert['validity'] = [validity]
@@ -485,7 +484,7 @@ def SitePublicAlert(PublicAlert, end):
     PublicAlert['tech_info'] = [tech_info]
             
     SitePublicAlert = PublicAlert.loc[PublicAlert.site == site][['timestamp', 'site', 'source', 'alert', 'updateTS']]
-
+    print SitePublicAlert
     try:
         SitePublicAlert['timestamp'] = init_triggerTS
     except:
