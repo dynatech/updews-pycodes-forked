@@ -380,7 +380,11 @@ def SitePublicAlert(PublicAlert, end):
         rain_alert = 'nd'
     
     # surficial data presence
-    ground_alert = op_trigger.loc[(op_trigger.source == 'ground') & (op_trigger.updateTS >= round_release_time(end) - timedelta(hours=4))]
+    if internal_alert == 'A0':
+        ground_ts = pd.to_datetime(end)
+    else:
+        ground_ts = round_release_time(end) - timedelta(hours=4)
+    ground_alert = op_trigger.loc[(op_trigger.source == 'ground') & (op_trigger.updateTS >= ground_ts)]
     if len(ground_alert) != 0:
         ground_alert = 'g'
     else:
@@ -436,9 +440,13 @@ def SitePublicAlert(PublicAlert, end):
             pass
         elif ((validity + timedelta(3) > end + timedelta(hours=0.5)) and ('0' in internal_alert.lower() or 'nd' in internal_alert.lower())) or 'x' in internal_alert.lower():
             validity = round_release_time(end)
-        else:
+        elif end + timedelta(hours=0.5) >= validity + timedelta(3):
             public_alert = 'A0'
             internal_alert = 'ND'
+            validity = ''        
+        else:
+            public_alert = 'A0'
+            internal_alert = 'A0'
             validity = ''
 
     #Public Alert A0
@@ -484,7 +492,7 @@ def SitePublicAlert(PublicAlert, end):
     PublicAlert['tech_info'] = [tech_info]
             
     SitePublicAlert = PublicAlert.loc[PublicAlert.site == site][['timestamp', 'site', 'source', 'alert', 'updateTS']]
-    print SitePublicAlert
+
     try:
         SitePublicAlert['timestamp'] = init_triggerTS
     except:
