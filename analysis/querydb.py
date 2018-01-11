@@ -496,81 +496,105 @@ def alert_to_db(df, table_name):
         else:
             print_out('unrecognized table : ' + table_name)
             return
-
+    
     if table_name == 'operational_triggers':
+        # checks trigger source
         query = "SELECT * FROM operational_trigger_symbols"
         all_trig = get_db_dataframe(query)
         trigger_source = all_trig[all_trig.trigger_sym_id == df['trigger_sym_id'].values[0]]['trigger_source'].values[0]
-        trigger_sym_ids = ','.join(map(str, all_trig[all_trig.trigger_source == trigger_source]['trigger_sym_id'].values))
 
-    query = "SELECT * FROM %s WHERE" %table_name
+        # does not write nd subsurface alerts
+        if trigger_source == 'subsurface':
+            alert_level = all_trig[all_trig.trigger_sym_id == df['trigger_sym_id'].values[0]]['alert_level'].values[0]
+            if alert_level == -1:
+                return
+        # if ts does not exist, writes alert; else: updates alert level
+        elif trigger_source == 'surficial':
+
+            query =  "SELECT * FROM "
+            query += "	(SELECT * FROM operational_trigger_symbols "
+            query += "	WHERE trigger_source = '%s') AS sym " %trigger_source
+            query += "INNER JOIN "
+            query += "	(SELECT * FROM operational_triggers "
+            query += "	WHERE site_id = %s " %df['site_id'].values[0]
+            query += " AND ts = '%s' " %df['ts'].values[0]
+            query += "	) AS trig "
+            query += "ON trig.trigger_sym_id = sym.trigger_sym_id"
+            surficial = get_db_dataframe(query)
+
+            if len(surficial) == 0:
+                push_db_dataframe(df, table_name, index=False)
+                return
+            else:
+                trigger_id = surficial['trigger_id'].values[0]
+                trigger_sym_id = df['trigger_sym_id'].values[0]
+                query =  "UPDATE %s " %table_name
+                query += "SET trigger_sym_id = '%s' " %trigger_sym_id
+                query += "WHERE trigger_id = %s" %trigger_id
+                execute_query(query)
+                return
+                
+        query =  "SELECT * FROM "
+        query += "	(SELECT * FROM operational_trigger_symbols "
+        query += "	WHERE trigger_source = '%s') AS sym " %trigger_source
+        query += "INNER JOIN "
+        query += "	( "
     
-    if table_name == 'tsm_alerts':
-        query += " tsm_id = '%s'" %df['tsm_id'].values[0]
-    elif table_name == 'public_alerts':
-        query += " site_id = '%s'" %(df['site_id'].values[0])
     else:
-        query += " site_id = '%s' and trigger_sym_id in (%s)" %(df['site_id'].values[0], trigger_sym_ids)
+        query = ""
 
-    query += " and ts <= '%s' and ts_updated >= '%s' ORDER BY ts DESC LIMIT 1" %(df['ts_updated'].values[0], pd.to_datetime(df['ts_updated'].values[0])-timedelta(hours=0.5))
+    if table_name == 'tsm_alerts':
+        where_id = 'tsm_id'
+    else:
+        where_id = 'site_id'
+        
+    ts_updated = pd.to_datetime(df['ts_updated'].values[0])-timedelta(hours=0.5)
+    
+    # previous alert
+    query +=  "SELECT * FROM %s " %table_name
+    query += "WHERE %s = %s " %(where_id, df[where_id].values[0])
+    query += "AND ((ts <= '%s' " %df['ts_updated'].values[0]
+    query += " AND ts_updated >= '%s') " %df['ts_updated'].values[0]
+    query += "OR (ts_updated <= '%s' " %df['ts_updated'].values[0]
+    query += " AND ts_updated >= '%s')) " %ts_updated
+
+    if table_name == 'operational_triggers':
+        
+        query += "	) AS trig "
+        query += "ON trig.trigger_sym_id = sym.trigger_sym_id "
+
+    query += "ORDER BY ts DESC LIMIT 1"
 
     df2 = get_db_dataframe(query)
 
-    if table_name == 'tsm_alerts':
-        try:
-            same_alert = df2['alert_level'].values[0] == df['alert_level'].values[0]
-        except:
-            same_alert = False
-        query = "SELECT EXISTS(SELECT * FROM tsm_alerts"
-        query += " WHERE ts = '%s' AND tsm_id = %s)" %(df['ts'].values[0], df['tsm_id'].values[0])
-        if get_db_dataframe(query).values[0][0] == 1:
-            inDB = True
-        else:
-            inDB = False
-
-    elif table_name == 'public_alerts':
-        try:
-            same_alert = df2['pub_sym_id'].values[0] == df['pub_sym_id'].values[0]
-        except:
-            same_alert = False
-        query = "SELECT EXISTS(SELECT * FROM public_alerts"
-        query += " WHERE ts = '%s' AND site_id = %s" %(df['ts'].values[0], df['site_id'].values[0])
-        query += " AND pub_sym_id)" %df['pub_sym_id'].values[0]
-        if get_db_dataframe(query).values[0][0] == 1:
-            inDB = True
-        else:
-            inDB = False
-
-    else:
-        try:
-            same_alert = df2['trigger_sym_id'].values[0] == df['trigger_sym_id'].values[0]
-        except:
-            same_alert = False
-        query = "SELECT EXISTS(SELECT * FROM operational_triggers"
-        query += " WHERE ts = '%s' AND site_id = %s" %(df['ts'].values[0], df['site_id'].values[0])
-        query += " AND trigger_sym_id = %s)" %df['trigger_sym_id'].values[0]
-        if get_db_dataframe(query).values[0][0] == 1:
-            inDB = True
-        else:
-            inDB = False
-        #check if ts, site_id, trigger_source combination exists
-        
-        
-
-    if (len(df2) == 0 or not same_alert) and not inDB:
+    # writes alert if no alerts within the past 30mins
+    if len(df2) == 0:
         push_db_dataframe(df, table_name, index=False)
-        
-    elif same_alert and df2['ts_updated'].values[0] < df['ts_updated'].values[0]:
-        query = "UPDATE %s SET ts_updated = '%s' WHERE" %(table_name, df['ts_updated'].values[0])
+    # does not update ts_updated if ts in written ts to ts_updated range
+    elif pd.to_datetime(df2['ts_updated'].values[0]) >= \
+                  pd.to_datetime(df['ts'].values[0]):
+        pass
+    # if diff prev alert, writes to db; else: updates ts_updated
+    else:
         if table_name == 'tsm_alerts':
-            query += " ta_id = %s" %df2['ta_id'].values[0]
+            alert_comp = 'alert_level'
+            pk_id = 'ta_id'
         elif table_name == 'public_alerts':
-            query += " public_id = %s" %df2['public_id'].values[0]
-        elif table_name == 'internal_alerts':
-            query += " internal_id = %s" %df2['internal_id'].values[0]
+            alert_comp = 'pub_sym_id'
+            pk_id = 'public_id'
         else:
-            query += " trigger_id = %s" %df2['trigger_id'].values[0]
-        execute_query(query)
+            alert_comp = 'trigger_sym_id'
+            pk_id = 'trigger_id'
+
+        same_alert = df2[alert_comp].values[0] == df[alert_comp].values[0]
+        
+        if not same_alert[0]:
+            push_db_dataframe(df, table_name, index=False)
+        else:
+            query =  "UPDATE %s " %table_name
+            query += "SET ts_updated = '%s' " %df['ts_updated'].values[0]
+            query += "WHERE %s = %s" %(pk_id, df2[pk_id].values[0])
+            execute_query(query)
 
 def memcached():
     mc = memcache.Client(['127.0.0.1:11211'],debug=0)
