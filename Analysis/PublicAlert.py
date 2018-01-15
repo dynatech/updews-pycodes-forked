@@ -427,9 +427,9 @@ def SitePublicAlert(PublicAlert, end):
             query =  "SELECT * FROM senslopedb.rain_alerts "
             query += "where site_id = '%s' and ts = '%s'" %(site, end)
             rain_alert_df = q.GetDBDataFrame(query)
-            if len(rain_alert_df) != 0 and 'r' in internal_alert.lower():
+            if len(rain_alert_df) < 2 and 'r' in internal_alert.lower():
                 internal_alert = internal_alert.replace('R', 'Rx')
-            elif len(rain_alert_df) != 0:
+            elif len(rain_alert_df) < 2:
                 internal_alert += 'rx'
                 internal_alert = internal_alert.replace('EDrx', 'rxED')
                 internal_alert = internal_alert.replace('Drx', 'rxD')
