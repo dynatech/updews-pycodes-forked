@@ -108,14 +108,14 @@ def summary_writer(r,datasource,twoyrmax,halfmax,rainfall,end,write_alert):
     if write_alert or ralert == 'r1':
         engine = create_engine('mysql://'+q.Userdb+':'+q.Passdb+'@'+q.Hostdb+':3306/'+q.Namedb)
         if ralert == 'r0':
-            if one < halfmax*0.75:
-                df = pd.DataFrame({'ts': [end], 'site_id': [r], 'rain_source': [datasource], 'rain_alert': ['r0a'], 'cumulative': [one], 'threshold': [round(halfmax,2)]})
+            if one >= halfmax*0.75:
+                df = pd.DataFrame({'ts': [end], 'site_id': [r], 'rain_source': [datasource], 'rain_alert': ['rxa'], 'cumulative': [one], 'threshold': [round(halfmax,2)]})
                 try:
                     df.to_sql(name = 'rain_alerts', con = engine, if_exists = 'append', schema = q.Namedb, index = False)
                 except:
                     pass
-            if three < twoyrmax*0.75:
-                df = pd.DataFrame({'ts': [end], 'site_id': [r], 'rain_source': [datasource], 'rain_alert': ['r0b'], 'cumulative': [three], 'threshold': [round(twoyrmax,2)]})
+            if three >= twoyrmax*0.75:
+                df = pd.DataFrame({'ts': [end], 'site_id': [r], 'rain_source': [datasource], 'rain_alert': ['rxb'], 'cumulative': [three], 'threshold': [round(twoyrmax,2)]})
                 try:
                     df.to_sql(name = 'rain_alerts', con = engine, if_exists = 'append', schema = q.Namedb, index = False)
                 except:
@@ -167,7 +167,7 @@ def RainfallAlert(siterainprops, end, s):
         currAlert = prev_PAlert['alert'].values[0]
 
         if currAlert != 'A0':
-
+    
             # one prev alert
             if len(prev_PAlert) == 1:
                 start_monitor = pd.to_datetime(prev_PAlert.timestamp.values[0])
@@ -197,7 +197,8 @@ def RainfallAlert(siterainprops, end, s):
             query += "and timestamp >= '%s' " %start_monitor
             query += "and timestamp <= '%s'" %end
             triggers = q.GetDBDataFrame(query)
-            validity = max(triggers['updateTS'].values) + timedelta(1)
+
+            validity = pd.to_datetime(max(triggers['updateTS'].values)) + timedelta(1)
             if currAlert == 'A3':
                 validity += timedelta(1)
 
@@ -205,13 +206,13 @@ def RainfallAlert(siterainprops, end, s):
                 write_alert = True
             else:
                 write_alert = False
-
+    
         else:
             write_alert = False
 
     except:
         write_alert = False
-
+    
     try:
         if rain_arq == None:
             rain_timecheck = pd.DataFrame()
