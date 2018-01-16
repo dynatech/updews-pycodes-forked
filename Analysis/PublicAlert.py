@@ -471,6 +471,9 @@ def SitePublicAlert(PublicAlert, end):
     if 'd' in internal_alert.lower().replace('nd', ''):
         source += ['on demand']
     source = ','.join(source)
+    
+    if 'rx' in internal_alert.lower():
+        rain_alert = 'rx'
 
     if len(op_trigger) != 0:
         ts = pd.to_datetime(max(op_trigger['updateTS'].values))
