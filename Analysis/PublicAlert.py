@@ -423,7 +423,7 @@ def SitePublicAlert(PublicAlert, end):
             prev_rain_alert = q.GetDBDataFrame(query)['alert'].values[-1]
             if prev_rain_alert == 'nd':
                 internal_alert = internal_alert.replace('R', 'R0')
-        elif rain_alert == 'r0' and end > validity - timedelta(hours=0.5):
+        elif rain_alert == 'r0' and end >= validity - timedelta(hours=0.5):
             query =  "SELECT * FROM senslopedb.rain_alerts "
             query += "where site_id = '%s' " %site
             query += "and ts in ('%s', '%s')" %(end - timedelta(hours=0.5), end)
