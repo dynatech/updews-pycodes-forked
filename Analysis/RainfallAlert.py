@@ -167,7 +167,7 @@ def RainfallAlert(siterainprops, end, s):
         currAlert = prev_PAlert['alert'].values[0]
 
         if currAlert != 'A0':
-
+    
             # one prev alert
             if len(prev_PAlert) == 1:
                 start_monitor = pd.to_datetime(prev_PAlert.timestamp.values[0])
@@ -197,7 +197,8 @@ def RainfallAlert(siterainprops, end, s):
             query += "and timestamp >= '%s' " %start_monitor
             query += "and timestamp <= '%s'" %end
             triggers = q.GetDBDataFrame(query)
-            validity = max(triggers['updateTS'].values) + timedelta(1)
+
+            validity = pd.to_datetime(max(triggers['updateTS'].values)) + timedelta(1)
             if currAlert == 'A3':
                 validity += timedelta(1)
 
@@ -205,13 +206,13 @@ def RainfallAlert(siterainprops, end, s):
                 write_alert = True
             else:
                 write_alert = False
-
+    
         else:
             write_alert = False
 
     except:
         write_alert = False
-
+    
     try:
         if rain_arq == None:
             rain_timecheck = pd.DataFrame()

@@ -423,9 +423,10 @@ def SitePublicAlert(PublicAlert, end):
             prev_rain_alert = q.GetDBDataFrame(query)['alert'].values[-1]
             if prev_rain_alert == 'nd':
                 internal_alert = internal_alert.replace('R', 'R0')
-        elif rain_alert == 'r0' and end > validity - timedelta(hours=0.5):
+        elif rain_alert == 'r0' and end >= validity - timedelta(hours=0.5):
             query =  "SELECT * FROM senslopedb.rain_alerts "
-            query += "where site_id = '%s' and ts = '%s'" %(site, end)
+            query += "where site_id = '%s' " %site
+            query += "and ts in ('%s', '%s')" %(end - timedelta(hours=0.5), end)
             rain_alert_df = q.GetDBDataFrame(query)
             if len(rain_alert_df) != 0 and 'r' in internal_alert.lower():
                 internal_alert = internal_alert.replace('R', 'Rx')
@@ -470,6 +471,9 @@ def SitePublicAlert(PublicAlert, end):
     if 'd' in internal_alert.lower().replace('nd', ''):
         source += ['on demand']
     source = ','.join(source)
+    
+    if 'rx' in internal_alert.lower():
+        rain_alert = 'rx'
 
     if len(op_trigger) != 0:
         ts = pd.to_datetime(max(op_trigger['updateTS'].values))
