@@ -17,10 +17,10 @@ all_rainguage_noah = []
 #fdate = "2017-10-22 00:00:00"
 #tdate = "2017-10-29 00:00:00"
 
-fdata = raw_input('from: ')
-tdata = raw_input('to: ')
-tdate = dt.strptime(tdata, "%Y-%m-%d %H:%M:%S")
-fdate = dt.strptime(fdata, "%Y-%m-%d %H:%M:%S")
+#fdata = raw_input('from: ')
+#tdata = raw_input('to: ')
+#tdate = dt.strptime(tdata, "%Y-%m-%d %H:%M:%S")
+#fdate = dt.strptime(fdata, "%Y-%m-%d %H:%M:%S")
 
 #rain_noah = []
 #rain_arq  = []
@@ -167,28 +167,60 @@ fdate = dt.strptime(fdata, "%Y-%m-%d %H:%M:%S")
 #rain_noah.to_csv('//var//www//html//temp//data//rain_noah_execution.csv')
 # 
 
-gnd_data = []
-for site in dfnew.name:
-    start = time.time() 
-    if site == 'mng':
-        site ='man'
-    elif site == 'png':
-        site = 'pan'
-    elif site == 'bto':
-        site = 'bat'
-    elif site == 'jor':
-        site = "pob"
-        
-    
-    query = "SELECT id,timestamp, UPPER(crack_id) AS crack_id,meas FROM senslopedb.gndmeas where timestamp between '%s' and '%s' and site_id ='%s' and meas <= '500' order by site_id asc"%(fdate,tdate,site) 
-    df = pd.io.sql.read_sql(query,engine)
-    df.columns = ['id','ts','crack_id','meas']
-    df = df.set_index(['ts'])
-    dfajson = df.reset_index().to_json(orient='records',date_format='iso')
-    dfajson = dfajson.replace("T"," ").replace("Z","").replace(".000","")
-    dfajson_data = dfajson
-    end = time.time()
-    gnd_data.append({'from':fdate,'to':tdate,'site':site,'time':(end - start),'data_lenght':len(df)}) 
-    
-gnd_data = pd.DataFrame(gnd_data)
-gnd_data.to_csv('//var//www//html//temp//data//gnd_py_ex.csv')    
+
+############################ groound #################################
+#gnd_data = []
+#for site in dfnew.name:
+#    start = time.time() 
+#    if site == 'mng':
+#        site ='man'
+#    elif site == 'png':
+#        site = 'pan'
+#    elif site == 'bto':
+#        site = 'bat'
+#    elif site == 'jor':
+#        site = "pob"
+#        
+#    
+#    query = "SELECT id,timestamp, UPPER(crack_id) AS crack_id,meas FROM senslopedb.gndmeas where timestamp between '%s' and '%s' and site_id ='%s' and meas <= '500' order by site_id asc"%(fdate,tdate,site) 
+#    df = pd.io.sql.read_sql(query,engine)
+#    df.columns = ['id','ts','crack_id','meas']
+#    df = df.set_index(['ts'])
+#    dfajson = df.reset_index().to_json(orient='records',date_format='iso')
+#    dfajson = dfajson.replace("T"," ").replace("Z","").replace(".000","")
+#    dfajson_data = dfajson
+#    end = time.time()
+#    gnd_data.append({'from':fdate,'to':tdate,'site':site,'time':(end - start),'data_lenght':len(df)}) 
+#    
+#gnd_data = pd.DataFrame(gnd_data)
+#gnd_data.to_csv('//var//www//html//temp//data//gnd_py_ex.csv')    
+
+
+import os
+path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../updews-pycodes/Analysis/'))
+if not path in sys.path:
+   sys.path.insert(1, path)
+del path
+
+import vcdgen as vcd
+
+sub_data = []
+fdate =['','2017-09-25 00:00:00','2017-09-17 00:00:00','2017-09-01 00:00:00']
+tdate = '2017-10-01 00:00:00'
+for time_f  in fdate:
+    for site in dfnew.name: 
+        start = time.time()           
+
+        if time_f  == '':
+            if tdate == '':
+                df= vcd.vcdgen(site)
+            else:
+                df= vcd.vcdgen(site, tdate, time_f )
+        else:
+            df= vcd.vcdgen(site, tdate, time_f )
+        print site 
+        end = time.time()
+        sub_data.append({'from':time_f,'to':tdate,'site':site,'time':(end - start),'data_lenght':len(df)})
+        print [{'from':time_f,'to':tdate,'site':site,'time':(end - start),'data_lenght':len(df)}]
+sub_data = pd.DataFrame(sub_data)
+sub_data.to_csv('//var//www//html//temp//data//sub_py_ex.csv') 
