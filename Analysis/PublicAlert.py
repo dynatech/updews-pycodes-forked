@@ -389,8 +389,8 @@ def SitePublicAlert(PublicAlert, end):
         ground_alert = 'g'
     else:
         ground_alert = 'g0'
-    if 'g' in internal_alert.lower() and len(ground_alert) == 0:
-        internal_alert = internal_alert.replace('G', 'G0').replace('g', 'g0')
+    if 'g' in internal_alert.lower() and ground_alert == 'g0':
+        internal_alert = internal_alert.replace('g', 'g0')
         
     # qualitative surficial observation
     try:
