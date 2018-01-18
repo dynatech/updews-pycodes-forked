@@ -205,7 +205,7 @@ del path
 import vcdgen as vcd
 
 sub_data = []
-fdate =['','2017-09-25 00:00:00','2017-09-17 00:00:00','2017-09-01 00:00:00']
+fdate =['','2017-09-25 00:00:00']
 tdate = '2017-10-01 00:00:00'
 for time_f  in fdate:
     for site in dfnew.name: 
