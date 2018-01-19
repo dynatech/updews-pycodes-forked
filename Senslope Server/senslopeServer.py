@@ -277,11 +277,11 @@ def RunSenslopeServer(network):
         logRuntimeStatus(network,"com port error")
         raise ValueError(">> Error: no com port found")
             
-    dbio.createTable("runtimelog","runtime",cfg.config().mode.logtoinstance)
+    # dbio.createTable("runtimelog","runtime",cfg.config().mode.logtoinstance)
     logRuntimeStatus(network,"startup")
     
-    dbio.createTable('smsinbox','smsinbox',cfg.config().mode.logtoinstance)
-    dbio.createTable('smsoutbox','smsoutbox',cfg.config().mode.logtoinstance)
+    # dbio.createTable('smsinbox','smsinbox',cfg.config().mode.logtoinstance)
+    # dbio.createTable('smsoutbox','smsoutbox',cfg.config().mode.logtoinstance)
 
     sensor_numbers_str = str(getSensorNumbers())
 
