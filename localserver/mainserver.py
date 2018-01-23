@@ -489,8 +489,9 @@ def get_arguments():
 def get_gsm_modules():
     ids = mc.get('gsmids')
     if ids == None:
-        query = "select * from gsm_modules"
+        query = "select gsm_id, gsm_name, gsm_sim_num from gsm_modules"
         gsm_modules = dbio.query_database(query,'get_gsm_ids')
+        print gsm_modules
 
         ids = dict() 
         for gsm_id,name,num in gsm_modules:
