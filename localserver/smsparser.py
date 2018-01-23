@@ -14,6 +14,7 @@ import memcache
 import lockscript
 import gsmio
 import surficialparser as surfp
+import utsparser as uts
 mc = memcache.Client(['127.0.0.1:11211'],debug=0)
 
 def update_last_msg_received_table(txtdatetime,name,sim_num,msg):
@@ -654,13 +655,13 @@ def process_rain(sms):
         csq = line.split(",")[8]
 
 
-    # except IndexError and AttributeError:
-    #     print '\n>> Error: Rain message format is not recognized'
-    #     print line
-    #     return
+    except IndexError, AttributeError:
+        print '\n>> Error: Rain message format is not recognized'
+        print line
+        return False
     except KeyboardInterrupt:
         print '\n>>Error: Weather message format unknown ' + line
-        return
+        return False
         
     # update_sim_num_table(msgtable,sender,txtdatetime[:10])
 
@@ -834,7 +835,9 @@ def parse_all_messages(args,allmsgs=[]):
             
             # Added for V1 sensors removes unnecessary characters 
             # pls see function pre_process_col_v1(data)
-            if re.search("\*FF",msg.data) or re.search("PZ\*",msg.data):
+            if re.search("^[A-Z]{3}X[A-Z]{1}\*L\*",msg.data):
+                isMsgProcSuccess = uts.parse_extensometer_uts(msg)
+            elif re.search("\*FF",msg.data) or re.search("PZ\*",msg.data):
                 isMsgProcSuccess = process_piezometer(msg)
             # elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*\d+T?$",msg.data):
             elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*.*",msg.data):
@@ -859,11 +862,17 @@ def parse_all_messages(args,allmsgs=[]):
                             write_soms_data_to_db(dlist,msg)
                         else:
                             write_two_accel_data_to_db(dlist,msg)
+                    isMsgProcSuccess = True
                 except IndexError:
                     print "\n\n>> Error: Possible data type error"
                     print msg.data
+                    isMsgProcSuccess = False
                 except ValueError:
                     print ">> Value error detected"
+                    isMsgProcSuccess = False
+                except MySQLdb.ProgrammingError:
+                    print ">> Error writing data to DB"
+                    isMsgProcSuccess = False
             elif re.search("[A-Z]{4}\*[A-F0-9]+\*[0-9]+$",msg.data):
                 #process_column_v1(msg.data)
                 process_column_v1(msg)
@@ -1035,6 +1044,7 @@ def main():
 
     # force backup
     while True:
+        print args.dbhost, args.table, args.status, args.messagelimit
         allmsgs = dbio.get_all_sms_from_db(host=args.dbhost, table=args.table,
             read_status=args.status, limit=args.messagelimit)
         
