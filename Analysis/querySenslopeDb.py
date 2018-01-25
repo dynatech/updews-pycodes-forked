@@ -83,6 +83,7 @@ def GetLatestTimestamp(nameDb, table):
         print "Error in getting maximum timestamp"
 
     a = cur.fetchall()
+    db.close()
     if a:
         return a[0][0]
     else: 
@@ -99,6 +100,7 @@ def GetLatestTimestamp2(table_name):
         print "Error in getting maximum timestamp"
 
     a = cur.fetchall()
+    db.close()
     if a:
         return a[0][0]
     else: 
@@ -504,6 +506,7 @@ def GetSensorList(site=''):
                     continue
                 s = columnArray(df.name[s],df.num_nodes[s],df.seg_length[s],df.col_length[s])
                 sensors.append(s)
+            db.close()
             return sensors
         except:
             raise ValueError('Could not get sensor list from database')
@@ -517,6 +520,7 @@ def GetSensorList(site=''):
             sensors = []
             s = columnArray(df.name[0],df.num_nodes[0],df.seg_length[0],df.col_length[0])
             sensors.append(s)
+            db.close()
             return sensors
 
 def GetSensorDF():
@@ -578,7 +582,7 @@ def GetRainList():
         for s in range(len(df)):
             s = rainArray(df.name[s],df.max_rain_2year[s],df.rain_senslope[s],df.rain_arq[s])
             sensors.append(s)
-            
+        db.close()
         return sensors
     except:
         raise ValueError('Could not get sensor list from database')
@@ -601,7 +605,7 @@ def GetRainNOAHList():
 
         df = pd.DataFrame({'RG': RG})
         df['RG'] = df.RG.apply(lambda x: int(x[len('rain_noah_'):len(x)]))
-        
+        db.close()
         noahlist = sorted(set(df['RG'].values))
         
         return noahlist
