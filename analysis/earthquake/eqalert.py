@@ -110,8 +110,13 @@ def up_to_op_trig(op_trig,name):
 
        
 def get_alert_symbol():
-    query = 'SELECT trigger_sym_id FROM %s.operational_trigger_symbols' % (qdb.Namedb)
-    query += ''' WHERE trigger_source = 'earthquake' '''
+    query =  "SELECT trigger_sym_id FROM "
+    query += "  operational_trigger_symbols AS op "
+    query += "INNER JOIN "
+    query += "  (SELECT source_id FROM trigger_hierarchies "
+    query += "  WHERE trigger_source = 'earthquake' "
+    query += "  ) AS trig "
+    query += "ON op.source_id = trig.source_id"
     sym = qdb.get_db_dataframe(query)
     return sym.trigger_sym_id[0]
 

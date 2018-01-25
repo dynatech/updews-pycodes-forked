@@ -756,8 +756,14 @@ def get_trigger_sym_id(alert_level):
     trigger_sym_id: int
         generated from operational_trigger_symbols table
     """
-    #### query the translation table from operational_trigger_symbols table
-    query = "SELECT trigger_sym_id,alert_level FROM operational_trigger_symbols WHERE trigger_source = 'surficial'"
+    #### query the translation table from operational_trigger_symbols table and trigger_hierarchies table
+    query =  "SELECT trigger_sym_id, alert_level FROM "
+    query += "  operational_trigger_symbols AS op "
+    query += "INNER JOIN "
+    query += "  (SELECT source_id FROM trigger_hierarchies "
+    query += "  WHERE trigger_source = 'surficial' "
+    query += "  ) AS trig "
+    query += "ON op.source_id = trig.source_id"
     translation_table = qdb.get_db_dataframe(query).set_index('alert_level').to_dict()['trigger_sym_id']
     return translation_table[alert_level]
     

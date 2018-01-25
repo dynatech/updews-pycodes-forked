@@ -132,8 +132,13 @@ def main(site_code='', Print=True, end=datetime.now()):
     site_threshold = threshold.groupby('site_id', as_index=False)
     props = site_threshold.apply(gauge_props, gauges=gauges)
     
-    query = "SELECT * FROM operational_trigger_symbols"
-    query += " WHERE trigger_source = 'rainfall'"
+    query =  "SELECT * FROM "
+    query += "  operational_trigger_symbols AS op "
+    query += "INNER JOIN "
+    query += "  (SELECT * FROM trigger_hierarchies "
+    query += "  WHERE trigger_source = 'rainfall' "
+    query += "  ) AS trig "
+    query += "ON op.source_id = trig.source_id"
     trigger_symbol = qdb.get_db_dataframe(query)
 
     site_props = props.groupby('site_id')
