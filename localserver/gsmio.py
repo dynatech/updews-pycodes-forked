@@ -132,13 +132,15 @@ def send_msg(msg, number, simulate=False):
         return random() < 0.15
 
     try:
-        pdulist = smssubmit(number,msg).to_pdu()
+        pdulist = smssubmit(number,msg.decode('latin')).to_pdu()
     except:
         print "Error in pdu conversion. Skipping message sending"
         return -1
 
     # print "pdulen", len(pdulist)
-
+    print "\nMSG:", msg, 
+    print "NUM:", number
+            
     for pdu in pdulist:
         try: 
             a = ''
@@ -147,8 +149,7 @@ def send_msg(msg, number, simulate=False):
 
             # print preamble
 
-            print "\nMSG:", msg, 
-            print "NUM:", number
+            
 
             gsm.write(preamble+"\r")
             now = time.time()
