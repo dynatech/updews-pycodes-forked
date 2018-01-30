@@ -609,6 +609,9 @@ def alert_to_db(df, table_name):
 
         same_alert = df2[alert_comp].values[0] == df[alert_comp].values[0]
         
+        if type(same_alert) != bool:
+            same_alert = same_alert[0]
+        
         if not same_alert:
             push_db_dataframe(df, table_name, index=False)
         else:
