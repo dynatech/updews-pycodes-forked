@@ -134,17 +134,14 @@ def sendMsg(msg, number):
         return -1
 
     # print "pdulen", len(pdulist)
+    print "\nMSG:", msg, 
+    print "NUM:", number
 
     for pdu in pdulist:
         try: 
             a = ''
             now = time.time()
             preamble = "AT+CMGS=%d" % (pdu.length)
-
-            # print preamble
-
-            print "\nMSG:", msg, 
-            print "NUM:", number
 
             gsm.write(preamble+"\r")
             now = time.time()
