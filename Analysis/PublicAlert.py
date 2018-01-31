@@ -169,6 +169,9 @@ def SitePublicAlert(PublicAlert, end):
         if len(df) == 0:
             with open('l0t_alert.txt', 'w') as w:
                 w.write('As of ' + str(datetime.now())[:16] + '\n')
+                l0talert = l0talert.split('%')
+                l0talert.remove('')
+                l0talert = ':'.join(l0talert + ['ground'])
                 w.write(l0talert)
             writeAlertToDb('l0t_alert.txt')
             with open('l0t_alert.txt', 'w') as w:

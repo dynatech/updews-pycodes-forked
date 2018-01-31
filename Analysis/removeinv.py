@@ -105,7 +105,7 @@ def main_inv(ts=datetime.now()):
     return finaldf
 
 def main_l0t(ts=datetime.now()):
-    query = "SELECT * FROM smsalerts where ts_ack >= '%s' and alertstat = 'valid' and alertmsg like '%s'" %(pd.to_datetime(ts) - timedelta(hours=1), '%l0t%')
+    query = "SELECT * FROM smsalerts where ts_ack >= '%s' and alertstat = 'valid' and alertmsg like '%s'" %(pd.to_datetime(ts) - timedelta(hours=4), '%l0t%')
     df = q.GetDBDataFrame(query)
 
     if len(df) != 0:
