@@ -518,7 +518,7 @@ def SitePublicAlert(PublicAlert, end):
 
     public_CurrAlert = SitePublicAlert['alert'].values[0]
 
-    if public_CurrAlert != 'A0' or public_PrevAlert != public_CurrAlert:
+    if public_PrevAlert != public_CurrAlert:
         
         query =  "SELECT * FROM smsalerts "
         query += "where ts_set > '%s'" %(start_monitor - timedelta(1))
