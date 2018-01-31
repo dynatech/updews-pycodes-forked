@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import serial, datetime, ConfigParser, time, re
 from datetime import datetime as dt
 from datetime import timedelta as td
@@ -116,7 +117,7 @@ def gsmcmd(cmd):
     except serial.SerialException:
         print "NO SERIAL COMMUNICATION (gsmcmd)"
         # RunSenslopeServer(gsm_network)
-        
+
 def sendMsg(msg, number):
     """
     Sends a command 'cmd' to GSM Module
@@ -127,23 +128,20 @@ def sendMsg(msg, number):
     # return
 
     try:
-        pdulist = smssubmit(number,msg).to_pdu()
+        pdulist = smssubmit(number,msg.decode('latin')).to_pdu()
     except:
         print "Error in pdu conversion. Skipping message sending"
         return -1
 
     # print "pdulen", len(pdulist)
+    print "\nMSG:", msg, 
+    print "NUM:", number
 
     for pdu in pdulist:
         try: 
             a = ''
             now = time.time()
             preamble = "AT+CMGS=%d" % (pdu.length)
-
-            # print preamble
-
-            print "\nMSG:", msg, 
-            print "NUM:", number
 
             gsm.write(preamble+"\r")
             now = time.time()
