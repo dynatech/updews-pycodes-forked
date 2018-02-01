@@ -1,18 +1,18 @@
 [LocalDB]
 username = root
-host = 192.168.1.102
+host = 192.168.150.129
 password = senslope
 dbname = senslopedb
 
 [GSMDB]
 username = root
-host = 127.0.0.1
+host = 192.168.150.127
 password = senslope
 dbname = senslopedb
 
-[MirrorDB]
+[SandboxDB]
 username = root
-host = 192.168.1.105
+host = 192.168.150.128
 password = senslope
 dbname = senslopedb
 
@@ -64,7 +64,7 @@ smart = 00,07,08,09,10,11,12,14,18,19,20,21,22,23,24,25,28,29,30,31,32,33,34,38,
 globe = 05,06,15,16,17,25,26,27,35,36,37,45,55,56,75,77,78,79,94,95,96,97 
 
 [mode]
-script_mode = gsmserver
+script_mode = procmsg
 
 [io]
 proc_limit = 10

@@ -16,6 +16,7 @@ c = cfg.config()
 
 localdbinstance = dbInstance(c.localdb.name,c.localdb.host,c.localdb.user,c.localdb.pwd)
 gsmdbinstance = dbInstance(c.gsmdb.name,c.gsmdb.host,c.gsmdb.user,c.gsmdb.pwd)
+sandboxbinstance = dbInstance(c.sandboxdb.name,c.sandboxdb.host,c.sandboxdb.user,c.sandboxdb.pwd)
 
 # def SenslopeDBConnect():
 # Definition: Connect to senslopedb in mysql
