@@ -166,7 +166,7 @@ def RainfallAlert(siterainprops, end, s):
         prev_PAlert = q.GetDBDataFrame(query)
         
         query = "SELECT * FROM senslopedb.site_level_alert WHERE site = '%s' AND source = 'public' AND updateTS >= '%s' ORDER BY timestamp DESC LIMIT 1" %(name, end - timedelta(hours=0.5))
-        currAlert = prev_PAlert['alert'].values[0]
+        currAlert = q.GetDBDataFrame(query)['alert'].values[0]
 
         if currAlert != 'A0':
     
