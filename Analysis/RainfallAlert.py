@@ -202,7 +202,7 @@ def RainfallAlert(siterainprops, end, s):
             if currAlert == 'A3':
                 validity += timedelta(1)
 
-            if end > validity:
+            if end + timedelta(hours=0.5) >= validity:
                 write_alert = True
             else:
                 write_alert = False

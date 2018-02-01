@@ -133,7 +133,7 @@ def internal_alert_level(trigger):
         
     return trigger
     
-def SitePublicAlert(PublicAlert, end):
+def SitePublicAlert(PublicAlert, end, start_time):
     site = PublicAlert['site'].values[0]
     print site
     
@@ -430,7 +430,7 @@ def SitePublicAlert(PublicAlert, end):
         elif rain_alert == 'r0' and end >= validity - timedelta(hours=0.5):
             query =  "SELECT * FROM senslopedb.rain_alerts "
             query += "where site_id = '%s' " %site
-            query += "and ts in ('%s', '%s')" %(end - timedelta(hours=0.5), end)
+            query += "and ts = '%s'" %end
             rain_alert_df = q.GetDBDataFrame(query)
             if len(rain_alert_df) != 0 and 'r' in internal_alert.lower():
                 internal_alert = internal_alert.replace('R', 'Rx')
@@ -446,8 +446,9 @@ def SitePublicAlert(PublicAlert, end):
         elif ((validity + timedelta(3) > end + timedelta(hours=0.5)) and \
                         (('0' in internal_alert.lower() or 'nd' in internal_alert.lower()))) \
                     or 'x' in internal_alert.lower() \
-                    or end.time() not in [time(3, 30), time(7, 30), time(11, 30),
-                        time(15, 30), time(19, 30), time(23, 30)]:
+                    or not (end.time() in [time(3, 30), time(7, 30), time(11, 30),
+                        time(15, 30), time(19, 30), time(23, 30)] and \
+                        int(start_time.strftime('%M')) > 45):
             validity = round_release_time(end)
         elif '0' in internal_alert.lower() or 'nd' in internal_alert.lower():
             public_alert = 'A0'
@@ -591,7 +592,7 @@ def main(end=datetime.now()):
     site_df = pd.DataFrame({'site': props['name'].values})
 
     Site_Public_Alert = site_df.groupby('site')
-    PublicAlert = Site_Public_Alert.apply(SitePublicAlert, end=end)
+    PublicAlert = Site_Public_Alert.apply(SitePublicAlert, end=end, start_time=start_time)
     PublicAlert = PublicAlert[['timestamp', 'site', 'alert', 'internal_alert', 'palert_source', 'validity', 'sensor_alert', 'rain_alert', 'ground_alert', 'retriggerTS', 'tech_info']]
     PublicAlert = PublicAlert.rename(columns = {'palert_source': 'source'})
     PublicAlert = PublicAlert.sort_values(['alert', 'site'], ascending = [False, True])
