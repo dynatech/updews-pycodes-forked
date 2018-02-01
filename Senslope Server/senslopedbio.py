@@ -23,6 +23,8 @@ sandboxbinstance = dbInstance(c.sandboxdb.name,c.sandboxdb.host,c.sandboxdb.user
 def SenslopeDBConnect(instance):
     if instance.upper() == 'LOCAL':
         dbc = localdbinstance
+    elif instance.upper() == 'SANDBOX':
+        dbc = localdbinstance    
     else:
         dbc = gsmdbinstance
     while True:
