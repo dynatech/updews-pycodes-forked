@@ -45,6 +45,12 @@ class config:
 		self.gsmdb.pwd = cfg.get("GSMDB","password")
 		self.gsmdb.name = cfg.get("GSMDB","dbname")
 
+		self.sandboxdb = Container()
+		self.sandboxdb.user = cfg.get("SandboxDB","username")
+		self.sandboxdb.host = cfg.get("SandboxDB","host")
+		self.sandboxdb.pwd =  cfg.get("SandboxDB","password")
+		self.sandboxdb.name = cfg.get("SandboxDB","dbname")
+
 		self.serialio = Container()
 		self.serialio.baudrate = cfg.getint("Serial","baudrate")
 		self.serialio.globeport = cfg.get("Serial","globeport")
