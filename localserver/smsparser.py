@@ -659,6 +659,10 @@ def process_rain(sms):
         print '\n>> Error: Rain message format is not recognized'
         print line
         return False
+    except ValueError:
+        print '\n>> Error: One of the values not correct'
+        print line
+        return False
     except KeyboardInterrupt:
         print '\n>>Error: Weather message format unknown ' + line
         return False

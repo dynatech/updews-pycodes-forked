@@ -81,8 +81,8 @@ def get_all_sms_from_db(host='local',read_status=0,table='loggers',limit=200):
     
     while True:
         try:
-            query = ("select inbox_id,ts_received,sim_num,sms_msg from "
-                "(select inbox_id,ts_received,mobile_id,sms_msg from smsinbox_%s "
+            query = ("select inbox_id,ts_sms,sim_num,sms_msg from "
+                "(select inbox_id,ts_sms,mobile_id,sms_msg from smsinbox_%s "
                 "where read_status = %d order by inbox_id desc limit %d) as t1 "
                 "inner join (select mobile_id, sim_num from %s) as t2 "
                 "on t1.mobile_id = t2.mobile_id ") % (table, read_status, limit,
