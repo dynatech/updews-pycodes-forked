@@ -30,13 +30,29 @@ def RoundReleaseTime(date_time):
     return date_time
 
 def writeOperationalTriggers(site_id, end):
-    query = "SELECT op.alert_level, trigger_sym_id FROM (SELECT alert_level, ts, ts_updated FROM"
-    query += " tsm_alerts as ta left join tsm_sensors as tsm on ta.tsm_id = tsm.tsm_id where site_id = %s) AS sub" %site_id
-    query += " left join operational_trigger_symbols as op"
-    query += " on op.alert_level = sub.alert_level"
-    query += " where trigger_source = 'subsurface'"
-    query += " and ts <= '%s'" %end
-    query += " and ts_updated >= '%s'" %end
+
+    query =  "SELECT sym.alert_level, trigger_sym_id FROM ( "
+    query += "  SELECT alert_level FROM "
+    query += "    (SELECT * FROM tsm_alerts "
+    query += "    where ts <= '%s' " %end
+    query += "    and ts_updated >= '%s' " %end
+    query += "    ) as ta "
+    query += "  INNER JOIN "
+    query += "    (SELECT tsm_id FROM tsm_sensors "
+    query += "    where site_id = %s " %site_id
+    query += "    ) as tsm "
+    query += "  on ta.tsm_id = tsm.tsm_id "
+    query += "  ) AS sub "
+    query += "INNER JOIN "
+    query += "  (SELECT trigger_sym_id, alert_level FROM "
+    query += "    operational_trigger_symbols AS op "
+    query += "  INNER JOIN "
+    query += "    (SELECT source_id FROM trigger_hierarchies "
+    query += "    WHERE trigger_source = 'subsurface' "
+    query += "    ) AS trig "
+    query += "  ON op.source_id = trig.source_id "
+    query += "  ) as sym "
+    query += "on sym.alert_level = sub.alert_level"
     df = qdb.get_db_dataframe(query)
     
     trigger_sym_id = df.sort_values('alert_level', ascending=False)['trigger_sym_id'].values[0]
@@ -117,4 +133,4 @@ def main(tsm_name='', end='', end_mon=False):
 ################################################################################
 
 if __name__ == "__main__":
-    main()
+    main('banta')

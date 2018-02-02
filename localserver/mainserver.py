@@ -52,35 +52,69 @@ def send_alert_gsm(network,alertmsg):
     except IndexError:
         print "Error sending all_alerts.txt"
 
-def write_raw_sms_to_db(msglist,sensor_nums):
-    query = ("INSERT INTO smsinbox (timestamp, sim_num,"
-        "sms_msg,read_status,web_flag) VALUES ")
+def write_raw_sms_to_db(msglist,gsm_info):
+
+    logger_mobile_sim_nums = get_mobile_sim_nums('loggers')
+    user_mobile_sim_nums = get_mobile_sim_nums('users')
+
+    # gsm_ids = get_gsm_modules()
+
+    gsm_id = gsm_info['id']
+
+    loggers_count = 0
+    users_count = 0
+    
+    query_loggers = ("insert into smsinbox_loggers (ts_received, mobile_id, "
+        "sms_msg,read_status,gsm_id) values ")
+    query_users = ("insert into smsinbox_users (ts_received, mobile_id, "
+        "sms_msg,read_status,gsm_id) values ")
+
+    sms_id_ok = []
+    sms_id_unk = []
+    ts_received = 0
+    ltr_mobile_id= 0
+
     for m in msglist:
-        if sensor_nums.find(m.simnum[-10:]) == -1:
-        # if re.search(m.simnum[-10:],sensor_nums):
-            web_flag = 'W'
-            print m.data[:20]
-            if cfg.config().mode.script_mode == 'gsmserver':
-                ret = dsll.sendReceivedGSMtoDEWS(str(m.dt.replace("/","-")),
-                    m.simnum, m.data)
-
-                #if the SMS Message was sent successfully to the web socket server then,
-                #   change web_flag to 'WS' which means "Websocket Server Sent"
-                if ret == 0:
-                    web_flag = 'WSS'
-        else:
-            web_flag = 'S'
-        query += "('%s','%s','%s','UNREAD','%s')," % (str(m.dt.replace("/","-")), 
-            str(m.simnum),str(m.data.replace("'","\"")),web_flag)
-        # query += "('" + str(m.dt.replace("/","-")) + "','" + str(m.simnum) + "','"
-        # query += str(m.data.replace("'","\"")) + "','UNREAD'),"
+        # print m.simnum, m.data, m.dt, m.num
+        ts_received = m.dt
+        sms_msg = m.data
+        read_status = 0 
     
-    # just to remove the trailing ','
-    query = query[:-1]
-    # print query
-    
-    dbio.commit_to_db(query, "write_raw_sms_to_db", instance='GSM')
+        if m.simnum in logger_mobile_sim_nums.keys():
+            query_loggers += "('%s',%d,'%s',%d,%d)," % (ts_received, 
+                logger_mobile_sim_nums[m.simnum], sms_msg, read_status, gsm_id)
+            ltr_mobile_id= logger_mobile_sim_nums[m.simnum]
+            loggers_count += 1
+        elif m.simnum in user_mobile_sim_nums.keys():
+            query_users += "('%s',%d,'%s',%d,%d)," % (ts_received, 
+                user_mobile_sim_nums[m.simnum], sms_msg, read_status, gsm_id)
+            users_count += 1
+        else:            
+            print 'Unknown number', m.simnum
+            sms_id_unk.append(m.num)
+            continue
 
+        sms_id_ok.append(m.num)
+
+    query_loggers = query_loggers[:-1]
+    query_users = query_users[:-1]
+
+    print query_loggers
+    print query_users
+
+    if len(sms_id_ok)>0:
+        if loggers_count > 0:
+            # query_safe= 'SET SQL_SAFE_UPDATES=0'
+            # dbio.commit_to_db(query_safe,'simulate_gsm')
+            dbio.commit_to_db(query_loggers,'write_raw_sms_to_db',
+                instance = 'sandbox')
+            # print query_lastText
+            dbio.commit_to_db(query_lastText,'write_raw_sms_to_db',
+                instance = 'sandbox')
+        if users_count > 0:
+            dbio.commit_to_db(query_users,'write_raw_sms_to_db',
+                instance = 'sandbox')
+        
 def write_eq_alert_message_to_db(alertmsg):
     c = cfg.config()
     # write_outbox_message_to_db(alertmsg,c.smsalert.globenum)
@@ -282,6 +316,9 @@ def get_value_from_cache(key):
     value = mc.get(key)
 
 def try_sending_messages(network):
+    # print ">> eavm: skipping.."
+    time.sleep(30)
+    return
     start = dt.now()
     while True:
         send_messages_from_db(network)
@@ -290,10 +327,10 @@ def try_sending_messages(network):
         if (dt.now()-start).seconds > 30:
             break
 
-def detele_messages_from_gsm():
+def delete_messages_from_gsm():
     print "\n>> Deleting all read messages"
     try:
-        gsmio.gsmcmd('AT+CMGD=0,2').strip()
+        gsmio.gsm_cmd('AT+CMGD=0,2').strip()
         print 'OK'
     except ValueError:
         print '>> Error deleting messages'
@@ -374,7 +411,7 @@ def simulate_gsm(network='simulate'):
             # query_safe= 'SET SQL_SAFE_UPDATES=0'
             # dbio.commit_to_db(query_safe,'simulate_gsm')
             dbio.commit_to_db(query_loggers,'simulate_gsm')
-            print query_lastText
+            # print query_lastText
             dbio.commit_to_db(query_lastText,'simulate_gsm')
         if users_count > 0:
             dbio.commit_to_db(query_users,'simulate_gsm')
@@ -391,7 +428,7 @@ def simulate_gsm(network='simulate'):
     
     sys.exit()
         
-def run_server(network='simulate',table='loggers'):
+def run_server(gsm_info,table='loggers'):
     minute_of_last_alert = dt.now().minute
     timetosend = 0
     lastAlertMsgSent = ''
@@ -399,12 +436,12 @@ def run_server(network='simulate',table='loggers'):
     global checkIfActive 
     checkIfActive = True
 
-    if network == 'simulate':
+    if gsm_info['name'] == 'simulate':
         simulate_gsm(network)
         sys.exit()
 
     try:
-        gsm = gsmio.init_gsm(network)        
+        gsm = gsmio.init_gsm(gsm_info)        
     except serial.SerialException:
         print '**NO COM PORT FOUND**'
         serverstate = 'serial'
@@ -418,32 +455,37 @@ def run_server(network='simulate',table='loggers'):
     # dbio.create_table('smsinbox','smsinbox',cfg.config().mode.logtoinstance)
     # dbio.create_table('smsoutbox','smsoutbox',cfg.config().mode.logtoinstance)
 
-    sensor_numbers_str = str(get_sensor_numbers())
+    # sensor_numbers_str = str(get_sensor_numbers())
 
-    print '**' + network + ' GSM server active**'
+    print '**' + gsm_info['name'] + ' GSM server active**'
     print time.asctime()
+    network = gsm_info['network']
     while True:
-        m = gsmio.countmsg()
+        m = gsmio.count_msg()
         if m>0:
             allmsgs = gsmio.get_all_sms(network)
+
+            for msg in allmsgs:
+                print msg
             
             try:
-                write_raw_sms_to_db(allmsgs,sensor_numbers_str)
-            except MySQLdb.ProgrammingError:
+                write_raw_sms_to_db(allmsgs,gsm_info)
+            # except MySQLdb.ProgrammingError:
+            except KeyboardInterrupt:
                 print ">> Error: May be an empty line.. skipping message storing"
             
-            detele_messages_from_gsm()
+            delete_messages_from_gsm()
                 
             print dt.today().strftime("\n" + network 
                 + " Server active as of %A, %B %d, %Y, %X")
-            log_runtime_status(network,"alive")
+            # log_runtime_status(network,"alive")
 
             try_sending_messages(network)
             
         elif m == 0:
             try_sending_messages(network)
             
-            gsmio.gsmflush()
+            gsmio.flush_gsm()
             today = dt.today()
             if (today.minute % 10 == 0):
                 if checkIfActive:
@@ -455,15 +497,15 @@ def run_server(network='simulate',table='loggers'):
         elif m == -1:
             print'GSM MODULE MAYBE INACTIVE'
             serverstate = 'inactive'
-            log_runtime_status(network,"gsm inactive")
-            gsmio.resetGsm()
+            # log_runtime_status(network,"gsm inactive")
+            gsmio.reset_gsm()
 
         elif m == -2:
             print '>> Error in parsing mesages: No data returned by GSM'
-            gsmio.resetGsm()            
+            gsmio.reset_gsm()            
         else:
             print '>> Error in parsing mesages: Error unknown'
-            gsmio.resetGsm()
+            gsmio.reset_gsm()
 
 def get_arguments():
     parser = argparse.ArgumentParser(description="Run SMS server [-options]")
@@ -471,6 +513,8 @@ def get_arguments():
         help="smsinbox table (loggers or users)")
     parser.add_argument("-n", "--network", 
         help="network name (smart/globe/simulate)")
+    parser.add_argument("-g", "--gsm_id", type = int,
+        help="gsm id (1,2,3...)")
     
     try:
         args = parser.parse_args()
@@ -486,33 +530,46 @@ def get_arguments():
         print error
         sys.exit()
 
-def get_gsm_modules():
-    ids = mc.get('gsmids')
-    if ids == None:
+def get_gsm_modules(reset_val = False):
+    gsm_modules = mc.get('gsm_modules')
+    if reset_val or (gsm_modules == None or len(gsm_modules.keys()) == 0):
+        print "Getting gsm modules information..."
         query = "select gsm_id, gsm_name, gsm_sim_num from gsm_modules"
-        gsm_modules = dbio.query_database(query,'get_gsm_ids')
+        result_set = dbio.query_database(query,'get_gsm_ids','sandbox')
         print gsm_modules
 
-        ids = dict() 
-        for gsm_id,name,num in gsm_modules:
-            ids[name] = gsm_id
+        # ids = dict() 
+        gsm_modules = dict()
+        for gsm_id, name, num, net, port, pwr_on_pin in result_set:
+            gsm_info = dict()
+            gsm_info["network"] = net
+            gsm_info["name"] = name
+            gsm_info["num"] = num
+            gsm_info["port"] = port
+            gsm_info["pwr_on_pin"] = pwr_on_pin
+            gsm_info["id"] = gsm_id
+            gsm_modules[gsm_id] = gsm_info 
 
-        mc.set('gsm_ids',ids)
+        mc.set('gsm_modules',gsm_modules)
 
-    return ids
+    return gsm_modules
 
 def main():
     args = get_arguments()
-    network = args.network
+    
+    gsm_modules = get_gsm_modules(True)
+    # print gsm_modules
 
-    gsm_ids = get_gsm_modules()
-    print gsm_ids.keys()
+    if args.gsm_id not in gsm_modules.keys():
+        print ">> Error in gsm module selection (%s)" % (args.gsm_id) 
+        sys.exit()
 
-    if network not in gsm_ids.keys():
-        print ">> Error in network selection", network
+    if gsm_modules[args.gsm_id]["port"] is None:
+        print ">> Error: missing information on gsm_module"
         sys.exit()
     
-    run_server(network)
+    print 'Running gsm server ...'
+    run_server(gsm_modules[args.gsm_id])
     sys.exit()
 
 if __name__ == '__main__':

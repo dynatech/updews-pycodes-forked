@@ -79,7 +79,7 @@ def parse_surficial_text(text):
         raise SurficialParserError(c.reply.failweaen)
     recisvalid = False
     for keyword in ["ARAW","ULAN","BAGYO","LIMLIM","AMBON","ULAP","SUN",
-        "RAIN","CLOUD","DILIM","HAMOG"]:
+        "RAIN","CLOUD","DILIM","HAMOG","INIT"]:
         if keyword in wrecord:
             recisvalid = True
             break

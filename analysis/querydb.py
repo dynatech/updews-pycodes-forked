@@ -499,26 +499,39 @@ def alert_to_db(df, table_name):
     
     if table_name == 'operational_triggers':
         # checks trigger source
-        query = "SELECT * FROM operational_trigger_symbols"
+        query =  "SELECT * FROM "
+        query += "  operational_trigger_symbols AS op "
+        query += "INNER JOIN "
+        query += "  trigger_hierarchies AS trig "
+        query += "ON op.source_id = trig.source_id "
         all_trig = get_db_dataframe(query)
-        trigger_source = all_trig[all_trig.trigger_sym_id == df['trigger_sym_id'].values[0]]['trigger_source'].values[0]
+        trigger_source = all_trig[all_trig.trigger_sym_id == \
+                    df['trigger_sym_id'].values[0]]['trigger_source'].values[0]
 
         # does not write nd subsurface alerts
         if trigger_source == 'subsurface':
-            alert_level = all_trig[all_trig.trigger_sym_id == df['trigger_sym_id'].values[0]]['alert_level'].values[0]
+            alert_level = all_trig[all_trig.trigger_sym_id == \
+                    df['trigger_sym_id'].values[0]]['alert_level'].values[0]
             if alert_level == -1:
                 return
         # if ts does not exist, writes alert; else: updates alert level
         elif trigger_source == 'surficial':
 
-            query =  "SELECT * FROM "
-            query += "	(SELECT * FROM operational_trigger_symbols "
-            query += "	WHERE trigger_source = '%s') AS sym " %trigger_source
+            query =  "SELECT trigger_id, trig.trigger_sym_id FROM "
+            query += "  (SELECT trigger_sym_id, alert_level, alert_symbol, "
+            query += "  op.source_id, trigger_source FROM "
+            query += "    operational_trigger_symbols AS op "
+            query += "  INNER JOIN "
+            query += "    (SELECT * FROM trigger_hierarchies "
+            query += "    WHERE trigger_source = '%s' " %trigger_source
+            query += "    ) AS trig "
+            query += "  ON op.source_id = trig.source_id "
+            query += "  ) AS sym "
             query += "INNER JOIN "
-            query += "	(SELECT * FROM operational_triggers "
-            query += "	WHERE site_id = %s " %df['site_id'].values[0]
-            query += " AND ts = '%s' " %df['ts'].values[0]
-            query += "	) AS trig "
+            query += "  (SELECT * FROM operational_triggers "
+            query += "  WHERE site_id = %s " %df['site_id'].values[0]
+            query += "  AND ts = '%s' " %df['ts'].values[0]
+            query += "  ) AS trig "
             query += "ON trig.trigger_sym_id = sym.trigger_sym_id"
             surficial = get_db_dataframe(query)
 
@@ -528,17 +541,25 @@ def alert_to_db(df, table_name):
             else:
                 trigger_id = surficial['trigger_id'].values[0]
                 trigger_sym_id = df['trigger_sym_id'].values[0]
-                query =  "UPDATE %s " %table_name
-                query += "SET trigger_sym_id = '%s' " %trigger_sym_id
-                query += "WHERE trigger_id = %s" %trigger_id
-                execute_query(query)
+                if trigger_sym_id != surficial['trigger_sym_id'].values[0]:
+                    query =  "UPDATE %s " %table_name
+                    query += "SET trigger_sym_id = '%s' " %trigger_sym_id
+                    query += "WHERE trigger_id = %s" %trigger_id
+                    execute_query(query)
                 return
                 
         query =  "SELECT * FROM "
-        query += "	(SELECT * FROM operational_trigger_symbols "
-        query += "	WHERE trigger_source = '%s') AS sym " %trigger_source
+        query += "  (SELECT trigger_sym_id, alert_level, alert_symbol, "
+        query += "    op.source_id, trigger_source FROM "
+        query += "      operational_trigger_symbols AS op "
+        query += "    INNER JOIN "
+        query += "      (SELECT * FROM trigger_hierarchies "
+        query += "      WHERE trigger_source = '%s' " %trigger_source
+        query += "      ) AS trig "
+        query += "    ON op.source_id = trig.source_id "
+        query += "    ) AS sym "
         query += "INNER JOIN "
-        query += "	( "
+        query += "  ( "
     
     else:
         query = ""
@@ -551,16 +572,16 @@ def alert_to_db(df, table_name):
     ts_updated = pd.to_datetime(df['ts_updated'].values[0])-timedelta(hours=0.5)
     
     # previous alert
-    query +=  "SELECT * FROM %s " %table_name
-    query += "WHERE %s = %s " %(where_id, df[where_id].values[0])
-    query += "AND ((ts <= '%s' " %df['ts_updated'].values[0]
-    query += " AND ts_updated >= '%s') " %df['ts_updated'].values[0]
-    query += "OR (ts_updated <= '%s' " %df['ts_updated'].values[0]
-    query += " AND ts_updated >= '%s')) " %ts_updated
+    query += "  SELECT * FROM %s " %table_name
+    query += "  WHERE %s = %s " %(where_id, df[where_id].values[0])
+    query += "  AND ((ts <= '%s' " %df['ts_updated'].values[0]
+    query += "    AND ts_updated >= '%s') " %df['ts_updated'].values[0]
+    query += "  OR (ts_updated <= '%s' " %df['ts_updated'].values[0]
+    query += "    AND ts_updated >= '%s')) " %ts_updated
 
     if table_name == 'operational_triggers':
         
-        query += "	) AS trig "
+        query += "  ) AS trig "
         query += "ON trig.trigger_sym_id = sym.trigger_sym_id "
 
     query += "ORDER BY ts DESC LIMIT 1"
@@ -588,7 +609,10 @@ def alert_to_db(df, table_name):
 
         same_alert = df2[alert_comp].values[0] == df[alert_comp].values[0]
         
-        if not same_alert[0]:
+        if type(same_alert) != bool:
+            same_alert = same_alert[0]
+        
+        if not same_alert:
             push_db_dataframe(df, table_name, index=False)
         else:
             query =  "UPDATE %s " %table_name
