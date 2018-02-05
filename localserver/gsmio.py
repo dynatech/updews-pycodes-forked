@@ -7,6 +7,8 @@ from messaging.sms import SmsSubmit as smssubmit
 import cfgfileio as cfg
 import argparse
 from random import random
+import memcache
+mc = memcache.Client(['127.0.0.1:11211'],debug=0)
 
 if cfg.config().mode.script_mode == 'gsmserver':
     import RPi.GPIO as GPIO
@@ -27,8 +29,11 @@ class sms:
 class CustomGSMResetException(Exception):
     pass
 
-def power_gsm(mode):
-    GPIO.output(cfg.config().gsmio.resetpin, mode)
+def power_gsm(mode,pin):
+    import RPi.GPIO as GPIO
+    GPIO.setmode(GPIO.BOARD)
+    GPIO.setup(pin, GPIO.OUT)
+    GPIO.output(pin, mode)
     print 'done'
     
 def reset_gsm():
@@ -41,15 +46,16 @@ def reset_gsm():
     except ImportError:
         return
        
-def init_gsm(network):
+def init_gsm(gsm_info):
     global gsm
-    power_gsm(True)
+    power_gsm(True,gsm_info["pwr_on_pin"])
     gsm = serial.Serial()
     c = cfg.config()
-    if network.lower() == 'globe':
-        Port = c.serialio.globeport
-    else:
-        Port = c.serialio.smartport
+    # if network[:5].lower() == 'globe':
+    #     Port = c.serialio.globeport
+    # else:
+    #     Port = c.serialio.smartport
+    Port = gsm_info['port']
     print 'Connecting to GSM modem at', Port
     
     gsm.port = Port
@@ -60,7 +66,7 @@ def init_gsm(network):
         gsm.open()
     
     #flush_gsm()
-    for i in range(0,4):
+    for i in range(0,1):
         gsm.write('AT\r\n')
         time.sleep(1)
     print 'Switching to no-echo mode', gsm_cmd('ATE0').strip('\r\n')
@@ -224,8 +230,48 @@ def count_msg():
             print b
             print '>> Retryring message reading'
             # log_error(b)
-            # return -2   
+            # return -2
 
+def manage_multi_messages(smsdata):
+    if 'ref' not in smsdata:
+        return smsdata
+
+    sms_ref = smsdata['ref']
+    
+    # get/set multipart_sms_list
+    multipart_sms = mc.get("multipart_sms")
+    if multipart_sms is None:
+        multipart_sms = {}
+        print "multipart_sms in None"
+
+    if sms_ref not in multipart_sms:
+        multipart_sms[sms_ref] = {}
+        multipart_sms[sms_ref]['date'] = smsdata['date']
+        multipart_sms[sms_ref]['number'] = smsdata['number']
+        # multipart_sms[sms_ref]['cnt'] = smsdata['cnt']
+        multipart_sms[sms_ref]['seq_rec'] = 0
+    
+    multipart_sms[sms_ref][smsdata['seq']] = smsdata['text']
+    print "Sequence no: %d/%d" % (smsdata['seq'],smsdata['cnt'])
+    multipart_sms[sms_ref]['seq_rec'] += 1
+
+    smsdata_complete = ""
+
+    if multipart_sms[sms_ref]['seq_rec'] == smsdata['cnt']:
+        multipart_sms[sms_ref]['text'] = ""
+        for i in range(1,smsdata['cnt']+1):
+            multipart_sms[sms_ref]['text'] += multipart_sms[sms_ref][i]
+        # print multipart_sms[sms_ref]['text']
+
+        smsdata_complete = multipart_sms[sms_ref]
+
+        del multipart_sms[sms_ref]
+    else:
+        print "Incomplete message"
+
+    mc.set("multipart_sms", multipart_sms)
+    return smsdata_complete
+    
 def get_all_sms(network):
     allmsgs = 'd' + gsm_cmd('AT+CMGL=4')
     # print allmsgs.replace('\r','@').replace('\n','$')
@@ -244,6 +290,7 @@ def get_all_sms(network):
             # f.close()
                 
         # msg = msg.replace('\n','').split("\r")
+        # print msg
         try:
             pdu = re.search(r'[0-9A-F]{20,}',msg).group(0)
         except AttributeError:
@@ -255,6 +302,13 @@ def get_all_sms(network):
         # print pdu
 
         smsdata = smsdeliver(pdu).data
+
+        print smsdata
+        print smsdata['date']
+
+        smsdata = manage_multi_messages(smsdata)
+        if smsdata == "":
+            continue
 
         try:
             txtnum = re.search(r'(?<= )[0-9]{1,2}(?=,)',msg).group(0)
