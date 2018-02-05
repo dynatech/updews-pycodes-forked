@@ -59,34 +59,36 @@ def write_raw_sms_to_db(msglist,gsm_info):
 
     # gsm_ids = get_gsm_modules()
 
+    ts_stored = dt.today().strftime("%Y-%m-%d %H:%M:%S")
+
     gsm_id = gsm_info['id']
 
     loggers_count = 0
     users_count = 0
-    
-    query_loggers = ("insert into smsinbox_loggers (ts_received, mobile_id, "
+
+    query_loggers = ("insert into smsinbox_loggers (ts_sms, ts_stored, mobile_id, "
         "sms_msg,read_status,gsm_id) values ")
-    query_users = ("insert into smsinbox_users (ts_received, mobile_id, "
+    query_users = ("insert into smsinbox_users (ts_sms, ts_stored, mobile_id, "
         "sms_msg,read_status,gsm_id) values ")
 
     sms_id_ok = []
     sms_id_unk = []
-    ts_received = 0
+    ts_sms = 0
     ltr_mobile_id= 0
 
     for m in msglist:
         # print m.simnum, m.data, m.dt, m.num
-        ts_received = m.dt
+        ts_sms = m.dt
         sms_msg = m.data
         read_status = 0 
     
         if m.simnum in logger_mobile_sim_nums.keys():
-            query_loggers += "('%s',%d,'%s',%d,%d)," % (ts_received, 
+            query_loggers += "('%s','%s',%d,'%s',%d,%d)," % (ts_sms, ts_stored,
                 logger_mobile_sim_nums[m.simnum], sms_msg, read_status, gsm_id)
             ltr_mobile_id= logger_mobile_sim_nums[m.simnum]
             loggers_count += 1
         elif m.simnum in user_mobile_sim_nums.keys():
-            query_users += "('%s',%d,'%s',%d,%d)," % (ts_received, 
+            query_users += "('%s','%s',%d,'%s',%d,%d)," % (ts_sms, ts_stored,
                 user_mobile_sim_nums[m.simnum], sms_msg, read_status, gsm_id)
             users_count += 1
         else:            
@@ -366,29 +368,31 @@ def simulate_gsm(network='simulate'):
     loggers_count = 0
     users_count = 0
     
-    query_loggers = ("insert into smsinbox_loggers (ts_received, mobile_id, "
+    ts_stored = dt.today().strftime("%Y-%m-%d %H:%M:%S")
+
+    query_loggers = ("insert into smsinbox_loggers (ts_sms, ts_stored, mobile_id, "
         "sms_msg,read_status,gsm_id) values ")
-    query_users = ("insert into smsinbox_users (ts_received, mobile_id, "
+    query_users = ("insert into smsinbox_users (ts_sms, ts_stored, mobile_id, "
         "sms_msg,read_status,gsm_id) values ")
 
     print smsinbox_sms
     sms_id_ok = []
     sms_id_unk = []
-    ts_received = 0
+    ts_sms = 0
     ltr_mobile_id= 0
 
     for m in smsinbox_sms:
-        ts_received = m[1]
+        ts_sms = m[1]
         sms_msg = m[3]
         read_status = 0 
     
         if m[2] in logger_mobile_sim_nums.keys():
-            query_loggers += "('%s',%d,'%s',%d,%d)," % (ts_received, 
+            query_loggers += "('%s','%s',%d,'%s',%d,%d)," % (ts_sms, ts_stored,
                 logger_mobile_sim_nums[m[2]], sms_msg, read_status, gsm_id)
             ltr_mobile_id= logger_mobile_sim_nums[m[2]]
             loggers_count += 1
         elif m[2] in user_mobile_sim_nums.keys():
-            query_users += "('%s',%d,'%s',%d,%d)," % (ts_received, 
+            query_users += "('%s','%s',%d,'%s',%d,%d)," % (ts_sms, ts_stored,
                 user_mobile_sim_nums[m[2]], sms_msg, read_status, gsm_id)
             users_count += 1
         else:            
@@ -404,7 +408,7 @@ def simulate_gsm(network='simulate'):
     # print query
     query_lastText = ("UPDATE last_text_received SET inbox_id = "
         "(select max(inbox_id) from smsinbox_loggers), ts = '{}' "
-        "where mobile_id= {}".format(ts_received, ltr_mobile_id))
+        "where mobile_id= {}".format(ts_sms, ltr_mobile_id))
     # print query_lastText    
     if len(sms_id_ok)>0:
         if loggers_count > 0:
@@ -437,7 +441,7 @@ def run_server(gsm_info,table='loggers'):
     checkIfActive = True
 
     if gsm_info['name'] == 'simulate':
-        simulate_gsm(network)
+        simulate_gsm(gsm_info['network'])
         sys.exit()
 
     try:
@@ -534,7 +538,7 @@ def get_gsm_modules(reset_val = False):
     gsm_modules = mc.get('gsm_modules')
     if reset_val or (gsm_modules == None or len(gsm_modules.keys()) == 0):
         print "Getting gsm modules information..."
-        query = "select gsm_id, gsm_name, gsm_sim_num from gsm_modules"
+        query = "select * from gsm_modules"
         result_set = dbio.query_database(query,'get_gsm_ids','sandbox')
         print gsm_modules
 
