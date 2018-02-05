@@ -12,6 +12,7 @@ if not path in sys.path:
 del path   
 
 import querydb as qdb
+import publicalerts as pub
 
 def create_rainfall_alerts():
     query = "CREATE TABLE `rainfall_alerts` ("
@@ -172,17 +173,17 @@ def summary_writer(site_id,site_code,gauge_name,rain_id,twoyrmax,halfmax,rainfal
         ralert=0
         advisory='---'
 
-    if (write_alert and end.time() in [time(3,30), time(7,30), time(11,30), time(15,30), time(19,30), time(23,30)]) or ralert == 1:
+    if write_alert or ralert == 1:
         if qdb.does_table_exist('rainfall_alerts') == False:
             #Create a site_alerts table if it doesn't exist yet
             create_rainfall_alerts()
 
         if ralert == 0:
-            if one < halfmax*0.75 and three < twoyrmax*0.75:
+            if one >= halfmax*0.75 or three >= twoyrmax*0.75:
                 query = "SELECT EXISTS(SELECT * FROM rainfall_alerts"
-                query += " WHERE ts = '%s' AND site_id = %s AND rain_alert = '0')" %(end, site_id)
+                query += " WHERE ts = '%s' AND site_id = %s AND rain_alert = 'x')" %(end, site_id)
                 if qdb.get_db_dataframe(query).values[0][0] == 0:
-                    df = pd.DataFrame({'ts': [end], 'site_id': [site_id], 'rain_id': [rain_id], 'rain_alert': [0], 'cumulative': [np.nan], 'threshold': [np.nan]})
+                    df = pd.DataFrame({'ts': [end], 'site_id': [site_id], 'rain_id': [rain_id], 'rain_alert': ['x'], 'cumulative': [np.nan], 'threshold': [np.nan]})
                     qdb.push_db_dataframe(df, 'rainfall_alerts', index = False)
 
         else:
@@ -225,14 +226,37 @@ def main(rain_props, end, sc, trigger_symbol):
     offsetstart = start - timedelta(hours=0.5)
 
     try:
-        query = "SELECT EXISTS (SELECT * FROM public_alerts as a left join" 
-        query += " public_alert_symbols as s on a.pub_sym_id = s.pub_sym_id"
-        query += " where site_id = %s and alert_level > 0" %site_id
-        query += " and ts <= '%s' and ts_updated >= '%s')" %(end, end)
-        if qdb.get_db_dataframe(query).values[0][0] == 1:
-            write_alert = True
+        
+        query =  "SELECT alert_level FROM "
+        query += "  (SELECT * FROM public_alerts "
+        query += "  WHERE site_id = %s " %site_id
+        query += "  AND ts <= '%s' " %end
+        query += "  AND ts_updated >= '%s' " %(end - timedelta(hours=0.5))
+        query += "  ) AS a "
+        query += "INNER JOIN "
+        query += "  (SELECT pub_sym_id, alert_level FROM public_alert_symbols "
+        query += "  ) AS s "
+        query += "ON a.pub_sym_id = s.pub_sym_id"
+
+        if qdb.get_db_dataframe(query)['alert_level'].values[0] > 0:
+            
+            start_monitor = pub.event_start(site_id, end)
+            op_trig = pub.get_operational_trigger(site_id, start_monitor, end)
+            op_trig = op_trig[op_trig.alert_level > 0]
+            validity = max(op_trig['ts_updated'].values)
+            validity = qdb.release_time(pd.to_datetime(validity)) \
+                                     + timedelta(1)
+            if 3 in op_trig['alert_level'].values:
+                validity += timedelta(1)
+                
+            if end + timedelta(hours=0.5) >= validity:
+                write_alert = True
+            else:
+                write_alert = False            
+        
         else:
             write_alert = False
+    
     except:
         write_alert = False
 
