@@ -116,16 +116,16 @@ def event_start(site_id, end):
     """
 
     query =  "SELECT ts, ts_updated FROM "
-    query += "  (SELECT * FROM public_alerts"
+    query += "  (SELECT * FROM public_alerts "
     query += "  WHERE site_id = %s " %site_id
     query += "  AND (ts_updated <= '%s' " %end
     query += "    OR (ts_updated >= '%s' " %end
     query += "      AND ts <= '%s')) " %end
-    query += "  ) AS pub" %site_id
-    query += "INNER JOIN"
-    query += "  (SELECT * FROM public_alert_symbols"
-    query += "  WHERE alert_type = 'event') AS sym"
-    query += "ON pub.pub_sym_id = sym.pub_sym_id"
+    query += "  ) AS pub " %site_id
+    query += "INNER JOIN "
+    query += "  (SELECT * FROM public_alert_symbols "
+    query += "  WHERE alert_type = 'event') AS sym "
+    query += "ON pub.pub_sym_id = sym.pub_sym_id "
     query += "ORDER BY ts DESC LIMIT 3"
     
     # previous positive alert
@@ -569,7 +569,7 @@ def site_public_alert(site_props, end, public_symbols, internal_symbols,
     except:
         pass
     
-#    qdb.alert_to_db(site_public_df, 'public_alerts')
+    qdb.alert_to_db(site_public_df, 'public_alerts')
     
     public_df['public_alert'] = public_symbols[public_symbols.alert_level == \
                              public_alert]['alert_symbol'].values[0]

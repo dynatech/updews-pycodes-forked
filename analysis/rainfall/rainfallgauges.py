@@ -59,6 +59,9 @@ def to_mysql(df):
         qdb.execute_query(query)
 
 def main():
+    start = datetime.now()
+    qdb.print_out(start)
+
     if qdb.does_table_exist('rainfall_gauges') == False:
         #Create a rainfall_gauges table if it doesn't exist yet
         create_rainfall_gauges()
@@ -82,10 +85,9 @@ def main():
     
     rain_id = noah.groupby('gauge_name')
     rain_id.apply(to_mysql)
+    
+    qdb.print_out('runtime = %s' %(datetime.now() - start))
 
 ################################################################################
 if __name__ == "__main__":
-    start = datetime.now()
-    print start
     main()
-    print 'runtime =', datetime.now() - start
