@@ -343,7 +343,7 @@ def check_rainfall_alert(internal_df, internal_symbols, site_id,
     query =  "SELECT * FROM rainfall_alerts "
     query += "where site_id = '%s' " %site_id
     query += "and ts = '%s'" %end
-    rainfall_df = qdb.GetDBDataFrame(query)
+    rainfall_df = qdb.get_db_dataframe(query)
 
     if len(rainfall_df) != 0:
         if rainfall_id in internal_df['source_id'].values:
