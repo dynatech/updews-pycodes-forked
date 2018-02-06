@@ -26,7 +26,7 @@ def updateLastMsgReceivedTable(txtdatetime,name,sim_num,msg):
     dbio.commitToDb(query, 'updateLastMsgReceivedTable')
     
 def updateSimNumTable(name,sim_num,date_activated):
-    db, cur = dbio.SenslopeDBConnect('local')
+    # db, cur = dbio.SenslopeDBConnect('local')
     
     query = """INSERT IGNORE INTO site_column_sim_nums (name,sim_num,date_activated)
                 VALUES ('%s','%s','%s')""" %( name.upper(),sim_num,date_activated)

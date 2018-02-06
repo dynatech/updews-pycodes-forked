@@ -137,6 +137,9 @@ def sendMsg(msg, number):
     print "\nMSG:", msg, 
     print "NUM:", number
 
+    parts = len(pdulist)
+    count = 1
+
     for pdu in pdulist:
         try: 
             a = ''
@@ -156,7 +159,7 @@ def sendMsg(msg, number):
                 print '^^ a ^^'
                 return -1
             else:
-                print '>'
+                print '>',
             
             a = ''
             now = time.time()
@@ -172,7 +175,8 @@ def sendMsg(msg, number):
                 print '>> Error: GSM reported ERROR in SMS reading'
                 return -1
             else:
-                print ">> Message sent!"
+                print ">> Part %d/%d: Message sent!" % (count,parts)
+                count += 1
                 
                 
         except serial.SerialException:

@@ -16,12 +16,15 @@ c = cfg.config()
 
 localdbinstance = dbInstance(c.localdb.name,c.localdb.host,c.localdb.user,c.localdb.pwd)
 gsmdbinstance = dbInstance(c.gsmdb.name,c.gsmdb.host,c.gsmdb.user,c.gsmdb.pwd)
+sandboxbinstance = dbInstance(c.sandboxdb.name,c.sandboxdb.host,c.sandboxdb.user,c.sandboxdb.pwd)
 
 # def SenslopeDBConnect():
 # Definition: Connect to senslopedb in mysql
 def SenslopeDBConnect(instance):
     if instance.upper() == 'LOCAL':
         dbc = localdbinstance
+    elif instance.upper() == 'SANDBOX':
+        dbc = localdbinstance    
     else:
         dbc = gsmdbinstance
     while True:
@@ -35,6 +38,8 @@ def SenslopeDBConnect(instance):
             time.sleep(2)
             
 def createTable(table_name, type, instance='local'):
+    print ">> Skip table creation"
+    return
     db, cur = SenslopeDBConnect(instance)
     # cur.execute("CREATE DATABASE IF NOT EXISTS %s" %Namedb)
     # cur.execute("USE %s"%Namedb)
@@ -83,7 +88,7 @@ def createTable(table_name, type, instance='local'):
     db.close()
 
 def setReadStatus(read_status,sms_id_list):
-    db, cur = SenslopeDBConnect('gsm')
+    # db, cur = SenslopeDBConnect('gsm')
     
     if type(sms_id_list) is list:
         if len(sms_id_list) == 0:
@@ -99,7 +104,7 @@ def setReadStatus(read_status,sms_id_list):
     commitToDb(query,"setReadStatus", instance='GSM')
     
 def setSendStatus(send_status,sms_id_list):
-    db, cur = SenslopeDBConnect('gsm')
+    # db, cur = SenslopeDBConnect('gsm')
     
     if type(sms_id_list) is list:
         if len(sms_id_list) == 0:
@@ -128,6 +133,7 @@ def getAllSmsFromDb(read_status):
             out = []
             if a:
                 out = cur.fetchall()
+            db.close()
             return out
 
         except MySQLdb.OperationalError:
