@@ -570,7 +570,8 @@ def writeAlertToDb(alertfile):
     alerttxt = f.read()
     f.close()
 
-    sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../Senslope\ Server')))
+    script_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../Senslope Server'))
+    sys.path.insert(1, script_path)
     import senslopeServer as server
 
     server.writeAlertToDb(alerttxt)
