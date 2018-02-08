@@ -488,7 +488,7 @@ def ProcessEarthquake(msg):
     dbio.commitToDb(query, 'earthquake')
 
     # subprocess.Popen(["python",cfg.config().fileio.eqprocfile])
-    exec_line = "~/anaconda2/bin/python %s > ~/scriptlogs/earthquakescript.txt 2>&1" % (cfg.config().fileio.eqprocfile)
+    exec_line = "~/miniconda2/bin/python %s > ~/logs/earthquakescript.txt 2>&1" % (cfg.config().fileio.eqprocfile)
     p = subprocess.Popen(exec_line, stdout=subprocess.PIPE, shell=True, stderr=subprocess.STDOUT)
 
     return True
@@ -737,7 +737,7 @@ def invokeProcessInBgnd(exec_line):
 
 def syncTable(table):
     c = cfg.config()
-    invokeProcessInBgnd("~/anaconda2/bin/python %s %s > %s 2>&1" % (c.fileio.masyncscript, table, c.fileio.masynclogs))
+    invokeProcessInBgnd("~/miniconda2/bin/python %s %s > %s 2>&1" % (c.fileio.masyncscript, table, c.fileio.masynclogs))
 
 def ProcessAllMessages(allmsgs,network):
     c = cfg.config()
@@ -783,10 +783,12 @@ def ProcessAllMessages(allmsgs,network):
                     errortype = re.search("(WEATHER|DATE|TIME|GROUND MEASUREMENTS|NAME)", str(e).upper()).group(0)
                     print ">> Error in manual ground measurement SMS", errortype
 
-                    server.WriteOutboxMessageToDb("READ-FAIL: (%s)\n%s" % (errortype,msg.data),c.smsalert.communitynum)
-                    server.WriteOutboxMessageToDb(str(e), msg.simnum)
+                    #server.WriteOutboxMessageToDb("READ-FAIL: (%s)\n%s" % (errortype,msg.data),c.smsalert.communitynum)
+                    #server.WriteOutboxMessageToDb(str(e), msg.simnum)
+                    print 'Skip reply'
                 except:
-                    server.WriteOutboxMessageToDb("READ-FAIL: (Unhandled) \n" + msg.data,c.smsalert.communitynum)
+                    #server.WriteOutboxMessageToDb("READ-FAIL: (Unhandled) \n" + msg.data,c.smsalert.communitynum)
+                    print 'Skip reply'
                   
             elif re.search("^[A-Z]{4,5}\*[xyabcXYABC]\*[A-F0-9]+\*[0-9]+T?$",msg.data):
                 try:
