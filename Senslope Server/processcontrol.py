@@ -4,7 +4,7 @@ import subprocess
 
 def main():
 
-	dyna_cron = CronTab(user='dynaslope')
+	dyna_cron = CronTab(user='dyna')
 
 	parser = argparse.ArgumentParser(description="Control crontab items\n PC [-options]")
 	parser.add_argument("-ep", "--enable_procmessages", help="enable processmessages scripts", action="store_true")
