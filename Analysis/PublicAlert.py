@@ -157,7 +157,7 @@ def SitePublicAlert(PublicAlert, end, start_time, file_path):
     site_alert = site_alert[(site_alert.source == 'public') | ((site_alert.source != 'public') & (site_alert.updateTS >= end - timedelta(1)))]
     site_alert = site_alert[~site_alert.source.isin(['internal', 'noadjfilt', 'netvel'])]
     site_alert = site_alert[~site_alert.alert.isin(['nd', 'ND'])]
-    print site_alert
+
     #sms alert for l0t
     l0t_alert = site_alert.loc[site_alert.alert == 'l0t']
     if len(l0t_alert) != 0:
@@ -487,6 +487,8 @@ def SitePublicAlert(PublicAlert, end, start_time, file_path):
     if len(op_trigger) != 0:
         ts = pd.to_datetime(max(op_trigger['updateTS'].values))
         if ts > end:
+            ts = end
+        elif ts < end - timedelta(hours=0.5):
             ts = end
         PublicAlert['timestamp'] = [ts]
     else:
