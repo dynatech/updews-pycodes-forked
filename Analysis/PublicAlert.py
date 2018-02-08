@@ -6,8 +6,6 @@ from sqlalchemy import create_engine
 import sys
 
 import querySenslopeDb as q
-import alertgen as a
-import AllRainfall as rain
 import filepath
 
 def round_data_time(date_time):
@@ -102,20 +100,6 @@ def SensorTrigger(df):
             sensor_tech += ['%s (nodes %s)' %(i.upper(), ','.join(sorted(col_df['id'].values)))]
     return ','.join(sensor_tech)
 
-def alertgen(df, end):
-    name = df['name'].values[0]
-    query = "SELECT max(timestamp) FROM %s" %name
-    ts = pd.to_datetime(q.GetDBDataFrame(query).values[0][0])
-    if ts == None:
-        return
-    if ts > end - timedelta(hours=12):
-        if ts > end:
-            ts = end
-        try:
-            a.main(name, end=ts, end_mon=True)
-        except:
-            pass
-
 def internal_alert_level(trigger):
     source = trigger['source'].values[0]
     
@@ -139,27 +123,41 @@ def SitePublicAlert(PublicAlert, end, start_time, file_path):
     print site
     
     # latest alert per source (public,internal,sensor,ground,moms,rain,eq,on demand)*
-    query = "(SELECT * FROM ( SELECT * FROM senslopedb.site_level_alert WHERE"
-    query += " (updateTS <= '%s' OR (updateTS >= '%s' AND timestamp <= '%s'))" %(end, end, end)
-    query += " AND ( site = '%s' " %site
+    site_query = "( site = '%s' " %site
     if site == 'bto':
-        query += "or site = 'bat' "
+        site_query += "or site = 'bat' )"
     elif site == 'mng':
-        query += "or site = 'man' "
+        site_query += "or site = 'man' )"
     elif site == 'png':
-        query += "or site = 'pan' "
+        site_query += "or site = 'pan' )"
     elif site == 'jor':
-        query += "or site = 'pob' "
+        site_query += "or site = 'pob' )"
     elif site == 'tga':
-        query += "or site = 'tag' "
-    query += ") ORDER BY timestamp DESC) AS sub GROUP BY source)"
+        site_query += "or site = 'tag' )"
+    else:
+        site_query += ')'
+
+    query =  "SELECT * FROM "
+    query += "  (SELECT max(timestamp) AS timestamp, source FROM ( "
+    query += "    SELECT * FROM senslopedb.site_level_alert "
+    query += "    WHERE (updateTS <= '%s' " %end
+    query += "      OR (updateTS >= '%s' " %end
+    query += "        AND timestamp <= '%s')) " %end
+    query += "    AND %s " %site_query
+    query += "  ) AS sub GROUP BY source "
+    query += "  ) AS ts_set "
+    query += "INNER JOIN "
+    query += "  (SELECT * FROM site_level_alert "
+    query += "  WHERE %s " %site_query
+    query += "  ) AS alert "
+    query += "USING (timestamp, source)"
 
     # dataframe of public alert and triggers within 24 hours
     site_alert = q.GetDBDataFrame(query)
     site_alert = site_alert[(site_alert.source == 'public') | ((site_alert.source != 'public') & (site_alert.updateTS >= end - timedelta(1)))]
     site_alert = site_alert[~site_alert.source.isin(['internal', 'noadjfilt', 'netvel'])]
     site_alert = site_alert[~site_alert.alert.isin(['nd', 'ND'])]
-
+    print site_alert
     #sms alert for l0t
     l0t_alert = site_alert.loc[site_alert.alert == 'l0t']
     if len(l0t_alert) != 0:
@@ -367,10 +365,11 @@ def SitePublicAlert(PublicAlert, end, start_time, file_path):
 
     # latest column alert
     sensor_site = site + '%'
-    query =  "SELECT * FROM ( SELECT * FROM senslopedb.column_level_alert "
+    query =  "SELECT * FROM column_level_alert "
     query += "WHERE site LIKE '%s' " %sensor_site
+    query += "AND timestamp <= '%s' " %end
     query += "AND updateTS >= '%s' " %(end - timedelta(hours=0.5))
-    query += "ORDER BY timestamp DESC) AS sub GROUP BY site"
+    query += "ORDER BY timestamp DESC"
     sensor_alert = q.GetDBDataFrame(query)
     sensor_alert = sensor_alert[['site', 'alert']]
     sensor_alert = sensor_alert.rename(columns = {'site': 'sensor'})
