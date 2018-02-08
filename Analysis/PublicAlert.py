@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, time, date
 import re
 from sqlalchemy import create_engine
 import sys
+import os
 
 import querySenslopeDb as q
 import filepath
@@ -569,7 +570,7 @@ def writeAlertToDb(alertfile):
     alerttxt = f.read()
     f.close()
 
-    sys.path.insert(0, '/home/dynaslope/Desktop/Senslope Server/')
+    sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../Senslope\ Server')))
     import senslopeServer as server
 
     server.writeAlertToDb(alerttxt)
