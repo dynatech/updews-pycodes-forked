@@ -324,7 +324,6 @@ def main(name='', end='', end_mon=False):
 
     alert['node_alert']=alert['node_alert'].map({-1:'ND',0:'L0',1:'L2',2:'L3'})
     alert['col_alert']=alert['col_alert'].map({-1:'ND',0:'L0',1:'L2',2:'L3'})
-    print alert
     not_working = q.GetNodeStatus(1).loc[q.GetNodeStatus(1).site == name].node.values
     
     for i in not_working:
@@ -356,12 +355,15 @@ def main(name='', end='', end_mon=False):
         colname = monitoring.colprops.name[0:3]
     query = "SELECT * FROM senslopedb.site_level_alert WHERE site = '%s' and source = 'public' and timestamp <= '%s' and updateTS >= '%s' ORDER BY updateTS DESC LIMIT 1" %(colname, window.end, window.end-timedelta(hours=0.5))
     public_alert = q.GetDBDataFrame(query)
-    if public_alert.alert.values[0] != 'A0':
-        plot_time = ['07:30:00', '19:30:00']
-        if str(window.end.time()) in plot_time or end_mon:
+    try:
+        if public_alert.alert.values[0] != 'A0':
+            plot_time = ['07:30:00', '19:30:00']
+            if str(window.end.time()) in plot_time or end_mon:
+                plotter.main(monitoring, window, config, plotvel_start=window.end-timedelta(hours=3), plotvel_end=window.end, realtime=False, end_mon=end_mon)
+        elif RoundTime(pd.to_datetime(public_alert.timestamp.values[0])) == RoundTime(window.end):
             plotter.main(monitoring, window, config, plotvel_start=window.end-timedelta(hours=3), plotvel_end=window.end, realtime=False, end_mon=end_mon)
-    elif RoundTime(pd.to_datetime(public_alert.timestamp.values[0])) == RoundTime(window.end):
-        plotter.main(monitoring, window, config, plotvel_start=window.end-timedelta(hours=3), plotvel_end=window.end, realtime=False, end_mon=end_mon)
+    except:
+        pass
 
 #######################
 
@@ -373,4 +375,4 @@ def main(name='', end='', end_mon=False):
 ################################################################################
 
 if __name__ == "__main__":
-    main()
+    main('parta', '2018-02-08 10:00')
