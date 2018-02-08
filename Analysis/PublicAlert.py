@@ -134,7 +134,7 @@ def internal_alert_level(trigger):
         
     return trigger
     
-def SitePublicAlert(PublicAlert, end, start_time):
+def SitePublicAlert(PublicAlert, end, start_time, file_path):
     site = PublicAlert['site'].values[0]
     print site
     
@@ -168,14 +168,14 @@ def SitePublicAlert(PublicAlert, end, start_time):
         query = "SELECT * FROM senslopedb.smsalerts where alertmsg like '%s' and ts_set >= '%s' ORDER BY ts_set desc" %(l0talert, groundTS)
         df = q.GetDBDataFrame(query)
         if len(df) == 0:
-            with open('l0t_alert.txt', 'w') as w:
+            with open(file_path+'l0t_alert.txt', 'w') as w:
                 w.write('As of ' + str(datetime.now())[:16] + '\n')
                 l0talert = l0talert.split('%')
                 l0talert.remove('')
                 l0talert = ':'.join(l0talert + ['ground'])
                 w.write(l0talert)
-            writeAlertToDb('l0t_alert.txt')
-            with open('l0t_alert.txt', 'w') as w:
+            writeAlertToDb(file_path+'l0t_alert.txt')
+            with open(file_path+'l0t_alert.txt', 'w') as w:
                 w.write('')
 
     # public alert
@@ -551,14 +551,14 @@ def SitePublicAlert(PublicAlert, end, start_time):
                     GSMAlert['palert_source'] = [GSMAlert['palert_source'].values[0].replace('sensor', colnode_source)]
             
                 GSMAlert = GSMAlert[['site', 'alert', 'palert_source']]            
-                with open('GSMAlert.txt', 'w') as w:
+                with open(file_path+'GSMAlert.txt', 'w') as w:
                     w.write('As of ' + str(end)[:16] + '\n')
-                GSMAlert.to_csv('GSMAlert.txt', header = False, index = None, sep = ':', mode = 'a')
+                GSMAlert.to_csv(file_path+'GSMAlert.txt', header = False, index = None, sep = ':', mode = 'a')
         
                 #write text file to db
-                writeAlertToDb('GSMAlert.txt')
+                writeAlertToDb(file_path+'GSMAlert.txt')
             
-                with open('GSMAlert.txt', 'w') as w:
+                with open(file_path+'GSMAlert.txt', 'w') as w:
                     w.write('')
             
     return PublicAlert
@@ -577,21 +577,20 @@ def main(end=datetime.now()):
     start_time = datetime.now()
     print start_time
     
-    with open('GSMAlert.txt', 'w') as w:
+    file_path = filepath.output_file_path('all', 'public')['monitoring_output']   
+    with open(file_path+'GSMAlert.txt', 'w') as w:
         w.write('')
         
     end = round_data_time(end)
     
     props = q.GetRainProps('rain_props')
     site_df = pd.DataFrame({'site': props['name'].values})
-
+    
     Site_Public_Alert = site_df.groupby('site')
-    PublicAlert = Site_Public_Alert.apply(SitePublicAlert, end=end, start_time=start_time)
+    PublicAlert = Site_Public_Alert.apply(SitePublicAlert, end=end, start_time=start_time, file_path=file_path)
     PublicAlert = PublicAlert[['timestamp', 'site', 'alert', 'internal_alert', 'palert_source', 'validity', 'sensor_alert', 'rain_alert', 'ground_alert', 'retriggerTS', 'tech_info']]
     PublicAlert = PublicAlert.rename(columns = {'palert_source': 'source'})
     PublicAlert = PublicAlert.sort_values(['alert', 'site'], ascending = [False, True])
-
-    file_path = filepath.output_file_path('all', 'public')['monitoring_output']
         
     PublicAlert['timestamp'] = PublicAlert['timestamp'].apply(lambda x: str(x))
     PublicAlert['validity'] = PublicAlert['validity'].apply(lambda x: str(x))
