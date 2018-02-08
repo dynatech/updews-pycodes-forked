@@ -92,10 +92,10 @@ def subplot_colpos(dfts, ax_xz, ax_xy, show_part_legend, config, colposTS):
     curax=ax_xy
     curcolpos_xy = dfts['cs_xy'].apply(lambda x: x*1000).values
     if show_part_legend == False:
-        curax.plot(curcolpos_xy,curcolpos_x,'.-', label=str(pd.to_datetime(dfts.ts.values[0])))
+        curax.plot(curcolpos_xy,curcolpos_x,'.-', label=pd.to_datetime(dfts.ts.values[0]).strftime('%Y-%m-%d'))
     else:
         if i % show_part_legend == 0 or i == config.io.num_col_pos - 1:
-            curax.plot(curcolpos_xy,curcolpos_x,'.-', label=str(pd.to_datetime(dfts.ts.values[0])))
+            curax.plot(curcolpos_xy,curcolpos_x,'.-', label=pd.to_datetime(dfts.ts.values[0]).strftime('%Y-%m-%d'))
         else:
             curax.plot(curcolpos_xy,curcolpos_x,'.-')
     curax.set_xlabel('horizontal displacement, \n across slope(mm)')
@@ -151,7 +151,7 @@ def plot_column_positions(df,colname,end, show_part_legend, config, num_nodes=0,
             tick.label.set_rotation('vertical')
             tick.label.set_fontsize(10)
     
-        plt.subplots_adjust(top=0.92, bottom=0.15, left=0.10, right=0.73)        
+        plt.subplots_adjust(top=0.92, bottom=0.22, left=0.12, right=0.77)        
         plt.suptitle(colname,fontsize='medium')
         ax_xz.grid(True)
         ax_xy.grid(True)

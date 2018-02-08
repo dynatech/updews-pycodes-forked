@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from sqlalchemy import create_engine
 
 import querySenslopeDb as q
+import filepath
 
 def alertmsg(df):
     alert_msg = df['alertmsg'].values[0].split('\n')
@@ -100,8 +101,12 @@ def main_inv(ts=datetime.now()):
     alertdf = alertdf[alertdf.site.isin(withalert['site'].values)]
     alertdf = alertdf[alertdf.source != 'ground']
     finaldf = sitewithalert.apply(currentinv, df=alertdf)
-    finaldf = finaldf.sort('timestamp', ascending=False).drop_duplicates(['site','source'], keep='first').reset_index(drop='True')
-    finaldf.to_csv('InvalidAlert.txt', sep=':', header=True, index=False, mode='w')
+    try:
+        finaldf = finaldf.sort('timestamp', ascending=False).drop_duplicates(['site','source'], keep='first').reset_index(drop='True')
+    except:
+        finaldf = pd.DataFrame(columns = ['alert', 'iomp', 'remarks', 'site', 'source', 'timestamp'])
+    file_path = filepath.output_file_path('all', 'public')['monitoring_output']
+    finaldf.to_csv(file_path+'InvalidAlert.txt', sep=':', header=True, index=False, mode='w')
     return finaldf
 
 def main_l0t(ts=datetime.now()):

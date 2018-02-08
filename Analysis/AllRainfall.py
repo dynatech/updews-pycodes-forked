@@ -66,27 +66,8 @@ def main(site='', Print=True, end=datetime.now(), monitoring_end=False):
         rainprops = rainprops[rainprops.name == site]
     siterainprops = rainprops.groupby('name')
     
-    summary = siterainprops.apply(RA.main, end=end, s=s)
-    summary = summary.reset_index(drop=True).set_index('site')[['1D cml', 'half of 2yr max', '3D cml', '2yr max', 'DataSource', 'alert', 'advisory']]
-    summary[['1D cml', 'half of 2yr max', '3D cml', '2yr max']] = np.round(summary[['1D cml', 'half of 2yr max', '3D cml', '2yr max']], 1)
-    summary_json = summary.reset_index()
-    summary_json['ts'] = str(end)
-    summary_json = summary_json.to_json(orient="records")
-
-    if Print == True:
-        if s.io.PrintSummaryAlert and not monitoring_end:
-            summary.to_csv(output_path+s.io.RainfallPlotsPath+'SummaryOfRainfallAlertGenerationFor'+tsn+s.io.CSVFormat,sep=',',mode='w')
-            
-            with open(output_path+s.io.RainfallPlotsPath+'summary'+tsn+'.json', 'w') as w:
-                w.write(summary_json)
-
+    siterainprops.apply(RA.main, end=end, s=s)
     
-        if s.io.PrintPlot:
-            summary['positive_trigger'] = summary['alert'].map({'r1': True, 'r0': False, 'nd': False})
-            siterainprops.apply(RP.main, offsetstart=offsetstart, start=start, end=end, tsn=tsn, s=s, monitoring_end=monitoring_end, summary=summary)
-    
-    return summary_json
-
 ###############################################################################
 
 if __name__ == "__main__":

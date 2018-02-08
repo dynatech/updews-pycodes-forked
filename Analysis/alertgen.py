@@ -347,26 +347,6 @@ def main(name='', end='', end_mon=False):
 
 #######################
 
-    if monitoring.colprops.name == 'mesta':
-        colname = 'msu'
-    elif monitoring.colprops.name == 'messb':
-        colname = 'msl'
-    else:
-        colname = monitoring.colprops.name[0:3]
-    query = "SELECT * FROM senslopedb.site_level_alert WHERE site = '%s' and source = 'public' and timestamp <= '%s' and updateTS >= '%s' ORDER BY updateTS DESC LIMIT 1" %(colname, window.end, window.end-timedelta(hours=0.5))
-    public_alert = q.GetDBDataFrame(query)
-    try:
-        if public_alert.alert.values[0] != 'A0':
-            plot_time = ['07:30:00', '19:30:00']
-            if str(window.end.time()) in plot_time or end_mon:
-                plotter.main(monitoring, window, config, plotvel_start=window.end-timedelta(hours=3), plotvel_end=window.end, realtime=False, end_mon=end_mon)
-        elif RoundTime(pd.to_datetime(public_alert.timestamp.values[0])) == RoundTime(window.end):
-            plotter.main(monitoring, window, config, plotvel_start=window.end-timedelta(hours=3), plotvel_end=window.end, realtime=False, end_mon=end_mon)
-    except:
-        pass
-
-#######################
-
     print column_level_alert
     print 'run time =', datetime.now()-start
 

@@ -8,6 +8,7 @@ import sys
 import querySenslopeDb as q
 import alertgen as a
 import AllRainfall as rain
+import filepath
 
 def round_data_time(date_time):
     date_time = pd.to_datetime(date_time)
@@ -560,13 +561,6 @@ def SitePublicAlert(PublicAlert, end, start_time):
                 with open('GSMAlert.txt', 'w') as w:
                     w.write('')
             
-    if (public_CurrAlert == 'A0' and public_PrevAlert != public_CurrAlert) or (public_CurrAlert != 'A0' and end.time() in [time(7,30), time(19,30)]):
-        query = "SELECT * FROM senslopedb.site_column_props where name LIKE '%s'" %sensor_site
-        df = q.GetDBDataFrame(query)
-        logger_df = df.groupby('name')
-        logger_df.apply(alertgen, end)
-        rain.main(site=site, end=end, monitoring_end=True)
-
     return PublicAlert
 
 def writeAlertToDb(alertfile):
@@ -596,19 +590,19 @@ def main(end=datetime.now()):
     PublicAlert = PublicAlert[['timestamp', 'site', 'alert', 'internal_alert', 'palert_source', 'validity', 'sensor_alert', 'rain_alert', 'ground_alert', 'retriggerTS', 'tech_info']]
     PublicAlert = PublicAlert.rename(columns = {'palert_source': 'source'})
     PublicAlert = PublicAlert.sort_values(['alert', 'site'], ascending = [False, True])
-    
-    PublicAlert.to_csv('PublicAlert.txt', header=True, index=None, sep='\t', mode='w')
-    
+
+    file_path = filepath.output_file_path('all', 'public')['monitoring_output']
+        
     PublicAlert['timestamp'] = PublicAlert['timestamp'].apply(lambda x: str(x))
     PublicAlert['validity'] = PublicAlert['validity'].apply(lambda x: str(x))
 
-    invdf = pd.read_csv('InvalidAlert.txt', sep = ':')
+    invdf = pd.read_csv(file_path+'InvalidAlert.txt', sep = ':')
     invdf['timestamp'] = invdf['timestamp'].apply(lambda x: str(x))
     
     df = pd.DataFrame({'invalids': [invdf], 'alerts': [PublicAlert]})
     json = df.to_json(orient="records")
 
-    with open('PublicAlert.json', 'w') as w:
+    with open(file_path+'PublicAlert.json', 'w') as w:
         w.write(json)
 
     print 'runtime =', datetime.now() - start_time
