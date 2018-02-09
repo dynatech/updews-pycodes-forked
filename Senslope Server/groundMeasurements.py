@@ -172,7 +172,10 @@ def getGndMeas(text):
 
   site_code = sms_list[1].lower()  
   ts = date_str+" "+time_str
-  command = """~/anaconda2/bin/python %s %s "%s" > ~/scriptlogs/gndalert.txt 2>&1 && ~/anaconda2/bin/python %s %s "%s" > ~/scriptlogs/gndalert2.txt 2>&1 && ~/anaconda2/bin/python %s %s "%s" > ~/scriptlogs/gndalert3.txt 2>&1""" % (c.fileio.gndalert1, site_code, ts, c.fileio.gndalert2, site_code, ts, c.fileio.gndalert3, site_code, ts) 
+  command = ("~/miniconda2/bin/python %s %s "%s" > ~/scriptlogs/gndalert.txt 2>&1 &&"
+    " ~/miniconda2/bin/python %s %s "%s" > ~/scriptlogs/gndalert2.txt 2>&1 &&"
+    " ~/miniconda2/bin/python %s %s "%s" > ~/scriptlogs/gndalert3.txt 2>&1") % (c.fileio.gndalert1, site_code, ts, 
+      c.fileio.gndalert2, site_code, ts, c.fileio.gndalert3, site_code, ts) 
 
   p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, stderr=subprocess.STDOUT)
   
