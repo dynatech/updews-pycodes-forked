@@ -143,6 +143,41 @@ def get_latest_ground_df(site=None,end = None):
     df = GetDBDataFrame(query)
     return df[['timestamp','site_id','crack_id','meas']]
 
+def get_latest_ground_df2(site = None,end = None):
+    '''
+    Get the latest 10 recent ground measurement per marker of specified site and timestamp.
+    
+    Paramters
+    ----------------
+    site - string
+        site code of site of interest
+    end - string (YYYY-MM-DD HH:MM)
+        end timestamp
+    
+    Returns
+    ---------------
+    ground_data - pd.DataFrame()
+        Latest 10 ground data
+    '''
+    #### Get query of ground data of specified site and timestamp
+    query = 'SELECT timestamp,site_id,crack_id,meas FROM gndmeas WHERE timestamp <= "{}" AND site_id = "{}"'.format(end,site) 
+    
+    #### Get all ground data
+    all_surficial = GetDBDataFrame(query)
+    
+    #### Uppercase site and marker_id
+    all_surficial.loc[:,['crack_id']] = all_surficial['crack_id'].apply(lambda x:x.upper())
+    all_surficial.loc[:,['site_id']] = all_surficial['site_id'].apply(lambda x:x.upper())
+    
+    #### Group data according to site and crack_id
+    all_surficial_group = all_surficial.groupby(['site_id','crack_id'],as_index = False)
+    
+    ####  Get latest 10 data per crack
+    ground_data = all_surficial_group.apply(lambda x:x.tail(10)).reset_index()[['timestamp','site_id','crack_id','meas']]
+    
+    return ground_data
+    
+    
 def get_ground_df(start = '',end = '',site=None):
     #INPUT: Optional start time, end time, and site name
     #OUTPUT: Ground measurement data frame
@@ -485,7 +520,7 @@ def GenerateGroundDataAlert(site=None,end=None):
 ############################################ MAIN ############################################
 
     #Step 1: Get the ground data from local database 
-    df = get_latest_ground_df(site,end)
+    df = get_latest_ground_df2(site,end)
     end = pd.to_datetime(end)
     #lower caps all site_id names while cracks should be in title form
     df['site_id'] = map(lambda x: x.lower(),df['site_id'])
