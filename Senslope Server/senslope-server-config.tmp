@@ -60,6 +60,7 @@ gndalert1 = /home/dynaslope/Desktop/updews-pycodes/Data\ Analysis/GroundAlert/Ge
 gndalert2 = /home/dynaslope/Desktop/updews-pycodes/Data\ Analysis/GroundAlert/GenerateGroundAlertWithTrendingNewAlerts.py
 gndalert3 = /home/dynaslope/Desktop/updews-pycodes/Data\ Analysis/GroundAlert/GenerateGroundAlertWithTrending.py
 monitoringoutputdir =  /home/dynaslope/Desktop/MonitoringOutput/serverlogs/
+pythonpath = ~/miniconda/bin/python
 
 
 [simprefix]

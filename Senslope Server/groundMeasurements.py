@@ -172,19 +172,15 @@ def getGndMeas(text):
 
   site_code = sms_list[1].lower()  
   ts = date_str+" "+time_str
-  command = ("~/miniconda2/bin/python %s %s "%s" > ~/scriptlogs/gndalert.txt 2>&1 &&"
-    " ~/miniconda2/bin/python %s %s "%s" > ~/scriptlogs/gndalert2.txt 2>&1 &&"
-    " ~/miniconda2/bin/python %s %s "%s" > ~/scriptlogs/gndalert3.txt 2>&1") % (c.fileio.gndalert1, site_code, ts, 
-      c.fileio.gndalert2, site_code, ts, c.fileio.gndalert3, site_code, ts) 
+  command = ("%s %s %s \"%s\" > ~/logs/gndalert.txt 2>&1 &&"
+    " %s %s %s \"%s\" > ~/logs/gndalert2.txt 2>&1 &&"
+    " %s %s %s \"%s\" > ~/logs/gndalert3.txt 2>&1") % (c.fileio.pythonpath, c.fileio.gndalert1, site_code, ts, 
+    c.fileio.pythonpath, c.fileio.gndalert2, site_code, ts, 
+    c.fileio.pythonpath, c.fileio.gndalert3, site_code, ts) 
 
   p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, stderr=subprocess.STDOUT)
   
   return gnd_records
-
-
-def test():
-
-  ret = getGndMeas("ROUTINE BAT SEP 11 2017 7:30 AM A 139.7 CM B 230.7 CM C 126.8 CM MAARAW CECILIO CABARDO ANABEL PAJUAY ")
 
 
 if __name__ == "__main__":
