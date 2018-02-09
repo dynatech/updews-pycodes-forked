@@ -38,18 +38,21 @@ class config:
 		self.localdb.host = cfg.get("LocalDB","host")
 		self.localdb.pwd = cfg.get("LocalDB","password")
 		self.localdb.name = cfg.get("LocalDB","dbname")
+		self.localdb.inbox = cfg.get("LocalDB","inboxname")
 		
 		self.gsmdb = Container()
 		self.gsmdb.user = cfg.get("GSMDB","username")
 		self.gsmdb.host = cfg.get("GSMDB","host")
 		self.gsmdb.pwd = cfg.get("GSMDB","password")
 		self.gsmdb.name = cfg.get("GSMDB","dbname")
+		self.gsmdb.inbox = cfg.get("GSMDB","inboxname")
 
 		self.sandboxdb = Container()
 		self.sandboxdb.user = cfg.get("SandboxDB","username")
 		self.sandboxdb.host = cfg.get("SandboxDB","host")
 		self.sandboxdb.pwd =  cfg.get("SandboxDB","password")
 		self.sandboxdb.name = cfg.get("SandboxDB","dbname")
+		self.sandboxdb.inbox = cfg.get("SandboxDB","inboxname")
 
 		self.serialio = Container()
 		self.serialio.baudrate = cfg.getint("Serial","baudrate")

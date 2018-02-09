@@ -3,18 +3,21 @@ username = root
 host = 192.168.150.129
 password = senslope
 dbname = senslopedb
+inboxname = smsinbox
 
 [GSMDB]
 username = root
 host = 192.168.150.127
 password = senslope
 dbname = senslopedb
+inboxname = smsinbox
 
 [SandboxDB]
 username = root
 host = 192.168.150.128
 password = senslope
 dbname = senslopedb
+inboxname = smsinbox2
 
 [Serial]
 baudrate = 57600
