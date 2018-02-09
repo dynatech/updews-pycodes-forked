@@ -488,7 +488,8 @@ def ProcessEarthquake(msg):
     dbio.commitToDb(query, 'earthquake')
 
     # subprocess.Popen(["python",cfg.config().fileio.eqprocfile])
-    exec_line = "~/miniconda2/bin/python %s > ~/logs/earthquakescript.txt 2>&1" % (cfg.config().fileio.eqprocfile)
+    c = cfg.config()
+    exec_line = "%s %s > ~/logs/earthquakescript.txt 2>&1" % (c.fileio.pythonpath, c.fileio.eqprocfile)
     p = subprocess.Popen(exec_line, stdout=subprocess.PIPE, shell=True, stderr=subprocess.STDOUT)
 
     return True
@@ -737,7 +738,7 @@ def invokeProcessInBgnd(exec_line):
 
 def syncTable(table):
     c = cfg.config()
-    invokeProcessInBgnd("~/miniconda2/bin/python %s %s > %s 2>&1" % (c.fileio.masyncscript, table, c.fileio.masynclogs))
+    invokeProcessInBgnd("%s %s %s > %s 2>&1" % (c.fileio.pythonpath, c.fileio.masyncscript, table, c.fileio.masynclogs))
 
 def ProcessAllMessages(allmsgs,network,instance):
     c = cfg.config()
