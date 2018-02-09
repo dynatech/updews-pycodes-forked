@@ -783,12 +783,10 @@ def ProcessAllMessages(allmsgs,network,instance):
                     errortype = re.search("(WEATHER|DATE|TIME|GROUND MEASUREMENTS|NAME)", str(e).upper()).group(0)
                     print ">> Error in manual ground measurement SMS", errortype
 
-                    #server.WriteOutboxMessageToDb("READ-FAIL: (%s)\n%s" % (errortype,msg.data),c.smsalert.communitynum)
-                    #server.WriteOutboxMessageToDb(str(e), msg.simnum)
-                    print 'Skip reply'
+                    server.WriteOutboxMessageToDb("READ-FAIL: (%s)\n%s" % (errortype,msg.data),c.smsalert.communitynum)
+                    server.WriteOutboxMessageToDb(str(e), msg.simnum)
                 except:
-                    #server.WriteOutboxMessageToDb("READ-FAIL: (Unhandled) \n" + msg.data,c.smsalert.communitynum)
-                    print 'Skip reply'
+                    server.WriteOutboxMessageToDb("READ-FAIL: (Unhandled) \n" + msg.data,c.smsalert.communitynum)
                   
             elif re.search("^[A-Z]{4,5}\*[xyabcXYABC]\*[A-F0-9]+\*[0-9]+T?$",msg.data):
                 try:
