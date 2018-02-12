@@ -101,9 +101,6 @@ def write_raw_sms_to_db(msglist,gsm_info):
     query_loggers = query_loggers[:-1]
     query_users = query_users[:-1]
 
-    print query_loggers
-    print query_users
-
     if len(sms_id_ok)>0:
         if loggers_count > 0:
             # query_safe= 'SET SQL_SAFE_UPDATES=0'
