@@ -45,12 +45,20 @@ def up_one(p):
 path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 analysis_path = up_one(path)+'/Analysis/'
 
+                      
 if not analysis_path in sys.path:
     sys.path.insert(1,analysis_path)
 del analysis_path
 
 #Import file output path creator
 from filepath import output_file_path                   
+
+#Monitoring output directory
+path2 = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+out_path = up_one(up_one(path2)) 
+
+cfg = ConfigParser.ConfigParser()
+cfg.read(path2 + '/server-config.txt')
     
 def CreateMarkerAlerts(Hostdb,Userdb,Passdb,Namedb):
     db = mysqlDriver.connect(host = Hostdb, user = Userdb, passwd = Passdb)
@@ -186,6 +194,78 @@ def get_latest_ground_df(site=None,end = None):
     df = GetDBDataFrame(query)
     return df[['timestamp','site_id','crack_id','meas']]
 
+def get_latest_ground_df2(site = None,end = None):
+    '''
+    Get the latest 10 recent ground measurement per marker of specified site and timestamp.
+    
+    Paramters
+    ----------------
+    site - string
+        site code of site of interest
+    end - string (YYYY-MM-DD HH:MM)
+        end timestamp
+    
+    Returns
+    ---------------
+    ground_data - pd.DataFrame()
+        Latest 10 ground data
+    '''
+    #### Get query of ground data of specified site and timestamp
+    query = 'SELECT timestamp,site_id,crack_id,meas FROM gndmeas WHERE timestamp <= "{}" AND site_id = "{}"'.format(end,site) 
+    
+    #### Get all ground data
+    all_surficial = GetDBDataFrame(query)
+    
+    #### Uppercase site and marker_id
+    all_surficial.loc[:,['crack_id']] = all_surficial['crack_id'].apply(lambda x:x.upper())
+    all_surficial.loc[:,['site_id']] = all_surficial['site_id'].apply(lambda x:x.upper())
+    
+    #### Group data according to site and crack_id
+    all_surficial_group = all_surficial.groupby(['site_id','crack_id'],as_index = False)
+    
+    ####  Get latest 10 data per crack
+    ground_data = all_surficial_group.apply(lambda x:x.tail(10)).reset_index()[['timestamp','site_id','crack_id','meas']]
+    
+    return ground_data
+
+def get_latest_marker_data(site,marker,end):
+    '''
+    Get the latest 10 recent ground measurement per marker of specified site, marker and end timestamp.
+    
+    Paramters
+    ----------------
+    site - string
+        site code of site of interest
+    marker - string
+        marker name of interest
+    end - string (YYYY-MM-DD HH:MM)
+        end timestamp
+    
+    Returns
+    ---------------
+    marker_data - pd.DataFrame()
+        Latest 10 marker data for specified marker
+    '''
+    #### Get query of ground data of specified site and timestamp
+    query = 'SELECT timestamp,site_id,crack_id,meas FROM gndmeas WHERE timestamp <= "{}" AND site_id = "{}" AND crack_id = "{}"'.format(end,site,marker) 
+    
+    #### Get all ground data
+    all_surficial = GetDBDataFrame(query)
+    
+    #### Uppercase site and marker_id
+    all_surficial.loc[:,['crack_id']] = all_surficial['crack_id'].apply(lambda x:x.upper())
+    all_surficial.loc[:,['site_id']] = all_surficial['site_id'].apply(lambda x:x.upper())
+    
+    #### Group data according to site and crack_id
+    all_surficial_group = all_surficial.groupby(['site_id','crack_id'],as_index = False)
+    
+    ####  Get latest 10 data per crack
+    marker_data = all_surficial_group.apply(lambda x:x.tail(10)).reset_index()[['timestamp','site_id','crack_id','meas']]
+    
+    return marker_data
+    
+
+
 def get_ground_df(start = '',end = '',site=None):
     #INPUT: Optional start time, end time, and site name
     #OUTPUT: Ground measurement data frame
@@ -251,7 +331,7 @@ def crack_eval(df,out_folder,end):
                                 
                     #Perform Trending Test if alert is not L0
                     if (crack_alert != 'l0' and crack_alert != 'l0p'):
-                        trend_alert = check_trending(df,out_folder,plot = True)
+                        trend_alert = check_trending(df,out_folder,plot = False)
                         if (trend_alert != 'Legit' and crack_alert != 'l3'):
                             crack_alert = 'l0t'
                 
@@ -532,35 +612,14 @@ def del_new_db_data(df):
 def GenerateGroundDataAlert(site=None,end=None):
     if site == None and end == None:
         site, end = sys.argv[1].lower()[:3],sys.argv[2].lower()    
-
-    start_time = datetime.now()
-    #Monitoring output directory
-    path2 = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-    out_path = up_one(up_one(path2)) 
     
-    cfg = ConfigParser.ConfigParser()
-    cfg.read(path2 + '/server-config.txt')
-    
-    #Retrieving important declaration files
-    printtostdout = True
-    PrintJSON = cfg.get('I/O','PrintJSON')
-    PrintGAlert = cfg.get('I/O','PrintGAlert')
-    Namedb = cfg.get('DB I/O','Namedb')
-    rt_window_length = cfg.getfloat('I/O','rt_window_length')
-    roll_window_length = cfg.getfloat('I/O','roll_window_length')
-    data_dt = cfg.getfloat('I/O','data_dt')
-    num_roll_window_ops = cfg.getfloat('I/O','num_roll_window_ops')
-        
-    ### Use filepath.py to get output folder
     monitoring_out_path = output_file_path(site,'surficial',end = pd.to_datetime(end))['monitoring_output']
     print_out_path = monitoring_out_path
     print_out_path2 = monitoring_out_path + 'TrendingPlots/'
-    
-    
     for path in [print_out_path,print_out_path2]:
         if not os.path.exists(path):
             os.makedirs(path)
-    
+
     #Set the monitoring window
 #    if end == None:
 #        roll_window_numpts, end, start, offsetstart, monwin = set_monitoring_window(roll_window_length,data_dt,rt_window_length,num_roll_window_ops)
@@ -571,7 +630,7 @@ def GenerateGroundDataAlert(site=None,end=None):
 ############################################ MAIN ############################################
 
     #Step 1: Get the ground data from local database 
-    df = get_latest_ground_df(site,end)
+    df = get_latest_ground_df2(site,end)
     end = pd.to_datetime(end)
     #lower caps all site_id names while cracks should be in title form
     df['site_id'] = map(lambda x: x.lower(),df['site_id'])
@@ -633,7 +692,76 @@ def GenerateGroundDataAlert(site=None,end=None):
 #    site_data_to_plot.apply(PlotSite,tsn,print_out_path)
 
     #Step 7: Displacement plot for each crack and site for last 10 data points of recent cracks with measurement.
-    ground_data_to_plot = get_ground_data_with_recent_cracks(site,end,10)
+#    ground_data_to_plot = get_ground_data_with_recent_cracks(site,end,10)
+#    ground_data_to_plot['site_id'] = map(lambda x: x.lower(),ground_data_to_plot['site_id'])
+#    ground_data_to_plot['crack_id'] = map(lambda x: x.title(),ground_data_to_plot['crack_id'])
+#    
+#    tsn=pd.to_datetime(end).strftime("%Y-%m-%d_%H-%M-%S")
+#    site_data_to_plot = ground_data_to_plot.groupby('site_id')
+#    site_data_to_plot.apply(PlotSite,tsn,print_out_path)
+#
+#    ### Event folder plotting
+#    if max(map(lambda x:x in ('l2','l0t','l3'),new_db_release.alert.values)*1):
+#        positive_trigger = True
+#    else:
+#        positive_trigger = False
+#        
+#    event_out_path = output_file_path(site,'surficial',end = pd.to_datetime(end),positive_trigger = positive_trigger)['event']
+#
+#    #### Plot to event folder file if site is currently at event monitoring or positive trigger
+#    if event_out_path:
+#        site_data_to_plot.apply(PlotSite,tsn,event_out_path)
+#        crack_alerts = df.groupby(['site_id','crack_id']).apply(crack_eval,event_out_path,end).reset_index()
+#    
+#    
+#    end_time = datetime.now()
+#    print "time = ",end_time-start_time
+
+def PlotForEvent(site,end,window = 30):
+    event_out_path = output_file_path(site,'surficial',monitoring_end = True,end = pd.to_datetime(end))['event']
+    print event_out_path
+    if event_out_path:
+        start = pd.to_datetime(end) - timedelta(days = 30)
+    
+        ground_data_to_plot = get_ground_df(start,end,site)
+        ground_data_to_plot['site_id'] = map(lambda x: x.lower(),ground_data_to_plot['site_id'])
+        ground_data_to_plot['crack_id'] = map(lambda x: x.title(),ground_data_to_plot['crack_id'])
+        
+        tsn=pd.to_datetime(end).strftime("%Y-%m-%d_%H-%M-%S")
+        site_data_to_plot = ground_data_to_plot.groupby('site_id')
+        site_data_to_plot.apply(PlotSite,tsn,event_out_path)
+
+def PlotMarkerData(site,end,window = 30):
+    '''
+    Plot the marker data of specified site, end timestamp with the given window
+    
+    Parameters
+    -----------------
+    site - str
+        site code of the site of interest
+    end - string (YYYY-MM-DD HH:MM)
+        end timestamp
+    
+    Optional Parameters
+    -----------------
+    window - int (default - 30)
+        time window of the plot
+    
+    Returns
+    ---------------
+    None
+    
+    '''
+    monitoring_out_path = output_file_path(site,'surficial',end = pd.to_datetime(end))['monitoring_output']
+    print_out_path = monitoring_out_path
+    print_out_path2 = monitoring_out_path + 'TrendingPlots/'
+    for path in [print_out_path,print_out_path2]:
+        if not os.path.exists(path):
+            os.makedirs(path)
+
+    
+    start = pd.to_datetime(end) - timedelta(days = 30)
+    ground_data_to_plot = get_ground_df(start,end,site)
     ground_data_to_plot['site_id'] = map(lambda x: x.lower(),ground_data_to_plot['site_id'])
     ground_data_to_plot['crack_id'] = map(lambda x: x.title(),ground_data_to_plot['crack_id'])
     
@@ -641,22 +769,116 @@ def GenerateGroundDataAlert(site=None,end=None):
     site_data_to_plot = ground_data_to_plot.groupby('site_id')
     site_data_to_plot.apply(PlotSite,tsn,print_out_path)
 
-    ### Event folder plotting
-    if max(map(lambda x:x in ('l2','l0t','l3'),new_db_release.alert.values)*1):
-        positive_trigger = True
-    else:
-        positive_trigger = False
-        
-    event_out_path = output_file_path(site,'surficial',end = pd.to_datetime(end),positive_trigger = positive_trigger)['event']
+def PlotTrendingAnalysis(site,marker,end):
+    
+    monitoring_out_path = output_file_path(site,'surficial',end = pd.to_datetime(end))['monitoring_output']
+    print_out_path = monitoring_out_path
+    print_out_path2 = monitoring_out_path + 'TrendingPlots/'
+    for path in [print_out_path,print_out_path2]:
+        if not os.path.exists(path):
+            os.makedirs(path)
+    
+    #### Get marker data
+    df = get_latest_marker_data(site,marker,end)
+    
+    ##### Get the data from the crack dataframe    
+    cur_t = (df.timestamp.values - df.timestamp.values[0])/np.timedelta64(1,'D')
+    cur_x = df.meas.values
+    
+    ##### Interpolate the last 10 data points
+    _,var = moving_average(cur_x)
+    sp = UnivariateSpline(cur_t,cur_x,w=1/np.sqrt(var))
+    
+    t_n = np.linspace(cur_t[0],cur_t[-1],1000)
+    x_n = sp(t_n)
+    v_n = sp.derivative(n=1)(t_n)
+    a_n = sp.derivative(n=2)(t_n)
+    
+    v_s = abs(sp.derivative(n=1)(cur_t))
+    a_s = abs(sp.derivative(n=2)(cur_t))
+    
+    
+    ##### Federico et al. constants    
+    slope = 1.49905955613175
+    intercept = -3.00263765777028
+    t_crit = 4.53047399738543
+    var_v_log = 215.515369339559
+    v_log_mean = 2.232839766
+    sum_res_square = 49.8880017417971
+    n = 30.
+            
+    ##### Plotting Colors
+    tableau20 = [(31, 119, 180), (174, 199, 232), (255, 127, 14), (255, 187, 120),    
+                 (44, 160, 44), (152, 223, 138), (214, 39, 40), (255, 152, 150),    
+                 (148, 103, 189), (197, 176, 213), (140, 86, 75), (196, 156, 148),    
+                 (227, 119, 194), (247, 182, 210), (127, 127, 127), (199, 199, 199),    
+                 (188, 189, 34), (219, 219, 141), (23, 190, 207), (158, 218, 229)]
+    
+    for i in range(len(tableau20)):    
+        r, g, b = tableau20[i]    
+        tableau20[i] = (r / 255., g / 255., b / 255.)
+    #################
+    
+    v_theo = np.linspace(min(v_s),max(v_s),10000)
+    uncertainty = t_crit*np.sqrt(1/(n-2)*sum_res_square*(1/n + (np.log(v_theo) - v_log_mean)**2/var_v_log))
+    
+    log_a_theo = slope * np.log(v_theo) + intercept
+    log_a_theo_up = log_a_theo + uncertainty
+    log_a_theo_down = log_a_theo - uncertainty
+    
+    a_theo = np.e**log_a_theo
+    a_theo_up = np.e**log_a_theo_up
+    a_theo_down = np.e**log_a_theo_down
+    
+    fig = plt.figure()
+    fig.set_size_inches(15,8)
+    fig.suptitle('{} Crack {} {}'.format(str(df.site_id.values[0]).upper(),str(df.crack_id.values[0]).title(),pd.to_datetime(df.timestamp.values[-1]).strftime("%b %d, %Y %H:%M")))
+    ax1 = fig.add_subplot(121)
+    ax1.get_xaxis().tick_bottom()    
+    ax1.get_yaxis().tick_left()
+    ax1.grid()
+    l1 = ax1.plot(v_theo,a_theo,c = tableau20[0],label = 'Fukuzono (1985)')
+    ax1.plot(v_theo,a_theo_up,'--',c = tableau20[0])
+    ax1.plot(v_theo,a_theo_down,'--', c = tableau20[0])
+    ax1.plot(v_s,a_s,c = tableau20[10])
+    l2 = ax1.plot(v_s[:-1],a_s[:-1],'o',c = tableau20[19],label = 'Previous')
+    l3 = ax1.plot(v_s[-1],a_s[-1],'*',c = tableau20[6],label = 'Current')
 
-    #### Plot to event folder file if site is currently at event monitoring or positive trigger
-    if event_out_path:
-        site_data_to_plot.apply(PlotSite,tsn,event_out_path)
-        crack_alerts = df.groupby(['site_id','crack_id']).apply(crack_eval,event_out_path,end).reset_index()
     
+    lns = l1 + l2 + l3
+    labs = [l.get_label() for l in lns]
+    ax1.legend(lns,labs,loc = 'upper left',fancybox = True, framealpha = 0.5)        
     
-    end_time = datetime.now()
-    print "time = ",end_time-start_time
+    ax1.set_xlabel('velocity (cm/day)')
+    ax1.set_ylabel('acceleration (cm/day$^2$)')
+    ax1.set_xscale('log')
+    ax1.set_yscale('log')
+    
+    ax2 = fig.add_subplot(222)
+    ax2.grid()
+    ax2.plot(cur_t,cur_x,'.',c = tableau20[0],label = 'Data')
+    ax2.plot(t_n,x_n,c = tableau20[12],label = 'Interpolation')
+    ax2.legend(loc = 'upper left',fancybox = True, framealpha = 0.5)
+    ax2.set_ylabel('disp (meters)')
+    
+    ax3 = fig.add_subplot(224, sharex = ax2)
+    ax3.grid()
+    ax3.plot(t_n,v_n, color = tableau20[4],label = 'Velocity')
+    ax3.set_ylabel('velocity (cm/day)')
+    ax3.set_xlabel('time (days)')
+    ax3.legend(loc = 'upper left',fancybox = True, framealpha = 0.5)
+    
+    ax4 = ax3.twinx()
+    ax4.plot(t_n,a_n,'-r',label = 'Acceleration')
+    ax4.set_ylabel('acceleration (m/day$^2$)')
+    ax4.legend(loc = 'upper right',fancybox = True, framealpha = 0.5)
+
+    tsn = pd.to_datetime(df.timestamp.values[-1]).strftime("%Y-%m-%d_%H-%M-%S")
+    out_filename = print_out_path2 + '{} {} {}'.format(tsn,str(df.site_id.values[0]),str(df.crack_id.values[0]))
+    plt.savefig(out_filename,facecolor='w', edgecolor='w',orientation='landscape',mode='w',bbox_inches = 'tight')
+    
+
+
 ################## #Stand by Functionalities
 
 #    if PrintGAlert:
