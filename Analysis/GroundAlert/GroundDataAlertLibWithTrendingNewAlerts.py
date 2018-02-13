@@ -194,11 +194,29 @@ def get_latest_ground_df(site=None,end = None):
     df = GetDBDataFrame(query)
     return df[['timestamp','site_id','crack_id','meas']]
 
+def get_last_data(marker_data,last_ts,num_pts):
+    '''
+    Filters the last 10 recent ground measruements of the given ground data
+    
+    Parameters
+    -------------------
+    last_ts - maximum last timestamp from the ground measurement
+    num_pts - number of output points
+    
+    Returns
+    -------------------
+    last 10 ground data
+    '''
+    if max(marker_data.timestamp.values) < last_ts:
+        return marker_data.tail(0)
+    else:
+        return marker_data.tail(10)
+
 def get_latest_ground_df2(site = None,end = None):
     '''
     Get the latest 10 recent ground measurement per marker of specified site and timestamp.
     
-    Paramters
+    Parameters
     ----------------
     site - string
         site code of site of interest
@@ -220,11 +238,14 @@ def get_latest_ground_df2(site = None,end = None):
     all_surficial.loc[:,['crack_id']] = all_surficial['crack_id'].apply(lambda x:x.upper())
     all_surficial.loc[:,['site_id']] = all_surficial['site_id'].apply(lambda x:x.upper())
     
+    #### Get latest timestamp
+    last_ts = max(all_surficial.timestamp.values)
+    
     #### Group data according to site and crack_id
     all_surficial_group = all_surficial.groupby(['site_id','crack_id'],as_index = False)
     
     ####  Get latest 10 data per crack
-    ground_data = all_surficial_group.apply(lambda x:x.tail(10)).reset_index()[['timestamp','site_id','crack_id','meas']]
+    ground_data = all_surficial_group.apply(get_last_data,last_ts,10).reset_index()[['timestamp','site_id','crack_id','meas']]
     
     return ground_data
 
@@ -392,14 +413,13 @@ def PlotSite(df,tsn,print_out_path):
     plt.grid(True)
     plt.xticks(rotation = 45)
     plt.savefig(print_out_path+'surficial_'+tsn+'_'+site_name,dpi=160, facecolor='w', edgecolor='w',orientation='landscape',mode='w',bbox_inches = 'tight')
-    plt.close()
 
     
 def PlotCrack(df):
-    df.sort_values('timestamp',inplace = True)
-    disp = df.meas.values
-    time = df.timestamp.values
-    crack_name = ''.join(list(np.unique(df.crack_id.values)))
+    sorted_df = df.sort_values('timestamp')
+    disp = sorted_df.meas.values
+    time = sorted_df.timestamp.values
+    crack_name = ''.join(list(np.unique(sorted_df.crack_id.values)))
     markers = ['x','d','+','s','*']
     plt.plot(time,disp,label = crack_name,marker = markers[df.index[0]%len(markers)])
 
@@ -648,31 +668,30 @@ def GenerateGroundDataAlert(site=None,end=None):
     
     #Step 4: Include the timestamp of the run, create release ready data frame
     ground_alert_release = site_alerts
-    ground_alert_release['timestamp'] = end
+    ground_alert_release.loc[:,'timestamp'] = end
     ground_alert_release.columns = ['site','alert','cracks','timestamp']
     ground_alert_release = ground_alert_release.set_index(['timestamp'])
     
-    print ground_alert_release
-    
     #### Set df for new db release
     new_db_release = crack_alerts[crack_alerts.crack_alerts != 'nd']
-    new_db_release['ts'] = end    
-    new_db_release.columns = ['site_code','marker_name','alert','displacement','time_delta','ts']
-    new_db_release.set_index(['ts'],inplace = True)
-    #Step 5: Upload the results to the gndmeas_alerts database
-    
-    ##Get the previous alert database
-    ground_alert_previous = GetPreviousAlert(end)
-    uptoDB_gndmeas_alerts(ground_alert_release,ground_alert_previous)
-    
-    marker_alerts_previous = GetPreviousAlertNewDB(end)
-    uptoDB_marker_alerts(new_db_release,marker_alerts_previous)
+    if len(new_db_release) != 0:
+        new_db_release.loc[:,'ts'] = end    
+        new_db_release.columns = ['site_code','marker_name','alert','displacement','time_delta','ts']
+        new_db_release.set_index(['ts'],inplace = True)
+        #Step 5: Upload the results to the gndmeas_alerts database
+        
+        ##Get the previous alert database
+        ground_alert_previous = GetPreviousAlert(end)
+        uptoDB_gndmeas_alerts(ground_alert_release,ground_alert_previous)
+        
+        marker_alerts_previous = GetPreviousAlertNewDB(end)
+        uptoDB_marker_alerts(new_db_release,marker_alerts_previous)
     
     
     
     #Step 6: Upload to site_level_alert        
     ground_site_level = ground_alert_release.reset_index()
-    ground_site_level['source'] = 'ground'
+    ground_site_level.loc[:,'source'] = 'ground'
     
     df_for_db = ground_site_level[['timestamp','site','source','alert']]    
     df_for_db.dropna()
@@ -716,6 +735,7 @@ def GenerateGroundDataAlert(site=None,end=None):
 #    
 #    end_time = datetime.now()
 #    print "time = ",end_time-start_time
+    return new_db_release
 
 def PlotForEvent(site,end,window = 30):
     event_out_path = output_file_path(site,'surficial',monitoring_end = True,end = pd.to_datetime(end))['event']
@@ -762,12 +782,19 @@ def PlotMarkerData(site,end,window = 30):
     
     start = pd.to_datetime(end) - timedelta(days = 30)
     ground_data_to_plot = get_ground_df(start,end,site)
-    ground_data_to_plot['site_id'] = map(lambda x: x.lower(),ground_data_to_plot['site_id'])
-    ground_data_to_plot['crack_id'] = map(lambda x: x.title(),ground_data_to_plot['crack_id'])
+    
+    #### Check if least number of points per crack exceeds 10
+    ground_data_to_plot_group = ground_data_to_plot.groupby('crack_id')
+    
+    if min(ground_data_to_plot_group.apply(lambda x:len(x))) < 10:
+        ground_data_to_plot = get_latest_ground_df2(site,end)
+    
+    ground_data_to_plot.loc[:,'site_id'] = map(lambda x: x.lower(),ground_data_to_plot['site_id'])
+    ground_data_to_plot.loc[:,'crack_id'] = map(lambda x: x.title(),ground_data_to_plot['crack_id'])
     
     tsn=pd.to_datetime(end).strftime("%Y-%m-%d_%H-%M-%S")
     site_data_to_plot = ground_data_to_plot.groupby('site_id')
-    site_data_to_plot.apply(PlotSite,tsn,print_out_path)
+    site_data_to_plot.agg(PlotSite,tsn,print_out_path)
 
 def PlotTrendingAnalysis(site,marker,end):
     
