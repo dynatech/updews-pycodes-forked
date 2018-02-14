@@ -1,7 +1,6 @@
 from datetime import datetime
 import numpy as np
 import os
-from sqlalchemy import create_engine
 import sys
 
 #include the path of "Analysis" folder for the python scripts searching
@@ -63,7 +62,7 @@ def to_mysql(df):
         query = "UPDATE %s SET distance = %s WHERE priority_id = %s" %('rainfall_priorities', distance, priority_id)
         qdb.execute_query(query)
 
-def Distance(site_coord, rg_coord):
+def get_distance(site_coord, rg_coord):
     site_id = site_coord['site_id'].values[0]
     site_lat = site_coord['latitude'].values[0]
     site_lon = site_coord['longitude'].values[0]
@@ -89,10 +88,13 @@ def Distance(site_coord, rg_coord):
     return nearest_rg
 
 def main():
+    start = datetime.now()
+    qdb.print_out(start)
+
     coord = all_site_coord()
     rg_coord = all_rg_coord()
     site_coord = coord.groupby('site_id')
-    nearest_rg = site_coord.apply(Distance, rg_coord=rg_coord)
+    nearest_rg = site_coord.apply(get_distance, rg_coord=rg_coord)
     nearest_rg['distance'] = np.round(nearest_rg.distance,2)
     
     if qdb.does_table_exist('rainfall_priorities') == False:
@@ -103,11 +105,10 @@ def main():
     nearest_rg['priority_id'] = range(len(nearest_rg))
     site_nearest_rg = nearest_rg.groupby('priority_id')
     site_nearest_rg.apply(to_mysql)
+    
+    qdb.print_out('runtime = %s' %(datetime.now() - start))
 
     return nearest_rg
     
 if __name__ == "__main__":
-    start = datetime.now()
-    print start
     main()
-    print 'runtime =', datetime.now() - start

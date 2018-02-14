@@ -359,6 +359,7 @@ def process_piezometer(sms):
     line = sms.data
     sender = sms.simnum
     print 'Piezometer data: ' + line
+    line = re.sub("\*\*","*",line)
     try:
     #PUGBPZ*13173214*1511091800 
         linesplit = line.split('*')
@@ -394,6 +395,9 @@ def process_piezometer(sms):
         except ValueError:
             txtdatetime = dt.strptime(linesplit[2],
                 '%y%m%d%H%M').strftime('%Y-%m-%d %H:%M:00')
+
+        if int(txtdatetime[0:4]) < 2009:
+            txtdatetime = sms.dt
             
     except IndexError and AttributeError:
         print '\n>> Error: Piezometer message format is not recognized'

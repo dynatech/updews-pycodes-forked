@@ -608,9 +608,11 @@ def alert_to_db(df, table_name):
             pk_id = 'trigger_id'
 
         same_alert = df2[alert_comp].values[0] == df[alert_comp].values[0]
-        
-        if type(same_alert) != bool:
+
+        try:
             same_alert = same_alert[0]
+        except:
+            pass
         
         if not same_alert:
             push_db_dataframe(df, table_name, index=False)

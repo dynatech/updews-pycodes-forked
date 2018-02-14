@@ -142,15 +142,13 @@ def send_event_monitoring_reminder():
 	position = ['iompmt','iompct','oomps','oompmt','oompct']
 	position_dict = {}
 	for pos,per in zip(position,shifts[0][2:]):
-		#position_dict[per.upper().strip()] = pos
 		try:
- 			position_dict[per.upper().strip()] = pos
- 		except AttributeError:
- 			print 'Skipping position'
- 			continue
-
+			position_dict[per.upper().strip()] = pos
+		except AttributeError:
+			print 'Skiping position'
+			continue
 	names = tuple([name for name in shifts[0][1:] if name is not None])
-	numbers = get_numbers_from_list(names)
+	numbers = getNumbersFromList(names)
 	numbers_dict = {}
 	for nick,num in numbers:
 		numbers_dict[nick.upper().strip()] = num

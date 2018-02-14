@@ -35,10 +35,6 @@ def set_read_status(sms_id_list,read_status=0,table='',instance='local'):
         print "Error: Empty table"
         return
 
-    db, cur = db_connect(instance)
-    
-    # print type(sms_id_list)
-
     if type(sms_id_list) is list:
         if len(sms_id_list) == 0:
             return
@@ -56,8 +52,6 @@ def set_read_status(sms_id_list,read_status=0,table='',instance='local'):
     commit_to_db(query,"set_read_status")
     
 def set_send_status(table,status_list):
-    db, cur = db_connect('gsm')
-    
     query = ("insert into smsoutbox_%s_status (stat_id, send_status, ts_sent) "
         "values ") % (table[:-1])
 

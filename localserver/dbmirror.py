@@ -125,8 +125,8 @@ def import_sql_file_to_dyna(table,max_inbox_id,max_index_last_copied):
     print table
     copy_query = ("SELECT t1.ts_sms as 'timestamp', t2.sim_num, t1.sms_msg, 'UNREAD' "
             "as read_status, 'W' AS web_flag FROM smsinbox_%s t1 inner join "
-            "(select mobile_id, sim_num from user_mobile) t2 "
-            "on t1.mobile_id = t2.mobile_id where t1.gsm_id !=1 and inbox_id <= %s and inbox_id > %s" % (table,max_inbox_id,max_index_last_copied))
+            "(select mobile_id, sim_num from %s_mobile) t2 "
+            "on t1.mobile_id = t2.mobile_id where t1.gsm_id !=1 and inbox_id <= %s and inbox_id > %s" % (table,table[:-1],max_inbox_id,max_index_last_copied))
 
     f_dump = "/home/dewsl/Documents/sqldumps/sandbox_%s_dump.sql" % (table)
 
