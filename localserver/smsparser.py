@@ -750,6 +750,14 @@ def spawn_alert_gen(tsm_name, timestamp):
         mc.set('alertgenlist',alertgenlist)
 
 def process_surficial_observation(msg):
+     """
+       -The function that process surficial observation .
+      
+      :param msg: surficiall message from community and store to database.
+      :type args: str
+      :returns: N/A.  
+
+    """
     c = cfg.config()
     sc = mc.get('server_config')
     has_parse_error = False
@@ -794,6 +802,7 @@ def process_surficial_observation(msg):
             stderr=subprocess.STDOUT)
 
 def check_number_in_users(num):
+
     query = "select user_id from user_mobile where sim_num = '%s'" % (num)
 
     user_id = dbio.query_database(query,'cnin')
@@ -804,6 +813,17 @@ def check_number_in_users(num):
 
 
 def parse_all_messages(args,allmsgs=[]):
+    """
+       -The function that all the message from gsm module .
+      
+      :param args: arguement from the python running script.
+      :param allmsgs: array of all message need to be process.
+      :type args: obj
+      :type allmsgs: array
+      :returns: **read_success_list, read_fail_list** (*array*)- list of  success and fail message parse.  
+
+     
+    """
     c = cfg.config()
     read_success_list = []
     read_fail_list = []
@@ -923,6 +943,13 @@ def parse_all_messages(args,allmsgs=[]):
     return read_success_list, read_fail_list
     
 def get_router_ids():
+    """
+       -The function that get rounters id. .
+      
+      :parameter: N/A
+      :returns: **nums **.(*obj*) - list of keys and values from model_id table;
+     
+    """
     db, cur = dbio.db_connect()
 
     query = ("SELECT `logger_id`,`logger_name` from `loggers` where `model_id`"
@@ -935,6 +962,14 @@ def get_router_ids():
     return nums
         
 def process_gateway_msg(msg):
+     """
+       -The function that process the gateway message .
+      
+      :param msg: message data.
+      :type msg: str
+      :returns: **True or False **.
+     
+    """
     print ">> Coordinator message received"
     print msg.data
     
@@ -992,6 +1027,14 @@ def process_gateway_msg(msg):
     #     return False
 
 def get_arguments():
+    """
+       -The function that checks the argument that being sent from main function and returns the
+        arguement of the function.
+      
+      :parameters: N/A
+      :returns: **args** - Mode of action from running python **-db,-ns,-b,-r,-l,-s,-g,-m,-t**.
+      .. note:: To run in terminal **python smsparser.py ** with arguments (** -db,-ns,-b,-r,-l,-s,-g,-m,-t**).
+    """
     parser = argparse.ArgumentParser(description = ("Run SMS parser\n "
         "smsparser [-options]"))
     parser.add_argument("-db", "--dbhost", 
@@ -1032,6 +1075,16 @@ def test():
     msg = gsmio.sms('', '', sms, '')
     
 def main():
+     """
+        **Description:**
+          -The main function that runs the whole smsparser with the logic of
+          parsing sms txt of users and loggers.
+         
+        :parameters: N/A
+        :returns: N/A
+        .. note:: To run in terminal **python smsparser.py ** with arguments (** -db,-ns,-b,-r,-l,-s,-g,-m,-t**).
+    """
+
     args = get_arguments()
 
     if not args.bypasslock:
