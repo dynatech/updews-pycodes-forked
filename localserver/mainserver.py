@@ -21,6 +21,48 @@ if cfg.config().mode.script_mode == 'gsmserver':
     import dewsSocketLeanLib as dsll
 #---------------------------------------------------------------------------------------------------------------------------
 
+
+def check_id_in_table(table,gsm_id):
+    """
+        **Description:**
+          -The function that checks if the number exists in users or loggers table.
+         
+        :param table: table name of the gsm_id.
+        :param gsm_id: gsm_id of the recipient.
+        :type table: int 
+        :type gsm_id: int
+        :returns: recipient number (*int*)
+    """
+    query = "select * from %s_mobile where mobile_id='%s' limit 80"%(table[:-1],gsm_id)
+    query_number = dbio.query_database(query,'check id in table') 
+    if len(query_number.sim_num) != 0:
+        return query_number[0][0]
+    else:
+        print " >> gsm id doesn't exist"
+        
+def check_number_in_table(num):
+    """
+        **Description:**
+          -The function that checks if the number exists in users or loggers table.
+         
+        :param num: number of the recipient.
+        :type num: int
+        :returns: table name **users** or **loggers** (*int*)
+    """
+    query = ("Select  IF((select count(*) FROM user_mobile where sim_num ='%s')>0,'1','0')" 
+    "as user,IF((select count(*) FROM logger_mobile where sim_num ='%s')>0,'1','0') as logger limit 80"%(num,num))
+    query_check_number = dbio.query_database(query,'check number in table')
+    if query_check_number[0][0] > query_check_number[0][1]:
+        return 'users'
+    elif query_check_number[0][0] < query_check_number[0][1]:
+        return 'loggers'
+    elif query_check_number[0][0]== 0 and query_check_number[0][1] == 0:
+        print '>> no record'
+    else:
+        print '>> both user and logger have a record'
+
+
+
 def log_runtime_status(script_name,status):
     """
         **Description:**
@@ -163,7 +205,7 @@ def get_gsm_id(number):
         **Description:**
           -The function that get the gsm id  of the number.
          
-        :param number: The message that will be sent to the recepients.
+        :param number: The message that will be sent to the recipients.
         :type number: str
         :returns: **id** (*int*) - id number for **Globe(2) , Smart(3) and Unable to send number in sim(-1)**
     """
@@ -186,38 +228,40 @@ def get_gsm_id(number):
         print '>> Prefix', num_prefix, 'cannot be sent'
         return -1
 
-def write_outbox_message_to_db(message='',recepients='',table='users'):
+def write_outbox_message_to_db(message='',recipients='',table=''):
     """
         **Description:**
           -The function that write message to the outbox of the database table.
          
-        :param message: The message that will be sent to the recepients.
-        :param recepients: The number of the recepients.
-        :param table: **Default** to **users**.
+        :param message: The message that will be sent to the recipients.
+        :param recipients: The number of the recipients.
+        :param table: table use of the number.
         :type message: str
-        :type recepients: int
+        :type recipients: int,list
         :type table: str
         :returns: N/A
     """
-    if table == '':
-        print "Error: No table indicated"
-        raise ValueError
-        return
-
+    # if table == '':
+    #     print "Error: No table indicated"
+    #     raise ValueError
+    #     return
     tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
-    query = ("insert into smsoutbox_%s (ts_written,sms_msg,source) VALUES "
-        "('%s','%s','central')") % (table,tsw,message)
-    
-    last_insert = dbio.commit_to_db(query,'write_outbox_message_to_db', 
-        last_insert=True)[0][0]
-
-    table_mobile = get_mobile_sim_nums(table)
-
-    query = ("INSERT INTO smsoutbox_%s_status (outbox_id,mobile_id,gsm_id)"
-        " VALUES ") % (table[:-1])
-            
-    for r in recepients.split(","):
+    for r in recipients.split(","):
         gsm_id = get_gsm_id(r)
+        table_name = check_number_in_table(r)
+        
+        query = ("insert into smsoutbox_%s (ts_written,sms_msg,source) VALUES "
+        "('%s','%s','central')") % (table_name,tsw,message)
+    
+        last_insert = dbio.commit_to_db(query,'write_outbox_message_to_db', 
+            last_insert=True)[0][0]
+
+        table_mobile = get_mobile_sim_nums(table_name)
+
+        query = ("INSERT INTO smsoutbox_%s_status (outbox_id,mobile_id,gsm_id)"
+            " VALUES ") % (table_name[:-1])
+
+
         if gsm_id == -1:
             continue
         else:
