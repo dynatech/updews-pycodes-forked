@@ -106,7 +106,10 @@ def remove_invalid(stat, df):
     df = df[~(df.id == stat['node'].values[0])].append(invalid)
     return df
 
-def genproc(col, window, config, fixpoint, realtime=False, comp_vel=True):
+def genproc(col, window, config, fixpoint='', realtime=False, comp_vel=True):
+    
+    if fixpoint == '':
+        fixpoint = config.io.column_fix
     
     monitoring = q.GetRawAccelData(col.name, window.offsetstart, window.end)
         

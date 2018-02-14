@@ -5,9 +5,10 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as md
 plt.ion()
 
+from datetime import timedelta
+import numpy as np
 import os
 import pandas as pd
-import numpy as np
 from scipy.stats import spearmanr
 
 import filepath
@@ -49,14 +50,14 @@ def compute_colpos(window, config, monitoring_vel, num_nodes, seg_len, fixpoint=
     colpos_df = colpos_df.append(colpos_df0, ignore_index = True)
     
     if column_fix == 'top':
-        colpos_df = colpos_df.sort('id', ascending = True)
+        colpos_df = colpos_df.sort_values('id', ascending = True)
     elif column_fix == 'bottom':
-        colpos_df = colpos_df.sort('id', ascending = False)
+        colpos_df = colpos_df.sort_values('id', ascending = False)
     
     colpos_dfts = colpos_df.groupby('ts', as_index=False)
     colposdf = colpos_dfts.apply(col_pos)
     
-    colposdf = colposdf.sort('id', ascending = True)
+    colposdf = colposdf.sort_values('id', ascending = True)
     colpos_dfts = colposdf.groupby('ts', as_index=False)
     colposdf = colpos_dfts.apply(compute_depth)
     
@@ -206,7 +207,7 @@ def cum_surf(df, xzd_plotoffset, num_nodes):
     cs_df = dfts[['xz', 'xy']].sum()    
     cs_df = cs_df - cs_df.values[0] + xzd_plotoffset * num_nodes
     cs_df = cs_df.sort_index()
-    
+
     return cs_df
 
 def noise_env(df, max_min_df, window, num_nodes, xzd_plotoffset):
@@ -326,7 +327,7 @@ def metadata(inc_df):
     return inc_df
 
 def node_annotation(monitoring_vel, num_nodes):
-    check_inc_df = monitoring_vel.sort('ts')
+    check_inc_df = monitoring_vel.sort_values('ts')
     
     inc_df = pd.DataFrame({'id': range(1, num_nodes+1), 'inc_xz': [np.nan]*num_nodes, 'inc_xy': [np.nan]*num_nodes, 'diff_xz': [np.nan]*num_nodes, 'diff_xy': [np.nan]*num_nodes})
     inc_df = inc_df[['id', 'inc_xz', 'inc_xy', 'diff_xz', 'diff_xy']]
@@ -338,7 +339,8 @@ def node_annotation(monitoring_vel, num_nodes):
 
     return inc_df
 
-def plot_disp_vel(noise_df, df0off, cs_df, colname, window, config, plotvel, xzd_plotoffset, num_nodes, velplot, plot_inc, inc_df=''):
+def plot_disp_vel(noise_df, df0off, cs_df, colname, window, config, plotvel,
+                  xzd_plotoffset, num_nodes, velplot, plot_inc, inc_df=''):
 #==============================================================================
 # 
 #     DESCRIPTION:
@@ -393,7 +395,6 @@ def plot_disp_vel(noise_df, df0off, cs_df, colname, window, config, plotvel, xzd
         ax_xyd.fill_between(cs_df.index,cs_df['xy'].values,xzd_plotoffset*(num_nodes),color='0.8')
     except:
         print 'Error in plotting cumulative surface displacement'
-        
     try:
         #assigning non-repeating colors to subplots axis
         ax_xzd=nonrepeat_colors(ax_xzd,num_nodes)
@@ -585,9 +586,9 @@ def df_add_offset_col(df, offset, num_nodes):
     return np.round(df,4)
     
     
-def main(monitoring, window, config, plotvel_start='', plotvel_end='', \
-            plotvel=True, show_part_legend = False, realtime=True, \
-            plot_inc=True, comp_vel=True, end_mon=False):
+def main(monitoring, window, config, plotvel_start='', plotvel_end='',
+         plotvel=True, show_part_legend = False, realtime=True, plot_inc=True,
+         comp_vel=True, end_mon=False, non_event_path=True):
 
     colname = monitoring.colprops.name
     num_nodes = monitoring.colprops.nos
@@ -625,10 +626,11 @@ def main(monitoring, window, config, plotvel_start='', plotvel_end='', \
     if realtime:
         config.io.outputfilepath = config.io.outputfilepath+'realtime/'
     
-    plt.savefig(file_path['monitoring_output'] + colname + '_ColPos_' + \
-            str(window.end.strftime('%Y-%m-%d_%H-%M')) + '.png', dpi=160, 
-            facecolor='w', edgecolor='w', orientation='landscape', mode='w',
-            bbox_extra_artists=(lgd,))
+    if non_event_path:
+        plt.savefig(file_path['monitoring_output'] + colname + '_ColPos_' + \
+                    str(window.end.strftime('%Y-%m-%d_%H-%M')) + '.png',
+                    dpi=160, facecolor='w', edgecolor='w',
+                    orientation='landscape', mode='w', bbox_extra_artists=(lgd,))
 
     if file_path['event']:
         plt.savefig(file_path['event'] + colname + '_ColPos_' + \
@@ -643,7 +645,7 @@ def main(monitoring, window, config, plotvel_start='', plotvel_end='', \
     
     # defining cumulative (surface) displacement
     cs_df = cum_surf(monitoring_vel, xzd_plotoffset, num_nodes)
-    
+
     #creating displacement noise envelope
     noise_df = noise_env(monitoring_vel, max_min_df, window, num_nodes, xzd_plotoffset)
     
@@ -651,6 +653,10 @@ def main(monitoring, window, config, plotvel_start='', plotvel_end='', \
     df0off = disp0off(monitoring_vel, window, config, xzd_plotoffset, num_nodes)
     
     if plotvel:
+        if plotvel_end == '':
+            plotvel_end = window.end
+        if plotvel_start == '':
+            plotvel_start = plotvel_end - timedelta(hours=3)
         #velplots
         vel = monitoring_vel.loc[(monitoring_vel.ts >= plotvel_start) & (monitoring_vel.ts <= plotvel_end)]
         #vel_xz
@@ -666,10 +672,14 @@ def main(monitoring, window, config, plotvel_start='', plotvel_end='', \
         velplot = ''
     
     # plot displacement and velocity
-    plot_disp_vel(noise_df, df0off, cs_df, colname, window, config, plotvel, xzd_plotoffset, num_nodes, velplot, plot_inc, inc_df=inc_df)
-    plt.savefig(file_path['monitoring_output'] + colname + '_DispVel_' + \
-            str(window.end.strftime('%Y-%m-%d_%H-%M')) + '.png', dpi=160, 
-            facecolor='w', edgecolor='w',orientation='landscape',mode='w')
+    plot_disp_vel(noise_df, df0off, cs_df, colname, window, config, plotvel,
+                  xzd_plotoffset, num_nodes, velplot, plot_inc, inc_df=inc_df)
+    
+    if non_event_path:
+        plt.savefig(file_path['monitoring_output'] + colname + '_DispVel_' + \
+                    str(window.end.strftime('%Y-%m-%d_%H-%M')) + '.png',
+                       dpi=160, facecolor='w', edgecolor='w',
+                       orientation='landscape', mode='w')
                 
     if file_path['event'] != None:
         plt.savefig(file_path['event'] + colname + '_DispVel_' + \
