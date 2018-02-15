@@ -253,16 +253,16 @@ def RainfallAlert(siterainprops, end, s):
     return summary
 
 def alert_toDB(df, end):
-    
+
     query = "SELECT * FROM senslopedb.site_level_alert WHERE site = '%s' AND source = 'rain' AND updateTS <= '%s' ORDER BY updateTS DESC LIMIT 1" %(df.site.values[0], end)
     
     df2 = q.GetDBDataFrame(query)
-    
+
     if len(df2) == 0 or df2.alert.values[0] != df.alert.values[0]:
         df['updateTS'] = end
         engine = create_engine('mysql://'+q.Userdb+':'+q.Passdb+'@'+q.Hostdb+':3306/'+q.Namedb)
         df.to_sql(name = 'site_level_alert', con = engine, if_exists = 'append', schema = q.Namedb, index = False)
-    elif df2.alert.values[0] == df.alert.values[0] and pd.to_datetime(df2.timestamp.values[0]) > pd.to_datetime(df.timestamp.values[0]):
+    elif df2.alert.values[0] == df.alert.values[0] and pd.to_datetime(df2.updateTS.values[0]) < pd.to_datetime(df.timestamp.values[0]):
         db, cur = q.SenslopeDBConnect(q.Namedb)
         query = "UPDATE senslopedb.site_level_alert SET updateTS='%s' WHERE site = '%s' and source = 'rain' and alert = '%s' and timestamp = '%s'" %(end, df2.site.values[0], df2.alert.values[0], pd.to_datetime(str(df2.timestamp.values[0])))
         cur.execute(query)

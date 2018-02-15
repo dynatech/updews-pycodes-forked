@@ -248,7 +248,7 @@ def alert_toDB(df, table_name, window):
         engine = create_engine('mysql://'+q.Userdb+':'+q.Passdb+'@'+q.Hostdb+':3306/'+q.Namedb)
         df.to_sql(name = table_name, con = engine, if_exists = 'append', schema = q.Namedb, index = False)
         
-    elif same_alert and df2['updateTS'].values[0] > df['updateTS'].values[0]:
+    elif same_alert and df2['updateTS'].values[0] < df['updateTS'].values[0]:
         db, cur = q.SenslopeDBConnect(q.Namedb)
         query = "UPDATE senslopedb.%s SET updateTS='%s' WHERE site = '%s' and source = 'sensor' and alert = '%s' and timestamp = '%s'" %(table_name, window.end, df2.site.values[0], df2.alert.values[0], pd.to_datetime(str(df2.timestamp.values[0])))
         cur.execute(query)
