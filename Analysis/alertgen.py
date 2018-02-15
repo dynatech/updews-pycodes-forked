@@ -9,8 +9,6 @@ import querySenslopeDb as q
 import genproc as g
 import AlertAnalysis as A
 
-import ColumnPlotter as plotter
-
 def RoundTime(date_time):
     # rounds time to 4/8/12 AM/PM
     time_hour = int(date_time.strftime('%H'))

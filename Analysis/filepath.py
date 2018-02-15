@@ -7,17 +7,6 @@ import querySenslopeDb as q
 
 def output_file_path(site, plot_type, monitoring_end=False, positive_trigger=False, end=datetime.now()):
 
-    if site == 'bat':
-        site = 'bto'
-    elif site == 'man':
-        site = 'mng'
-    elif site == 'pan':
-        site = 'png'
-    elif site == 'pob':
-        site= 'jor'
-    elif site == 'tag':
-        site = 'tga'
-
     output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
 
     window,config = rtw.getwindow(pd.to_datetime(end))
@@ -29,16 +18,29 @@ def output_file_path(site, plot_type, monitoring_end=False, positive_trigger=Fal
     else:
         shift_start = (window.end - timedelta(1)).strftime('%d %b %Y PM')
     
-    # 3 most recent non-A0 public alert
-    query = "SELECT * FROM senslopedb.site_level_alert"
-    query += " WHERE site = '%s'" %site
-    query += " AND source = 'public'"
-    query += " AND (updateTS <= '%s'" %window.end
-    query += "  OR (updateTS >= '%s'" %window.end
-    query += "  AND timestamp <= '%s'))" %window.end
-    query += " ORDER BY timestamp DESC LIMIT 4"
+    if site != 'all':
     
-    public_alert = q.GetDBDataFrame(query)
+        if site == 'bat':
+            site = 'bto'
+        elif site == 'man':
+            site = 'mng'
+        elif site == 'pan':
+            site = 'png'
+        elif site == 'pob':
+            site= 'jor'
+        elif site == 'tag':
+            site = 'tga'
+            
+        # 3 most recent non-A0 public alert
+        query = "SELECT * FROM senslopedb.site_level_alert"
+        query += " WHERE site = '%s'" %site
+        query += " AND source = 'public'"
+        query += " AND (updateTS <= '%s'" %window.end
+        query += "  OR (updateTS >= '%s'" %window.end
+        query += "  AND timestamp <= '%s'))" %window.end
+        query += " ORDER BY timestamp DESC LIMIT 4"
+        
+        public_alert = q.GetDBDataFrame(query)
 
     if plot_type == 'rainfall':
         monitoring_output_path = output_path + config.io.rainfallplotspath

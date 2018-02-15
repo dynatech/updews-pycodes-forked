@@ -59,8 +59,8 @@ def mon_main():
                 
             config.io.column_fix = column_fix
             
-            monitoring = g.genproc(col[0], window, config, config.io.column_fix, realtime=True)
-            plotter.main(monitoring, window, config, plotvel_start=window.end-timedelta(hours=3), plotvel_end=window.end)#, plot_inc=False)
+            monitoring = g.genproc(col[0], window, config, fixpoint=config.io.column_fix, realtime=True)
+            plotter.main(monitoring, window, config)
             
         # plots with customizable monitoring window
         elif monitoring_window == 'n':
@@ -143,8 +143,8 @@ def mon_main():
             else:
                 plotvel = False
     
-            monitoring = g.genproc(col[0], window, config, config.io.column_fix, comp_vel = plotvel)
-            plotter.main(monitoring, window, config, plotvel=plotvel, show_part_legend = show_part_legend, plotvel_end=window.end, plotvel_start=window.start, plot_inc=False, comp_vel=plotvel)
+            monitoring = g.genproc(col[0], window, config, fixpoint=config.io.column_fix, comp_vel = plotvel)
+            plotter.main(monitoring, window, config, plotvel=plotvel, show_part_legend = show_part_legend, plotvel_start=window.start, plot_inc=False, comp_vel=plotvel)
         
     # plots from start to end of data
     elif plot_all_data == 'y':
@@ -223,8 +223,8 @@ def mon_main():
         else:
             plotvel = False
 
-        monitoring = g.genproc(col[0], window, config, config.io.column_fix, comp_vel = plotvel)
-        plotter.main(monitoring, window, config, plotvel=plotvel, plotvel_start=window.start, plotvel_end=window.end, show_part_legend = show_part_legend, plot_inc=False, comp_vel=plotvel)
+        monitoring = g.genproc(col[0], window, config, fixpoint=config.io.column_fix, comp_vel = plotvel)
+        plotter.main(monitoring, window, config, plotvel=plotvel, plotvel_start=window.start, show_part_legend = show_part_legend, plot_inc=False, comp_vel=plotvel)
         
 ##########################################################
 if __name__ == "__main__":
