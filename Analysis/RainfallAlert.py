@@ -281,10 +281,11 @@ def main(siterainprops, end, s, db_write=True):
     ### Processes Rainfall Alert ###
     summary = RainfallAlert(siterainprops, end, s)
     
-    dbsummary = summary
-    dbsummary['timestamp'] = str(end)
-    dbsummary['source'] = 'rain'
-    dbsummary = dbsummary[['timestamp', 'site', 'source', 'alert']]
-    alert_toDB(dbsummary, end)
+    if db_write:
+        dbsummary = summary
+        dbsummary['timestamp'] = str(end)
+        dbsummary['source'] = 'rain'
+        dbsummary = dbsummary[['timestamp', 'site', 'source', 'alert']]
+        alert_toDB(dbsummary, end)
     
     return summary
