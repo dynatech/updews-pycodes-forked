@@ -599,7 +599,7 @@ def FixMesData(df):
     return df
 
 def FixSiteCode(df):
-    df.replace(to_replace = {'site_id':{'bto':'bat','png':'pan','mng':'man','jor':'pob'}},inplace = True)
+    df.replace(to_replace = {'site_id':{'bto':'bat','png':'pan','mng':'man','jor':'pob','tag':'tga'}},inplace = True)
     return df
     
 def del_data(df):
@@ -739,17 +739,34 @@ def GenerateGroundDataAlert(site=None,end=None):
 
 def PlotForEvent(site,end,window = 30):
     event_out_path = output_file_path(site,'surficial',monitoring_end = True,end = pd.to_datetime(end))['event']
-    print event_out_path
+    marker_alerts = GenerateGroundDataAlert(site,end)
+    print marker_alerts
     if event_out_path:
         start = pd.to_datetime(end) - timedelta(days = 30)
     
         ground_data_to_plot = get_ground_df(start,end,site)
+        ground_data_to_plot2 = get_latest_ground_df2(site,end)
+            #### Check if least number of points per crack exceeds 10
+        ground_data_to_plot_group = ground_data_to_plot.groupby('crack_id')
+        
+        if len(ground_data_to_plot_group) != 0:
+            if min(ground_data_to_plot_group.apply(lambda x:len(x))) < 10:
+                ground_data_to_plot = ground_data_to_plot2
+        else:
+                ground_data_to_plot = ground_data_to_plot2
+        
         ground_data_to_plot['site_id'] = map(lambda x: x.lower(),ground_data_to_plot['site_id'])
         ground_data_to_plot['crack_id'] = map(lambda x: x.title(),ground_data_to_plot['crack_id'])
         
         tsn=pd.to_datetime(end).strftime("%Y-%m-%d_%H-%M-%S")
         site_data_to_plot = ground_data_to_plot.groupby('site_id')
         site_data_to_plot.apply(PlotSite,tsn,event_out_path)
+    
+        #### Generate trending plots
+        for marker in marker_alerts.loc[np.logical_and(marker_alerts.alert != 'nd',marker_alerts.alert != 'l0'),'marker_name']:
+            cur_data = ground_data_to_plot2.loc[ground_data_to_plot2.crack_id == marker]
+            cur_group = cur_data.groupby(['site_id','crack_id'],as_index = False)
+            cur_group.apply(check_trending,event_out_path,True)
 
 def PlotMarkerData(site,end,window = 30):
     '''
@@ -786,8 +803,11 @@ def PlotMarkerData(site,end,window = 30):
     #### Check if least number of points per crack exceeds 10
     ground_data_to_plot_group = ground_data_to_plot.groupby('crack_id')
     
-    if min(ground_data_to_plot_group.apply(lambda x:len(x))) < 10:
-        ground_data_to_plot = get_latest_ground_df2(site,end)
+    if len(ground_data_to_plot_group) != 0:
+        if min(ground_data_to_plot_group.apply(lambda x:len(x))) < 10:
+            ground_data_to_plot = get_latest_ground_df2(site,end)
+    else:
+            ground_data_to_plot = get_latest_ground_df2(site,end)
     
     ground_data_to_plot.loc[:,'site_id'] = map(lambda x: x.lower(),ground_data_to_plot['site_id'])
     ground_data_to_plot.loc[:,'crack_id'] = map(lambda x: x.title(),ground_data_to_plot['crack_id'])
