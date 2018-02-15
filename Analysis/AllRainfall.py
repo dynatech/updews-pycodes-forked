@@ -45,7 +45,8 @@ def get_rt_window(rt_window_length,roll_window_length,end=datetime.now()):
 ################################     MAIN     ################################
 
 def main(site='', end=datetime.now(), Print=False, alert_eval=True,
-         plot=False, monitoring_end=True, positive_trigger=True):
+         plot=False, monitoring_end=True, positive_trigger=True,
+         db_write=True):
     
     start_time = datetime.now()
     print start_time
@@ -68,7 +69,7 @@ def main(site='', end=datetime.now(), Print=False, alert_eval=True,
     siterainprops = rainprops.groupby('name')
 
     if alert_eval:
-        summary = siterainprops.apply(RA.main, end=end, s=s)
+        summary = siterainprops.apply(RA.main, end=end, s=s, db_write=db_write)
         summary = summary.reset_index(drop=True).set_index('site')
         summary = summary[['1D cml', 'half of 2yr max', '3D cml', '2yr max',
                            'DataSource', 'alert', 'advisory']]	

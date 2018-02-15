@@ -145,7 +145,7 @@ def main(end=''):
     public_alert = qdb.GetDBDataFrame(query)
     public_alert = public_alert[public_alert.site == 'par']
     if len(public_alert) != 0:
-        rain.main(site='', end=end, Print=True)
+        rain.main(site='', end=end, Print=True, db_write=False)
         site_public_alert = public_alert.groupby('site', as_index=False)
         site_public_alert.apply(site_plot, end=end,
                                 shift_datetime=shift_datetime)
