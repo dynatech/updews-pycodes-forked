@@ -280,9 +280,6 @@ def main(siterainprops, end, s):
     dbsummary['timestamp'] = str(end)
     dbsummary['source'] = 'rain'
     dbsummary = dbsummary[['timestamp', 'site', 'source', 'alert']]
-    try:
-        alert_toDB(dbsummary, end)
-    except:
-        print 'duplicate entry'
+    alert_toDB(dbsummary, end)
     
     return summary
