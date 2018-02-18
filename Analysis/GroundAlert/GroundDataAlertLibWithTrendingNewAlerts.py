@@ -238,6 +238,9 @@ def get_latest_ground_df2(site = None,end = None):
     all_surficial.loc[:,['crack_id']] = all_surficial['crack_id'].apply(lambda x:x.upper())
     all_surficial.loc[:,['site_id']] = all_surficial['site_id'].apply(lambda x:x.upper())
     
+    #### Remove none timestamps
+    all_surficial = all_surficial[np.logical_not(all_surficial.timestamp.isnull())]
+    
     #### Get latest timestamp
     last_ts = max(all_surficial.timestamp.values)
     
@@ -311,30 +314,31 @@ def crack_eval(df,out_folder,end):
     out_df = pd.Series()
     df = df[df.timestamp <= end]
     df.sort_values('timestamp',inplace = True)
-    try:
-        if RoundTime(end) != RoundTime(df.timestamp.iloc[-1]):
-            crack_alert = 'nd'
-        else:
-            #Obtain the time difference and displacement between the latest values (Return l0 if only one value is present)
-            if len(df) >= 2:
-                time_delta = (df.timestamp.iloc[-1]  - df.timestamp.iloc[-2]) / np.timedelta64(1,'D')
-                abs_disp = np.abs(df.meas.iloc[-1]-df.meas.iloc[-2])
-                cur_vel = abs_disp / time_delta
-                crack_alert = 'nd'    
-                
-                #1cm Reliability Cap
-                if abs_disp < 1:
-                    crack_alert = 'l0'
+    df.loc[:,'timestamp'] = map(lambda x:pd.to_datetime(x),df.timestamp)
+#    try:
+    if RoundTime(end) != RoundTime(df.timestamp.iloc[-1]):
+        crack_alert = 'nd'
+    else:
+        #Obtain the time difference and displacement between the latest values (Return l0 if only one value is present)
+        if len(df) >= 2:
+            time_delta = (df.timestamp.iloc[-1]  - df.timestamp.iloc[-2]) / np.timedelta64(1,'D')
+            abs_disp = np.abs(df.meas.iloc[-1]-df.meas.iloc[-2])
+            cur_vel = abs_disp / time_delta
+            crack_alert = 'nd'    
+            
+            #1cm Reliability Cap
+            if abs_disp < 1:
+                crack_alert = 'l0'
+            else:
+                #Based on alert table (convert velocity to cm/hour)
+                cur_vel = cur_vel/24.
+                if cur_vel >= 1.8:
+                    crack_alert = 'l3'
+                elif cur_vel >= 0.25:
+                    crack_alert = 'l2'
                 else:
-                    #Based on alert table (convert velocity to cm/hour)
-                    cur_vel = cur_vel/24.
-                    if cur_vel >= 1.8:
-                        crack_alert = 'l3'
-                    elif cur_vel >= 0.25:
-                        crack_alert = 'l2'
-                    else:
-                        crack_alert = 'l0'
-                    #Perform p value computation for specific crack
+                    crack_alert = 'l0'
+                #Perform p value computation for specific crack
 #                    if abs_disp == 1:
 #                        if len(df) >= 4:
 #                            #get the last 4 data values for the current feature
@@ -349,21 +353,21 @@ def crack_eval(df,out_folder,end):
 #                            #Evaluate p value
 #                            if p > 0.05:
 #                                crack_alert = 'l0p'
-                                
-                    #Perform Trending Test if alert is not L0
-                    if (crack_alert != 'l0' and crack_alert != 'l0p'):
-                        trend_alert = check_trending(df,out_folder,plot = False)
-                        if (trend_alert != 'Legit' and crack_alert != 'l3'):
-                            crack_alert = 'l0t'
-                
-                
-            else:
-                crack_alert = 'l0'
-        
+                            
+                #Perform Trending Test if alert is not L0
+                if (crack_alert != 'l0' and crack_alert != 'l0p'):
+                    trend_alert = check_trending(df,out_folder,plot = False)
+                    if (trend_alert != 'Legit' and crack_alert != 'l3'):
+                        crack_alert = 'l0t'
+            
+            
+        else:
+            crack_alert = 'l0'
+    
 
-    except:
-        print 'Timestamp error for '+' '.join(list(np.concatenate((df.site_id.values,df.crack_id.values))))
-        crack_alert = 'nd'
+#    except:
+#        print 'Timestamp error for '+' '.join(list(np.concatenate((df.site_id.values,df.crack_id.values))))
+#        crack_alert = 'nd'
     
     try:
         abs_disp = np.abs(df.meas.iloc[-1]-df.meas.iloc[-2])
