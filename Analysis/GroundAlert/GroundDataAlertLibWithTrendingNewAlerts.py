@@ -241,6 +241,9 @@ def get_latest_ground_df2(site = None,end = None):
     #### Remove none timestamps
     all_surficial = all_surficial[np.logical_not(all_surficial.timestamp.isnull())]
     
+    #### Apply pd.to_datetime() to timestamp column
+    all_surficial.loc[:,['timestamp']] = map(lambda x: pd.to_datetime(x),all_surficial.timestamp)
+    
     #### Get latest timestamp
     last_ts = max(all_surficial.timestamp.values)
     
@@ -314,7 +317,7 @@ def crack_eval(df,out_folder,end):
     out_df = pd.Series()
     df = df[df.timestamp <= end]
     df.sort_values('timestamp',inplace = True)
-    df.loc[:,'timestamp'] = map(lambda x:pd.to_datetime(x),df.timestamp)
+
 #    try:
     if RoundTime(end) != RoundTime(df.timestamp.iloc[-1]):
         crack_alert = 'nd'
