@@ -389,12 +389,17 @@ def plot_disp_vel(noise_df, df0off, cs_df, colname, window, config, plotvel,
     
     try:
         #plotting cumulative (surface) displacments
-        ax_xzd.plot(cs_df.index, cs_df['xz'].values,color='0.4',linewidth=0.5)
-        ax_xyd.plot(cs_df.index, cs_df['xy'].values,color='0.4',linewidth=0.5)
-        ax_xzd.fill_between(cs_df.index,cs_df['xz'].values,xzd_plotoffset*(num_nodes),color='0.8')
-        ax_xyd.fill_between(cs_df.index,cs_df['xy'].values,xzd_plotoffset*(num_nodes),color='0.8')
+        curax=ax_xzd
+        plt.sca(curax)
+        plt.plot(cs_df.index.values, cs_df['xz'].values,color='0.4',linewidth=0.5)
+        plt.fill_between(cs_df.index.values,cs_df['xz'].values,xzd_plotoffset*(num_nodes),color='0.8')
+        curax=ax_xyd
+        plt.sca(curax)        
+        plt.plot(cs_df.index.values, cs_df['xy'].values,color='0.4',linewidth=0.5)
+        plt.fill_between(cs_df.index.values,cs_df['xy'].values,xzd_plotoffset*(num_nodes),color='0.8')
     except:
         print 'Error in plotting cumulative surface displacement'
+
     try:
         #assigning non-repeating colors to subplots axis
         ax_xzd=nonrepeat_colors(ax_xzd,num_nodes)
@@ -638,6 +643,9 @@ def main(monitoring, window, config, plotvel_start='', plotvel_end='',
                 facecolor='w', edgecolor='w', orientation='landscape', mode='w',
                 bbox_extra_artists=(lgd,))
 
+    if not realtime:
+        plt.close()
+
     inc_df = node_annotation(monitoring_vel, num_nodes)
 
     # displacement plot offset
@@ -685,3 +693,6 @@ def main(monitoring, window, config, plotvel_start='', plotvel_end='',
         plt.savefig(file_path['event'] + colname + '_DispVel_' + \
                 str(window.end.strftime('%Y-%m-%d_%H-%M')) + '.png', dpi=160, 
                 facecolor='w', edgecolor='w',orientation='landscape',mode='w')
+
+    if not realtime:
+        plt.close()

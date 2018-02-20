@@ -42,9 +42,7 @@ def round_shift_time(date_time):
 
     return date_time
 
-def tsm_plot(df, end, shift_datetime):
-    
-    tsm_name = df['name'].values[0]
+def tsm_plot(tsm_name, end, shift_datetime):
     
     query = "SELECT max(timestamp) AS ts FROM %s" %tsm_name
     
@@ -69,8 +67,10 @@ def subsurface(site, end, shift_datetime):
     sensor_site = site[0:3] + '%'
     query = "SELECT * FROM site_column_props where name LIKE '%s'" %sensor_site
     df = qdb.GetDBDataFrame(query)
-    tsm_df = df.groupby('name', as_index=False)
-    tsm_df.apply(tsm_plot, end=end, shift_datetime=shift_datetime)
+    tsm_set = set(df['name'].values)
+    for tsm_name in tsm_set:
+        print tsm_name
+        tsm_plot(tsm_name, end, shift_datetime)
     
 def surficial(site, end, shift_datetime):
 
@@ -108,9 +108,9 @@ def site_plot(public_alert, end, shift_datetime):
 
     site = public_alert['site'].values[0]
     
+    rain.main(site=site, end=end, alert_eval=False, plot=True, realtime=False)
     subsurface(site, end, shift_datetime)
     surficial(site, end, shift_datetime)
-    rain.main(site=site, end=end, alert_eval=False, plot=True)
 
 def main(end=''):
     
@@ -126,10 +126,10 @@ def main(end=''):
             end = datetime.now()
     else:
         end = pd.to_datetime(end)
-    
+
     end = round_data_time(end)
     shift_datetime = round_shift_time(end)
-    
+
     if end.time() not in [time(3, 30), time(7, 30), time(11, 30), time(15, 30),
                time(19, 30), time(23, 30)]:
         return
@@ -143,7 +143,7 @@ def main(end=''):
     query += "  AND alert = 'A0')) "
     query += "ORDER BY timestamp DESC"
     public_alert = qdb.GetDBDataFrame(query)
-    public_alert = public_alert[public_alert.site == 'par']
+
     if len(public_alert) != 0:
         rain.main(site='', end=end, Print=True, db_write=False)
         site_public_alert = public_alert.groupby('site', as_index=False)

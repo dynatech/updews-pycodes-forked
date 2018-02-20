@@ -30,7 +30,7 @@ def GetResampledData(r, offsetstart, start, end):
             blankdf=pd.DataFrame({'ts': [end], 'rain': [0]})
             blankdf=blankdf.set_index('ts')
             rainfall=rainfall.append(blankdf)
-        rainfall=rainfall.resample('30min',how='sum', label='right')
+        rainfall=rainfall.resample('30min', label='right').sum()
         rainfall=rainfall[(rainfall.index>=start)&(rainfall.index<=end)]
         return rainfall
     except:
