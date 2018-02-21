@@ -13,7 +13,7 @@ import memcache
 # print s.misc.debug
 
 
-cfgfiletxt = 'server_config.tmp'
+cfgfiletxt = 'server_config.txt'
 cfile = os.path.dirname(os.path.realpath(__file__)) + '/' + cfgfiletxt
     
 def read_cfg_file():
