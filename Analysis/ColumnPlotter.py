@@ -386,17 +386,29 @@ def plot_disp_vel(noise_df, df0off, cs_df, colname, window, config, plotvel,
             ax_xzv=fig.add_subplot(121)
             ax_xzv.invert_yaxis()
             ax_xyv=fig.add_subplot(122,sharex=ax_xzv,sharey=ax_xzv)
-    
+
+    try:
+        dfmt = md.DateFormatter('%Y-%m-%d\n%H:%M')
+        ax_xzd.xaxis.set_major_formatter(dfmt)
+        ax_xyd.xaxis.set_major_formatter(dfmt)
+    except:
+        print 'Error in setting date format of x-label in disp subplots'
+
     try:
         #plotting cumulative (surface) displacments
+        ts = cs_df.reset_index()['ts'].apply(lambda x: mpl.dates.date2num(x)).values
         curax=ax_xzd
         plt.sca(curax)
-        plt.plot(cs_df.index.values, cs_df['xz'].values,color='0.4',linewidth=0.5)
-        plt.fill_between(cs_df.index.values,cs_df['xz'].values,xzd_plotoffset*(num_nodes),color='0.8')
+        plt.plot_date(ts, cs_df['xz'].values, color='0.4', marker=None,
+                      linestyle='-', linewidth=0.5)
+        plt.fill_between(ts, cs_df['xz'].values, xzd_plotoffset*(num_nodes),
+                         color='0.8')
         curax=ax_xyd
         plt.sca(curax)        
-        plt.plot(cs_df.index.values, cs_df['xy'].values,color='0.4',linewidth=0.5)
-        plt.fill_between(cs_df.index.values,cs_df['xy'].values,xzd_plotoffset*(num_nodes),color='0.8')
+        plt.plot_date(ts, cs_df['xy'].values, color='0.4', marker=None,
+                      linestyle='-', linewidth=0.5)
+        plt.fill_between(ts, cs_df['xy'].values, xzd_plotoffset*(num_nodes),
+                         color='0.8')
     except:
         print 'Error in plotting cumulative surface displacement'
 
@@ -549,7 +561,7 @@ def plot_disp_vel(noise_df, df0off, cs_df, colname, window, config, plotvel,
     if plotvel:
         for item in ([ax_xyv.yaxis.label, ax_xzv.yaxis.label]):
             item.set_fontsize(8)
-    
+
     try:
         dfmt = md.DateFormatter('%Y-%m-%d\n%H:%M')
         ax_xzd.xaxis.set_major_formatter(dfmt)

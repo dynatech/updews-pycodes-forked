@@ -69,7 +69,6 @@ def subsurface(site, end, shift_datetime):
     df = qdb.GetDBDataFrame(query)
     tsm_set = set(df['name'].values)
     for tsm_name in tsm_set:
-        print tsm_name
         tsm_plot(tsm_name, end, shift_datetime)
     
 def surficial(site, end, shift_datetime):
@@ -108,9 +107,9 @@ def site_plot(public_alert, end, shift_datetime):
 
     site = public_alert['site'].values[0]
     
-    rain.main(site=site, end=end, alert_eval=False, plot=True, realtime=False)
     subsurface(site, end, shift_datetime)
     surficial(site, end, shift_datetime)
+    rain.main(site=site, end=end, alert_eval=False, plot=True, realtime=False)
 
 def main(end=''):
     
