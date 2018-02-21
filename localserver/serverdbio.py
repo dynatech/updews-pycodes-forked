@@ -52,17 +52,18 @@ def set_read_status(sms_id_list,read_status=0,table='',instance='local'):
     commit_to_db(query,"set_read_status")
     
 def set_send_status(table,status_list):
-    query = ("insert into smsoutbox_%s_status (stat_id, send_status, ts_sent) "
+    query = ("insert into smsoutbox_%s_status (stat_id, send_status, ts_sent,gsm_id,outbox_id,mobile_id) "
         "values ") % (table[:-1])
 
-    for stat_id, send_status, ts_sent in status_list:
-        query += "(%d,%d,'%s')," % (stat_id, send_status, ts_sent)
+    for stat_id, send_status, ts_sent ,gsm_id,outbox_id,mobile_id in status_list:
+        query += "(%d,%d,'%s',%d,%d,%d)," % (stat_id, send_status, ts_sent,gsm_id,outbox_id,mobile_id)
 
     query = query[:-1]
     query += (" on duplicate key update stat_id=values(stat_id), "
         "send_status=send_status+values(send_status),ts_sent=values(ts_sent)")
     
     commit_to_db(query,"set_send_status")
+    
     
 def get_all_sms_from_db(host='local',read_status=0,table='loggers',limit=200):
     db, cur = db_connect(host)
@@ -97,12 +98,12 @@ def get_all_outbox_sms_from_db(table='users',send_status=5,gsm_id=5,limit=10):
     while True:
         try:
             db, cur = db_connect()
-            query = ("select t1.stat_id,t1.mobile_id,t2.sms_msg from "
-                "smsoutbox_%s_status as t1"
-                "inner join (select * from smsoutbox_%s) as t2"
-                "on t1.outbox_id = t2.outbox_id"
-                "where t1.send_status < %d"
-                "and t1.gsm_id = %d"
+            query = ("select t1.stat_id,t1.mobile_id,t1.gsm_id,t1.outbox_id,t2.sms_msg from "
+                "smsoutbox_%s_status as t1 "
+                "inner join (select * from smsoutbox_%s) as t2 "
+                "on t1.outbox_id = t2.outbox_id "
+                "where t1.send_status < %d "
+                "and t1.gsm_id = %d "
                 "limit %d ") % (table[:-1],table,send_status,gsm_id,limit)
                 
             # print query

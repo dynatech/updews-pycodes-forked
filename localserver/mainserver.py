@@ -258,7 +258,7 @@ def write_outbox_message_to_db(message='',recipients='',table=''):
 
         table_mobile = get_mobile_sim_nums(table_name)
 
-        query = ("INSERT INTO smsoutbox_%s_status (outbox_id,mobile_id,gsm_id)"
+        query = ("INSERT INTO smsoutbox_%s_status (outbox_id,mobile_id,gsm_id,ts_sent)"
             " VALUES ") % (table_name[:-1])
 
 
@@ -267,7 +267,7 @@ def write_outbox_message_to_db(message='',recipients='',table=''):
         else:
             tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
             print last_insert, table_mobile[r], tsw, gsm_id
-            query += "(%d,%d,%d)," % (last_insert,table_mobile[r],gsm_id)
+            query += "(%d,%d,%d,'%s')," % (last_insert,table_mobile[r],gsm_id,tsw)
             # print query
     
     query = query[:-1]
@@ -344,13 +344,14 @@ def send_messages_from_db(table='users',send_status=0,gsm_id=0,limit=10):
 
     for m in allmsgs:
         print m
-
+        
+    raw_allmsgs = allmsgs
     table_mobile = get_mobile_sim_nums(table)
     inv_table_mobile = {v: k for k, v in table_mobile.iteritems()}
     # print inv_table_mobile
         
     msglist = []
-    for stat_id,mobile_id,sms_msg in allmsgs:
+    for stat_id,mobile_id,sms_msg,outbox_id,gsm_id in allmsgs:
         smsItem = gsmio.sms(stat_id, inv_table_mobile[mobile_id], sms_msg, '')
         msglist.append(smsItem)
     allmsgs = msglist
@@ -359,7 +360,8 @@ def send_messages_from_db(table='users',send_status=0,gsm_id=0,limit=10):
     
     allowed_prefixes = get_allowed_prefixes('globe')
     # # cycle through all messages
-    for msg in allmsgs:
+    for i, msg in enumerate(allmsgs):
+
         try:
             num_prefix = re.match("^ *((0)|(63))9\d\d",msg.simnum).group()
             num_prefix = num_prefix.strip()
@@ -369,13 +371,15 @@ def send_messages_from_db(table='users',send_status=0,gsm_id=0,limit=10):
             # check if recepient number in allowed prefixed list    
         if num_prefix in allowed_prefixes:
             ret = gsmio.send_msg(msg.data,msg.simnum.strip(),simulate=True)
-
+            outbox_id = raw_allmsgs[i][3]
+            gsm_id = raw_allmsgs[i][2]
+            mobile_id = raw_allmsgs[i][1]
             today = dt.today().strftime("%Y-%m-%d %H:%M:%S")
             if ret:
                 send_stat = 1
-                stat = msg.num,1,today
+                stat = msg.num,1,today,gsm_id,outbox_id,mobile_id
             else:
-                stat = msg.num,5,today
+                stat = msg.num,5,today,gsm_id,outbox_id,mobile_id
 
             status_list.append(stat)
             
