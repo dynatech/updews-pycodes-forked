@@ -104,6 +104,8 @@ to_smooth = 1			;to smooth xz and xy through moving average (1 or 0)
 rt_to_fill = 1			;to forward fill (1 or 0)
 rt_to_smooth = 1		;to smooth xz and xy through moving average (1 or 0)
 column_fix = bottom		;node to fix in column position plot (top or bottom)
+enable_analysis = True	;enable/disable spawing analysis scripts upon sms receipt
+
 
 [rainfall]
 

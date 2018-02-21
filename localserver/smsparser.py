@@ -754,7 +754,7 @@ def spawn_alert_gen(tsm_name, timestamp):
         mc.set('alertgenlist',alertgenlist)
 
 def process_surficial_observation(msg):
-     """
+    """
        -The function that process surficial observation .
       
       :param msg: surficiall message from community and store to database.
@@ -966,7 +966,7 @@ def get_router_ids():
     return nums
         
 def process_gateway_msg(msg):
-     """
+    """
        -The function that process the gateway message .
       
       :param msg: message data.
@@ -1079,7 +1079,7 @@ def test():
     msg = gsmio.sms('', '', sms, '')
     
 def main():
-     """
+    """
         **Description:**
           -The main function that runs the whole smsparser with the logic of
           parsing sms txt of users and loggers.
