@@ -85,24 +85,36 @@ def send_alert_message():
 
 def check_alerts():
     ts_now = dt.now().strftime("%Y-%m-%d %H:%M:%S")
-    query = ("SELECT stat_id, site_code, trigger_source, alert_symbol, "
-        "ts_last_retrigger FROM "
-        "(SELECT stat_id, ts_last_retrigger, site_id, trigger_source, "
-        "alert_symbol FROM "
-        "(SELECT stat_id, ts_last_retrigger, site_id, trigger_sym_id FROM "
-        "(SELECT * FROM alert_status WHERE ts_set < '%s' "
-        "and ts_ack is NULL) AS stat "
-        "INNER JOIN "
-        "operational_triggers AS op "
-        "ON stat.trigger_id = op.trigger_id) AS trig "
-        "INNER JOIN "
-        "operational_trigger_symbols AS sym "
-        "ON trig.trigger_sym_id = sym.trigger_sym_id) AS alert "
-        "INNER JOIN "
-        "sites as s "
-        "ON s.site_id = alert.site_id") % (ts_now)
+    query = ("SELECT stat_id, site_code, trigger_source, "
+            "alert_symbol, ts_last_retrigger FROM "
+            "(SELECT stat_id, ts_last_retrigger, site_id, "
+            "trigger_source, alert_symbol FROM "
+            "(SELECT stat_id, ts_last_retrigger, site_id, "
+            "trigger_sym_id FROM "
+            "(SELECT * FROM alert_status "
+            "WHERE ts_set < '%s' " 
+            "and ts_ack is NULL "
+            ") AS stat "
+            "INNER JOIN "
+            "operational_triggers AS op "
+            "USING (trigger_id) "
+            ") AS trig "
+            "INNER JOIN "
+            "(SELECT trigger_sym_id, trigger_source, "
+            "alert_level, alert_symbol FROM "
+            "operational_trigger_symbols "
+            "INNER JOIN "
+            "trigger_hierarchies "
+            "USING (source_id) "
+            ") as sym "
+            "USING (trigger_sym_id)) AS alert "
+            "INNER JOIN "
+            "sites "
+            "USING (site_id)") % (ts_now)
 
     alert_msgs = dbio.query_database(query,'check_alerts')
+
+    print "alert messages:", alert_msgs
 
     return alert_msgs
 
