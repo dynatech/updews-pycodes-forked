@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 plt.ioff()
 
 from datetime import datetime, timedelta, time, date
+import os
 import pandas as pd
 import sys
 
@@ -13,6 +14,15 @@ import ColumnPlotter as plotter
 import genproc as gen
 import querySenslopeDb as qdb
 import rtwindow as rtw
+
+#include the path of outer folder for the python scripts searching
+path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'GroundAlert/'))
+if not path in sys.path:
+    sys.path.insert(1,path)
+del path   
+
+import GroundDataAlertLibWithTrendingNewAlerts as surf_plot
+
 
 def round_data_time(date_time):
     
@@ -94,10 +104,8 @@ def surficial(site, end, shift_datetime):
 
     ts = qdb.GetDBDataFrame(query)['ts'].values[0]
 
-###############################################################################
-#    if ts != None:
-#        *call Leo's script for plotting 
-###############################################################################    
+    if ts != None:
+        surf_plot.PlotForEvent(site,ts)
 
 def site_plot(public_alert, end, shift_datetime):
     
