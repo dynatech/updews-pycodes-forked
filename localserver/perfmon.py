@@ -19,11 +19,11 @@ def count_items(ts_end = None, ts_start = None, table = None, stat_col = None,
 
 	if ts_end is None:
 		ts = dt.now()
-		ts_end = ts - td(minutes = ts.minute % 5, seconds = ts.second, 
+		ts_end = ts - td(minutes = ts.minute % timelag, seconds = ts.second, 
 			microseconds = ts.microsecond)
 		
 		if ts_start is None:
-			ts_start = ts_end - td(minutes = 5)
+			ts_start = ts_end - td(minutes = timelag)
 	
 		ts_start = ts_start.strftime("%Y-%m-%d %H:%M:%S")
 		ts_end = ts_end.strftime("%Y-%m-%d %H:%M:%S")
