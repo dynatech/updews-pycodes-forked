@@ -202,40 +202,7 @@ def write_eq_alert_message_to_db(alertmsg):
     # write_outbox_message_to_db(alertmsg,c.smsalert.globenum)
     # write_outbox_message_to_db(alertmsg,c.smsalert.smartnum)
 
-# def get_gsm_id(number,rpi_module):
-#     """
-#         **Description:**
-#           -The function that get the gsm id  of the number.
-         
-#         :param number: The message that will be sent to the recipients.
-#         :type number: str
-#         :returns: **id** (*int*) - id number for **Globe(2) , Smart(3) and Unable to send number in sim(-1)**
-#     """
-#     smart_prefixes = get_allowed_prefixes('SMART')
-#     globe_prefixes = get_allowed_prefixes('GLOBE')
 
-#     try:
-#         num_prefix = re.match("^((0)|(63))9\d\d",number).group()
-#     except:
-#         print '>> Unable to send sim number in this gsm module'
-#         return -1
-
-#     if num_prefix in smart_prefixes:
-#         if rpi_module == 1:
-#             return 3
-#         else:
-#             return 5
-#         # return 'SMART'
-#     elif num_prefix in globe_prefixes:
-#         if rpi_module == 1:
-#             return 2
-#         else:
-#             return 6
-
-#         # return 'GLOBE'
-#     else:
-#         print '>> Prefix', num_prefix, 'cannot be sent'
-#         return -1
 
 def write_outbox_message_to_db(message='',recipients='',gsm_id='',table=''):
     """
@@ -244,9 +211,11 @@ def write_outbox_message_to_db(message='',recipients='',gsm_id='',table=''):
          
         :param message: The message that will be sent to the recipients.
         :param recipients: The number of the recipients.
+        :param gsm_id: The gsm id .
         :param table: table use of the number.
         :type message: str
-        :type recipients: int,list
+        :type recipients: str
+        :type recipients: int
         :type table: str
         :returns: N/A
     """
@@ -494,14 +463,13 @@ def get_value_from_cache(key):
     value = mc.get(key)
 
 def try_sending_messages(gsm_id):
-    
     """
         **Description:**
-          -The function that runs resend message in the gsm network .
+          -The function that try to send message in the gsm network for loggers and users .
          
-        :param network: gsm network provider.
-        :type network: str
-        :returns: **date now** (*date*) - Timestamp of try to send the data.
+        :param gsm_id: gsm_id of 4(globe) and 5(smart).
+        :type gsm_id: int
+        :returns: N/A
     """
     # print ">> eavm: skipping.."
     # time.sleep(30)
@@ -638,7 +606,7 @@ def run_server(gsm_info,table='loggers'):
     # print gsm_info["id"]
     """
         **Description:**
-          -The function that runs the gsm server.
+          -The function that runs the gsm server to read the recieved message and to try to send message from outbox.
          
         :param gsm_info: id of the gsm server.
         :param table: table name to use and **Default** to **loggers**

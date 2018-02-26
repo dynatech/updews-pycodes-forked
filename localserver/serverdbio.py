@@ -100,6 +100,20 @@ def get_all_sms_from_db(host='local',read_status=0,table='loggers',limit=200):
             time.sleep(20)
             
 def get_all_outbox_sms_from_db(table='users',send_status=5,gsm_id=5,limit=10):
+    """
+        **Description:**
+          -The function that get all outbox message that are not yet send.
+         
+        :param table: Table name and **Default** to **users** table .
+        :param send_status:  **Default** to **5**.
+        :param gsm_id: **Default** to **5**.
+        :param limit: **Default** to **10**.
+        :type table: str
+        :type send_status: str
+        :type gsm_id: int
+        :type limit: int
+        :returns: List of message
+    """
 
     while True:
         try:
