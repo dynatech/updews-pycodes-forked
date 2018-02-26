@@ -178,12 +178,7 @@ def write_raw_sms_to_db(msglist,gsm_info):
 
     if len(sms_id_ok)>0:
         if loggers_count > 0:
-            # query_safe= 'SET SQL_SAFE_UPDATES=0'
-            # dbio.commit_to_db(query_safe,'simulate_gsm')
             dbio.commit_to_db(query_loggers,'write_raw_sms_to_db',
-                instance = 'sandbox')
-            # print query_lastText
-            dbio.commit_to_db(query_lastText,'write_raw_sms_to_db',
                 instance = 'sandbox')
         if users_count > 0:
             dbio.commit_to_db(query_users,'write_raw_sms_to_db',
@@ -545,7 +540,6 @@ def simulate_gsm(network='simulate'):
     query_users = ("insert into smsinbox_users (ts_sms, ts_stored, mobile_id, "
         "sms_msg,read_status,gsm_id) values ")
 
-    print smsinbox_sms
     sms_id_ok = []
     sms_id_unk = []
     ts_sms = 0
@@ -652,11 +646,10 @@ def run_server(gsm_info,table='loggers'):
             allmsgs = gsmio.get_all_sms(network)
 
             for msg in allmsgs:
-                print msg
-            
+                print msg.data
+
             try:
                 write_raw_sms_to_db(allmsgs,gsm_info)
-            # except MySQLdb.ProgrammingError:
             except KeyboardInterrupt:
                 print ">> Error: May be an empty line.. skipping message storing"
             
@@ -739,7 +732,7 @@ def get_gsm_modules(reset_val = False):
         print "Getting gsm modules information..."
         query = "select * from gsm_modules"
         result_set = dbio.query_database(query,'get_gsm_ids','sandbox')
-        print gsm_modules
+        # print gsm_modules
 
         # ids = dict() 
         gsm_modules = dict()
