@@ -52,14 +52,16 @@ def check_number_in_table(num):
     query = ("Select  IF((select count(*) FROM user_mobile where sim_num ='%s')>0,'1','0')" 
     "as user,IF((select count(*) FROM logger_mobile where sim_num ='%s')>0,'1','0') as logger limit 80"%(num,num))
     query_check_number = dbio.query_database(query,'check number in table')
+
     if query_check_number[0][0] > query_check_number[0][1]:
         return 'users'
     elif query_check_number[0][0] < query_check_number[0][1]:
         return 'loggers'
-    elif query_check_number[0][0]== 0 and query_check_number[0][1] == 0:
-        print '>> no record'
-    else:
-        print '>> both user and logger have a record'
+    elif query_check_number[0][0] == '0' and query_check_number[0][1] == '0':
+        return False
+
+
+    
 
 
 
@@ -200,35 +202,42 @@ def write_eq_alert_message_to_db(alertmsg):
     # write_outbox_message_to_db(alertmsg,c.smsalert.globenum)
     # write_outbox_message_to_db(alertmsg,c.smsalert.smartnum)
 
-def get_gsm_id(number):
-    """
-        **Description:**
-          -The function that get the gsm id  of the number.
+# def get_gsm_id(number,rpi_module):
+#     """
+#         **Description:**
+#           -The function that get the gsm id  of the number.
          
-        :param number: The message that will be sent to the recipients.
-        :type number: str
-        :returns: **id** (*int*) - id number for **Globe(2) , Smart(3) and Unable to send number in sim(-1)**
-    """
-    smart_prefixes = get_allowed_prefixes('SMART')
-    globe_prefixes = get_allowed_prefixes('GLOBE')
+#         :param number: The message that will be sent to the recipients.
+#         :type number: str
+#         :returns: **id** (*int*) - id number for **Globe(2) , Smart(3) and Unable to send number in sim(-1)**
+#     """
+#     smart_prefixes = get_allowed_prefixes('SMART')
+#     globe_prefixes = get_allowed_prefixes('GLOBE')
 
-    try:
-        num_prefix = re.match("^((0)|(63))9\d\d",number).group()
-    except:
-        print '>> Unable to send sim number in this gsm module'
-        return -1
+#     try:
+#         num_prefix = re.match("^((0)|(63))9\d\d",number).group()
+#     except:
+#         print '>> Unable to send sim number in this gsm module'
+#         return -1
 
-    if num_prefix in smart_prefixes:
-        return 3
-        # return 'SMART'
-    elif num_prefix in globe_prefixes:
-        return 2
-        # return 'GLOBE'
-    else:
-        print '>> Prefix', num_prefix, 'cannot be sent'
-        return -1
+#     if num_prefix in smart_prefixes:
+#         if rpi_module == 1:
+#             return 3
+#         else:
+#             return 5
+#         # return 'SMART'
+#     elif num_prefix in globe_prefixes:
+#         if rpi_module == 1:
+#             return 2
+#         else:
+#             return 6
 
-def write_outbox_message_to_db(message='',recipients='',table=''):
+#         # return 'GLOBE'
+#     else:
+#         print '>> Prefix', num_prefix, 'cannot be sent'
+#         return -1
+
+def write_outbox_message_to_db(message='',recipients='',gsm_id='',table=''):
     """
         **Description:**
           -The function that write message to the outbox of the database table.
@@ -245,34 +254,33 @@ def write_outbox_message_to_db(message='',recipients='',table=''):
     #     print "Error: No table indicated"
     #     raise ValueError
     #     return
+
     tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
     for r in recipients.split(","):
-        gsm_id = get_gsm_id(r)
         table_name = check_number_in_table(r)
+        if table_name:
+            query = ("insert into smsoutbox_%s (ts_written,sms_msg,source) VALUES "
+            "('%s','%s','central')") % (table_name,tsw,message)
         
-        query = ("insert into smsoutbox_%s (ts_written,sms_msg,source) VALUES "
-        "('%s','%s','central')") % (table_name,tsw,message)
-    
-        last_insert = dbio.commit_to_db(query,'write_outbox_message_to_db', 
-            last_insert=True)[0][0]
-
-        table_mobile = get_mobile_sim_nums(table_name)
-
-        query = ("INSERT INTO smsoutbox_%s_status (outbox_id,mobile_id,gsm_id,ts_sent)"
-            " VALUES ") % (table_name[:-1])
-
-
-        if gsm_id == -1:
-            continue
-        else:
-            tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
-            print last_insert, table_mobile[r], tsw, gsm_id
-            query += "(%d,%d,%d,'%s')," % (last_insert,table_mobile[r],gsm_id,tsw)
+            last_insert = dbio.commit_to_db(query,'write_outbox_message_to_db', 
+                last_insert=True)[0][0]
             # print query
-    
-    query = query[:-1]
-    # print query        
-    dbio.commit_to_db(query, "write_outbox_message_to_db")
+            table_mobile = get_mobile_sim_nums(table_name)
+
+            query = ("INSERT INTO smsoutbox_%s_status (outbox_id,mobile_id,gsm_id)"
+                " VALUES ") % (table_name[:-1])
+            if gsm_id == -1:
+                continue
+            else:
+                tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
+                print last_insert, table_mobile[r], gsm_id
+                query += "(%d,%d,%d)" % (last_insert,table_mobile[r],gsm_id)
+           
+                dbio.commit_to_db(query, "write_outbox_message_to_db")
+        else:
+            print '>> No record on both users and loggers'
+            continue
+            
     
 def check_alert_messages():
     """
@@ -318,6 +326,7 @@ def get_allowed_prefixes(network):
     return extended_prefix_list
     
 def send_messages_from_db(table='users',send_status=0,gsm_id=0,limit=10):
+   
     """
         **Description:**
           -The function that send message from database.
@@ -337,56 +346,56 @@ def send_messages_from_db(table='users',send_status=0,gsm_id=0,limit=10):
     #     return
     allmsgs = dbio.get_all_outbox_sms_from_db(table,send_status,gsm_id,limit)
     if len(allmsgs) <= 0:
-        print ">> No messages in outbox"
+        # print ">> No messages in outbox"
         return
     
     print ">> Sending messagess from db"
 
-    for m in allmsgs:
-        print m
+    # for m in allmsgs:
+    #     print m
         
-    raw_allmsgs = allmsgs
+    
     table_mobile = get_mobile_sim_nums(table)
     inv_table_mobile = {v: k for k, v in table_mobile.iteritems()}
     # print inv_table_mobile
         
     msglist = []
-    for stat_id,mobile_id,sms_msg,outbox_id,gsm_id in allmsgs:
-        smsItem = gsmio.sms(stat_id, inv_table_mobile[mobile_id], sms_msg, '')
-        msglist.append(smsItem)
+    for stat_id,mobile_id,outbox_id,gsm_id,sms_msg in allmsgs:
+        smsItem = gsmio.sms(stat_id, inv_table_mobile[mobile_id], sms_msg,'')
+        msglist.append([smsItem,gsm_id,outbox_id,mobile_id])
+        
     allmsgs = msglist
-    
+
     status_list = []
     
     allowed_prefixes = get_allowed_prefixes('globe')
+
     # # cycle through all messages
-    for i, msg in enumerate(allmsgs):
+    for msg in allmsgs:
 
         try:
-            num_prefix = re.match("^ *((0)|(63))9\d\d",msg.simnum).group()
+            num_prefix = re.match("^ *((0)|(63))9\d\d",msg[0].simnum).group()
             num_prefix = num_prefix.strip()
         except:
-            print 'Error getting prefix', msg.simnum
+            print 'Error getting prefix', msg[0].simnum
             continue
             # check if recepient number in allowed prefixed list    
         if num_prefix in allowed_prefixes:
-            ret = gsmio.send_msg(msg.data,msg.simnum.strip(),simulate=True)
-            outbox_id = raw_allmsgs[i][3]
-            gsm_id = raw_allmsgs[i][2]
-            mobile_id = raw_allmsgs[i][1]
+            ret = gsmio.send_msg(msg[0].data,msg[0].simnum.strip())
             today = dt.today().strftime("%Y-%m-%d %H:%M:%S")
             if ret:
                 send_stat = 1
-                stat = msg.num,1,today,gsm_id,outbox_id,mobile_id
+                stat = msg[0].num,1,today,msg[1],msg[2],msg[3]
             else:
-                stat = msg.num,5,today,gsm_id,outbox_id,mobile_id
+                stat = msg[0].num,5,today,msg[1],msg[2],msg[3]
 
             status_list.append(stat)
             
         else:
             print "Number not in prefix list", num_prefix
 
-    dbio.set_send_status(table,status_list)
+        dbio.set_send_status(table,status_list)
+
     
     #Get all outbox messages with send_status "SENT" and attempt to send
     #   chatterbox acknowledgements
@@ -484,7 +493,8 @@ def get_value_from_cache(key):
     """
     value = mc.get(key)
 
-def try_sending_messages(network):
+def try_sending_messages(gsm_id):
+    
     """
         **Description:**
           -The function that runs resend message in the gsm network .
@@ -494,11 +504,13 @@ def try_sending_messages(network):
         :returns: **date now** (*date*) - Timestamp of try to send the data.
     """
     # print ">> eavm: skipping.."
-    time.sleep(30)
-    return
+    # time.sleep(30)
+    # return
     start = dt.now()
     while True:  
-        send_messages_from_db(network)
+        # send_messages_from_db(network)
+        send_messages_from_db(table='users',send_status=5,gsm_id=gsm_id)
+        send_messages_from_db(table='loggers',send_status=5,gsm_id=gsm_id)
         print '.',
         time.sleep(2)
         if (dt.now()-start).seconds > 30:
@@ -623,6 +635,7 @@ def simulate_gsm(network='simulate'):
     sys.exit()
         
 def run_server(gsm_info,table='loggers'):
+    # print gsm_info["id"]
     """
         **Description:**
           -The function that runs the gsm server.
@@ -685,10 +698,11 @@ def run_server(gsm_info,table='loggers'):
                 + " Server active as of %A, %B %d, %Y, %X")
             # log_runtime_status(network,"alive")
 
-            try_sending_messages(network)
+            try_sending_messages(gsm_info["id"])
             
         elif m == 0:
-            try_sending_messages(network)
+            
+            try_sending_messages(gsm_info["id"])
             
             gsmio.flush_gsm()
             today = dt.today()
