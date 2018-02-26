@@ -1,3 +1,5 @@
+""" Mirroring Data from dyna to sanbox and sandbox to dyna."""
+
 import ConfigParser, MySQLdb, time, sys, argparse
 from datetime import datetime as dt
 import cfgfileio as cfg
@@ -52,15 +54,18 @@ def set_read_status(sms_id_list,read_status=0,table='',instance='local'):
     commit_to_db(query,"set_read_status")
     
 def set_send_status(table,status_list):
-    query = ("insert into smsoutbox_%s_status (stat_id, send_status, ts_sent,gsm_id,outbox_id,mobile_id) "
+    # print status_list
+    query = ("insert into smsoutbox_%s_status (stat_id,send_status,ts_sent,outbox_id,gsm_id,mobile_id) "
         "values ") % (table[:-1])
 
-    for stat_id, send_status, ts_sent ,gsm_id,outbox_id,mobile_id in status_list:
-        query += "(%d,%d,'%s',%d,%d,%d)," % (stat_id, send_status, ts_sent,gsm_id,outbox_id,mobile_id)
+    for stat_id,send_status,ts_sent,outbox_id,gsm_id,mobile_id in status_list:
+        query += "(%d,%d,'%s',%d,%d,%d)," % (stat_id,send_status,ts_sent,outbox_id,gsm_id,mobile_id)
 
     query = query[:-1]
     query += (" on duplicate key update stat_id=values(stat_id), "
         "send_status=send_status+values(send_status),ts_sent=values(ts_sent)")
+
+    # print query
     
     commit_to_db(query,"set_send_status")
     
@@ -95,6 +100,21 @@ def get_all_sms_from_db(host='local',read_status=0,table='loggers',limit=200):
             time.sleep(20)
             
 def get_all_outbox_sms_from_db(table='users',send_status=5,gsm_id=5,limit=10):
+    """
+        **Description:**
+          -The function that get all outbox message that are not yet send.
+         
+        :param table: Table name and **Default** to **users** table .
+        :param send_status:  **Default** to **5**.
+        :param gsm_id: **Default** to **5**.
+        :param limit: **Default** to **10**.
+        :type table: str
+        :type send_status: str
+        :type gsm_id: int
+        :type limit: int
+        :returns: List of message
+    """
+
     while True:
         try:
             db, cur = db_connect()
@@ -105,8 +125,7 @@ def get_all_outbox_sms_from_db(table='users',send_status=5,gsm_id=5,limit=10):
                 "where t1.send_status < %d "
                 "and t1.gsm_id = %d "
                 "limit %d ") % (table[:-1],table,send_status,gsm_id,limit)
-                
-            # print query
+          
             a = cur.execute(query)
             out = []
             if a:
