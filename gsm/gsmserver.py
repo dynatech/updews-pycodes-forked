@@ -1,4 +1,4 @@
-""" Running gsmserver scripts"""
+""" Running mainserver scripts"""
 
 import os,time,serial,re,sys
 import MySQLdb
@@ -22,28 +22,28 @@ if cfg.config().mode.script_mode == 'gsmserver':
 #---------------------------------------------------------------------------------------------------------------------------
 
 
-# def check_id_in_table(table,gsm_id):
-#     """
-#         **Description:**
-#           -The check_id_in_table is a function that checks if the number exists in users or loggers table.
+def check_id_in_table(table,gsm_id):
+    """
+        **Description:**
+          -The function that checks if the number exists in users or loggers table.
          
-#         :param table: table name of the gsm_id.
-#         :param gsm_id: gsm_id of the recipient.
-#         :type table: int 
-#         :type gsm_id: int
-#         :returns: recipient number (*int*)
-#     """
-#     query = "select * from %s_mobile where mobile_id='%s' limit 80"%(table[:-1],gsm_id)
-#     query_number = dbio.query_database(query,'check id in table') 
-#     if len(query_number.sim_num) != 0:
-#         return query_number[0][0]
-#     else:
-#         print " >> gsm id doesn't exist"
+        :param table: table name of the gsm_id.
+        :param gsm_id: gsm_id of the recipient.
+        :type table: int 
+        :type gsm_id: int
+        :returns: recipient number (*int*)
+    """
+    query = "select * from %s_mobile where mobile_id='%s' limit 80"%(table[:-1],gsm_id)
+    query_number = dbio.query_database(query,'check id in table') 
+    if len(query_number.sim_num) != 0:
+        return query_number[0][0]
+    else:
+        print " >> gsm id doesn't exist"
         
 def check_number_in_table(num):
     """
         **Description:**
-          -The check_number_in_table is a function that checks if the number exists in users or loggers table.
+          -The function that checks if the number exists in users or loggers table.
          
         :param num: number of the recipient.
         :type num: int
@@ -59,6 +59,10 @@ def check_number_in_table(num):
         return 'loggers'
     elif query_check_number[0][0] == '0' and query_check_number[0][1] == '0':
         return False
+
+
+    
+
 
 
 def log_runtime_status(script_name,status):
@@ -174,12 +178,7 @@ def write_raw_sms_to_db(msglist,gsm_info):
 
     if len(sms_id_ok)>0:
         if loggers_count > 0:
-            # query_safe= 'SET SQL_SAFE_UPDATES=0'
-            # dbio.commit_to_db(query_safe,'simulate_gsm')
             dbio.commit_to_db(query_loggers,'write_raw_sms_to_db',
-                instance = 'sandbox')
-            # print query_lastText
-            dbio.commit_to_db(query_lastText,'write_raw_sms_to_db',
                 instance = 'sandbox')
         if users_count > 0:
             dbio.commit_to_db(query_users,'write_raw_sms_to_db',
@@ -294,7 +293,7 @@ def send_messages_from_db(table='users',send_status=0,gsm_id=0,limit=10):
    
     """
         **Description:**
-          -The send_messages_from_db is a function that list all unsent message for loggers/users , resend all messgae on list and update message status in database.
+          -The function that send message from database.
          
         :param table: Table name and **Default** to **users** table .
         :param send_status:  **Default** to **0**.
@@ -386,7 +385,7 @@ def get_sensor_numbers():
 def get_mobile_sim_nums(table):
     """
         **Description:**
-          -The get_mobile_sim_nums is a function that get the number of the loggers or users in the database.
+          -The function that get the number of the loggers or users in the database.
          
         :param table: loggers or users table.
         :type table: str
@@ -461,7 +460,7 @@ def get_value_from_cache(key):
 def try_sending_messages(gsm_id):
     """
         **Description:**
-          -The try_sending_messages is a function that resend message from smsoutbox  for loggers and users .
+          -The function that try to send message in the gsm network for loggers and users .
          
         :param gsm_id: gsm_id of 4(globe) and 5(smart).
         :type gsm_id: int
@@ -483,7 +482,7 @@ def try_sending_messages(gsm_id):
 def delete_messages_from_gsm():
     """
         **Description:**
-          -The delete_messages_from_gsm is a function that delete messages in the gsm module when it has been read in inbox.
+          -The function that delete messages in the gsm module
          
         :parameters: N/A
         :returns: N/A
@@ -495,114 +494,113 @@ def delete_messages_from_gsm():
     except ValueError:
         print '>> Error deleting messages'
 
-# def simulate_gsm(network='simulate'):
-#     """
-#         **Description:**
-#           -The function that runs a gsm simulation of insert,update and check status of gsm.
+def simulate_gsm(network='simulate'):
+    """
+        **Description:**
+          -The function that runs a gsm simulation of insert,update and check status of gsm.
          
-#         :param network: gsm network and **Default** to **simulate**.
-#         :type table: str
-#         :returns: N/A
-#     """
-#     print "Simulating GSM"
+        :param network: gsm network and **Default** to **simulate**.
+        :type table: str
+        :returns: N/A
+    """
+    print "Simulating GSM"
     
-#     db, cur = dbio.db_connect('sandbox')
+    db, cur = dbio.db_connect('sandbox')
     
-#     smsinbox_sms = []
+    smsinbox_sms = []
 
-#     try:
-#         query = """select sms_id, timestamp, sim_num, sms_msg from smsinbox
-#             where web_flag not in ('0','-1') limit 1000"""
+    try:
+        query = """select sms_id, timestamp, sim_num, sms_msg from smsinbox
+            where web_flag not in ('0','-1') limit 1000"""
     
-#         a = cur.execute(query)
-#         out = []
-#         if a:
-#             smsinbox_sms = cur.fetchall()
+        a = cur.execute(query)
+        out = []
+        if a:
+            smsinbox_sms = cur.fetchall()
         
-#     except MySQLdb.OperationalError:
-#         print '9.',
-#         time.sleep(20)
+    except MySQLdb.OperationalError:
+        print '9.',
+        time.sleep(20)
 
-#     # print smsinbox_sms
-#     logger_mobile_sim_nums = get_mobile_sim_nums('loggers')
-#     user_mobile_sim_nums = get_mobile_sim_nums('users')
-#     # print logger_mobile
+    # print smsinbox_sms
+    logger_mobile_sim_nums = get_mobile_sim_nums('loggers')
+    user_mobile_sim_nums = get_mobile_sim_nums('users')
+    # print logger_mobile
 
-#     # gsm_ids = get_gsm_ids()
-#     # gsm_id = 1gsm_ids[network]
-#     gsm_id = 1
-#     loggers_count = 0
-#     users_count = 0
+    # gsm_ids = get_gsm_ids()
+    # gsm_id = 1gsm_ids[network]
+    gsm_id = 1
+    loggers_count = 0
+    users_count = 0
     
-#     ts_stored = dt.today().strftime("%Y-%m-%d %H:%M:%S")
+    ts_stored = dt.today().strftime("%Y-%m-%d %H:%M:%S")
 
-#     query_loggers = ("insert into smsinbox_loggers (ts_sms, ts_stored, mobile_id, "
-#         "sms_msg,read_status,gsm_id) values ")
-#     query_users = ("insert into smsinbox_users (ts_sms, ts_stored, mobile_id, "
-#         "sms_msg,read_status,gsm_id) values ")
+    query_loggers = ("insert into smsinbox_loggers (ts_sms, ts_stored, mobile_id, "
+        "sms_msg,read_status,gsm_id) values ")
+    query_users = ("insert into smsinbox_users (ts_sms, ts_stored, mobile_id, "
+        "sms_msg,read_status,gsm_id) values ")
 
-#     print smsinbox_sms
-#     sms_id_ok = []
-#     sms_id_unk = []
-#     ts_sms = 0
-#     ltr_mobile_id= 0
+    sms_id_ok = []
+    sms_id_unk = []
+    ts_sms = 0
+    ltr_mobile_id= 0
 
-#     for m in smsinbox_sms:
-#         ts_sms = m[1]
-#         sms_msg = m[3]
-#         read_status = 0 
+    for m in smsinbox_sms:
+        ts_sms = m[1]
+        sms_msg = m[3]
+        read_status = 0 
     
-#         if m[2] in logger_mobile_sim_nums.keys():
-#             query_loggers += "('%s','%s',%d,'%s',%d,%d)," % (ts_sms, ts_stored,
-#                 logger_mobile_sim_nums[m[2]], sms_msg, read_status, gsm_id)
-#             ltr_mobile_id= logger_mobile_sim_nums[m[2]]
-#             loggers_count += 1
-#         elif m[2] in user_mobile_sim_nums.keys():
-#             query_users += "('%s','%s',%d,'%s',%d,%d)," % (ts_sms, ts_stored,
-#                 user_mobile_sim_nums[m[2]], sms_msg, read_status, gsm_id)
-#             users_count += 1
-#         else:            
-#             print 'Unknown number', m[2]
-#             sms_id_unk.append(m[0])
-#             continue
+        if m[2] in logger_mobile_sim_nums.keys():
+            query_loggers += "('%s','%s',%d,'%s',%d,%d)," % (ts_sms, ts_stored,
+                logger_mobile_sim_nums[m[2]], sms_msg, read_status, gsm_id)
+            ltr_mobile_id= logger_mobile_sim_nums[m[2]]
+            loggers_count += 1
+        elif m[2] in user_mobile_sim_nums.keys():
+            query_users += "('%s','%s',%d,'%s',%d,%d)," % (ts_sms, ts_stored,
+                user_mobile_sim_nums[m[2]], sms_msg, read_status, gsm_id)
+            users_count += 1
+        else:            
+            print 'Unknown number', m[2]
+            sms_id_unk.append(m[0])
+            continue
         
-#         sms_id_ok.append(m[0])
+        sms_id_ok.append(m[0])
 
-#     query_loggers = query_loggers[:-1]
-#     query_users = query_users[:-1]
+    query_loggers = query_loggers[:-1]
+    query_users = query_users[:-1]
     
-#     # print query
-#     query_lastText = ("UPDATE last_text_received SET inbox_id = "
-#         "(select max(inbox_id) from smsinbox_loggers), ts = '{}' "
-#         "where mobile_id= {}".format(ts_sms, ltr_mobile_id))
-#     # print query_lastText    
-#     if len(sms_id_ok)>0:
-#         if loggers_count > 0:
-#             # query_safe= 'SET SQL_SAFE_UPDATES=0'
-#             # dbio.commit_to_db(query_safe,'simulate_gsm')
-#             dbio.commit_to_db(query_loggers,'simulate_gsm')
-#             # print query_lastText
-#             dbio.commit_to_db(query_lastText,'simulate_gsm')
-#         if users_count > 0:
-#             dbio.commit_to_db(query_users,'simulate_gsm')
+    # print query
+    query_lastText = ("UPDATE last_text_received SET inbox_id = "
+        "(select max(inbox_id) from smsinbox_loggers), ts = '{}' "
+        "where mobile_id= {}".format(ts_sms, ltr_mobile_id))
+    # print query_lastText    
+    if len(sms_id_ok)>0:
+        if loggers_count > 0:
+            # query_safe= 'SET SQL_SAFE_UPDATES=0'
+            # dbio.commit_to_db(query_safe,'simulate_gsm')
+            dbio.commit_to_db(query_loggers,'simulate_gsm')
+            # print query_lastText
+            dbio.commit_to_db(query_lastText,'simulate_gsm')
+        if users_count > 0:
+            dbio.commit_to_db(query_users,'simulate_gsm')
         
-#         sms_id_ok = str(sms_id_ok).replace("L","")[1:-1]
-#         query = "update smsinbox set web_flag = '0' where sms_id in (%s);" % (sms_id_ok)
-#         dbio.commit_to_db(query,'simulate_gsm')
+        sms_id_ok = str(sms_id_ok).replace("L","")[1:-1]
+        query = "update smsinbox set web_flag = '0' where sms_id in (%s);" % (sms_id_ok)
+        dbio.commit_to_db(query,'simulate_gsm')
 
-#     if len(sms_id_unk)>0:
-#         # print sms_id_unk
-#         sms_id_unk = str(sms_id_unk).replace("L","")[1:-1]
-#         query = "update smsinbox set web_flag = '-1' where sms_id in (%s);" % (sms_id_unk)
-#         dbio.commit_to_db(query,'simulate_gsm')
+    if len(sms_id_unk)>0:
+        # print sms_id_unk
+        sms_id_unk = str(sms_id_unk).replace("L","")[1:-1]
+        query = "update smsinbox set web_flag = '-1' where sms_id in (%s);" % (sms_id_unk)
+        dbio.commit_to_db(query,'simulate_gsm')
     
-#     sys.exit()
+    sys.exit()
         
 def run_server(gsm_info,table='loggers'):
     # print gsm_info["id"]
     """
         **Description:**
-          -The run_server is a function that runs the gsm server to read the recieved message from gsm , resending unsent messgae from outbox and update message status in database
+          -The function that runs the gsm server to read the recieved message and to try to send message from outbox.
          
         :param gsm_info: id of the gsm server.
         :param table: table name to use and **Default** to **loggers**
@@ -648,11 +646,10 @@ def run_server(gsm_info,table='loggers'):
             allmsgs = gsmio.get_all_sms(network)
 
             for msg in allmsgs:
-                print msg
-            
+                print msg.data
+
             try:
                 write_raw_sms_to_db(allmsgs,gsm_info)
-            # except MySQLdb.ProgrammingError:
             except KeyboardInterrupt:
                 print ">> Error: May be an empty line.. skipping message storing"
             
@@ -693,7 +690,8 @@ def run_server(gsm_info,table='loggers'):
 def get_arguments():
     """
         **Description:**
-          -The get_arguments is a function that checks the argument that being sent from main function and returns a parse argument between table,network or gsm_id.
+          -The get_arguments function that checks the argument that being sent from main function and returns the
+        arguement of the function.
          
         :parameters: N/A
         :returns: **args** (*int,str*) - Mode of action from running python **loggers or users** (*smsinbox table*), **smart/globe/simulate** (*network name*)  and **gsm id** (*1,2,3...*) .
@@ -723,7 +721,7 @@ def get_arguments():
 def get_gsm_modules(reset_val = False):
     """
         **Description:**
-          -The get_gsm_modules is a function that returns gsm_module disctionary of it network,name,number,power in pin and gsm_id.
+          -The get_gsm_modules function that get and check the gsm modules information.
          
         :param reset_val: Trigger value to check the gsm information and **Default** to **False**
         :type table: boolean
@@ -734,7 +732,7 @@ def get_gsm_modules(reset_val = False):
         print "Getting gsm modules information..."
         query = "select * from gsm_modules"
         result_set = dbio.query_database(query,'get_gsm_ids','sandbox')
-        print gsm_modules
+        # print gsm_modules
 
         # ids = dict() 
         gsm_modules = dict()
@@ -753,15 +751,18 @@ def get_gsm_modules(reset_val = False):
     return gsm_modules
 
 def main():
+
     """
         **Description:**
-          -The main function that runs the whole gsmserver with the logic of
-          checking if the gsmserver must run the gsm network rpi and table smsinbox.
+          -The main function that runs the whole mainserver with the logic of
+          checking if the mainserver must run the gsm network rpi and table smsinbox.
          
         :parameters: N/A
         :returns: N/A
-        .. note:: To run in terminal **python gsmserver.py** **-g** *<gsm id (1,2,3...)>* **-t** *<smsinbox table (loggers or users)>* **-n** *<network name (smart/globe/simulate)>*.
+        .. note:: To run in terminal **python mainserver.py** **-g** *<gsm id (1,2,3...)>* **-t** *<smsinbox table (loggers or users)>* **-n** *<network name (smart/globe/simulate)>*.
     """
+
+
     args = get_arguments()
     
     gsm_modules = get_gsm_modules(True)
