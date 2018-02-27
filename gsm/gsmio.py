@@ -144,55 +144,48 @@ def send_msg(msg, number, simulate=False):
         return -1
 
     # print "pdulen", len(pdulist)
-    print "\nMSG:", msg, 
+    print "\nMSG:", msg 
     print "NUM:", number
+
+    parts = len(pdulist)
+    count = 1
             
     for pdu in pdulist:
-        try: 
-            a = ''
-            now = time.time()
-            preamble = "AT+CMGS=%d" % (pdu.length)
+        a = ''
+        now = time.time()
+        preamble = "AT+CMGS=%d" % (pdu.length)
 
-            # print preamble
+        gsm.write(preamble+"\r")
+        now = time.time()
+        while a.find('>')<0 and a.find("ERROR")<0 and time.time()<now+20:
+            a += gsm.read(gsm.inWaiting())
+            time.sleep(0.5)
+            print '.',
 
-            
-
-            gsm.write(preamble+"\r")
-            now = time.time()
-            while a.find('>')<0 and a.find("ERROR")<0 and time.time()<now+20:
+        if time.time()>now+3 or a.find("ERROR") > -1:  
+            print '>> Error: GSM Unresponsive at finding >'
+            print a
+            return -1
+        else:
+            print '>',
+        
+        a = ''
+        now = time.time()
+        gsm.write(pdu.pdu+chr(26))
+        while a.find('OK')<0 and a.find("ERROR")<0 and time.time()<now+60:
                 a += gsm.read(gsm.inWaiting())
                 time.sleep(0.5)
-                print '.',
-
-            if time.time()>now+3 or a.find("ERROR") > -1:  
-                print '>> Error: GSM Unresponsive at finding >'
-                print a
-                print '^^ a ^^'
-                return -1
-            else:
-                print '>'
-            
-            a = ''
-            now = time.time()
-            gsm.write(pdu.pdu+chr(26))
-            while a.find('OK')<0 and a.find("ERROR")<0 and time.time()<now+60:
-                    a += gsm.read(gsm.inWaiting())
-                    time.sleep(0.5)
-                    print ':',
-            if time.time()-60>now:
-                print '>> Error: timeout reached'
-                return -1
-            elif a.find('ERROR')>-1:
-                print '>> Error: GSM reported ERROR in SMS reading'
-                return -1
-            else:
-                print ">> Message sent!"
+                print ':',
+        if time.time()-60>now:
+            print '>> Error: timeout reached'
+            return -1
+        elif a.find('ERROR')>-1:
+            print '>> Error: GSM reported ERROR in SMS reading'
+            return -1
+        else:
+            print ">> Part %d/%d: Message sent!" % (count,parts)
+            count += 1
                 
-                
-        except serial.SerialException:
-            print "NO SERIAL COMMUNICATION (send_msg)"
-            RunSenslopeServer(gsm_network)  
-
     return 0
         
 def log_error(log):
