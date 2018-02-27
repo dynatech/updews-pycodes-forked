@@ -296,9 +296,6 @@ def get_all_sms(network):
 
         smsdata = smsdeliver(pdu).data
 
-        print smsdata
-        print smsdata['date']
-
         smsdata = manage_multi_messages(smsdata)
         if smsdata == "":
             continue
