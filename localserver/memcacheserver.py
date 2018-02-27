@@ -1,5 +1,5 @@
 import serverdbio as dbio
-import mainserver as server
+import gsmserver as server
 import pandas as pd
 import pandas.io.sql as psql
 import memcache

@@ -4,7 +4,7 @@ from datetime import datetime as dt
 from datetime import timedelta as td
 import serverdbio as dbio
 import somsparser as ssp
-import mainserver as server
+import gsmserver as server
 import cfgfileio as cfg
 import argparse
 import queryserverinfo as qsi

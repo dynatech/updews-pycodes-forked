@@ -5,7 +5,7 @@ import cfgfileio as cfg
 from datetime import datetime as dt
 from datetime import timedelta as td
 import serverdbio as dbio
-import mainserver as server
+import gsmserver as server
 import queryserverinfo as qsi
 import argparse
 #---------------------------------------------------------------------------------------------------------------------------
