@@ -913,10 +913,6 @@ def parse_all_messages(args,allmsgs=[]):
             elif (msg.data.split('*')[0] == 'COORDINATOR' or 
                 msg.data.split('*')[0] == 'GATEWAY'):
                 isMsgProcSuccess = process_gateway_msg(msg)
-            elif re.search("^MANUAL RESET",msg.data):
-                server.write_outbox_message_to_db("SENSORPOLL SENSLOPE", 
-                    msg.simnum,'loggers')
-                isMsgProcSuccess = True
             else:
                 print '>> Unrecognized message format: '
                 print 'NUM: ' , msg.simnum
