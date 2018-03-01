@@ -587,13 +587,21 @@ def alert_to_db(df, table_name):
     query += "ORDER BY ts DESC LIMIT 1"
 
     df2 = get_db_dataframe(query)
-    
+
+    if table_name == 'public_alerts':
+        query =  "SELECT * FROM %s " %table_name
+        query += "WHERE site_id = %s " %df['site_id'].values[0]
+        query += "AND ts = '%s' " %df['ts'].values[0]
+        query += "AND pub_sym_id = %s" %df['pub_sym_id'].values[0]
+
+        df2 = df2.append(get_db_dataframe(query))
+
     # writes alert if no alerts within the past 30mins
     if len(df2) == 0:
         push_db_dataframe(df, table_name, index=False)
     # does not update ts_updated if ts in written ts to ts_updated range
     elif pd.to_datetime(df2['ts_updated'].values[0]) >= \
-                  pd.to_datetime(df['ts'].values[0]):
+                  pd.to_datetime(df['ts_updated'].values[0]):
         pass
     # if diff prev alert, writes to db; else: updates ts_updated
     else:
@@ -609,15 +617,6 @@ def alert_to_db(df, table_name):
 
         same_alert = df2[alert_comp].values[0] == df[alert_comp].values[0]
         
-        if table_name == 'public_alerts':
-            query =  "SELECT * FROM %s " %table_name
-            query += "WHERE site_id = %s " %df['site_id'].values[0]
-            query += "AND ts = '%s' " %df['ts'].values[0]
-            query += "AND pub_sym_id = %s" %df['pub_sym_id'].values[0]
-            
-            if len(get_db_dataframe(query)) != 0:
-                same_alert = True
-
         try:
             same_alert = same_alert[0]
         except:
