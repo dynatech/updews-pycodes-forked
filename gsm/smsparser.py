@@ -927,18 +927,21 @@ def parse_all_messages(args,allmsgs=[]):
 
             ref_count += 1
             print ">> SMS count processed:", ref_count
-    # method for updating the read_status all messages that have been processed
-    # so that they will not be processed again in another run
+
+            # method for updating the read_status all messages that have been processed
+            # so that they will not be processed again in another run
+            if ref_count % 200 == 0:
+                dbio.set_read_status(read_success_list, read_status=1,
+                    table=args.table)
+                dbio.set_read_status(read_fail_list, read_status=-1,
+                    table=args.table)
+
+                read_success_list = []
+                read_fail_list = []
+
         except KeyboardInterrupt:
             print '>> User exit'
             sys.exit()
-        # except:
-        #     # print all the traceback routine so that the error can be traced
-        #     print (traceback.format_exc())
-        #     print ">> Setting message read_status to fatal error"
-        #     # dbio.set_read_status(cur_num, read_status=-1, table = args.table)
-        #     read_fail_list.append(msg.num)
-        #     continue
         
     return read_success_list, read_fail_list
     
@@ -1115,16 +1118,9 @@ def main():
 
             read_success_list, read_fail_list = parse_all_messages(args,allmsgs)
 
-            dbio.set_read_status(read_success_list, read_status=1,
-                table=args.table)
-            dbio.set_read_status(read_fail_list, read_status=-1,
-                table=args.table)
-            # sleeptime = 5
         else:
-            # server.logRuntimeStatus("procfromdb","alive")
             print dt.today().strftime("\nServer active as of %A, %B %d, %Y, %X")
             return
-            # time.sleep(sleeptime)
         sys.exit()
 
 if __name__ == "__main__":
