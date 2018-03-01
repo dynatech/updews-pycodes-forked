@@ -396,7 +396,7 @@ def site_public_alert(site_props, end, public_symbols, internal_symbols,
         monitoring_type = get_monitoring_type(site_id, end)
     except:
         monitoring_type = 'routine'
-    print monitoring_type
+
     if monitoring_type == 'event':
         start_monitor = event_start(site_id, end)
     else:

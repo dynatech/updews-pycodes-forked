@@ -537,7 +537,6 @@ def alert_to_db(df, table_name):
 
             if len(surficial) == 0:
                 push_db_dataframe(df, table_name, index=False)
-                return
             else:
                 trigger_id = surficial['trigger_id'].values[0]
                 trigger_sym_id = df['trigger_sym_id'].values[0]
@@ -546,7 +545,8 @@ def alert_to_db(df, table_name):
                     query += "SET trigger_sym_id = '%s' " %trigger_sym_id
                     query += "WHERE trigger_id = %s" %trigger_id
                     execute_query(query)
-                return
+            
+            return
                 
         query =  "SELECT * FROM "
         query += "  (SELECT trigger_sym_id, alert_level, alert_symbol, "
@@ -587,7 +587,7 @@ def alert_to_db(df, table_name):
     query += "ORDER BY ts DESC LIMIT 1"
 
     df2 = get_db_dataframe(query)
-
+    
     # writes alert if no alerts within the past 30mins
     if len(df2) == 0:
         push_db_dataframe(df, table_name, index=False)
@@ -608,6 +608,15 @@ def alert_to_db(df, table_name):
             pk_id = 'trigger_id'
 
         same_alert = df2[alert_comp].values[0] == df[alert_comp].values[0]
+        
+        if table_name == 'public_alerts':
+            query =  "SELECT * FROM %s " %table_name
+            query += "WHERE site_id = %s " %df['site_id'].values[0]
+            query += "AND ts = '%s' " %df['ts'].values[0]
+            query += "AND pub_sym_id = %s" %df['pub_sym_id'].values[0]
+            
+            if len(get_db_dataframe(query)) != 0:
+                same_alert = True
 
         try:
             same_alert = same_alert[0]
