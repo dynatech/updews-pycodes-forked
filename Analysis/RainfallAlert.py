@@ -30,7 +30,7 @@ def GetResampledData(r, offsetstart, start, end):
             blankdf=pd.DataFrame({'ts': [end], 'rain': [0]})
             blankdf=blankdf.set_index('ts')
             rainfall=rainfall.append(blankdf)
-        rainfall=rainfall.resample('30min',how='sum', label='right')
+        rainfall=rainfall.resample('30min', label='right').sum()
         rainfall=rainfall[(rainfall.index>=start)&(rainfall.index<=end)]
         return rainfall
     except:
@@ -256,13 +256,12 @@ def alert_toDB(df, end):
     
     query = "SELECT * FROM site_level_alert WHERE site = '%s' AND source = 'rain' AND timestamp = '%s' ORDER BY updateTS DESC LIMIT 1" %(df.site.values[0], end)
     df2 = q.GetDBDataFrame(query)
-    
-    if len(df2) != 0:
 
-        query = "SELECT * FROM site_level_alert WHERE site = '%s' AND source = 'rain' AND updateTS <= '%s' ORDER BY updateTS DESC LIMIT 1" %(df.site.values[0], end)
-        
+    if len(df2) == 0:
+
+        query = "SELECT * FROM site_level_alert WHERE site = '%s' AND source = 'rain' AND updateTS <= '%s' ORDER BY updateTS DESC LIMIT 1" %(df.site.values[0], end)        
         df2 = q.GetDBDataFrame(query)
-    
+
         if len(df2) == 0 or df2.alert.values[0] != df.alert.values[0]:
             df['updateTS'] = end
             engine = create_engine('mysql://'+q.Userdb+':'+q.Passdb+'@'+q.Hostdb+':3306/'+q.Namedb)

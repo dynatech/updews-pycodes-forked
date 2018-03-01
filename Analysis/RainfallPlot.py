@@ -37,9 +37,9 @@ def GetData(r, offsetstart, end):
     rainfall = rainfall.drop_duplicates('ts')
     rainfall = rainfall.set_index('ts')
     if len(rain_timecheck) < 1:
-        rainfall = rainfall.resample('30min',how='pad', label='right')
+        rainfall = rainfall.resample('30min', label='right').pad()
     else:
-        rainfall = rainfall.resample('30min',how='sum', label='right')
+        rainfall = rainfall.resample('30min', label='right').sum()
         
     rainfall = rainfall[(rainfall.index>=offsetstart)]
     rainfall = rainfall[(rainfall.index<=end)]
@@ -57,11 +57,11 @@ def PlotData(rain_gauge_col, offsetstart, start, end, sub, col, insax, cumax, fi
     data = GetData(rain_gauge_col['rain_gauge'].values[0], offsetstart, end)
     
     #getting the rolling sum for the last24 hours
-    rainfall2=pd.rolling_sum(data,48,min_periods=1)
+    rainfall2=data.rolling(48,min_periods=1).sum()
     rainfall2=np.round(rainfall2,4)
     
     #getting the rolling sum for the last 3 days
-    rainfall3=pd.rolling_sum(data,144,min_periods=1)
+    rainfall3=data.rolling(144,min_periods=1).sum()
     rainfall3=np.round(rainfall3,4)
 
     data['24hr cumulative rainfall'] = rainfall2.rain
@@ -192,7 +192,7 @@ def SensorPlot(name, col, offsetstart, start, end, tsn, halfmax, twoyrmax, base,
 ################################     MAIN     ################################
 
 def main(siterainprops, offsetstart, start, end, tsn, s, monitoring_end=True,
-         positive_trigger=True, non_event_path=True):
+         positive_trigger=True, non_event_path=True, realtime=True):
 
     ##INPUT:
     ##siterainprops; DataFrameGroupBy; contains rain noah ids of noah rain gauge near the site, one and three-day rainfall threshold
@@ -225,3 +225,6 @@ def main(siterainprops, offsetstart, start, end, tsn, s, monitoring_end=True,
     col.index = range(len(col))
     SensorPlot(name, col, offsetstart, start, end, tsn, halfmax, twoyrmax, base, \
             monitoring_end, positive_trigger, non_event_path)
+    
+    if not realtime:
+        plt.close()

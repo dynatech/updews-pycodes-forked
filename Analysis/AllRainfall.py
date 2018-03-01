@@ -46,7 +46,7 @@ def get_rt_window(rt_window_length,roll_window_length,end=datetime.now()):
 
 def main(site='', end=datetime.now(), Print=False, alert_eval=True,
          plot=False, monitoring_end=True, positive_trigger=True,
-         db_write=True):
+         db_write=True, realtime=True):
     
     start_time = datetime.now()
     print start_time
@@ -90,7 +90,8 @@ def main(site='', end=datetime.now(), Print=False, alert_eval=True,
         siterainprops.apply(RP.main, offsetstart=offsetstart, start=start,
                             end=end, tsn=tsn, s=s,
                             monitoring_end=monitoring_end,
-                            positive_trigger=positive_trigger)	
+                            positive_trigger=positive_trigger,
+                            realtime=realtime)	
     
     print "runtime = ", datetime.now()-start_time
                                     

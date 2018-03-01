@@ -165,6 +165,10 @@ def getGndMeas(text):
       cm = float(re.search("\d{1,3}\.*\d{0,2}",cm).group(0))
     except AttributeError:
       cm = float(re.search("\d{1,3}\.*\d{0,2}",cm).group(0))*100.0
+
+    # check for out of bounds errors
+    if cm > 2500.0:
+      raise ValueError(c.reply.failmeasen)
       
     gnd_records = gnd_records + "('"+date_str+" "+time_str+"','"+sms_list[0]+"','"+sms_list[1]+"','"+observer_name+"','"+crid+"','"+str(cm)+"','"+wrecord+"'),"
     
