@@ -12,10 +12,10 @@ import GroundDataAlertLibWithTrending as test
 
     
 def getDF():
-
         site = sys.argv[1]
-        cid = sys.argv[2].replace("%20"," ")
-        df= test.GroundDataTrendingPlotJSON(site, cid, datetime.now())
+        cid = sys.argv[2].replace("%20"," ");
+        end_date = sys.argv[3].replace("%20"," ");
+        df= test.GroundDataTrendingPlotJSON(site, cid, end_date)
         df = pd.DataFrame(df,columns=['raw'])
         dfajson = df.reset_index().to_json(orient="records",date_format='iso')
         dfajson = dfajson.replace("T"," ").replace("Z","").replace(".000","")
