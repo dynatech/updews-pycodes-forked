@@ -220,30 +220,34 @@ def write_outbox_message_to_db(message='',recipients='',gsm_id='',table=''):
     #     return
 
     tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
-    for r in recipients.split(","):
-        table_name = check_number_in_table(r)
-        if table_name:
-            query = ("insert into smsoutbox_%s (ts_written,sms_msg,source) VALUES "
-            "('%s','%s','central')") % (table_name,tsw,message)
-        
-            last_insert = dbio.commit_to_db(query,'write_outbox_message_to_db', 
-                last_insert=True)[0][0]
-            # print query
-            table_mobile = get_mobile_sim_nums(table_name)
 
-            query = ("INSERT INTO smsoutbox_%s_status (outbox_id,mobile_id,gsm_id)"
-                " VALUES ") % (table_name[:-1])
-            if gsm_id == -1:
-                continue
-            else:
-                tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
-                print last_insert, table_mobile[r], gsm_id
-                query += "(%d,%d,%d)" % (last_insert,table_mobile[r],gsm_id)
-           
-                dbio.commit_to_db(query, "write_outbox_message_to_db")
-        else:
-            print '>> No record on both users and loggers'
+    if table == '':
+        table_name = check_number_in_table(recipients[0])
+    else:
+        table_name = table
+
+    query = ("insert into smsoutbox_%s (ts_written,sms_msg,source) VALUES "
+        "('%s','%s','central')") % (table_name,tsw,message)
+        
+    outbox_id = dbio.commit_to_db(query,'write_outbox_message_to_db', 
+        last_insert=True)[0][0]
+
+    query = ("INSERT INTO smsoutbox_%s_status (outbox_id,mobile_id,gsm_id)"
+            " VALUES ") % (table_name[:-1])
+
+    table_mobile = get_mobile_sim_nums(table_name)
+
+    for r in recipients.split(","):        
+        tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
+        try:
+            print outbox_id, table_mobile[r], gsm_id
+            query += "(%d,%d,%d)," % (outbox_id,table_mobile[r],gsm_id)
+        except KeyError:
+            print ">> Error: Possible key error for", r
             continue
+    query = query[:-1]
+       
+    dbio.commit_to_db(query, "write_outbox_message_to_db")
             
     
 def check_alert_messages():
