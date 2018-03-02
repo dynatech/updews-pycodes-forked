@@ -16,9 +16,9 @@ import memcache
 import argparse
 mc = memcache.Client(['127.0.0.1:11211'],debug=0)
 
-if cfg.config().mode.script_mode == 'gsmserver':
-    sys.path.insert(0, cfg.config().fileio.websocketdir)
-    import dewsSocketLeanLib as dsll
+# if cfg.config().mode.script_mode == 'gsmserver':
+#     sys.path.insert(0, cfg.config().fileio.websocketdir)
+#     import dewsSocketLeanLib as dsll
 #---------------------------------------------------------------------------------------------------------------------------
 
 
@@ -310,7 +310,6 @@ def send_messages_from_db(table='users',send_status=0,gsm_id=0,limit=10):
     #     return
     allmsgs = dbio.get_all_outbox_sms_from_db(table,send_status,gsm_id,limit)
     if len(allmsgs) <= 0:
-        # print ">> No messages in outbox"
         return
     
     print ">> Sending messagess from db"
@@ -357,8 +356,12 @@ def send_messages_from_db(table='users',send_status=0,gsm_id=0,limit=10):
             
         else:
             print "Number not in prefix list", num_prefix
+            today = dt.today().strftime("%Y-%m-%d %H:%M:%S")
+            stat = msg[0].num,-1,today,msg[1],msg[2],msg[3]
+            status_list.append(stat)
+            continue
 
-        dbio.set_send_status(table,status_list)
+    dbio.set_send_status(table,status_list)
 
     
     #Get all outbox messages with send_status "SENT" and attempt to send
