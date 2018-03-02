@@ -772,8 +772,8 @@ def process_surficial_observation(msg):
         print 'Updating observations'
         mo_id = surfp.update_surficial_observations(obv)
         surfp.update_surficial_data(obv,mo_id)
-        server.write_outbox_message_to_db("READ-SUCCESS: \n" + msg.data,
-            c.smsalert.communitynum,'users')
+        # server.write_outbox_message_to_db("READ-SUCCESS: \n" + msg.data,
+        #     c.smsalert.communitynum,'users')
         # server.write_outbox_message_to_db(c.reply.successen, msg.simnum,'users')
         # proceed_with_analysis = True
     except surfp.SurficialParserError as e:
@@ -783,13 +783,13 @@ def process_surficial_observation(msg):
         print ">> Error in manual ground measurement SMS", errortype
         has_parse_error = True
 
-        server.write_outbox_message_to_db("READ-FAIL: (%s)\n%s" % 
-            (errortype,msg.data),c.smsalert.communitynum,'users')
+        # server.write_outbox_message_to_db("READ-FAIL: (%s)\n%s" % 
+            # (errortype,msg.data),c.smsalert.communitynum,'users')
         # server.write_outbox_message_to_db(str(e), msg.simnum,'users')
     except KeyError:
         print '>> Error: Possible site code error'
-        server.write_outbox_message_to_db("READ-FAIL: (site code)\n%s" % 
-            (msg.data),c.smsalert.communitynum,'users')
+        # server.write_outbox_message_to_db("READ-FAIL: (site code)\n%s" % 
+        #     (msg.data),c.smsalert.communitynum,'users')
         has_parse_error = True
     # except:
     #     # pass
