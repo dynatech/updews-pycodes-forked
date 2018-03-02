@@ -793,8 +793,8 @@ def process_surficial_observation(msg):
         print 'Updating observations'
         mo_id = surfp.update_surficial_observations(obv)
         surfp.update_surficial_data(obv,mo_id)
-        server.write_outbox_message_to_db("READ-SUCCESS: \n" + msg.data,
-            c.smsalert.communitynum,'users')
+        # server.write_outbox_message_to_db("READ-SUCCESS: \n" + msg.data,
+        #     c.smsalert.communitynum,'users')
         # server.write_outbox_message_to_db(c.reply.successen, msg.simnum,'users')
         # proceed_with_analysis = True
     except surfp.SurficialParserError as e:
@@ -804,13 +804,13 @@ def process_surficial_observation(msg):
         print ">> Error in manual ground measurement SMS", errortype
         has_parse_error = True
 
-        server.write_outbox_message_to_db("READ-FAIL: (%s)\n%s" % 
-            (errortype,msg.data),c.smsalert.communitynum,'users')
+        # server.write_outbox_message_to_db("READ-FAIL: (%s)\n%s" % 
+            # (errortype,msg.data),c.smsalert.communitynum,'users')
         # server.write_outbox_message_to_db(str(e), msg.simnum,'users')
     except KeyError:
         print '>> Error: Possible site code error'
-        server.write_outbox_message_to_db("READ-FAIL: (site code)\n%s" % 
-            (msg.data),c.smsalert.communitynum,'users')
+        # server.write_outbox_message_to_db("READ-FAIL: (site code)\n%s" % 
+        #     (msg.data),c.smsalert.communitynum,'users')
         has_parse_error = True
     # except:
     #     # pass
@@ -861,6 +861,8 @@ def parse_all_messages(args,allmsgs=[]):
     if allmsgs==[]:
         print 'Error: No message to Parse'
         sys.exit()
+
+    total_msgs = len(allmsgs)
     
     while allmsgs:
         try:
@@ -952,18 +954,21 @@ def parse_all_messages(args,allmsgs=[]):
 
             ref_count += 1
             print ">> SMS count processed:", ref_count
-    # method for updating the read_status all messages that have been processed
-    # so that they will not be processed again in another run
+
+            # method for updating the read_status all messages that have been processed
+            # so that they will not be processed again in another run
+            if ref_count % 200 == 0 or ref_count == total_msgs:
+                dbio.set_read_status(read_success_list, read_status=1,
+                    table=args.table)
+                dbio.set_read_status(read_fail_list, read_status=-1,
+                    table=args.table)
+
+                read_success_list = []
+                read_fail_list = []
+
         except KeyboardInterrupt:
             print '>> User exit'
             sys.exit()
-        # except:
-        #     # print all the traceback routine so that the error can be traced
-        #     print (traceback.format_exc())
-        #     print ">> Setting message read_status to fatal error"
-        #     # dbio.set_read_status(cur_num, read_status=-1, table = args.table)
-        #     read_fail_list.append(msg.num)
-        #     continue
         
     return read_success_list, read_fail_list
     
@@ -1141,16 +1146,9 @@ def main():
 
             read_success_list, read_fail_list = parse_all_messages(args,allmsgs)
 
-            dbio.set_read_status(read_success_list, read_status=1,
-                table=args.table)
-            dbio.set_read_status(read_fail_list, read_status=-1,
-                table=args.table)
-            # sleeptime = 5
         else:
-            # server.logRuntimeStatus("procfromdb","alive")
             print dt.today().strftime("\nServer active as of %A, %B %d, %Y, %X")
             return
-            # time.sleep(sleeptime)
         sys.exit()
 
 if __name__ == "__main__":

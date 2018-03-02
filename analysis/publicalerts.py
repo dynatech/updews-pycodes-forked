@@ -177,7 +177,8 @@ def get_monitoring_type(site_id, end):
     query =  "SELECT alert_type FROM "
     query += "  (SELECT * FROM public_alerts "
     query += "  WHERE site_id = %s " %site_id
-    query += "  AND (ts_updated <= '%s' " %end
+    query += "  AND ((ts_updated <= '%s' " %end
+    query += "      AND ts_updated >= '%s') " %(end - timedelta(hours=0.5))
     query += "    OR (ts_updated >= '%s' " %end
     query += "      AND ts <= '%s')) " %end
     query += "  ORDER BY ts DESC LIMIT 1 "
@@ -395,6 +396,7 @@ def site_public_alert(site_props, end, public_symbols, internal_symbols,
         monitoring_type = get_monitoring_type(site_id, end)
     except:
         monitoring_type = 'routine'
+
     if monitoring_type == 'event':
         start_monitor = event_start(site_id, end)
     else:

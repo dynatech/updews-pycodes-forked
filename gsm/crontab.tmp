@@ -1,0 +1,24 @@
+@reboot python ~/centralserver/gsm/memcacheserver.py # memcache
+
+* * * * * python ~/centralserver/gsm/dbmirror.py -m1 # copy from dyna smsinbox to sandbox smsinbox
+* * * * * python ~/centralserver/gsm/gsmserver.py -g1 # copy from smsinbox to x_users and x_loggers
+* * * * * python ~/centralserver/gsm/dbmirror.py -m2 -t users # copy SMS from rpi server to sandbox database
+* * * * * python ~/centralserver/gsm/dbmirror.py -m2 -t loggers
+
+* * * * * python ~/centralserver/gsm/smsparser.py -t loggers -l 5000 # parse SMS from smsinbox_loggers
+* * * * * python ~/centralserver/gsm/smsparser.py -t users -l 10 # parse SMS from smsinbox_users
+* * * * * python ~/centralserver/gsm/alertgenexec.py # execute alertgen scripts from memory
+* * * * * python ~/centralserver/gsm/alertmessaging.py -s # send alert messages
+
+
+@monthly python ~/centralserver/analysis/rainfall/rainfallgauges.py # update list of rainfall gauges and rain noah data used in evaluating alerts
+30 0 1 * * python ~/centralserver/analysis/rainfall/rainfallpriorities.py
+10,40 * * * * python ~/centralserver/analysis/rainfall/updaterainnoah.py
+
+11,41 * * * * python ~/centralserver/analysis/rainfall/rainfall.py # rainfall alert analysis
+1-59/5 * * * * python ~/centralserver/analysis/publicalerts.py
+2-59/5 * * * * python ~/centralserver/analysis/gsmalerts.py
+
+30 8,20 * * * python ~/dewslserver/googleapiinterface.py # event monitoring schedule updating
+
+*/2 * * * * python ~/centralserver/gsm/perfmon.py -t smsinbox_loggers -w -l2 # count items in smsinbox_loggers for the last 5 mins (default)
