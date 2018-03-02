@@ -840,6 +840,8 @@ def parse_all_messages(args,allmsgs=[]):
     if allmsgs==[]:
         print 'Error: No message to Parse'
         sys.exit()
+
+    total_msgs = len(allmsgs)
     
     while allmsgs:
         try:
@@ -930,7 +932,7 @@ def parse_all_messages(args,allmsgs=[]):
 
             # method for updating the read_status all messages that have been processed
             # so that they will not be processed again in another run
-            if ref_count % 200 == 0:
+            if ref_count % 200 == 0 or ref_count == total_msgs:
                 dbio.set_read_status(read_success_list, read_status=1,
                     table=args.table)
                 dbio.set_read_status(read_fail_list, read_status=-1,
