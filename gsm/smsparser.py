@@ -31,7 +31,9 @@ def logger_response(msg,log_type,log='False'):
         return False
 
 def common_logger_sms(msg):
-    log_match = {'NO DATA FROM SENSELOPE':1,'PARSED':2,'TIME':3,'REGIS':4,'NUM':5,'RESET':6}
+    log_match = {'NO DATA FROM SENSELOPE':1,'PARSED':2,'^\w{4,5}\*0\*\*[0-9]{10,12}':2,
+    '^\*[0-9]{10,12}$':3,'^[A-F0-9]+\*[0-9]{10,12}$':3,'REGISTERED':4,'SERVER NUMBER':5,
+    '^MANUAL RESET':6,'POWER UP':7, 'SYSTEM STARTUP': 8,'SMS RESET':9, 'POWER SAVING DEACTIVATED':10}
     for key,value in log_match.items():    
         if re.search(key, msg.data):
             logger_response(msg,value,True)
