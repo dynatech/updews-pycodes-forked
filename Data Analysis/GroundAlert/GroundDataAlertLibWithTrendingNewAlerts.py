@@ -229,7 +229,7 @@ def get_latest_ground_df2(site = None,end = None):
         Latest 10 ground data
     '''
     #### Get query of ground data of specified site and timestamp
-    query = 'SELECT timestamp,site_id,crack_id,meas FROM gndmeas WHERE timestamp <= "{}" AND site_id = "{}"'.format(end,site) 
+    query = 'SELECT timestamp,site_id,crack_id,meas FROM gndmeas WHERE timestamp <= "{}" AND site_id = "{}" order by timestamp ASC'.format(end,site) 
     
     #### Get all ground data
     all_surficial = GetDBDataFrame(query)
@@ -833,8 +833,9 @@ def PlotTrendingAnalysis(site,marker,end):
             os.makedirs(path)
     
     #### Get marker data
-    df = get_latest_marker_data(site,marker,end)
-    
+    df = get_latest_ground_df2(site,end)
+    df = df.loc[df.crack_id == marker]
+
     ##### Get the data from the crack dataframe    
     cur_t = (df.timestamp.values - df.timestamp.values[0])/np.timedelta64(1,'D')
     cur_x = df.meas.values
