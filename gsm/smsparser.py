@@ -17,6 +17,27 @@ import surficialparser as surfp
 import utsparser as uts
 mc = memcache.Client(['127.0.0.1:11211'],debug=0)
 
+
+def logger_response(msg,log_type,log='False'):
+    if log:
+        query = ("INSERT INTO logger_response (`logger_Id`, `inbox_id`, `log_type`)"
+         "values((Select logger_id from logger_mobile where sim_num = %s order by"
+          " date_activated desc limit 1),'%s','%s')" 
+         % (msg.simnum,msg.num,log_type))
+                    
+        dbio.commit_to_db(query, 'insert new log for logger response')
+        print '>> Log response'
+    else:
+        return False
+
+def common_logger_sms(msg):
+    log_match = {'NO DATA FROM SENSELOPE':1,'PARSED':2,'TIME':3,'REGIS':4,'NUM':5,'RESET':6}
+    for key,value in log_match.items():    
+        if re.search(key, msg.data):
+            logger_response(msg,value,True)
+            return value
+    return False
+
 def update_last_msg_received_table(txtdatetime,name,sim_num,msg):
     query = ("insert into senslopedb.last_msg_received"
         "(timestamp,name,sim_num,last_msg) values ('%s','%s','%s','%s')"
@@ -310,15 +331,15 @@ def process_column_v1(sms):
             
             valueX = tempx
             if valueX > 1024:
-	            valueX = tempx - 4096
+                valueX = tempx - 4096
 
             valueY = tempy
             if valueY > 1024:
-	            valueY = tempy - 4096
+                valueY = tempy - 4096
 
             valueZ = tempz
             if valueZ > 1024:
-	            valueZ = tempz - 4096
+                valueZ = tempz - 4096
 
             valueF = tempf #is this the M VALUE?
 
@@ -834,7 +855,7 @@ def parse_all_messages(args,allmsgs=[]):
 
     print "table:", args.table
 
-    cur_num = 0
+   
     ref_count = 0
 
     if allmsgs==[]:
@@ -850,7 +871,8 @@ def parse_all_messages(args,allmsgs=[]):
             #gets per text message
             msg = allmsgs.pop(0)
             # msg.data = msg.data.upper()
-            cur_num = msg.num
+           
+
                          
             msgname = check_name_of_number(msg.simnum)
             if len(msgname) == 0:
@@ -915,6 +937,9 @@ def parse_all_messages(args,allmsgs=[]):
             elif (msg.data.split('*')[0] == 'COORDINATOR' or 
                 msg.data.split('*')[0] == 'GATEWAY'):
                 isMsgProcSuccess = process_gateway_msg(msg)
+            elif common_logger_sms(msg) > 0:
+                print 'inbox_id: ', msg.num
+                print 'match'
             else:
                 print '>> Unrecognized message format: '
                 print 'NUM: ' , msg.simnum
@@ -1116,6 +1141,7 @@ def main():
                 smsItem = gsmio.sms(item[0], str(item[2]), str(item[3]), 
                     str(item[1]))
                 msglist.append(smsItem)
+             
             allmsgs = msglist
 
             read_success_list, read_fail_list = parse_all_messages(args,allmsgs)
