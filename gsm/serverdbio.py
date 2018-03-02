@@ -123,6 +123,7 @@ def get_all_outbox_sms_from_db(table='users',send_status=5,gsm_id=5,limit=10):
                 "inner join (select * from smsoutbox_%s) as t2 "
                 "on t1.outbox_id = t2.outbox_id "
                 "where t1.send_status < %d "
+                "and t1.send_status >= 0 "
                 "and t1.gsm_id = %d "
                 "limit %d ") % (table[:-1],table,send_status,gsm_id,limit)
           
