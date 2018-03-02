@@ -27,7 +27,7 @@ def alerts_df():
     df = pd.read_json(file_path + 'PublicAlert.json')
     alerts = pd.DataFrame(df['alerts'].values[0])
     alerts['internal_alert'] = alerts['internal_alert'].apply(lambda x: x.lower().replace('a0', ''))
-    alerts['up'] =  alerts['internal_alert'].str.contains('nd')|alerts['internal_alert'].str.contains('0')
+    alerts['up'] =  ~(alerts['internal_alert'].str.contains('nd')|alerts['internal_alert'].str.contains('0'))
     alerts = alerts[['timestamp', 'site', 'internal_alert', 'up']]
     
     return alerts
