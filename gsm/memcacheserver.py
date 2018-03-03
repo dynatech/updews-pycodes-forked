@@ -72,7 +72,10 @@ def main():
 	mc.set("server_config",c.config)
 
 	# set_server_cfg(mc)
-	set_mysql_tables(mc)
+	try:
+		set_mysql_tables(mc)
+	except KeyError:
+		print ">> KeyError"
 	
 if __name__ == "__main__":
     main()
