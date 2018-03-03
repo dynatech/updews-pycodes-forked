@@ -58,14 +58,14 @@ def dyna_to_sandbox():
     password = sc["db"]["password"]
     name = sc["db"]["name"]
 
-    sb_host = sc["host"]["sandbox"]
-    dyna_host = sc["host"]["dyna"]
-    gsm_host = sc["host"]["gsm"]
+    sb_host = sc["hosts"]["sandbox"]
+    dyna_host = sc["hosts"]["dynaslope"]
+    gsm_host = sc["hosts"]["gsm"]
 
     
     print "Checking max sms_id in sandbox smsinbox "
     command = ("mysql -u %s -h %s -e 'select max(sms_id) "
-        "from %s.smsinbox' -p%s") % (sb_user, sb_host, sb_name, sb_password)
+        "from %s.smsinbox' -p%s") % (user, sb_host, name, password)
     # print command
 
     p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, 
@@ -73,38 +73,28 @@ def dyna_to_sandbox():
     out, err = p.communicate()
     max_sms_id = out.split('\n')[2]
     # max_sms_id = 4104000
-    print "Max sms_id from sandbox smsinbox:", max_sms_id
-    print 'done\n'
+    print "Max sms_id from sandbox smsinbox:", max_sms_id, "done"
 
     # dump table entries
     print "Dumping tables from gsm host to sandbox dump file ...", 
-    host = sc["host"]["sandbox"]
-    user = sc["db"]["user"]
-    password = sc["db"]["password"]
-    name = sc["db"]["name"]
 
     f_dump = "/home/dewsl/Documents/sqldumps/mirrordump.sql"
     command = ("mysqldump -h %s --skip-add-drop-table --no-create-info "
         "-u %s %s smsinbox --where='sms_id > %s' > %s -p%s") % (gsm_host, 
             user, name, max_sms_id, f_dump, password)
-
-    print command
     p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, 
         stderr=subprocess.STDOUT)
     out, err = p.communicate()
-    print out, err
-    print 'done\n'
+    print 'done'
 
     # write to local db
     print "Dumping tables from gsm host to sandbox dump file ...", 
     command = "mysql -h %s -u %s %s < %s -p%s" % (sb_host, user, name, f_dump,
         password)
-    print command
     p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, 
         stderr=subprocess.STDOUT)
     out, err = p.communicate()
-    print out, err
-    print 'done\n'
+    print 'done'
 
     # delete dump file
     print "Deleting dump file ...", 
@@ -112,7 +102,7 @@ def dyna_to_sandbox():
     p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, 
         stderr=subprocess.STDOUT)
     out, err = p.communicate()
-    print 'done\n'
+    print 'done'
 
 def get_max_index_from_table(table_name):
     """
