@@ -13,15 +13,12 @@ mc = memcache.Client(['127.0.0.1:11211'],debug=0)
 def get_arguments():
     """
       **Description:**
-        -The function that checks the argument that being sent from main 
-        function and returns the
+        -The function that checks the argument that being sent from main function and returns the
         arguement of the function.
       
       :parameters: N/A
-      :returns: **args** (*int*) - Mode of action from running python **1** 
-      (*dyna to sandbox*) and **2** (*sandbox to dyna*).
-      .. note:: For mode 2 it also return **users or loggers** for sanbox to 
-      dyna.
+      :returns: **args** (*int*) - Mode of action from running python **1** (*dyna to sandbox*) and **2** (*sandbox to dyna*).
+      .. note:: For mode 2 it also return **users or loggers** for sanbox to dyna.
     """
     parser = argparse.ArgumentParser(description = ("copy items from different"
      "inboxes [-options]"))
@@ -45,8 +42,7 @@ def get_arguments():
 def dyna_to_sandbox():
     """
       **Description:**
-        -The function that process the exporting of data from dyna and importing
-         data to sandbox by 
+        -The function that process the exporting of data from dyna and importing data to sandbox by 
         loading  the data from XML.
       
       :parameters: N/A
@@ -62,14 +58,14 @@ def dyna_to_sandbox():
     password = sc["db"]["password"]
     name = sc["db"]["name"]
 
-    sb_host = sc["hosts"]["sandbox"]
-    dyna_host = sc["hosts"]["dynaslope"]
-    gsm_host = sc["hosts"]["gsm"]
+    sb_host = sc["host"]["sandbox"]
+    dyna_host = sc["host"]["dyna"]
+    gsm_host = sc["host"]["gsm"]
 
     
-    print "Checking max sms_id in sandbox smsinbox ",
+    print "Checking max sms_id in sandbox smsinbox "
     command = ("mysql -u %s -h %s -e 'select max(sms_id) "
-        "from %s.smsinbox' -p%s") % (user, sb_host, name, password)
+        "from %s.smsinbox' -p%s") % (sb_user, sb_host, sb_name, sb_password)
     # print command
 
     p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, 
@@ -77,28 +73,38 @@ def dyna_to_sandbox():
     out, err = p.communicate()
     max_sms_id = out.split('\n')[2]
     # max_sms_id = 4104000
-    print "Max sms_id from sandbox smsinbox:", max_sms_id, 
-    print 'done'
+    print "Max sms_id from sandbox smsinbox:", max_sms_id
+    print 'done\n'
 
     # dump table entries
     print "Dumping tables from gsm host to sandbox dump file ...", 
+    host = sc["host"]["sandbox"]
+    user = sc["db"]["user"]
+    password = sc["db"]["password"]
+    name = sc["db"]["name"]
+
     f_dump = "/home/dewsl/Documents/sqldumps/mirrordump.sql"
     command = ("mysqldump -h %s --skip-add-drop-table --no-create-info "
         "-u %s %s smsinbox --where='sms_id > %s' > %s -p%s") % (gsm_host, 
             user, name, max_sms_id, f_dump, password)
+
+    print command
     p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, 
         stderr=subprocess.STDOUT)
     out, err = p.communicate()
-    print 'done'
+    print out, err
+    print 'done\n'
 
     # write to local db
-    print "Copying smsinbox items from gsm to sandbox using dump file ...", 
+    print "Dumping tables from gsm host to sandbox dump file ...", 
     command = "mysql -h %s -u %s %s < %s -p%s" % (sb_host, user, name, f_dump,
         password)
+    print command
     p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, 
         stderr=subprocess.STDOUT)
     out, err = p.communicate()
-    print 'done'
+    print out, err
+    print 'done\n'
 
     # delete dump file
     print "Deleting dump file ...", 
@@ -106,7 +112,7 @@ def dyna_to_sandbox():
     p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, 
         stderr=subprocess.STDOUT)
     out, err = p.communicate()
-    print 'done'
+    print 'done\n'
 
 def get_max_index_from_table(table_name):
     """
@@ -120,7 +126,7 @@ def get_max_index_from_table(table_name):
       
     """
     sc = mc.get("server_config")
-    smsdb_host = sc["resource"]["smsdb"]
+    smsdb_host = sc["hosts"][sc["resource"]["smsdb"]]
     user = sc["db"]["user"]
     password = sc["db"]["password"]
     name = sc["db"]["name"]
@@ -131,26 +137,22 @@ def get_max_index_from_table(table_name):
     p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, 
         stderr=subprocess.STDOUT)
     out, err = p.communicate()
-    max_inbox_id = out.split('\n')[2]
-    # max_sms_id = 4104000
-    return max_inbox_id
+    return int(out.split('\n')[2])
 
 def get_last_copied_index(table_name):
     """
         **Description:**
-            -The function that reads the value of the index inside the 
-            user_inbox_index.tmp.
+            -The function that reads the value of the index inside the user_inbox_index.tmp.
         
         :parameters: N/A
-        :returns: **max_index_last_copied** (*int*) - Index id that stored from 
-        the user_inbox_index.tmp.
+        :returns: **max_index_last_copied** (*int*) - Index id that stored from the user_inbox_index.tmp.
     """
-    f_index = open("/home/dyna/logs/" + "%s_inbox_index.tmp" % table_name)
+    f_index = open("/home/dyna/logs/%s_inbox_index.tmp" % table_name, 'r')
     max_index_last_copied = int(f_index.readline())
     f_index.close()
     return max_index_last_copied
 
-def import_sql_file_to_dyna(table, max_inbox_id):
+def import_sql_file_to_dyna(table, max_inbox_id, max_index_last_copied):
     """
         **Description:**
          -The function that process the exporting of data from sanbox and importing data to dyna smsibox2.
@@ -165,40 +167,49 @@ def import_sql_file_to_dyna(table, max_inbox_id):
     """
     print "importing to dyna tables"
     print table
+
+    sc = mc.get("server_config")
+    
+    smsdb_host = sc["resource"]["smsdb"]
+    smsdb2_host = sc["resource"]["smsdb2"]
+
+    host_ip = sc["hosts"][smsdb_host]
+    host_ip2 = sc["hosts"][smsdb2_host]
+    user = sc["db"]["user"]
+    password = sc["db"]["password"]
+    name = sc["db"]["name"]
+
     copy_query = ("SELECT t1.ts_sms as 'timestamp', t2.sim_num, t1.sms_msg, "
         "'UNREAD' as read_status, 'W' AS web_flag FROM smsinbox_%s t1 "
         "inner join (select mobile_id, sim_num from %s_mobile) t2 "
         "on t1.mobile_id = t2.mobile_id where t1.gsm_id !=1 "
-        "and t1.inbox_id <= %d") % (table, table[:-1], max_inbox_id)
+        "and t1.inbox_id <= %d and t1.inbox_id < %d") % (table, table[:-1], 
+            max_inbox_id, max_index_last_copied)
 
     f_dump = "/home/dyna/logs/sandbox_%s_dump.sql" % (table)
 
     # export files from the table and dump to a file
-    command = ("mysql -e \"%s\" -h127.0.0.1 senslopedb -uroot -p%s --xml >"
-            " %s" % (copy_query, c.db["password"], f_dump))
-    print copy_query
 
-    p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, stderr=subprocess.STDOUT)
+    command = ("mysql -e \"%s\" -h%s senslopedb -uroot -p%s --xml >"
+            " %s" % (copy_query, host_ip, password, f_dump))
+    p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, 
+        stderr=subprocess.STDOUT)
     out, err = p.communicate()
     print command
     print ""
     # # print err
 
-    # command = "mysql -h %s -u %s %s < %s -p%s" % (c.dbhost["local"],c.db["user"],c.db["name"],f_dump,c.db["password"])
     import_query = ("LOAD XML LOCAL INFILE '%s' INTO TABLE smsinbox2" % (f_dump))
-    command = ("mysql -e \"%s\" -h127.0.0.1 senslopedb -uroot -p%s" % (import_query,c.db["password"]))
-    p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, stderr=subprocess.STDOUT)
+    command = ("mysql -e \"%s\" -h%s senslopedb -uroot -p%s") % (import_query,
+        host_ip2, password)
+    p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, 
+        stderr=subprocess.STDOUT)
     out, err = p.communicate()
     print command
 
-    # # delete dump file
-    # command = "rm %s" % (f_dump)
-    # p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, stderr=subprocess.STDOUT)
-    # out, err = p.communicate()
-
     # write new value in max_index_last_copied
-    f_index = open("/home/dyna/logs/" +table +"_inbox_index.tmp","wb")
-    f_index.write(max_inbox_id);
+    f_index = open("/home/dyna/logs/%s_inbox_index.tmp" % table, "wb")
+    f_index.write(str(max_inbox_id))
     f_index.close()
 
 
@@ -217,17 +228,17 @@ def sandbox_to_dyna(table_name):
     print "sandbox -> dyna"
 
     table = table_name
-    # max_inbox_id = get_max_index_from_table(table)
-    # print "max index from table:", max_inbox_id
+    max_inbox_id = get_max_index_from_table(table)
+    print "max index from table:", max_inbox_id
 
     # check if this index is already copied
     max_index_last_copied = get_last_copied_index(table)
     print "max index copied:", max_index_last_copied
 
-    if int(max_inbox_id) > int(max_index_last_copied):
-        import_sql_file_to_dyna(table, max_index_last_copied)
+    if max_inbox_id > max_index_last_copied:
+        import_sql_file_to_dyna(table, max_inbox_id, max_index_last_copied)
     else:
-        print ">> Error: inbox_id mismatch"
+        print "smsinbox2 up to date"
 
 def main():
     """
