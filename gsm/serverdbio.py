@@ -51,9 +51,9 @@ def set_read_status(sms_id_list,read_status=0,table='',instance='local'):
         where_clause)
     
     # print query
-    commit_to_db(query,"set_read_status")
+    commit_to_db(query, "set_read_status", False, instance)
     
-def set_send_status(table,status_list):
+def set_send_status(table, status_list, instance):
     # print status_list
     query = ("insert into smsoutbox_%s_status (stat_id,send_status,ts_sent,outbox_id,gsm_id,mobile_id) "
         "values ") % (table[:-1])
@@ -67,7 +67,7 @@ def set_send_status(table,status_list):
 
     # print query
     
-    commit_to_db(query,"set_send_status")
+    commit_to_db(query, "set_send_status", False, instance)
     
     
 def get_all_sms_from_db(host='local',read_status=0,table='loggers',limit=200):

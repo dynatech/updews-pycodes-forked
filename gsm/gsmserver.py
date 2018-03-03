@@ -60,11 +60,6 @@ def check_number_in_table(num):
     elif query_check_number[0][0] == '0' and query_check_number[0][1] == '0':
         return False
 
-
-    
-
-
-
 def log_runtime_status(script_name,status):
     """
         **Description:**
@@ -392,7 +387,7 @@ def get_sensor_numbers():
 
     return nums
 
-def get_mobile_sim_nums(table):
+def get_mobile_sim_nums(table, host = None):
     """
         **Description:**
           -The function that get the number of the loggers or users in the database.
@@ -401,6 +396,9 @@ def get_mobile_sim_nums(table):
         :type table: str
         :returns:  **mobile number** (*int*) - mobile number of user or logger
     """
+
+    if host is None:
+        raise ValueError("No host value given for mobile number")
 
     if table == 'loggers':
 
@@ -417,7 +415,7 @@ def get_mobile_sim_nums(table):
             "AND t1.mobile_id < t2.mobile_id)) "
             "WHERE t2.sim_num IS NULL and t1.sim_num is not null")
 
-        nums = dbio.query_database(query,'get_mobile_sim_nums','sandbox')
+        nums = dbio.query_database(query,'get_mobile_sim_nums', host)
         nums = {key: value for (value, key) in nums}
 
         logger_mobile_sim_nums = nums
@@ -431,7 +429,7 @@ def get_mobile_sim_nums(table):
         
         query = "select mobile_id,sim_num from user_mobile"
 
-        nums = dbio.query_database(query,'get_mobile_sim_nums','sandbox')
+        nums = dbio.query_database(query,'get_mobile_sim_nums', host)
         nums = {key: value for (value, key) in nums}
 
         user_mobile_sim_nums = nums
@@ -514,8 +512,13 @@ def simulate_gsm(network='simulate'):
         :returns: N/A
     """
     print "Simulating GSM"
+
+    sc = mc.get('server_config')
+    sms_mirror_host = sc["resource"]["sms_mirror_db"]
+    mobile_nums_db = sc["resource"]["mobile_nums_db"]
+    smsdb_host = sc["resource"]["smsdb"]
     
-    db, cur = dbio.db_connect('sandbox')
+    db, cur = dbio.db_connect(sms_mirror_host)
     
     smsinbox_sms = []
 
@@ -532,21 +535,17 @@ def simulate_gsm(network='simulate'):
         print '9.',
         time.sleep(20)
 
-    # print smsinbox_sms
-    logger_mobile_sim_nums = get_mobile_sim_nums('loggers')
-    user_mobile_sim_nums = get_mobile_sim_nums('users')
-    # print logger_mobile
+    logger_mobile_sim_nums = get_mobile_sim_nums('loggers', mobile_nums_db)
+    user_mobile_sim_nums = get_mobile_sim_nums('users', mobile_nums_db)
 
-    # gsm_ids = get_gsm_ids()
-    # gsm_id = 1gsm_ids[network]
     gsm_id = 1
     loggers_count = 0
     users_count = 0
     
     ts_stored = dt.today().strftime("%Y-%m-%d %H:%M:%S")
 
-    query_loggers = ("insert into smsinbox_loggers (ts_sms, ts_stored, mobile_id, "
-        "sms_msg,read_status,gsm_id) values ")
+    query_loggers = ("insert into smsinbox_loggers (ts_sms, ts_stored, "
+        "mobile_id, sms_msg,read_status,gsm_id) values ")
     query_users = ("insert into smsinbox_users (ts_sms, ts_stored, mobile_id, "
         "sms_msg,read_status,gsm_id) values ")
 
@@ -570,7 +569,7 @@ def simulate_gsm(network='simulate'):
                 user_mobile_sim_nums[m[2]], sms_msg, read_status, gsm_id)
             users_count += 1
         else:            
-            print 'Unknown number', m[2]
+            # print 'Unknown number', m[2]
             sms_id_unk.append(m[0])
             continue
         
@@ -578,31 +577,29 @@ def simulate_gsm(network='simulate'):
 
     query_loggers = query_loggers[:-1]
     query_users = query_users[:-1]
+
+    print ("Copying %d loggers item and %d users item with %d "
+        "unknown") % (loggers_count, users_count, len(sms_id_unk))
     
-    # print query
-    query_lastText = ("UPDATE last_text_received SET inbox_id = "
-        "(select max(inbox_id) from smsinbox_loggers), ts = '{}' "
-        "where mobile_id= {}".format(ts_sms, ltr_mobile_id))
-    # print query_lastText    
     if len(sms_id_ok)>0:
+
         if loggers_count > 0:
-            # query_safe= 'SET SQL_SAFE_UPDATES=0'
-            # dbio.commit_to_db(query_safe,'simulate_gsm')
-            dbio.commit_to_db(query_loggers,'simulate_gsm')
-            # print query_lastText
-            dbio.commit_to_db(query_lastText,'simulate_gsm')
+            dbio.commit_to_db(query_loggers, 'simulate_gsm', False, smsdb_host)
+
         if users_count > 0:
-            dbio.commit_to_db(query_users,'simulate_gsm')
+            dbio.commit_to_db(query_users, 'simulate_gsm', False, smsdb_host)
         
         sms_id_ok = str(sms_id_ok).replace("L","")[1:-1]
-        query = "update smsinbox set web_flag = '0' where sms_id in (%s);" % (sms_id_ok)
-        dbio.commit_to_db(query,'simulate_gsm')
+        query = ("update smsinbox set web_flag = '0' "
+            "where sms_id in (%s);") % (sms_id_ok)
+        dbio.commit_to_db(query, 'simulate_gsm', False, sms_mirror_host)
 
     if len(sms_id_unk)>0:
         # print sms_id_unk
         sms_id_unk = str(sms_id_unk).replace("L","")[1:-1]
-        query = "update smsinbox set web_flag = '-1' where sms_id in (%s);" % (sms_id_unk)
-        dbio.commit_to_db(query,'simulate_gsm')
+        query = ("update smsinbox set web_flag = '-1' "
+            "where sms_id in (%s);") % (sms_id_unk)
+        dbio.commit_to_db(query, 'simulate_gsm', False, sms_mirror_host)
     
     sys.exit()
         
