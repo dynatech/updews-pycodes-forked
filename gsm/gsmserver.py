@@ -176,13 +176,16 @@ def write_raw_sms_to_db(msglist,gsm_info):
     query_loggers = query_loggers[:-1]
     query_users = query_users[:-1]
 
+    sc = mc.get('server_config')
+    sms_instance = sc["resource"]["smsdb"]
+
     if len(sms_id_ok)>0:
         if loggers_count > 0:
             dbio.commit_to_db(query_loggers,'write_raw_sms_to_db',
-                instance = 'sandbox')
+                instance = sms_instance)
         if users_count > 0:
             dbio.commit_to_db(query_users,'write_raw_sms_to_db',
-                instance = 'sandbox')
+                instance = sms_instance)
         
 def write_eq_alert_message_to_db(alertmsg):
     """
@@ -482,7 +485,7 @@ def try_sending_messages(gsm_id):
         send_messages_from_db(table='users',send_status=5,gsm_id=gsm_id)
         send_messages_from_db(table='loggers',send_status=5,gsm_id=gsm_id)
         print '.',
-        time.sleep(2)
+        time.sleep(5)
         if (dt.now()-start).seconds > 30:
             break
 
@@ -651,9 +654,6 @@ def run_server(gsm_info,table='loggers'):
         m = gsmio.count_msg()
         if m>0:
             allmsgs = gsmio.get_all_sms(network)
-
-            for msg in allmsgs:
-                print msg.data
 
             try:
                 write_raw_sms_to_db(allmsgs,gsm_info)

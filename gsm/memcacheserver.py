@@ -25,7 +25,11 @@ def get_db_dataframe(query):
         db.close()
         return df
     except KeyboardInterrupt:
-        PrintOut("Exception detected in accessing database")
+        print "Exception detected in accessing database"
+        sys.exit()
+    except psql.DatabaseError:
+    	print "Error getting query %s" % (query)
+    	return None
 
 
 def set_logger_mobiles():
@@ -39,6 +43,10 @@ def set_mysql_tables(mc):
 	for key in tables:
 		print "%s," % (key),
 		df = get_db_dataframe("select * from %s;" % key)
+
+		if df is None:
+			continue
+
 		mc.set('df_'+key,df)
 
 		# special configuration

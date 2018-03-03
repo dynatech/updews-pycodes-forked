@@ -276,14 +276,6 @@ def get_all_sms(network):
     msglist = []
     
     for msg in allmsgs:
-        # if SaveToFile:
-            # mon = dt.now().strftime("-%Y-%B-")
-            # f = open("D:\\Server Files\\Consolidated\\"+network+mon+'backup.txt','a')
-            # f.write(msg)
-            # f.close()
-                
-        # msg = msg.replace('\n','').split("\r")
-        # print msg
         try:
             pdu = re.search(r'[0-9A-F]{20,}',msg).group(0)
         except AttributeError:
@@ -291,8 +283,6 @@ def get_all_sms(network):
             print ">> Error: cannot find pdu text", msg
             # log_error("wrong construction\n"+msg[0])
             continue
-
-        # print pdu
 
         smsdata = smsdeliver(pdu).data
 
@@ -316,7 +306,13 @@ def get_all_sms(network):
         try:        
             smsItem = sms(txtnum, smsdata['number'].strip('+'), 
                 str(smsdata['text']), txtdatetimeStr)
-            print str(smsdata['text'])
+
+            sms_msg = str(smsdata['text'])
+            if len(sms_msg) < 30:
+                print sms_msg
+            else:
+                print sms_msg[:10], "...", sms_msg[-20:]
+
             msglist.append(smsItem)
         except UnicodeEncodeError:
             print ">> Unknown character error. Skipping message"
