@@ -735,7 +735,7 @@ def get_gsm_modules(reset_val = False):
     if reset_val or (gsm_modules == None or len(gsm_modules.keys()) == 0):
         print "Getting gsm modules information..."
         query = "select * from gsm_modules"
-        result_set = dbio.query_database(query,'get_gsm_ids','sandbox')
+        result_set = dbio.query_database(query,'get_gsm_ids','local')
         # print gsm_modules
 
         # ids = dict() 
