@@ -16,9 +16,9 @@ import memcache
 import argparse
 mc = memcache.Client(['127.0.0.1:11211'],debug=0)
 
-if cfg.config().mode.script_mode == 'gsmserver':
-    sys.path.insert(0, cfg.config().fileio.websocketdir)
-    import dewsSocketLeanLib as dsll
+# if cfg.config().mode.script_mode == 'gsmserver':
+#     sys.path.insert(0, cfg.config().fileio.websocketdir)
+#     import dewsSocketLeanLib as dsll
 #---------------------------------------------------------------------------------------------------------------------------
 
 
@@ -59,11 +59,6 @@ def check_number_in_table(num):
         return 'loggers'
     elif query_check_number[0][0] == '0' and query_check_number[0][1] == '0':
         return False
-
-
-    
-
-
 
 def log_runtime_status(script_name,status):
     """
@@ -176,13 +171,16 @@ def write_raw_sms_to_db(msglist,gsm_info):
     query_loggers = query_loggers[:-1]
     query_users = query_users[:-1]
 
+    sc = mc.get('server_config')
+    sms_instance = sc["resource"]["smsdb"]
+
     if len(sms_id_ok)>0:
         if loggers_count > 0:
             dbio.commit_to_db(query_loggers,'write_raw_sms_to_db',
-                instance = 'sandbox')
+                instance = sms_instance)
         if users_count > 0:
             dbio.commit_to_db(query_users,'write_raw_sms_to_db',
-                instance = 'sandbox')
+                instance = sms_instance)
         
 def write_eq_alert_message_to_db(alertmsg):
     """
@@ -220,30 +218,34 @@ def write_outbox_message_to_db(message='',recipients='',gsm_id='',table=''):
     #     return
 
     tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
-    for r in recipients.split(","):
-        table_name = check_number_in_table(r)
-        if table_name:
-            query = ("insert into smsoutbox_%s (ts_written,sms_msg,source) VALUES "
-            "('%s','%s','central')") % (table_name,tsw,message)
-        
-            last_insert = dbio.commit_to_db(query,'write_outbox_message_to_db', 
-                last_insert=True)[0][0]
-            # print query
-            table_mobile = get_mobile_sim_nums(table_name)
 
-            query = ("INSERT INTO smsoutbox_%s_status (outbox_id,mobile_id,gsm_id)"
-                " VALUES ") % (table_name[:-1])
-            if gsm_id == -1:
-                continue
-            else:
-                tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
-                print last_insert, table_mobile[r], gsm_id
-                query += "(%d,%d,%d)" % (last_insert,table_mobile[r],gsm_id)
-           
-                dbio.commit_to_db(query, "write_outbox_message_to_db")
-        else:
-            print '>> No record on both users and loggers'
+    if table == '':
+        table_name = check_number_in_table(recipients[0])
+    else:
+        table_name = table
+
+    query = ("insert into smsoutbox_%s (ts_written,sms_msg,source) VALUES "
+        "('%s','%s','central')") % (table_name,tsw,message)
+        
+    outbox_id = dbio.commit_to_db(query,'write_outbox_message_to_db', 
+        last_insert=True)[0][0]
+
+    query = ("INSERT INTO smsoutbox_%s_status (outbox_id,mobile_id,gsm_id)"
+            " VALUES ") % (table_name[:-1])
+
+    table_mobile = get_mobile_sim_nums(table_name)
+
+    for r in recipients.split(","):        
+        tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
+        try:
+            print outbox_id, table_mobile[r], gsm_id
+            query += "(%d,%d,%d)," % (outbox_id,table_mobile[r],gsm_id)
+        except KeyError:
+            print ">> Error: Possible key error for", r
             continue
+    query = query[:-1]
+       
+    dbio.commit_to_db(query, "write_outbox_message_to_db")
             
     
 def check_alert_messages():
@@ -310,7 +312,6 @@ def send_messages_from_db(table='users',send_status=0,gsm_id=0,limit=10):
     #     return
     allmsgs = dbio.get_all_outbox_sms_from_db(table,send_status,gsm_id,limit)
     if len(allmsgs) <= 0:
-        # print ">> No messages in outbox"
         return
     
     print ">> Sending messagess from db"
@@ -357,8 +358,12 @@ def send_messages_from_db(table='users',send_status=0,gsm_id=0,limit=10):
             
         else:
             print "Number not in prefix list", num_prefix
+            today = dt.today().strftime("%Y-%m-%d %H:%M:%S")
+            stat = msg[0].num,-1,today,msg[1],msg[2],msg[3]
+            status_list.append(stat)
+            continue
 
-        dbio.set_send_status(table,status_list)
+    dbio.set_send_status(table,status_list)
 
     
     #Get all outbox messages with send_status "SENT" and attempt to send
@@ -382,7 +387,7 @@ def get_sensor_numbers():
 
     return nums
 
-def get_mobile_sim_nums(table):
+def get_mobile_sim_nums(table, host = None):
     """
         **Description:**
           -The function that get the number of the loggers or users in the database.
@@ -391,6 +396,9 @@ def get_mobile_sim_nums(table):
         :type table: str
         :returns:  **mobile number** (*int*) - mobile number of user or logger
     """
+
+    if host is None:
+        raise ValueError("No host value given for mobile number")
 
     if table == 'loggers':
 
@@ -407,7 +415,7 @@ def get_mobile_sim_nums(table):
             "AND t1.mobile_id < t2.mobile_id)) "
             "WHERE t2.sim_num IS NULL and t1.sim_num is not null")
 
-        nums = dbio.query_database(query,'get_mobile_sim_nums','sandbox')
+        nums = dbio.query_database(query,'get_mobile_sim_nums', host)
         nums = {key: value for (value, key) in nums}
 
         logger_mobile_sim_nums = nums
@@ -421,7 +429,7 @@ def get_mobile_sim_nums(table):
         
         query = "select mobile_id,sim_num from user_mobile"
 
-        nums = dbio.query_database(query,'get_mobile_sim_nums','sandbox')
+        nums = dbio.query_database(query,'get_mobile_sim_nums', host)
         nums = {key: value for (value, key) in nums}
 
         user_mobile_sim_nums = nums
@@ -475,7 +483,7 @@ def try_sending_messages(gsm_id):
         send_messages_from_db(table='users',send_status=5,gsm_id=gsm_id)
         send_messages_from_db(table='loggers',send_status=5,gsm_id=gsm_id)
         print '.',
-        time.sleep(2)
+        time.sleep(5)
         if (dt.now()-start).seconds > 30:
             break
 
@@ -504,8 +512,13 @@ def simulate_gsm(network='simulate'):
         :returns: N/A
     """
     print "Simulating GSM"
+
+    sc = mc.get('server_config')
+    sms_mirror_host = sc["resource"]["sms_mirror_db"]
+    mobile_nums_db = sc["resource"]["mobile_nums_db"]
+    smsdb_host = sc["resource"]["smsdb"]
     
-    db, cur = dbio.db_connect('sandbox')
+    db, cur = dbio.db_connect(sms_mirror_host)
     
     smsinbox_sms = []
 
@@ -522,21 +535,17 @@ def simulate_gsm(network='simulate'):
         print '9.',
         time.sleep(20)
 
-    # print smsinbox_sms
-    logger_mobile_sim_nums = get_mobile_sim_nums('loggers')
-    user_mobile_sim_nums = get_mobile_sim_nums('users')
-    # print logger_mobile
+    logger_mobile_sim_nums = get_mobile_sim_nums('loggers', mobile_nums_db)
+    user_mobile_sim_nums = get_mobile_sim_nums('users', mobile_nums_db)
 
-    # gsm_ids = get_gsm_ids()
-    # gsm_id = 1gsm_ids[network]
     gsm_id = 1
     loggers_count = 0
     users_count = 0
     
     ts_stored = dt.today().strftime("%Y-%m-%d %H:%M:%S")
 
-    query_loggers = ("insert into smsinbox_loggers (ts_sms, ts_stored, mobile_id, "
-        "sms_msg,read_status,gsm_id) values ")
+    query_loggers = ("insert into smsinbox_loggers (ts_sms, ts_stored, "
+        "mobile_id, sms_msg,read_status,gsm_id) values ")
     query_users = ("insert into smsinbox_users (ts_sms, ts_stored, mobile_id, "
         "sms_msg,read_status,gsm_id) values ")
 
@@ -560,7 +569,7 @@ def simulate_gsm(network='simulate'):
                 user_mobile_sim_nums[m[2]], sms_msg, read_status, gsm_id)
             users_count += 1
         else:            
-            print 'Unknown number', m[2]
+            # print 'Unknown number', m[2]
             sms_id_unk.append(m[0])
             continue
         
@@ -568,31 +577,29 @@ def simulate_gsm(network='simulate'):
 
     query_loggers = query_loggers[:-1]
     query_users = query_users[:-1]
+
+    print ("Copying %d loggers item and %d users item with %d "
+        "unknown") % (loggers_count, users_count, len(sms_id_unk))
     
-    # print query
-    query_lastText = ("UPDATE last_text_received SET inbox_id = "
-        "(select max(inbox_id) from smsinbox_loggers), ts = '{}' "
-        "where mobile_id= {}".format(ts_sms, ltr_mobile_id))
-    # print query_lastText    
     if len(sms_id_ok)>0:
+
         if loggers_count > 0:
-            # query_safe= 'SET SQL_SAFE_UPDATES=0'
-            # dbio.commit_to_db(query_safe,'simulate_gsm')
-            dbio.commit_to_db(query_loggers,'simulate_gsm')
-            # print query_lastText
-            dbio.commit_to_db(query_lastText,'simulate_gsm')
+            dbio.commit_to_db(query_loggers, 'simulate_gsm', False, smsdb_host)
+
         if users_count > 0:
-            dbio.commit_to_db(query_users,'simulate_gsm')
+            dbio.commit_to_db(query_users, 'simulate_gsm', False, smsdb_host)
         
         sms_id_ok = str(sms_id_ok).replace("L","")[1:-1]
-        query = "update smsinbox set web_flag = '0' where sms_id in (%s);" % (sms_id_ok)
-        dbio.commit_to_db(query,'simulate_gsm')
+        query = ("update smsinbox set web_flag = '0' "
+            "where sms_id in (%s);") % (sms_id_ok)
+        dbio.commit_to_db(query, 'simulate_gsm', False, sms_mirror_host)
 
     if len(sms_id_unk)>0:
         # print sms_id_unk
         sms_id_unk = str(sms_id_unk).replace("L","")[1:-1]
-        query = "update smsinbox set web_flag = '-1' where sms_id in (%s);" % (sms_id_unk)
-        dbio.commit_to_db(query,'simulate_gsm')
+        query = ("update smsinbox set web_flag = '-1' "
+            "where sms_id in (%s);") % (sms_id_unk)
+        dbio.commit_to_db(query, 'simulate_gsm', False, sms_mirror_host)
     
     sys.exit()
         
@@ -644,9 +651,6 @@ def run_server(gsm_info,table='loggers'):
         m = gsmio.count_msg()
         if m>0:
             allmsgs = gsmio.get_all_sms(network)
-
-            for msg in allmsgs:
-                print msg.data
 
             try:
                 write_raw_sms_to_db(allmsgs,gsm_info)
