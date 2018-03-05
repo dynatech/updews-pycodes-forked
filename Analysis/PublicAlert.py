@@ -4,10 +4,10 @@ from datetime import datetime, timedelta, time, date
 import re
 from sqlalchemy import create_engine
 import sys
+import os
 
 import querySenslopeDb as q
-import alertgen as a
-import AllRainfall as rain
+import filepath
 
 def round_data_time(date_time):
     date_time = pd.to_datetime(date_time)
@@ -101,20 +101,6 @@ def SensorTrigger(df):
             sensor_tech += ['%s (nodes %s)' %(i.upper(), ','.join(sorted(col_df['id'].values)))]
     return ','.join(sensor_tech)
 
-def alertgen(df, end):
-    name = df['name'].values[0]
-    query = "SELECT max(timestamp) FROM %s" %name
-    ts = pd.to_datetime(q.GetDBDataFrame(query).values[0][0])
-    if ts == None:
-        return
-    if ts > end - timedelta(hours=12):
-        if ts > end:
-            ts = end
-        try:
-            a.main(name, end=ts, end_mon=True)
-        except:
-            pass
-
 def internal_alert_level(trigger):
     source = trigger['source'].values[0]
     
@@ -133,25 +119,39 @@ def internal_alert_level(trigger):
         
     return trigger
     
-def SitePublicAlert(PublicAlert, end, start_time):
+def SitePublicAlert(PublicAlert, end, start_time, file_path):
     site = PublicAlert['site'].values[0]
     print site
     
     # latest alert per source (public,internal,sensor,ground,moms,rain,eq,on demand)*
-    query = "(SELECT * FROM ( SELECT * FROM senslopedb.site_level_alert WHERE"
-    query += " (updateTS <= '%s' OR (updateTS >= '%s' AND timestamp <= '%s'))" %(end, end, end)
-    query += " AND ( site = '%s' " %site
+    site_query = "( site = '%s' " %site
     if site == 'bto':
-        query += "or site = 'bat' "
+        site_query += "or site = 'bat' )"
     elif site == 'mng':
-        query += "or site = 'man' "
+        site_query += "or site = 'man' )"
     elif site == 'png':
-        query += "or site = 'pan' "
+        site_query += "or site = 'pan' )"
     elif site == 'jor':
-        query += "or site = 'pob' "
+        site_query += "or site = 'pob' )"
     elif site == 'tga':
-        query += "or site = 'tag' "
-    query += ") ORDER BY timestamp DESC) AS sub GROUP BY source)"
+        site_query += "or site = 'tag' )"
+    else:
+        site_query += ')'
+
+    query =  "SELECT * FROM "
+    query += "  (SELECT max(timestamp) AS timestamp, source FROM ( "
+    query += "    SELECT * FROM senslopedb.site_level_alert "
+    query += "    WHERE (updateTS <= '%s' " %end
+    query += "      OR (updateTS >= '%s' " %end
+    query += "        AND timestamp <= '%s')) " %end
+    query += "    AND %s " %site_query
+    query += "  ) AS sub GROUP BY source "
+    query += "  ) AS ts_set "
+    query += "INNER JOIN "
+    query += "  (SELECT * FROM site_level_alert "
+    query += "  WHERE %s " %site_query
+    query += "  ) AS alert "
+    query += "USING (timestamp, source)"
 
     # dataframe of public alert and triggers within 24 hours
     site_alert = q.GetDBDataFrame(query)
@@ -167,14 +167,14 @@ def SitePublicAlert(PublicAlert, end, start_time):
         query = "SELECT * FROM senslopedb.smsalerts where alertmsg like '%s' and ts_set >= '%s' ORDER BY ts_set desc" %(l0talert, groundTS)
         df = q.GetDBDataFrame(query)
         if len(df) == 0:
-            with open('l0t_alert.txt', 'w') as w:
+            with open(file_path+'l0t_alert.txt', 'w') as w:
                 w.write('As of ' + str(datetime.now())[:16] + '\n')
                 l0talert = l0talert.split('%')
                 l0talert.remove('')
                 l0talert = ':'.join(l0talert + ['ground'])
                 w.write(l0talert)
-            writeAlertToDb('l0t_alert.txt')
-            with open('l0t_alert.txt', 'w') as w:
+            writeAlertToDb(file_path+'l0t_alert.txt')
+            with open(file_path+'l0t_alert.txt', 'w') as w:
                 w.write('')
 
     # public alert
@@ -366,10 +366,11 @@ def SitePublicAlert(PublicAlert, end, start_time):
 
     # latest column alert
     sensor_site = site + '%'
-    query =  "SELECT * FROM ( SELECT * FROM senslopedb.column_level_alert "
+    query =  "SELECT * FROM column_level_alert "
     query += "WHERE site LIKE '%s' " %sensor_site
+    query += "AND timestamp <= '%s' " %end
     query += "AND updateTS >= '%s' " %(end - timedelta(hours=0.5))
-    query += "ORDER BY timestamp DESC) AS sub GROUP BY site"
+    query += "ORDER BY timestamp DESC"
     sensor_alert = q.GetDBDataFrame(query)
     sensor_alert = sensor_alert[['site', 'alert']]
     sensor_alert = sensor_alert.rename(columns = {'site': 'sensor'})
@@ -488,6 +489,8 @@ def SitePublicAlert(PublicAlert, end, start_time):
         ts = pd.to_datetime(max(op_trigger['updateTS'].values))
         if ts > end:
             ts = end
+        elif ts < end - timedelta(hours=0.5):
+            ts = end
         PublicAlert['timestamp'] = [ts]
     else:
         PublicAlert['timestamp'] = [end]
@@ -550,23 +553,16 @@ def SitePublicAlert(PublicAlert, end, start_time):
                     GSMAlert['palert_source'] = [GSMAlert['palert_source'].values[0].replace('sensor', colnode_source)]
             
                 GSMAlert = GSMAlert[['site', 'alert', 'palert_source']]            
-                with open('GSMAlert.txt', 'w') as w:
+                with open(file_path+'GSMAlert.txt', 'w') as w:
                     w.write('As of ' + str(end)[:16] + '\n')
-                GSMAlert.to_csv('GSMAlert.txt', header = False, index = None, sep = ':', mode = 'a')
+                GSMAlert.to_csv(file_path+'GSMAlert.txt', header = False, index = None, sep = ':', mode = 'a')
         
                 #write text file to db
-                writeAlertToDb('GSMAlert.txt')
+                writeAlertToDb(file_path+'GSMAlert.txt')
             
-                with open('GSMAlert.txt', 'w') as w:
+                with open(file_path+'GSMAlert.txt', 'w') as w:
                     w.write('')
             
-    if (public_CurrAlert == 'A0' and public_PrevAlert != public_CurrAlert) or (public_CurrAlert != 'A0' and end.time() in [time(7,30), time(19,30)]):
-        query = "SELECT * FROM senslopedb.site_column_props where name LIKE '%s'" %sensor_site
-        df = q.GetDBDataFrame(query)
-        logger_df = df.groupby('name')
-        logger_df.apply(alertgen, end)
-        rain.main(site=site, end=end, monitoring_end=True)
-
     return PublicAlert
 
 def writeAlertToDb(alertfile):
@@ -574,7 +570,8 @@ def writeAlertToDb(alertfile):
     alerttxt = f.read()
     f.close()
 
-    sys.path.insert(0, '/home/dynaslope/Desktop/Senslope Server/')
+    script_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../Senslope Server'))
+    sys.path.insert(1, script_path)
     import senslopeServer as server
 
     server.writeAlertToDb(alerttxt)
@@ -583,32 +580,31 @@ def main(end=datetime.now()):
     start_time = datetime.now()
     print start_time
     
-    with open('GSMAlert.txt', 'w') as w:
+    file_path = filepath.output_file_path('all', 'public')['monitoring_output']   
+    with open(file_path+'GSMAlert.txt', 'w') as w:
         w.write('')
         
     end = round_data_time(end)
     
     props = q.GetRainProps('rain_props')
     site_df = pd.DataFrame({'site': props['name'].values})
-
+    
     Site_Public_Alert = site_df.groupby('site')
-    PublicAlert = Site_Public_Alert.apply(SitePublicAlert, end=end, start_time=start_time)
+    PublicAlert = Site_Public_Alert.apply(SitePublicAlert, end=end, start_time=start_time, file_path=file_path)
     PublicAlert = PublicAlert[['timestamp', 'site', 'alert', 'internal_alert', 'palert_source', 'validity', 'sensor_alert', 'rain_alert', 'ground_alert', 'retriggerTS', 'tech_info']]
     PublicAlert = PublicAlert.rename(columns = {'palert_source': 'source'})
     PublicAlert = PublicAlert.sort_values(['alert', 'site'], ascending = [False, True])
-    
-    PublicAlert.to_csv('PublicAlert.txt', header=True, index=None, sep='\t', mode='w')
-    
+        
     PublicAlert['timestamp'] = PublicAlert['timestamp'].apply(lambda x: str(x))
     PublicAlert['validity'] = PublicAlert['validity'].apply(lambda x: str(x))
 
-    invdf = pd.read_csv('InvalidAlert.txt', sep = ':')
+    invdf = pd.read_csv(file_path+'InvalidAlert.txt', sep = ':')
     invdf['timestamp'] = invdf['timestamp'].apply(lambda x: str(x))
     
     df = pd.DataFrame({'invalids': [invdf], 'alerts': [PublicAlert]})
     json = df.to_json(orient="records")
 
-    with open('PublicAlert.json', 'w') as w:
+    with open(file_path+'PublicAlert.json', 'w') as w:
         w.write(json)
 
     print 'runtime =', datetime.now() - start_time

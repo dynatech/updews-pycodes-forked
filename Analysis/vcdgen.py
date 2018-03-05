@@ -86,14 +86,15 @@ def velocity(monitoring_vel, window, config, num_nodes, vel_start):
     #vel_xy
     vel_xy = vel[['ts', 'vel_xy', 'id']]
     velplot_xy,L2_xy,L3_xy = plotter.vel_classify(vel_xy, config, num_nodes, linearvel=False)
+    
+    L2_xz['ts'] = L2_xz['ts'].apply(lambda x: str(x))
+    L3_xz['ts'] = L3_xz['ts'].apply(lambda x: str(x))
+    L2_xy['ts'] = L2_xy['ts'].apply(lambda x: str(x))
+    L3_xy['ts'] = L3_xy['ts'].apply(lambda x: str(x))
 
-    L2 = L2_xz.append(L2_xy)
-    L3 = L3_xz.append(L3_xy) 
-    
-    L2['ts'] = L2['ts'].apply(lambda x: str(x))
-    L3['ts'] = L3['ts'].apply(lambda x: str(x))
-    
-    veldf = pd.DataFrame({'L2': [L2], 'L3': [L3]})
+    vel_xz = pd.DataFrame({'L2': [L2_xz], 'L3': [L3_xz]})
+    vel_xy = pd.DataFrame({'L2': [L2_xy], 'L3': [L3_xy]})
+    veldf = pd.DataFrame({'downslope': [vel_xz], 'latslope': [vel_xy]})
 
     return veldf
 
@@ -138,10 +139,12 @@ def vcdgen(colname, endTS='', startTS='', hour_interval='', fixpoint='bottom', v
 
 if __name__ == '__main__':
 
-    json = vcdgen('magta', endTS='2017-06-09 19:30')
+    json = vcdgen('magta', endTS='2017-10-09 19:30')
 
-    v_L2 = pd.DataFrame(pd.read_json(json)['v'].values[0][0]['L2']).sort_values(['id', 'ts'])
-    v_L3 = pd.DataFrame(pd.read_json(json)['v'].values[0][0]['L3']).sort_values(['id', 'ts'])
+    L2_xy = pd.DataFrame(pd.read_json(json)['v'].values[0][0]['latslope'][0]['L2'])
+    L3_xy = pd.DataFrame(pd.read_json(json)['v'].values[0][0]['latslope'][0]['L3'])
+    L2_xz = pd.DataFrame(pd.read_json(json)['v'].values[0][0]['downslope'][0]['L2'])
+    L3_xz = pd.DataFrame(pd.read_json(json)['v'].values[0][0]['downslope'][0]['L3'])
     
     c = pd.DataFrame(pd.read_json(json)['c'].values[0])
     

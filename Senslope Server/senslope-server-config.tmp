@@ -3,18 +3,21 @@ username = root
 host = 192.168.150.129
 password = senslope
 dbname = senslopedb
+inboxname = smsinbox
 
 [GSMDB]
 username = root
 host = 192.168.150.127
 password = senslope
 dbname = senslopedb
+inboxname = smsinbox
 
 [SandboxDB]
 username = root
 host = 192.168.150.128
 password = senslope
 dbname = senslopedb
+inboxname = smsinbox2
 
 [Serial]
 baudrate = 57600
@@ -45,18 +48,21 @@ FailObvEN = Error! You did not put your name on the text message.  Please check 
 FailOobEN = Error! Your date or time value is either too late or too early. Please check your SMS and try again.
 
 [FileIO]
-allalertsfile = /home/dynaslope/Desktop/updews-pycodes/Analysis/GSMAlert.txt
-eqprocfile = /home/dynaslope/Desktop/updews-pycodes/Analysis/eq_alert_gen.py
-querylatestreportoutput = /home/dynaslope/Desktop/query_latest_report_output.txt
-alertgenscript = /home/dynaslope/Desktop/updews-pycodes/Analysis/alertgen.py
-alertanalysisscript = /home/dynaslope/Desktop/updews-pycodes/Analysis/AlertAnalysis.py
-masyncscript = /home/dynaslope/Desktop/updews-pycodes/client/bin/invoke-masync-CtoS-single.py
-masynclogs = /home/dynaslope/scriptlogs/masync_on_receive.txt
-websocketdir = /home/pi/updews-pycodes/Experimental Versions/pythonSockets
-gndalert1 = /home/dynaslope/Desktop/updews-pycodes/Data\ Analysis/GroundAlert/GenerateGroundAlert.py
-gndalert2 = /home/dynaslope/Desktop/updews-pycodes/Data\ Analysis/GroundAlert/GenerateGroundAlertWithTrendingNewAlerts.py
-gndalert3 = /home/dynaslope/Desktop/updews-pycodes/Data\ Analysis/GroundAlert/GenerateGroundAlertWithTrending.py
-monitoringoutputdir =  /home/dynaslope/Desktop/MonitoringOutput/serverlogs/
+serverdir = /home/dyna/server/updews-pycodes/
+logsdir = /home/dyna/server/logs/
+monitoringoutputdir = /home/dyna/server/logs/
+allalertsfile = monitoringoutput/GSMAlert.txt
+eqprocfile = Analysis/eq_alert_gen.py
+querylatestreportoutput = query_latest_report_output.txt
+alertgenscript = Analysis/alertgen.py
+alertanalysisscript = Analysis/AlertAnalysis.py
+masyncscript = client/bin/invoke-masync-CtoS-single.py
+masynclogs = masync_on_receive.txt
+websocketdir = Experimental Versions/pythonSockets
+gndalert1 = Data\ Analysis/GroundAlert/GenerateGroundAlert.py
+gndalert2 = Data\ Analysis/GroundAlert/GenerateGroundAlertWithTrendingNewAlerts.py
+gndalert3 = Data\ Analysis/GroundAlert/GenerateGroundAlertWithTrending.py
+pythonpath = ~/miniconda2/bin/python
 
 
 [simprefix]

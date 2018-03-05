@@ -176,10 +176,10 @@ def GetDBDataFrame(query):
         PrintOut("Exception detected in accessing database")
         
 #Push a dataframe object into a table
-def PushDBDataFrame(df,table_name):     
+def PushDBDataFrame(df,table_name,index=True):     
     engine = create_engine('mysql://'+Userdb+':'+Passdb+'@'+Hostdb+':3306/'+Namedb)
     try:
-        df.to_sql(name = table_name, con = engine, if_exists = 'append', schema = Namedb)
+        df.to_sql(name = table_name, con = engine, if_exists = 'append', schema = Namedb, index=index)
     except:
         print 'already in db'
 
@@ -664,9 +664,9 @@ def GetLastGoodData(df, nos, fillMissing=False):
         # change their ids to the missing ids
         dfd.id = pd.Series(missing)
         # append to the lgd datframe
-        dflgd = dfa.append(dfd).sort(['id']).reset_index(level=1,drop=True)
+        dflgd = dfa.append(dfd).sort_values(['id']).reset_index(level=1,drop=True)
     else:
-        dflgd = dfa.sort(['id']).reset_index(level=1,drop=True)
+        dflgd = dfa.sort_values(['id']).reset_index(level=1,drop=True)
         
 #    print dflgd
     

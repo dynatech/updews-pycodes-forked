@@ -11,6 +11,7 @@ import rtwindow as rtw
 import querySenslopeDb as q
 import genproc as g
 import ColumnPlotter as plotter
+import filepath
 
 def mon_main():
     while True:
@@ -59,8 +60,8 @@ def mon_main():
                 
             config.io.column_fix = column_fix
             
-            monitoring = g.genproc(col[0], window, config, config.io.column_fix, realtime=True)
-            plotter.main(monitoring, window, config, plotvel_start=window.end-timedelta(hours=3), plotvel_end=window.end)#, plot_inc=False)
+            monitoring = g.genproc(col[0], window, config, fixpoint=config.io.column_fix, realtime=True)
+            plotter.main(monitoring, window, config)
             
         # plots with customizable monitoring window
         elif monitoring_window == 'n':
@@ -143,8 +144,8 @@ def mon_main():
             else:
                 plotvel = False
     
-            monitoring = g.genproc(col[0], window, config, config.io.column_fix, comp_vel = plotvel)
-            plotter.main(monitoring, window, config, plotvel=plotvel, show_part_legend = show_part_legend, plotvel_end=window.end, plotvel_start=window.start, plot_inc=False, comp_vel=plotvel)
+            monitoring = g.genproc(col[0], window, config, fixpoint=config.io.column_fix, comp_vel = plotvel)
+            plotter.main(monitoring, window, config, plotvel=plotvel, show_part_legend = show_part_legend, plotvel_start=window.start, plot_inc=False, comp_vel=plotvel)
         
     # plots from start to end of data
     elif plot_all_data == 'y':
@@ -223,8 +224,35 @@ def mon_main():
         else:
             plotvel = False
 
-        monitoring = g.genproc(col[0], window, config, config.io.column_fix, comp_vel = plotvel)
-        plotter.main(monitoring, window, config, plotvel=plotvel, plotvel_start=window.start, plotvel_end=window.end, show_part_legend = show_part_legend, plot_inc=False, comp_vel=plotvel)
+        monitoring = g.genproc(col[0], window, config, fixpoint=config.io.column_fix, comp_vel = plotvel)
+        plotter.main(monitoring, window, config, plotvel=plotvel, plotvel_start=window.start, show_part_legend = show_part_legend, plot_inc=False, comp_vel=plotvel)
+        
+    try:
+        plotvel
+    except:
+        plotvel = True
+        
+    if plotvel == True:
+        while True:
+            save_vel = raw_input('Save velocity values? (Y/N): ').lower()
+            if save_vel == 'y' or save_vel == 'n':        
+                break
+            
+        try:
+            if monitoring_window == 'y':
+                plotvel_start = window.end - timedelta(hours=3)
+            else:
+                plotvel_start = window.start
+        except:
+            plotvel_start = window.start
+
+        if save_vel == 'y':
+            vel = monitoring.disp_vel[['id', 'vel_xz', 'vel_xy']]
+            vel = vel[(vel.index >= plotvel_start) & (vel.index <= window.end)]
+            vel = vel.reset_index().sort_values(['ts', 'id'])
+            
+            file_path = filepath.output_file_path('all', 'public')['monitoring_output']
+            vel.to_csv(file_path + col[0].name.upper() + 'vel.csv', index=False)
         
 ##########################################################
 if __name__ == "__main__":

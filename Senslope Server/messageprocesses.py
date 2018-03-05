@@ -488,7 +488,8 @@ def ProcessEarthquake(msg):
     dbio.commitToDb(query, 'earthquake')
 
     # subprocess.Popen(["python",cfg.config().fileio.eqprocfile])
-    exec_line = "~/anaconda2/bin/python %s > ~/scriptlogs/earthquakescript.txt 2>&1" % (cfg.config().fileio.eqprocfile)
+    c = cfg.config()
+    exec_line = "%s %s > ~/logs/earthquakescript.txt 2>&1" % (c.fileio.pythonpath, c.fileio.eqprocfile)
     p = subprocess.Popen(exec_line, stdout=subprocess.PIPE, shell=True, stderr=subprocess.STDOUT)
 
     return True
@@ -737,9 +738,9 @@ def invokeProcessInBgnd(exec_line):
 
 def syncTable(table):
     c = cfg.config()
-    invokeProcessInBgnd("~/anaconda2/bin/python %s %s > %s 2>&1" % (c.fileio.masyncscript, table, c.fileio.masynclogs))
+    invokeProcessInBgnd("%s %s %s > %s 2>&1" % (c.fileio.pythonpath, c.fileio.masyncscript, table, c.fileio.masynclogs))
 
-def ProcessAllMessages(allmsgs,network):
+def ProcessAllMessages(allmsgs,network,instance):
     c = cfg.config()
     read_success_list = []
     read_fail_list = []
@@ -775,7 +776,7 @@ def ProcessAllMessages(allmsgs,network):
                 try:
                     gm = gndmeas.getGndMeas(msg.data)
                     RecordGroundMeasurements(gm)
-                    syncTable(gndmeas)
+                    syncTable("gndmeas")
                     # server.WriteOutboxMessageToDb("READ-SUCCESS: \n" + msg.data,c.smsalert.communitynum)
                     server.WriteOutboxMessageToDb(c.reply.successen, msg.simnum)
                 except ValueError as e:
@@ -836,7 +837,7 @@ def ProcessAllMessages(allmsgs,network):
         # print all the traceback routine so that the error can be traced
         print (traceback.format_exc())
         print ">> Setting message read_status to fatal error"
-        dbio.setReadStatus("FATAL ERROR",cur_num)
+        dbio.setReadStatus("FATAL ERROR",cur_num,instance)
         
     return read_success_list, read_fail_list
     
