@@ -124,8 +124,11 @@ def write_raw_sms_to_db(msglist,gsm_info):
         :type gsm_info: obj
         :returns: N/A
     """
-    logger_mobile_sim_nums = get_mobile_sim_nums('loggers')
-    user_mobile_sim_nums = get_mobile_sim_nums('users')
+    sc = mc.get('server_config')
+    mobile_nums_db = sc["resource"]["mobile_nums_db"]
+
+    logger_mobile_sim_nums = get_mobile_sim_nums('loggers', mobile_nums_db)
+    user_mobile_sim_nums = get_mobile_sim_nums('users', mobile_nums_db)
 
     # gsm_ids = get_gsm_modules()
 

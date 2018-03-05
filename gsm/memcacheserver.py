@@ -68,8 +68,10 @@ def main():
 	mc = memcache.Client(['127.0.0.1:11211'],debug=0)
 	print 'done'
 
+	print 'Setting server configuration',
 	c = cfg.dewsl_server_config()
 	mc.set("server_config",c.config)
+	print 'done'
 
 	# set_server_cfg(mc)
 	try:
