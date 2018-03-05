@@ -173,7 +173,7 @@ def import_sql_file_to_dyna(table, max_inbox_id, max_index_last_copied):
         "'UNREAD' as read_status, 'W' AS web_flag FROM smsinbox_%s t1 "
         "inner join (select mobile_id, sim_num from %s_mobile) t2 "
         "on t1.mobile_id = t2.mobile_id where t1.gsm_id !=1 "
-        "and t1.inbox_id <= %d and t1.inbox_id < %d") % (table, table[:-1], 
+        "and t1.inbox_id < %d and t1.inbox_id > %d") % (table, table[:-1], 
             max_inbox_id, max_index_last_copied)
 
     f_dump = "/home/dyna/logs/sandbox_%s_dump.sql" % (table)
@@ -201,6 +201,11 @@ def import_sql_file_to_dyna(table, max_inbox_id, max_index_last_copied):
     f_index = open("/home/dyna/logs/%s_inbox_index.tmp" % table, "wb")
     f_index.write(str(max_inbox_id))
     f_index.close()
+
+    # delete dump file
+    command = "rm %s" % (f_dump)
+    p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, 
+        stderr=subprocess.STDOUT)
 
 
 def sandbox_to_dyna(table_name):
