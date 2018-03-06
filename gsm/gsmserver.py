@@ -81,10 +81,8 @@ def log_runtime_status(script_name,status):
     
     print ">> Logging runtime '" + status + "' at " + logtimestamp 
     
-    query = """insert ignore into runtimelog
-                (timestamp,script_name,status)
-                values ('%s','%s','%s')
-                """ %(logtimestamp,script_name,status)
+    query = ("insert ignore into runtimelog (ts, script_name, log_details) "
+        "Values ('%s','%s','%s')") % (logtimestamp, script_name, status)
     
     dbio.commit_to_db(query, 'log_runtime_status')
        
@@ -642,14 +640,8 @@ def run_server(gsm_info,table='loggers'):
         log_runtime_status(network,"com port error")
         raise ValueError(">> Error: no com port found")
             
-    # dbio.create_table("runtimelog","runtime",cfg.config().mode.logtoinstance)
-    # log_runtime_status(network,"startup",)
+    log_runtime_status(gsm_info["name"],"startup")
     
-    # dbio.create_table('smsinbox','smsinbox',cfg.config().mode.logtoinstance)
-    # dbio.create_table('smsoutbox','smsoutbox',cfg.config().mode.logtoinstance)
-
-    # sensor_numbers_str = str(get_sensor_numbers())
-
     print '**' + gsm_info['name'] + ' GSM server active**'
     print time.asctime()
     network = gsm_info['network']
@@ -667,7 +659,7 @@ def run_server(gsm_info,table='loggers'):
                 
             print dt.today().strftime("\n" + network 
                 + " Server active as of %A, %B %d, %Y, %X")
-            # log_runtime_status(network,"alive")
+            log_runtime_status(gsm_info["name"],"alive")
 
             try_sending_messages(gsm_info["id"])
             
