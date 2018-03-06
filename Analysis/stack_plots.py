@@ -72,13 +72,13 @@ def get_rain_df(rain_gauge, start, end):
     rain_df = rain_df[rain_df.rain >= 0]
     rain_df = rain_df.set_index('ts')
     rain_df = rain_df.resample('30min').sum()
-    rain_df = rain_df[(rain_df.index >= start) & (rain_df.index <= end)]
     
     rain_df['one'] = rain_df.rain.rolling(window=48, min_periods=1, center=False).sum()
     rain_df['one'] = np.round(rain_df.one, 2)
     rain_df['three'] = rain_df.rain.rolling(window=144, min_periods=1, center=False).sum()
     rain_df['three'] = np.round(rain_df.three, 2)
     
+    rain_df = rain_df[(rain_df.index >= start) & (rain_df.index <= end)]
     rain_df = rain_df.reset_index()
     
     return rain_df
