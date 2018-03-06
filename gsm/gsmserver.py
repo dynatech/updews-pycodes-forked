@@ -25,7 +25,7 @@ mc = memcache.Client(['127.0.0.1:11211'],debug=0)
 def check_id_in_table(table,gsm_id):
     """
         **Description:**
-          -The function that checks if the number exists in users or loggers table.
+          -The check id in table is a function that select data from user or logger mobile with mobile id.
          
         :param table: table name of the gsm_id.
         :param gsm_id: gsm_id of the recipient.
@@ -43,7 +43,7 @@ def check_id_in_table(table,gsm_id):
 def check_number_in_table(num):
     """
         **Description:**
-          -The function that checks if the number exists in users or loggers table.
+          -The check number in table is a function that checks if the number exists in users or loggers table.
          
         :param num: number of the recipient.
         :type num: int
@@ -63,7 +63,7 @@ def check_number_in_table(num):
 def log_runtime_status(script_name,status):
     """
         **Description:**
-          -The function that log the runtime of script alive or not.
+          -The log runtime status is a  function that log the runtime of script if  alive or not.
          
         :param script_name: Script file name.
         :param status: script runtime status.
@@ -91,7 +91,7 @@ def log_runtime_status(script_name,status):
 def send_alert_gsm(network,alertmsg):
     """
         **Description:**
-          -The function that sends alert using gsm.
+          -The sen alert gsm is a function check number and  sends alert message using gsm.
          
         :param network: Network that will be use **Smart or Globe**.
         :param alertmsg: alert message.
@@ -116,7 +116,7 @@ def send_alert_gsm(network,alertmsg):
 def write_raw_sms_to_db(msglist,gsm_info):
     """
         **Description:**
-          -The function that write raw  message in database.
+          -The write raw sms to database function that write raw  message in database.
          
         :param msglist: The message list.
         :param gsm_info: The gsm_info that being use.
@@ -185,25 +185,26 @@ def write_raw_sms_to_db(msglist,gsm_info):
             dbio.commit_to_db(query_users,'write_raw_sms_to_db',
                 instance = sms_instance)
         
-def write_eq_alert_message_to_db(alertmsg):
-    """
-        **Description:**
-          -The main function that write alert in file.
+# def write_eq_alert_message_to_db(alertmsg):
+#     """
+#         **Description:**
+#           -The main function that write alert in file.
          
-        :param alertmsg: The message that will be write in file.
-        :type alertmsg: str
-        :returns: N/A
-    """
-    c = cfg.config()
-    # write_outbox_message_to_db(alertmsg,c.smsalert.globenum)
-    # write_outbox_message_to_db(alertmsg,c.smsalert.smartnum)
+#         :param alertmsg: The message that will be write in file.
+#         :type alertmsg: str
+#         :returns: N/A
+#     """
+#     c = cfg.config()
+#     # write_outbox_message_to_db(alertmsg,c.smsalert.globenum)
+#     # write_outbox_message_to_db(alertmsg,c.smsalert.smartnum)
 
 
 
 def write_outbox_message_to_db(message='',recipients='',gsm_id='',table=''):
     """
         **Description:**
-          -The function that write message to the outbox of the database table.
+          -The write outbox message to database is a function that insert message to smsoutbox with 
+          timestamp written,message source and mobile id.
          
         :param message: The message that will be sent to the recipients.
         :param recipients: The number of the recipients.
@@ -254,7 +255,7 @@ def write_outbox_message_to_db(message='',recipients='',gsm_id='',table=''):
 def check_alert_messages():
     """
         **Description:**
-          -The function that checks alert message in allalertsfile.
+          -The check alert message is a function that checks alert message in allalertsfile.
          
         :parameters: N/A
         :returns: **alllines** (*str*) - status if the file  alert file is read.
@@ -275,9 +276,9 @@ def check_alert_messages():
 def get_allowed_prefixes(network):
     """
         **Description:**
-          -The function that runs  to check network prefixes extensions.
+          -The get allowed prefixes is a function that runs to check network prefixes extensions.
          
-        :param netwok: Table name and **Default** to **users** table .
+        :param netwok: Table name (users and loggers) and **Default** to **users** table .
         :type network: str
         :returns: **extended_prefix_list** (*int*) - The extended prefix
     """
@@ -298,12 +299,12 @@ def send_messages_from_db(table='users',send_status=0,gsm_id=0,limit=10):
    
     """
         **Description:**
-          -The function that send message from database.
+          -The send massages from database is a function that get all message unset and try to send the message again.
          
         :param table: Table name and **Default** to **users** table .
-        :param send_status:  **Default** to **0**.
-        :param gsm_id: **Default** to **0**.
-        :param limit: **Default** to **10**.
+        :param send_status: the id number of the gsm message status and  **Default** to **0**.
+        :param gsm_id: The id of the gsm that is use globe (2,4) and smart (3,5) and **Default** to **0**.
+        :param limit: The limit of message to get in the table and **Default** to **10**.
         :type table: str
         :type send_status: str
         :type gsm_id: int
@@ -377,7 +378,7 @@ def send_messages_from_db(table='users',send_status=0,gsm_id=0,limit=10):
 def get_sensor_numbers():
     """
         **Description:**
-          -The function that get number of the sensors in the database.
+          -The get sensor numbers is a function that get number of the sensors in the database.
          
         :parameters: N/A
         :returns:  **mobile number** (*int*) -mobile number of all sensors
@@ -393,10 +394,12 @@ def get_sensor_numbers():
 def get_mobile_sim_nums(table, host = None):
     """
         **Description:**
-          -The function that get the number of the loggers or users in the database.
+          -The get mobile sim nums is a function that get the number of the loggers or users in the database.
          
         :param table: loggers or users table.
+        :param host: host name of the number and  **Default** to **None**
         :type table: str
+        :type host: str 
         :returns:  **mobile number** (*int*) - mobile number of user or logger
     """
 
@@ -447,12 +450,12 @@ def get_mobile_sim_nums(table, host = None):
 def save_to_cache(key,value):
     """
         **Description:**
-          -The main function that save values in cache.
+          -The save to cache is a function that save values in cache.
          
         :param key: cache key.
-        :param key: cache value.
+        :param value: cache value.
         :type key: str
-        :type key: int,str
+        :type value: int,str
         :returns: N/A
     """
     mc.set(key,value)
@@ -460,7 +463,7 @@ def save_to_cache(key,value):
 def get_value_from_cache(key):
     """
         **Description:**
-          -The function that get the cache.
+          -The get value from cache is a function that get the cache.
          
         :param key: cache key.
         :type key: str
@@ -471,7 +474,7 @@ def get_value_from_cache(key):
 def try_sending_messages(gsm_id):
     """
         **Description:**
-          -The function that try to send message in the gsm network for loggers and users .
+          -The try sending message is a function that try to send message in the gsm network for loggers and users .
          
         :param gsm_id: gsm_id of 4(globe) and 5(smart).
         :type gsm_id: int
@@ -493,7 +496,7 @@ def try_sending_messages(gsm_id):
 def delete_messages_from_gsm():
     """
         **Description:**
-          -The function that delete messages in the gsm module
+          -The delete message from gms is a function that delete messages in the gsm module
          
         :parameters: N/A
         :returns: N/A
@@ -508,7 +511,7 @@ def delete_messages_from_gsm():
 def simulate_gsm(network='simulate'):
     """
         **Description:**
-          -The function that runs a gsm simulation of insert,update and check status of gsm.
+          -The simulate is a function that runs a gsm simulation of insert,update and check status of gsm.
          
         :param network: gsm network and **Default** to **simulate**.
         :type table: str
@@ -610,7 +613,7 @@ def run_server(gsm_info,table='loggers'):
     # print gsm_info["id"]
     """
         **Description:**
-          -The function that runs the gsm server to read the recieved message and to try to send message from outbox.
+          -The run server is a function that runs the gsm server to read the recieved message and to try to send message from outbox.
          
         :param gsm_info: id of the gsm server.
         :param table: table name to use and **Default** to **loggers**
@@ -697,8 +700,8 @@ def run_server(gsm_info,table='loggers'):
 def get_arguments():
     """
         **Description:**
-          -The get_arguments function that checks the argument that being sent from main function and returns the
-        arguement of the function.
+          -The get_arguments is a function that checks the argument that being sent from main function and returns the
+        arguement list of the function.
          
         :parameters: N/A
         :returns: **args** (*int,str*) - Mode of action from running python **loggers or users** (*smsinbox table*), **smart/globe/simulate** (*network name*)  and **gsm id** (*1,2,3...*) .
@@ -728,7 +731,7 @@ def get_arguments():
 def get_gsm_modules(reset_val = False):
     """
         **Description:**
-          -The get_gsm_modules function that get and check the gsm modules information.
+          -The get_gsm_modules is a function that get and check the gsm modules information.
          
         :param reset_val: Trigger value to check the gsm information and **Default** to **False**
         :type table: boolean
@@ -761,8 +764,9 @@ def main():
 
     """
         **Description:**
-          -The main function that runs the whole mainserver with the logic of
-          checking if the mainserver must run the gsm network rpi and table smsinbox.
+          -The main is a function that runs the whole gsmserver with the logic of
+          checking if the gsmserver arguement is being initialize as gsm_id, table or network 
+          with respective agruement id.
          
         :parameters: N/A
         :returns: N/A
