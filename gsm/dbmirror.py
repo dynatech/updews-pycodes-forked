@@ -6,6 +6,7 @@ import subprocess
 import cfgfileio as cfg
 import argparse
 import memcache
+import sys
 
 c = cfg.config()
 mc = memcache.Client(['127.0.0.1:11211'],debug=0)
@@ -71,7 +72,12 @@ def dyna_to_sandbox():
     p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, 
         stderr=subprocess.STDOUT)
     out, err = p.communicate()
-    max_sms_id = out.split('\n')[2]
+    try:
+        max_sms_id = out.split('\n')[2]
+    except IndexError:
+        print "Index Error"
+        print out, err
+        sys.exit()
     # max_sms_id = 4104000
     print "Max sms_id from sandbox smsinbox:", max_sms_id, "done"
 
@@ -85,12 +91,15 @@ def dyna_to_sandbox():
     p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, 
         stderr=subprocess.STDOUT)
     out, err = p.communicate()
+    if out or err:
+        print out, err
     print 'done'
 
     # write to local db
     print "Dumping tables from gsm host to sandbox dump file ...", 
     command = "mysql -h %s -u %s %s < %s -p%s" % (sb_host, user, name, f_dump,
         password)
+    print command
     p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, 
         stderr=subprocess.STDOUT)
     out, err = p.communicate()
