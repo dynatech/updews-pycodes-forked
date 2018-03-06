@@ -84,7 +84,7 @@ def get_rain_df(rain_gauge, start, end):
     return rain_df
 
 # rainfall plot
-def plot_rain(ax, df, rain_gauge,plot_inst=1):
+def plot_rain(ax, df, rain_gauge, plot_inst=True):
     ax.plot(df.ts, df.one, color='green', label='1-day cml', alpha=1)
     ax.plot(df.ts,df.three, color='blue', label='3-day cml', alpha=1)
     
@@ -92,10 +92,9 @@ def plot_rain(ax, df, rain_gauge,plot_inst=1):
         ax.set_ylim([0, 300])
     
     if plot_inst:
-        ax2=ax.twinx()
-        width=0.04
-        ins_df = df.dropna()
-        ax2.bar([pltdates.date2num(x) for x in ins_df.ts], ins_df.rain, width=width,alpha=0.1, color='k', label = '30min rainfall')
+        ax2 = ax.twinx()
+        width = float(0.004 * (max(df['ts']) - min(df['ts'])).days)
+        ax2.bar(df['ts'].apply(lambda x: pltdates.date2num(x)), df.rain, width=width,alpha=0.1, color='k', label = '30min rainfall')
         ax2.xaxis_date()
     
     query = "SELECT * FROM rain_props where name = '%s'" %site
@@ -242,7 +241,7 @@ def main(site, start, end, rainfall_props, surficial_props, subsurface_props, cs
                 ax = fig.add_subplot(subplot-1, sharex=ax)
                 subplot -= 1                    
                 ax.xaxis.set_visible(False)
-            plot_rain(ax, rain, rain_gauge.upper().replace('RAIN_NOAH_', 'ASTI ARG '))
+            plot_rain(ax, rain, rain_gauge.upper().replace('RAIN_NOAH_', 'ASTI ARG '), plot_inst=rainfall_props['plot_inst'])
             for event_id in range(len(event_lst[0])):
                 try:
                     color = event_lst[1][event_id]
@@ -360,7 +359,7 @@ def main(site, start, end, rainfall_props, surficial_props, subsurface_props, cs
 if __name__ == '__main__':
     
     site = 'bar'
-    start = '2018-01-14'
+    start = '2018-01-10'
     end = '2018-01-20'
     subsurface_end = '2018-01-20 00:00'
     
@@ -376,10 +375,10 @@ if __name__ == '__main__':
     
     
     # rainfall plot                                                 
-    rainfall = True
-    plot_inst = 1                             ### True if to plot rainfall
-    rain_gauge_lst = ['imeraw']                           ### specifiy rain gauge
-    rainfall_props = {'to_plot': rainfall, 'rain_gauge_lst': rain_gauge_lst}
+    rainfall = True                              ### True if to plot rainfall
+    plot_inst = True                             ### True if to plot instantaneous rainfall
+    rain_gauge_lst = ['imeraw']                  ### specifiy rain gauge
+    rainfall_props = {'to_plot': rainfall, 'rain_gauge_lst': rain_gauge_lst, 'plot_inst': plot_inst}
 
     # surficial plot
     surficial = True                ### True if to plot surficial
