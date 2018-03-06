@@ -25,7 +25,7 @@ def logger_response(msg,log_type,log='False'):
           " date_activated desc limit 1),'%s','%s')" 
          % (msg.simnum,msg.num,log_type))
                     
-        dbio.commit_to_db(query, 'insert new log for logger response')
+        dbio.commit_to_db(query, 'insert new log for logger response',instance='sandbox')
         print '>> Log response'
     else:
         return False
@@ -35,7 +35,7 @@ def common_logger_sms(msg):
     '^\*[0-9]{10,12}$':3,'^[A-F0-9]+\*[0-9]{10,12}$':3,'REGISTERED':4,'SERVER NUMBER':5,
     '^MANUAL RESET':6,'POWER UP':7, 'SYSTEM STARTUP': 8,'SMS RESET':9, 'POWER SAVING DEACTIVATED':10}
     for key,value in log_match.items():    
-        if re.search(key, msg.data):
+        if re.search(key, msg.data.upper()):
             logger_response(msg,value,True)
             return value
     return False
@@ -1108,7 +1108,7 @@ def test():
 def main():
     """
         **Description:**
-          -The main function that runs the whole smsparser with the logic of
+          -The main is a function that runs the whole smsparser with the logic of
           parsing sms txt of users and loggers.
          
         :parameters: N/A
