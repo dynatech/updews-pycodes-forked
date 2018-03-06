@@ -13,7 +13,7 @@ mc = memcache.Client(['127.0.0.1:11211'],debug=0)
 def get_arguments():
     """
       **Description:**
-        -The function that checks the argument that being sent from main function and returns the
+        -The get arguments is a function that checks the argument that being sent from main function and returns the
         arguement of the function.
       
       :parameters: N/A
@@ -42,7 +42,7 @@ def get_arguments():
 def dyna_to_sandbox():
     """
       **Description:**
-        -The function that process the exporting of data from dyna and importing data to sandbox by 
+        -The dyna to sandbox is a function that process the exporting of data from dyna and importing data to sandbox by 
         loading  the data from XML.
       
       :parameters: N/A
@@ -107,7 +107,7 @@ def dyna_to_sandbox():
 def get_max_index_from_table(table_name):
     """
       **Description:**
-        -The function that get the max index of the smsinbox.
+        -The get max index from table is a function that get the max index of the smsinbox.
           
           :param table: Name of the table for smsinbox
           :type table: str
@@ -132,7 +132,7 @@ def get_max_index_from_table(table_name):
 def get_last_copied_index(table_name):
     """
         **Description:**
-            -The function that reads the value of the index inside the user_inbox_index.tmp.
+            -The get last copied index is a  function that reads the value of the index inside the user_inbox_index.tmp.
         
         :parameters: N/A
         :returns: **max_index_last_copied** (*int*) - Index id that stored from the user_inbox_index.tmp.
@@ -145,7 +145,7 @@ def get_last_copied_index(table_name):
 def import_sql_file_to_dyna(table, max_inbox_id, max_index_last_copied):
     """
         **Description:**
-         -The function that process the exporting of data from sanbox and importing data to dyna smsibox2.
+         -The import sql file to dyna is a function that process the exporting of data from sanbox and importing data to dyna smsibox2.
          This function also change the value of the index in user_inbox_index.tmp.
         :param table: Name of the table for smsinbox
         :param max_inbox_id: Index id of the not yet copied data in dyna
@@ -211,7 +211,7 @@ def import_sql_file_to_dyna(table, max_inbox_id, max_index_last_copied):
 def sandbox_to_dyna(table_name):
     """
       **Description:**
-        -The function that process the mirroring data of sandbox to dyna by comparing
+        -The sandbox to dyna is a function that process the mirroring data of sandbox to dyna by comparing
         the max index of  the not yet copied data from dyna and the last copied index
         from dyna.
       
@@ -238,7 +238,7 @@ def sandbox_to_dyna(table_name):
 def main():
     """
         **Description:**
-          -The main function that runs the whole dbmirror with the logic of
+          -The main is a function that runs the whole dbmirror with the logic of
           checking if the dbmirror must run the dyna to sandbox 
           or the sandbox to dyna for mirroring the data.
          
