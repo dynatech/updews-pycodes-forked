@@ -3,6 +3,8 @@
 import ConfigParser, MySQLdb, time, sys, argparse
 from datetime import datetime as dt
 import cfgfileio as cfg
+import memcache
+mc = memcache.Client(['127.0.0.1:11211'],debug=0)
 
 # cfg = ConfigParser.ConfigParser()
 # cfg.read(sys.path[0] + "/senslope-server-config.txt")
@@ -10,10 +12,15 @@ c = cfg.config()
 
 class dbInstance:
     def __init__(self,host):
-       self.name = c.db["name"]
-       self.host = c.dbhost[host]
-       self.user = c.db["user"]
-       self.password = c.db["password"]
+        sc = mc.get('server_config')
+        self.name = sc['db']['name']
+        self.host = sc['hosts'][host]
+        self.user = sc['db']['user']
+        self.password = sc['db']['password']
+       # self.name = c.db["name"]
+       # self.host = c.dbhost[host]
+       # self.user = c.db["user"]
+       # self.password = c.db["password"]
 
 # def db_connect():
 # Definition: Connect to senslopedb in mysql
