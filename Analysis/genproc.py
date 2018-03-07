@@ -20,7 +20,7 @@ def resamplenode(df, window):
     df = df.reset_index().drop_duplicates(['ts','id']).set_index('ts')
     df.index = pd.to_datetime(df.index)
     df = df.sort_index(ascending = True)
-    df = df.resample('30Min', base=0, how='pad')
+    df = df.resample('30Min', base=0).pad()
     df = df.reset_index(level=1)
     return df    
       
@@ -78,7 +78,7 @@ def fill_smooth(df, offsetstart, end, roll_window_numpts, to_smooth, to_fill):
     df=df[(df.index>=offsetstart)&(df.index<=end)]
     
     if to_smooth and len(df)>1:
-        df=pd.rolling_mean(df,window=roll_window_numpts,min_periods=1)[roll_window_numpts-1:]
+        df=df.rolling(window=roll_window_numpts,min_periods=1).mean()[roll_window_numpts-1:]
         return df
     else:
         return df
@@ -106,7 +106,10 @@ def remove_invalid(stat, df):
     df = df[~(df.id == stat['node'].values[0])].append(invalid)
     return df
 
-def genproc(col, window, config, fixpoint, realtime=False, comp_vel=True):
+def genproc(col, window, config, fixpoint='', realtime=False, comp_vel=True):
+    
+    if fixpoint == '':
+        fixpoint = config.io.column_fix
     
     monitoring = q.GetRawAccelData(col.name, window.offsetstart, window.end)
         
@@ -188,4 +191,4 @@ def genproc(col, window, config, fixpoint, realtime=False, comp_vel=True):
     else:
         disp_vel = monitoring
     
-    return procdata(col,disp_vel.sort(),max_min_df,max_min_cml)
+    return procdata(col,disp_vel.sort_index(),max_min_df,max_min_cml)

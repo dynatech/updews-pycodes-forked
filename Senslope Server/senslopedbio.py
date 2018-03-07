@@ -6,27 +6,35 @@ import cfgfileio as cfg
 # cfg.read(sys.path[0] + "/senslope-server-config.txt")
 
 class dbInstance:
-    def __init__(self,name,host,user,password):
+    def __init__(self,name,host,user,password,inbox):
        self.name = name
        self.host = host
        self.user = user
        self.password = password
+       self.inbox = inbox
 
 c = cfg.config()
 
-localdbinstance = dbInstance(c.localdb.name,c.localdb.host,c.localdb.user,c.localdb.pwd)
-gsmdbinstance = dbInstance(c.gsmdb.name,c.gsmdb.host,c.gsmdb.user,c.gsmdb.pwd)
-sandboxbinstance = dbInstance(c.sandboxdb.name,c.sandboxdb.host,c.sandboxdb.user,c.sandboxdb.pwd)
+localdbinstance = dbInstance(c.localdb.name,c.localdb.host,c.localdb.user,c.localdb.pwd,c.localdb.inbox)
+gsmdbinstance = dbInstance(c.gsmdb.name,c.gsmdb.host,c.gsmdb.user,c.gsmdb.pwd,c.gsmdb.inbox)
+sandboxinstance = dbInstance(c.sandboxdb.name,c.sandboxdb.host,c.sandboxdb.user,c.sandboxdb.pwd,c.sandboxdb.inbox)
+
+def get_db_instance(instance='gsm'):
+    if instance.upper() == 'LOCAL':
+        dbc = localdbinstance
+    elif instance.upper() == 'SANDBOX':
+        dbc = sandboxinstance    
+    else:
+        dbc = gsmdbinstance
+
+    return dbc
+    
 
 # def SenslopeDBConnect():
 # Definition: Connect to senslopedb in mysql
 def SenslopeDBConnect(instance):
-    if instance.upper() == 'LOCAL':
-        dbc = localdbinstance
-    elif instance.upper() == 'SANDBOX':
-        dbc = localdbinstance    
-    else:
-        dbc = gsmdbinstance
+    dbc = get_db_instance(instance)
+
     while True:
         try:
             db = MySQLdb.connect(host = dbc.host, user = dbc.user, passwd = dbc.password, db = dbc.name)
@@ -87,8 +95,10 @@ def createTable(table_name, type, instance='local'):
         
     db.close()
 
-def setReadStatus(read_status,sms_id_list):
+def setReadStatus(read_status,sms_id_list,instance='gsm'):
     # db, cur = SenslopeDBConnect('gsm')
+
+    dbc = get_db_instance(instance)
     
     if type(sms_id_list) is list:
         if len(sms_id_list) == 0:
@@ -99,11 +109,11 @@ def setReadStatus(read_status,sms_id_list):
         where_clause = "where sms_id = %d" % (sms_id_list)
     else:
         print ">> Unknown type"        
-    query = "update %s.smsinbox set read_status = '%s' %s" % (gsmdbinstance.name, read_status, where_clause)
+    query = "update %s.%s set read_status = '%s' %s" % (dbc.name, dbc.inbox, read_status, where_clause)
     
-    commitToDb(query,"setReadStatus", instance='GSM')
+    commitToDb(query,"setReadStatus", instance)
     
-def setSendStatus(send_status,sms_id_list):
+def setSendStatus(send_status,sms_id_list,instance='gsm'):
     # db, cur = SenslopeDBConnect('gsm')
     
     if type(sms_id_list) is list:
@@ -114,21 +124,21 @@ def setSendStatus(send_status,sms_id_list):
     elif type(sms_id_list) is long:
         where_clause = "where sms_id = %d" % (sms_id_list)
     query = "update %s.smsoutbox set send_status = '%s' %s" % (gsmdbinstance.name, send_status, where_clause)
-    print query
         
     now = dt.today().strftime("%Y-%m-%d %H:%M:%S")
 
     query = "update %s.smsoutbox set send_status = '%s', timestamp_sent ='%s' %s " % (gsmdbinstance.name, send_status, now, where_clause)
-    commitToDb(query,"setSendStatus", instance='GSM')
+    commitToDb(query,"setSendStatus", instance)
     
-def getAllSmsFromDb(read_status):
-    db, cur = SenslopeDBConnect('gsm')
+def getAllSmsFromDb(read_status,instance='gsm'):
+    db, cur = SenslopeDBConnect(instance)
+    dbc = get_db_instance(instance)
     
     while True:
         try:
-            query = """select sms_id, timestamp, sim_num, sms_msg from %s.smsinbox
-                where read_status = '%s' limit 200""" % (gsmdbinstance.name, read_status)
-        
+            query = """select sms_id, timestamp, sim_num, sms_msg from %s.%s
+                where read_status = '%s' limit 200""" % (dbc.name, dbc.inbox, read_status)
+
             a = cur.execute(query)
             out = []
             if a:

@@ -165,6 +165,10 @@ def getGndMeas(text):
       cm = float(re.search("\d{1,3}\.*\d{0,2}",cm).group(0))
     except AttributeError:
       cm = float(re.search("\d{1,3}\.*\d{0,2}",cm).group(0))*100.0
+
+    # check for out of bounds errors
+    if cm > 2500.0:
+      raise ValueError(c.reply.failmeasen)
       
     gnd_records = gnd_records + "('"+date_str+" "+time_str+"','"+sms_list[0]+"','"+sms_list[1]+"','"+observer_name+"','"+crid+"','"+str(cm)+"','"+wrecord+"'),"
     
@@ -172,16 +176,15 @@ def getGndMeas(text):
 
   site_code = sms_list[1].lower()  
   ts = date_str+" "+time_str
-  command = """~/anaconda2/bin/python %s %s "%s" > ~/scriptlogs/gndalert.txt 2>&1 && ~/anaconda2/bin/python %s %s "%s" > ~/scriptlogs/gndalert2.txt 2>&1 && ~/anaconda2/bin/python %s %s "%s" > ~/scriptlogs/gndalert3.txt 2>&1""" % (c.fileio.gndalert1, site_code, ts, c.fileio.gndalert2, site_code, ts, c.fileio.gndalert3, site_code, ts) 
+  command = ("%s %s %s \"%s\" > ~/logs/gndalert.txt 2>&1 &&"
+    " %s %s %s \"%s\" > ~/logs/gndalert2.txt 2>&1 &&"
+    " %s %s %s \"%s\" > ~/logs/gndalert3.txt 2>&1") % (c.fileio.pythonpath, c.fileio.gndalert1, site_code, ts, 
+    c.fileio.pythonpath, c.fileio.gndalert2, site_code, ts, 
+    c.fileio.pythonpath, c.fileio.gndalert3, site_code, ts) 
 
   p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, stderr=subprocess.STDOUT)
   
   return gnd_records
-
-
-def test():
-
-  ret = getGndMeas("ROUTINE BAT SEP 11 2017 7:30 AM A 139.7 CM B 230.7 CM C 126.8 CM MAARAW CECILIO CABARDO ANABEL PAJUAY ")
 
 
 if __name__ == "__main__":

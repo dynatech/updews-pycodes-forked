@@ -1,7 +1,7 @@
 #!/bin/bash
-cd ~/Desktop/websiteUploads
+cd ~/server/websiteUploads
 
-inotifywait -q -m -e close_write ~/Desktop/websiteUploads |
+inotifywait -q -m -e close_write ~/server/websiteUploads |
 while read folder events filename; do
 #    $target = $filename | awk '{ print $(NF) }'
 #    if [ "$filename" = *.sql ]; then

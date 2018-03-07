@@ -34,13 +34,13 @@ DotProductThreshold = 0.09
 ############################
 ###   LOCAL FILE PATH    ###
 ############################
-OutputFilePath = /MonitoringOutput/
-RainfallPlotsPath = /MonitoringOutput/RainfallPlots/
-SubsurfacePlotsPath = /MonitoringOutput/SubsurfacePlots/
-SurficialPlotsPath = /MonitoringOutput/SurficialPlots/
-TrendingSurficialPlotsPath = /MonitoringOutput/SurficialPlots/TrendingPlots/
-EQPlotsPath = /MonitoringOutput/EQPlots/
-GrndMeasPlotsPath = /MonitoringOutput/GrndMeasPlots/
+OutputFilePath = /monitoringoutput/
+RainfallPlotsPath = /monitoringoutput/rainfallplots/
+SubsurfacePlotsPath = /monitoringoutput/subsurfaceplots/
+SurficialPlotsPath = /monitoringoutput/surficialplots/
+TrendingSurficialPlotsPath = /monitoringoutput/surficialplots/trendingplots/
+EQPlotsPath = /monitoringoutput/eqplots/
+GrndMeasPlotsPath = /monitoringoutput/grndmeasplots/
 
 #############################
 ###    ALERT CONSTANTS    ###

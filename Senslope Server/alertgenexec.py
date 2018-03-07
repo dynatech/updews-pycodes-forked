@@ -41,7 +41,7 @@ def main():
 		mc.set('alertgenlist',[])
 		mc.set('alertgenlist',alertgenlist)
 
-		command = "~/anaconda2/bin/python %s %s '%s'" % (c.fileio.alertgenscript,alert_info['tsm_name'],alert_info['ts'])
+		command = "%s %s %s '%s'" % (c.fileio.pythonpath, c.fileio.alertgenscript,alert_info['tsm_name'],alert_info['ts'])
 
 		print "Running", alert_info['tsm_name'], "alertgen"
         
