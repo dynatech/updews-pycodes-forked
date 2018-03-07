@@ -52,7 +52,7 @@ def to_db(df):
     elif pd.to_datetime(prev_uptime['ts_updated'].values[0]) < df['ts_updated'].values[0]:
         query =  "UPDATE uptime "
         query += "SET updateTS = '%s' " %df['ts_updated'].values[0]
-        query += "WHERE timestamp = '%s'" %prev_uptime['ts'].values[0]
+        query += "WHERE ts = '%s'" %prev_uptime['ts'].values[0]
         qdb.ExecuteQuery(query)
 
 def main():
