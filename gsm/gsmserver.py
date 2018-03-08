@@ -606,6 +606,21 @@ def simulate_gsm(network='simulate'):
         dbio.commit_to_db(query, 'simulate_gsm', False, sms_mirror_host)
     
     sys.exit()
+
+def log_csq(gsm_id):
+    
+    ts_today = dt.today().strftime('%Y-%m-%d %H:%M:%S')
+
+    csq_val = gsmio.csq()
+
+    query = ("insert into gsm_csq_logs (`ts`,`gsm_id`,`csq_val`) "
+        "values ('%s', %d, %d)") % (ts_today, gsm_id, csq_val)
+
+    dbio.commit_to_db(query = query, identifier = "", last_insert = False, 
+        instance = "local")
+
+    return csq_val 
+
         
 def run_server(gsm_info,table='loggers'):
     # print gsm_info["id"]
@@ -644,8 +659,8 @@ def run_server(gsm_info,table='loggers'):
     
     print '**' + gsm_info['name'] + ' GSM server active**'
     print time.asctime()
-    network = gsm_info['network']
-    print "CSQ:", gsmio.csq()
+    network = gsm_info['name'].upper()
+    print "CSQ:", log_csq(gsm_info['id'])
     while True:
         m = gsmio.count_msg()
         if m>0:
@@ -661,7 +676,7 @@ def run_server(gsm_info,table='loggers'):
             print dt.today().strftime("\n" + network 
                 + " Server active as of %A, %B %d, %Y, %X")
 
-            print "CSQ:", gsmio.csq()
+            print "CSQ:", log_csq(gsm_info['id'])
 
             log_runtime_status(gsm_info["name"],"alive")
 
@@ -675,8 +690,9 @@ def run_server(gsm_info,table='loggers'):
             today = dt.today()
             if (today.minute % 10 == 0):
                 if checkIfActive:
-                    print today.strftime("\nServer active as of %A, %B %d, %Y, %X")
-                    print "CSQ:", gsmio.csq()
+                    print network, today.strftime("\nServer active as of "
+                        "%A, %B %d, %Y, %X")
+                    print "CSQ:", log_csq(gsm_info['id'])
                 checkIfActive = False
             else:
                 checkIfActive = True
