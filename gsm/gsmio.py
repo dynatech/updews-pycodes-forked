@@ -45,6 +45,18 @@ def reset_gsm():
         print 'done'
     except ImportError:
         return
+
+def csq():
+    csq_reply = gsm_cmd('AT+CSQ')
+
+    try:
+        csq_val = int(re.search("(?<=: )\d{1,2}(?=,)",csq_reply).group(0))
+        mc.set("csq_val",csq_val)
+        return csq_val
+    except ValueError, AttributeError:
+        return 0
+    except TypeError:
+        return 0
        
 def init_gsm(gsm_info):
     global gsm

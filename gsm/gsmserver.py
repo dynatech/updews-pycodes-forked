@@ -645,6 +645,7 @@ def run_server(gsm_info,table='loggers'):
     print '**' + gsm_info['name'] + ' GSM server active**'
     print time.asctime()
     network = gsm_info['network']
+    print "CSQ:", gsmio.csq()
     while True:
         m = gsmio.count_msg()
         if m>0:
@@ -659,6 +660,9 @@ def run_server(gsm_info,table='loggers'):
                 
             print dt.today().strftime("\n" + network 
                 + " Server active as of %A, %B %d, %Y, %X")
+
+            print "CSQ:", gsmio.csq()
+
             log_runtime_status(gsm_info["name"],"alive")
 
             try_sending_messages(gsm_info["id"])
@@ -672,6 +676,7 @@ def run_server(gsm_info,table='loggers'):
             if (today.minute % 10 == 0):
                 if checkIfActive:
                     print today.strftime("\nServer active as of %A, %B %d, %Y, %X")
+                    print "CSQ:", gsmio.csq()
                 checkIfActive = False
             else:
                 checkIfActive = True
