@@ -176,10 +176,10 @@ def GetDBDataFrame(query):
         PrintOut("Exception detected in accessing database")
         
 #Push a dataframe object into a table
-def PushDBDataFrame(df,table_name):     
+def PushDBDataFrame(df,table_name,index=True):     
     engine = create_engine('mysql://'+Userdb+':'+Passdb+'@'+Hostdb+':3306/'+Namedb)
     try:
-        df.to_sql(name = table_name, con = engine, if_exists = 'append', schema = Namedb)
+        df.to_sql(name = table_name, con = engine, if_exists = 'append', schema = Namedb, index=index)
     except:
         print 'already in db'
 
