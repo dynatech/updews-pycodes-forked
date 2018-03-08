@@ -32,10 +32,10 @@ def logger_response(msg,log_type,log='False'):
 
 def common_logger_sms(msg):
     log_match = {'NO DATA FROM SENSELOPE':1,'PARSED':2,'^\w{4,5}\*0\*\*[0-9]{10,12}':2,'^ \*':3,
-    '^\*[0-9]{10,12}$':3,'^[A-F0-9]+\*[0-9]{10,12}$':3,'^[A-F0-9]+\*[A-F0-9]{10,13}':3,'^[A-F0-9]+\*[A-F0-9]{6}':3,
+    '^\*[0-9]{10,12}$':3,'^[A-F0-9]+\*[0-9]{10,12}$':3,'^[A-F0-9]+\*[A-F0-9]{10,13}':3,'^[A-F0-9]+\*[A-F0-9]{6,7}':3,
     'REGISTERED':4,'SERVER NUMBER':5,'^MANUAL RESET':6,'POWER UP':7, 'SYSTEM STARTUP': 8,'SMS RESET':9, 
     'POWER SAVING DEACTIVATED':10,'POWER SAVING ACTIVATED':11,'NODATAFROMSENSLOPE':12,
-    '^\w{4,5}\*[xyabcXYABC]\*[A-F0-9]+$':13}
+    '^\w{4,5}\*[xyabcXYABC]\*[A-F0-9]+$':13,'!\*':15}
     for key,value in log_match.items():    
         if re.search(key, msg.data.upper()):
             logger_response(msg,value,True)
