@@ -219,7 +219,7 @@ def count_msg():
         
         try:
             c = int( b.split(',')[1] )
-            print '\n>> Received', c, 'message/s'
+            print '\n>> Received', c, 'message/s; CSQ:', csq()
             return c
         except IndexError:
             print 'count_msg b = ',b
