@@ -15,7 +15,8 @@ import lockscript
 import gsmio
 import surficialparser as surfp
 import utsparser as uts
-import dynadb.db as db
+import dynadb.db as dynadb
+
 mc = memcache.Client(['127.0.0.1:11211'],debug=0)
 
 
@@ -26,7 +27,7 @@ def logger_response(msg,log_type,log='False'):
           " date_activated desc limit 1),'%s','%s')" 
          % (msg.simnum,msg.num,log_type))
                     
-        db.write(query, 'insert new log for logger response',instance='sandbox')
+        dynadb.write(query, 'insert new log for logger response',instance='sandbox')
         print '>> Log response'
     else:
         return False
@@ -65,7 +66,7 @@ def update_sim_num_table(name,sim_num,date_activated):
     dbio.commit_to_db(query, 'update_sim_num_table')
 
 def check_name_of_number(number):
-    db, cur = db.connect()
+    db, cur = dynadb.connect()
     
     while True:
         try:
@@ -642,7 +643,7 @@ def check_logger_model(logger_name):
     query = ("SELECT model_id FROM senslopedb.loggers where "
         "logger_name = '%s'") % logger_name
 
-    return db.read(query,'check_logger_model')[0][0]
+    return dynadb.read(query,'check_logger_model')[0][0]
     
 def process_rain(sms):
 
