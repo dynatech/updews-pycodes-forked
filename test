@@ -1,0 +1,5 @@
+import sys
+import dynadb.db as db
+
+print db.read(query='select * from smsinbox_loggers limit 1',instance='sandbox')
+print db.write(query='insert into  `senslopedb`.`log_type` (`log_type`, `type_description`) VALUES ("170", "Test")',instance='sanbox')
