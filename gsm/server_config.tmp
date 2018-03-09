@@ -11,6 +11,7 @@ smsdb = gsm2
 datadb = sandbox
 sms_mirror_db = sandbox
 mobile_nums_db = gsm2
+smsdb2 = dynaslope
 
 [Db]
 password = senslope
