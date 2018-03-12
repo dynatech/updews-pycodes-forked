@@ -62,7 +62,6 @@ def init_gsm(gsm_info):
     global gsm
     power_gsm(True,gsm_info["pwr_on_pin"])
     gsm = serial.Serial()
-    c = cfg.config()
     # if network[:5].lower() == 'globe':
     #     Port = c.serialio.globeport
     # else:
@@ -71,8 +70,8 @@ def init_gsm(gsm_info):
     print 'Connecting to GSM modem at', Port
     
     gsm.port = Port
-    gsm.baudrate = c.serialio.baudrate
-    gsm.timeout = c.serialio.timeout
+    gsm.baudrate = c["serial"]["baudrate"]
+    gsm.timeout = c["serial"]["timeout"]
     
     if(gsm.isOpen() == False):
         gsm.open()
