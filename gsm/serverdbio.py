@@ -121,10 +121,12 @@ def get_all_outbox_sms_from_db(table='users',send_status=5,gsm_id=5,limit=10):
         :type limit: int
         :returns: List of message
     """
+    sc = mc.get('server_config')
+    instance = sc['resource']['smsdb']
 
     while True:
         try:
-            db, cur = db_connect()
+            db, cur = db_connect(instance)
             query = ("select t1.stat_id,t1.mobile_id,t1.gsm_id,t1.outbox_id,t2.sms_msg from "
                 "smsoutbox_%s_status as t1 "
                 "inner join (select * from smsoutbox_%s) as t2 "

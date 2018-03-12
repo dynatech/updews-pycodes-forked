@@ -309,7 +309,9 @@ def send_messages_from_db(table='users',send_status=0,gsm_id=0,limit=10):
         :type limit: int
         :returns: N/A
     """
-    c = cfg.config()
+    sc = mc.get('server_config')
+    instance = sc['resource']['smsdb']
+
     # if not c.mode.send_msg:
     #     return
     allmsgs = dbio.get_all_outbox_sms_from_db(table,send_status,gsm_id,limit)
@@ -322,7 +324,7 @@ def send_messages_from_db(table='users',send_status=0,gsm_id=0,limit=10):
     #     print m
         
     
-    table_mobile = get_mobile_sim_nums(table)
+    table_mobile = get_mobile_sim_nums(table, instance)
     inv_table_mobile = {v: k for k, v in table_mobile.iteritems()}
     # print inv_table_mobile
         
@@ -365,7 +367,7 @@ def send_messages_from_db(table='users',send_status=0,gsm_id=0,limit=10):
             status_list.append(stat)
             continue
 
-    dbio.set_send_status(table,status_list)
+    dbio.set_send_status(table, status_list, instance)
 
     
     #Get all outbox messages with send_status "SENT" and attempt to send
@@ -690,7 +692,7 @@ def run_server(gsm_info,table='loggers'):
             today = dt.today()
             if (today.minute % 10 == 0):
                 if checkIfActive:
-                    print network, today.strftime("\nServer active as of "
+                    print "\n", network, today.strftime("Server active as of "
                         "%A, %B %d, %Y, %X")
                     print "CSQ:", log_csq(gsm_info['id'])
                 checkIfActive = False
