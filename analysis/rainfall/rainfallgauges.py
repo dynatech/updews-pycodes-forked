@@ -65,10 +65,11 @@ def main():
     if qdb.does_table_exist('rainfall_gauges') == False:
         #Create a rainfall_gauges table if it doesn't exist yet
         create_rainfall_gauges()
-        senslope = senslope_rain_gauges()
-        
-        rain_id = senslope.groupby('gauge_name')
-        rain_id.apply(to_mysql)
+
+    senslope = senslope_rain_gauges()
+    
+    rain_id = senslope.groupby('gauge_name')
+    rain_id.apply(to_mysql)
 
     r = requests.get('http://weather.asti.dost.gov.ph/web-api/index.php/api/devices', auth=('phivolcs.ggrdd', 'PhiVolcs0117'))    
     noah = pd.DataFrame(r.json())
