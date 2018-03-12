@@ -935,7 +935,7 @@ def parse_all_messages(args,allmsgs=[]):
 
             # method for updating the read_status all messages that have been processed
             # so that they will not be processed again in another run
-            if ref_count % 200 == 0 or ref_count == total_msgs:
+            if ref_count % 200 == 0:
                 dbio.set_read_status(read_success_list, read_status = 1,
                     table = args.table, instance = args.dbhost)
                 dbio.set_read_status(read_fail_list, read_status = -1,
@@ -947,6 +947,11 @@ def parse_all_messages(args,allmsgs=[]):
         except KeyboardInterrupt:
             print '>> User exit'
             sys.exit()
+
+    dbio.set_read_status(read_success_list, read_status = 1,
+        table = args.table, instance = args.dbhost)
+    dbio.set_read_status(read_fail_list, read_status = -1,
+        table = args.table, instance = args.dbhost)
         
     return read_success_list, read_fail_list
     
