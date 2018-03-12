@@ -546,7 +546,7 @@ def site_public_alert(site_props, end, public_symbols, internal_symbols,
     
     try:    
         ts = max(op_trig[op_trig.alert_level != 0]['ts_updated'].values)
-        ts = release_time(pd.to_datetime(ts))
+        ts = data_ts(pd.to_datetime(ts))
     except:
         ts = end
     ts = str(ts)
