@@ -10,7 +10,7 @@ from random import random
 import memcache
 mc = memcache.Client(['127.0.0.1:11211'],debug=0)
 
-if cfg.config().mode.script_mode == 'gsmserver':
+if mc.get("server_config")["mode"]["script_mode"] == 'gsmserver':
     import RPi.GPIO as GPIO
 
     resetpin = cfg.config().gsmio.resetpin
