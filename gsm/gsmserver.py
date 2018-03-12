@@ -219,6 +219,10 @@ def write_outbox_message_to_db(message='',recipients='',gsm_id='',table=''):
     #     raise ValueError
     #     return
 
+    sc = mc.get('server_config')
+
+    host = sc['resource']['smsdb']
+
     tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
 
     if table == '':
@@ -229,13 +233,13 @@ def write_outbox_message_to_db(message='',recipients='',gsm_id='',table=''):
     query = ("insert into smsoutbox_%s (ts_written,sms_msg,source) VALUES "
         "('%s','%s','central')") % (table_name,tsw,message)
         
-    outbox_id = dbio.commit_to_db(query,'write_outbox_message_to_db', 
-        last_insert=True)[0][0]
+    outbox_id = dbio.commit_to_db(query = query, identifier = "womtdb", 
+        last_insert = True, instance = host)[0][0]
 
     query = ("INSERT INTO smsoutbox_%s_status (outbox_id,mobile_id,gsm_id)"
             " VALUES ") % (table_name[:-1])
 
-    table_mobile = get_mobile_sim_nums(table_name)
+    table_mobile = get_mobile_sim_nums(table_name, host)
 
     for r in recipients.split(","):        
         tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
@@ -246,8 +250,9 @@ def write_outbox_message_to_db(message='',recipients='',gsm_id='',table=''):
             print ">> Error: Possible key error for", r
             continue
     query = query[:-1]
-       
-    dbio.commit_to_db(query, "write_outbox_message_to_db")
+
+    dbio.commit_to_db(query = query, identifier = "womtdb", 
+        last_insert = False, instance = host)
             
     
 def check_alert_messages():
