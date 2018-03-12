@@ -16,12 +16,6 @@ import memcache
 import argparse
 mc = memcache.Client(['127.0.0.1:11211'],debug=0)
 
-# if cfg.config().mode.script_mode == 'gsmserver':
-#     sys.path.insert(0, cfg.config().fileio.websocketdir)
-#     import dewsSocketLeanLib as dsll
-#---------------------------------------------------------------------------------------------------------------------------
-
-
 def check_id_in_table(table,gsm_id):
     """
         **Description:**
@@ -86,31 +80,6 @@ def log_runtime_status(script_name,status):
     
     dbio.commit_to_db(query, 'log_runtime_status')
        
-def send_alert_gsm(network,alertmsg):
-    """
-        **Description:**
-          -The sen alert gsm is a function check number and  sends alert message using gsm.
-         
-        :param network: Network that will be use **Smart or Globe**.
-        :param alertmsg: alert message.
-        :type network: str
-        :type alertmsg: str
-        :returns: N/A
-    """
-    c = cfg.config()
-    try:
-        if network == 'GLOBE':    
-            numlist = c.simprefix.globe.split(",")
-        else:
-            numlist = c.simprefix.smart.split(",")
-        # f = open(allalertsfile,'r')
-        # alllines = f.read()
-        # f.close()
-        for n in numlist:
-            gsmio.send_msg(alertmsg,n)
-    except IndexError:
-        print "Error sending all_alerts.txt"
-
 def write_raw_sms_to_db(msglist,gsm_info):
     """
         **Description:**
@@ -183,21 +152,6 @@ def write_raw_sms_to_db(msglist,gsm_info):
             dbio.commit_to_db(query_users,'write_raw_sms_to_db',
                 instance = sms_instance)
         
-# def write_eq_alert_message_to_db(alertmsg):
-#     """
-#         **Description:**
-#           -The main function that write alert in file.
-         
-#         :param alertmsg: The message that will be write in file.
-#         :type alertmsg: str
-#         :returns: N/A
-#     """
-#     c = cfg.config()
-#     # write_outbox_message_to_db(alertmsg,c.smsalert.globenum)
-#     # write_outbox_message_to_db(alertmsg,c.smsalert.smartnum)
-
-
-
 def write_outbox_message_to_db(message='',recipients='',gsm_id='',table=''):
     """
         **Description:**
@@ -285,11 +239,11 @@ def get_allowed_prefixes(network):
         :type network: str
         :returns: **extended_prefix_list** (*int*) - The extended prefix
     """
-    c = cfg.config()
+    sc = mc.get('server_config')
     if network.upper() == 'SMART':
-        prefix_list = c.simprefix.smart.split(',')
+        prefix_list = sc["simprefix"]["smart"].split(',')
     else:
-        prefix_list = c.simprefix.globe.split(',')
+        prefix_list = sc["simprefix"]["globe"].split(',')
 
     extended_prefix_list = []
     for p in prefix_list:
