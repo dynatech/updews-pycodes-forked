@@ -40,11 +40,7 @@ def senslope_rain_gauges():
     return df
 
 def to_mysql(df):
-    gauge_name = df['gauge_name'].values[0]
-    
-    if gauge_name == 'lipt':
-        return
-    
+    gauge_name = df['gauge_name'].values[0]    
     query = "SELECT EXISTS(SELECT * FROM rainfall_gauges"
     query += " WHERE gauge_name = '%s')" %gauge_name
     if qdb.get_db_dataframe(query).values[0][0] == 0:
