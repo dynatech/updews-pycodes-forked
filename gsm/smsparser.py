@@ -873,16 +873,12 @@ def parse_all_messages(args,allmsgs=[]):
         try:
             isMsgProcSuccess = True
             print '\n\n*******************************************************'
-            #gets per text message
-            msg = allmsgs.pop(0)
-            # msg.data = msg.data.upper()
-           
 
+            msg = allmsgs.pop(0)
+            ref_count += 1
                          
             msgname = check_name_of_number(msg.simnum)
             if len(msgname) == 0:
-                print ">> Error unknown logger number:", msg.simnum
-            
                 if check_number_in_users(msg.simnum):
                     print '>> User number'
                 else:
@@ -957,7 +953,6 @@ def parse_all_messages(args,allmsgs=[]):
             else:
                 read_fail_list.append(msg.num)
 
-            ref_count += 1
             print ">> SMS count processed:", ref_count
 
             # method for updating the read_status all messages that have been processed

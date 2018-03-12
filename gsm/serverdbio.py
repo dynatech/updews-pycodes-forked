@@ -38,7 +38,7 @@ def db_connect(host='local'):
             print '6.',
             time.sleep(2)
             
-def set_read_status(sms_id_list,read_status=0,table='',instance='local'):
+def set_read_status(sms_id_list, read_status=0, table='', instance='local'):
     
     if table == '':
         print "Error: Empty table"
@@ -77,7 +77,7 @@ def set_send_status(table, status_list, instance):
     commit_to_db(query, "set_send_status", False, instance)
     
     
-def get_all_sms_from_db(host='local',read_status=0,table='loggers',limit=200):
+def get_all_sms_from_db(host='local', read_status=0, table='loggers', limit=200):
     db, cur = db_connect(host)
 
     if table in ['loggers','users']:
