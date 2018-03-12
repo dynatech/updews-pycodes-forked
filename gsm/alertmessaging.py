@@ -72,8 +72,12 @@ def send_alert_message():
     
         # send to alert staff
         contacts = get_alert_staff_numbers()
+        recipients_list = ""
         for mobile_id, sim_num in contacts:
-            write_outbox_dyna(message, sim_num)
+            recipients_list += "%s," % (sim_num)
+        recipients_list = recipients_list[:-1]
+        server.write_outbox_message_to_db(message=message, recipients=recipients_list,
+            gsm_id=4, table='users')
         
         # # set alert to 15 mins later
         ts_due = dt.now() + td(seconds=60*15)
@@ -126,21 +130,6 @@ def process_ack_to_alert(msg):
         # server.write_outbox_message_to_db(errmsg,msg.simnum)
         return False
 
-    # check to see if message from chatter box
-    # try:
-    #     name = qsi.get_name_of_staff(msg.simnum)
-    #     if re.search("server",name.lower()):
-    #         name = re.search("(?>=-).+(?= from)").group(0)
-    # except:
-    #     try:
-    #         chat_footer = re.search("-[A-Za-z ]+ from .+$",msg.data).group(0)
-    #         name = re.search("(?<=-)[A-Za-z]+(?= )",chat_footer).group(0)
-    #         msg.data = msg.data.replace(chat_footer,"")
-    #     except:
-    #         errmsg = "You are not permitted to acknowledge."
-    #         server.write_outbox_message_to_db(errmsg,msg.simnum)
-    #         return True
-
     user_id, nickname = qsi.get_name_of_staff(msg.simnum)
     print user_id, nickname, msg.data
     if re.search("server",nickname.lower()):
@@ -156,7 +145,9 @@ def process_ack_to_alert(msg):
             re.IGNORECASE).group(0)
     except AttributeError:
         errmsg = "Please put in your remarks."
-        write_outbox_dyna(errmsg, msg.simnum)
+        server.write_outbox_message_to_db(message = errmsg, recipients = msg.simnum,
+            gsm_id=4,table='users')
+        # write_outbox_dyna(errmsg, msg.simnum)
         return True
 
     try:
@@ -166,7 +157,9 @@ def process_ack_to_alert(msg):
     except AttributeError:
         errmsg = ("Please put in the alert status validity."
             " i.e (VALID, INVALID, VALIDATING)")
-        write_outbox_dyna(errmsg, msg.simnum)
+        server.write_outbox_message_to_db(message = errmsg, recipients = msg.simnum,
+            gsm_id=4, table='users')
+        # write_outbox_dyna(errmsg, msg.simnum)
         return True
 
     alert_status_dict = {"validating": 0, "valid": 1, "invalid": -1}
@@ -182,9 +175,14 @@ def process_ack_to_alert(msg):
         "Remarks: %s") % (stat_id, nickname, msg.dt, alert_status, remarks)
     
     tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
-    for user_id, sim_num in contacts:
-        write_outbox_dyna(message,sim_num)
-        print message, sim_num
+    recipients_list = ""
+    for mobile_id, sim_num in contacts:
+        recipients_list += "%s," % (sim_num)
+    recipents_list = recipients_list[:-1]
+    server.write_outbox_message_to_db(message = message, recipients = recipients_list,
+        gsm_id=4, table='users')
+    # write_outbox_dyna(message,sim_num)
+    # print message, sim_num
 
     return True
 

@@ -3,6 +3,8 @@
 import ConfigParser, MySQLdb, time, sys, argparse
 from datetime import datetime as dt
 import cfgfileio as cfg
+import memcache
+mc = memcache.Client(['127.0.0.1:11211'],debug=0)
 
 # cfg = ConfigParser.ConfigParser()
 # cfg.read(sys.path[0] + "/senslope-server-config.txt")
@@ -10,10 +12,15 @@ c = cfg.config()
 
 class dbInstance:
     def __init__(self,host):
-       self.name = c.db["name"]
-       self.host = c.dbhost[host]
-       self.user = c.db["user"]
-       self.password = c.db["password"]
+        sc = mc.get('server_config')
+        self.name = sc['db']['name']
+        self.host = sc['hosts'][host]
+        self.user = sc['db']['user']
+        self.password = sc['db']['password']
+       # self.name = c.db["name"]
+       # self.host = c.dbhost[host]
+       # self.user = c.db["user"]
+       # self.password = c.db["password"]
 
 # def db_connect():
 # Definition: Connect to senslopedb in mysql
@@ -51,9 +58,9 @@ def set_read_status(sms_id_list,read_status=0,table='',instance='local'):
         where_clause)
     
     # print query
-    commit_to_db(query,"set_read_status")
+    commit_to_db(query, "set_read_status", False, instance)
     
-def set_send_status(table,status_list):
+def set_send_status(table, status_list, instance):
     # print status_list
     query = ("insert into smsoutbox_%s_status (stat_id,send_status,ts_sent,outbox_id,gsm_id,mobile_id) "
         "values ") % (table[:-1])
@@ -67,7 +74,7 @@ def set_send_status(table,status_list):
 
     # print query
     
-    commit_to_db(query,"set_send_status")
+    commit_to_db(query, "set_send_status", False, instance)
     
     
 def get_all_sms_from_db(host='local',read_status=0,table='loggers',limit=200):
@@ -114,15 +121,18 @@ def get_all_outbox_sms_from_db(table='users',send_status=5,gsm_id=5,limit=10):
         :type limit: int
         :returns: List of message
     """
+    sc = mc.get('server_config')
+    instance = sc['resource']['smsdb']
 
     while True:
         try:
-            db, cur = db_connect()
+            db, cur = db_connect(instance)
             query = ("select t1.stat_id,t1.mobile_id,t1.gsm_id,t1.outbox_id,t2.sms_msg from "
                 "smsoutbox_%s_status as t1 "
                 "inner join (select * from smsoutbox_%s) as t2 "
                 "on t1.outbox_id = t2.outbox_id "
                 "where t1.send_status < %d "
+                "and t1.send_status >= 0 "
                 "and t1.gsm_id = %d "
                 "limit %d ") % (table[:-1],table,send_status,gsm_id,limit)
           

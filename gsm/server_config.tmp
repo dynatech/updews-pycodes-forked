@@ -3,7 +3,15 @@ local = 127.0.0.1
 senslope = 192.168.150.124
 dynaslope = 192.168.150.129
 gsm = 192.168.150.127
+gsm2 = 192.168.150.131
 sandbox = 192.168.150.128
+
+[Resource]
+smsdb = gsm2
+datadb = sandbox
+sms_mirror_db = sandbox
+mobile_nums_db = gsm2
+smsdb2 = dynaslope
 
 [Db]
 password = senslope
@@ -54,6 +62,7 @@ FailTimeEN = Error! There is a problem with your TIME format. Please check your 
 FailMeasEN = Error! There is a problem with your ground measurements format.  Please check your SMS and try again.
 FailWeaEN = Error! There is no weather information sent.  Please check your SMS and try again.
 FailObvEN = Error! You did not put your name on the text message. Please check your SMS and try again.
+FailOobEN = Error! Your date or time value is either too late or too early. Please check your SMS and try again.
 
 [FileIO]
 allalertsfile = /home/dynaslope/Desktop/updews-pycodes/Analysis/GSMAlert.txt
@@ -81,7 +90,7 @@ smart = 00,07,08,09,10,11,12,14,18,19,20,21,22,23,24,25,28,29,30,31,32,33,34,38,
 globe = 05,06,15,16,17,25,26,27,35,36,37,45,56,75,77,78,79,94,95,96,97 
 
 [mode]
-script_mode = procmsg
+script_mode = gsmserver
 
 [io]
 proc_limit = 10
@@ -105,7 +114,6 @@ rt_to_fill = 1			;to forward fill (1 or 0)
 rt_to_smooth = 1		;to smooth xz and xy through moving average (1 or 0)
 column_fix = bottom		;node to fix in column position plot (top or bottom)
 enable_analysis = True	;enable/disable spawing analysis scripts upon sms receipt
-
 
 [rainfall]
 

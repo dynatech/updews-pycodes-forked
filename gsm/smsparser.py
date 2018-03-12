@@ -15,7 +15,34 @@ import lockscript
 import gsmio
 import surficialparser as surfp
 import utsparser as uts
+import dynadb.db as dynadb
+
 mc = memcache.Client(['127.0.0.1:11211'],debug=0)
+
+
+def logger_response(msg,log_type,log='False'):
+    if log:
+        query = ("INSERT INTO logger_response (`logger_Id`, `inbox_id`, `log_type`)"
+         "values((Select logger_id from logger_mobile where sim_num = %s order by"
+          " date_activated desc limit 1),'%s','%s')" 
+         % (msg.simnum,msg.num,log_type))
+                    
+        dynadb.write(query, 'insert new log for logger response',instance='sandbox')
+        print '>> Log response'
+    else:
+        return False
+
+def common_logger_sms(msg):
+    log_match = {'NO DATA FROM SENSELOPE':1,'PARSED':2,'^\w{4,5}\*0\*\*[0-9]{10,12}':2,'^ \*':3,
+    '^\*[0-9]{10,12}$':3,'^[A-F0-9]+\*[0-9]{10,12}$':3,'^[A-F0-9]+\*[A-F0-9]{10,13}':3,'^[A-F0-9]+\*[A-F0-9]{6,7}':3,
+    'REGISTERED':4,'SERVER NUMBER':5,'^MANUAL RESET':6,'POWER UP':7, 'SYSTEM STARTUP': 8,'SMS RESET':9, 
+    'POWER SAVING DEACTIVATED':10,'POWER SAVING ACTIVATED':11,'NODATAFROMSENSLOPE':12,
+    '^\w{4,5}\*[xyabcXYABC]\*[A-F0-9]+$':13,'!\*':15}
+    for key,value in log_match.items():    
+        if re.search(key, msg.data.upper()):
+            logger_response(msg,value,True)
+            return value
+    return False
 
 def update_last_msg_received_table(txtdatetime,name,sim_num,msg):
     query = ("insert into senslopedb.last_msg_received"
@@ -39,7 +66,7 @@ def update_sim_num_table(name,sim_num,date_activated):
     dbio.commit_to_db(query, 'update_sim_num_table')
 
 def check_name_of_number(number):
-    db, cur = dbio.db_connect()
+    db, cur = dynadb.connect()
     
     while True:
         try:
@@ -310,15 +337,15 @@ def process_column_v1(sms):
             
             valueX = tempx
             if valueX > 1024:
-	            valueX = tempx - 4096
+                valueX = tempx - 4096
 
             valueY = tempy
             if valueY > 1024:
-	            valueY = tempy - 4096
+                valueY = tempy - 4096
 
             valueZ = tempz
             if valueZ > 1024:
-	            valueZ = tempz - 4096
+                valueZ = tempz - 4096
 
             valueF = tempf #is this the M VALUE?
 
@@ -616,7 +643,7 @@ def check_logger_model(logger_name):
     query = ("SELECT model_id FROM senslopedb.loggers where "
         "logger_name = '%s'") % logger_name
 
-    return dbio.query_database(query,'check_logger_model')[0][0]
+    return dynadb.read(query,'check_logger_model')[0][0]
     
 def process_rain(sms):
 
@@ -772,8 +799,8 @@ def process_surficial_observation(msg):
         print 'Updating observations'
         mo_id = surfp.update_surficial_observations(obv)
         surfp.update_surficial_data(obv,mo_id)
-        server.write_outbox_message_to_db("READ-SUCCESS: \n" + msg.data,
-            c.smsalert.communitynum,'users')
+        # server.write_outbox_message_to_db("READ-SUCCESS: \n" + msg.data,
+        #     c.smsalert.communitynum,'users')
         # server.write_outbox_message_to_db(c.reply.successen, msg.simnum,'users')
         # proceed_with_analysis = True
     except surfp.SurficialParserError as e:
@@ -783,13 +810,13 @@ def process_surficial_observation(msg):
         print ">> Error in manual ground measurement SMS", errortype
         has_parse_error = True
 
-        server.write_outbox_message_to_db("READ-FAIL: (%s)\n%s" % 
-            (errortype,msg.data),c.smsalert.communitynum,'users')
+        # server.write_outbox_message_to_db("READ-FAIL: (%s)\n%s" % 
+            # (errortype,msg.data),c.smsalert.communitynum,'users')
         # server.write_outbox_message_to_db(str(e), msg.simnum,'users')
     except KeyError:
         print '>> Error: Possible site code error'
-        server.write_outbox_message_to_db("READ-FAIL: (site code)\n%s" % 
-            (msg.data),c.smsalert.communitynum,'users')
+        # server.write_outbox_message_to_db("READ-FAIL: (site code)\n%s" % 
+        #     (msg.data),c.smsalert.communitynum,'users')
         has_parse_error = True
     # except:
     #     # pass
@@ -833,13 +860,14 @@ def parse_all_messages(args,allmsgs=[]):
     read_fail_list = []
 
     print "table:", args.table
-
-    cur_num = 0
+   
     ref_count = 0
 
     if allmsgs==[]:
         print 'Error: No message to Parse'
         sys.exit()
+
+    total_msgs = len(allmsgs)
     
     while allmsgs:
         try:
@@ -848,7 +876,8 @@ def parse_all_messages(args,allmsgs=[]):
             #gets per text message
             msg = allmsgs.pop(0)
             # msg.data = msg.data.upper()
-            cur_num = msg.num
+           
+
                          
             msgname = check_name_of_number(msg.simnum)
             if len(msgname) == 0:
@@ -913,10 +942,9 @@ def parse_all_messages(args,allmsgs=[]):
             elif (msg.data.split('*')[0] == 'COORDINATOR' or 
                 msg.data.split('*')[0] == 'GATEWAY'):
                 isMsgProcSuccess = process_gateway_msg(msg)
-            elif re.search("^MANUAL RESET",msg.data):
-                server.write_outbox_message_to_db("SENSORPOLL SENSLOPE", 
-                    msg.simnum,'loggers')
-                isMsgProcSuccess = True
+            elif common_logger_sms(msg) > 0:
+                print 'inbox_id: ', msg.num
+                print 'match'
             else:
                 print '>> Unrecognized message format: '
                 print 'NUM: ' , msg.simnum
@@ -931,18 +959,21 @@ def parse_all_messages(args,allmsgs=[]):
 
             ref_count += 1
             print ">> SMS count processed:", ref_count
-    # method for updating the read_status all messages that have been processed
-    # so that they will not be processed again in another run
+
+            # method for updating the read_status all messages that have been processed
+            # so that they will not be processed again in another run
+            if ref_count % 200 == 0 or ref_count == total_msgs:
+                dbio.set_read_status(read_success_list, read_status = 1,
+                    table = args.table, instance = args.dbhost)
+                dbio.set_read_status(read_fail_list, read_status = -1,
+                    table = args.table, instance = args.dbhost)
+
+                read_success_list = []
+                read_fail_list = []
+
         except KeyboardInterrupt:
             print '>> User exit'
             sys.exit()
-        # except:
-        #     # print all the traceback routine so that the error can be traced
-        #     print (traceback.format_exc())
-        #     print ">> Setting message read_status to fatal error"
-        #     # dbio.set_read_status(cur_num, read_status=-1, table = args.table)
-        #     read_fail_list.append(msg.num)
-        #     continue
         
     return read_success_list, read_fail_list
     
@@ -1019,16 +1050,15 @@ def process_gateway_msg(msg):
                 dbio.commit_to_db(query, 'process_gateway_msg')
             else:
                 print '>> no data to commit'
-
             return True
         else:
             print ">> Processing coordinator weather"
     except IndexError:
         print "IndexError: list index out of range"
+        logger_response(msg,14,True)
+    except:
+        print ">> Unknown Error", msg.data
         return False
-    # except:
-    #     print ">> Unknown Error", msg.data
-    #     return False
 
 def get_arguments():
     """
@@ -1081,7 +1111,7 @@ def test():
 def main():
     """
         **Description:**
-          -The main function that runs the whole smsparser with the logic of
+          -The main is a function that runs the whole smsparser with the logic of
           parsing sms txt of users and loggers.
          
         :parameters: N/A
@@ -1115,20 +1145,14 @@ def main():
                 smsItem = gsmio.sms(item[0], str(item[2]), str(item[3]), 
                     str(item[1]))
                 msglist.append(smsItem)
+             
             allmsgs = msglist
 
             read_success_list, read_fail_list = parse_all_messages(args,allmsgs)
 
-            dbio.set_read_status(read_success_list, read_status=1,
-                table=args.table)
-            dbio.set_read_status(read_fail_list, read_status=-1,
-                table=args.table)
-            # sleeptime = 5
         else:
-            # server.logRuntimeStatus("procfromdb","alive")
             print dt.today().strftime("\nServer active as of %A, %B %d, %Y, %X")
             return
-            # time.sleep(sleeptime)
         sys.exit()
 
 if __name__ == "__main__":
