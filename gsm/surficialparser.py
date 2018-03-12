@@ -6,8 +6,7 @@ import serverdbio as dbio
 import pandas as pd
 import memcache
 mc = memcache.Client(['127.0.0.1:11211'],debug=0)
-
-c = cfg.config()
+sc = mc.get('server_config')
 
 class SurficialParserError(Exception):
     pass
@@ -37,7 +36,7 @@ def parse_surficial_text(text):
     try:
         data_field = re.split(" ",cleanText,maxsplit=2)[2]
     except IndexError:
-        raise SurficialParserError(c.reply.failmeasen)
+        raise SurficialParserError(sc["replymessages"]["failmeasen"])
 
     # double check site code
     site_code = sms_list[1].lower()
@@ -53,7 +52,7 @@ def parse_surficial_text(text):
     date_str = get_date_from_sms(data_field)
     print "Date: " + date_str
     # except AttributeError:
-    #     raise ValueError(c.reply.faildateen)
+    #     raise ValueError(sc["replymessages"]["faildateen"])
       
     # try:
     time_str = get_time_from_sms(data_field)
@@ -68,7 +67,7 @@ def parse_surficial_text(text):
     if meas:
         pass
     else:
-        raise SurficialParserError(c.reply.failmeasen)
+        raise SurficialParserError(sc["replymessages"]["failmeasen"])
       
       # get all the weather information
     print meas[-1], repr(data_field)
@@ -76,7 +75,7 @@ def parse_surficial_text(text):
     try:
         wrecord = re.search("(?<="+meas[-1]+" )[A-Z]+",data_field).group(0)
     except AttributeError:
-        raise SurficialParserError(c.reply.failweaen)
+        raise SurficialParserError(sc["replymessages"]["failweaen"])
     recisvalid = False
     for keyword in ["ARAW","ULAN","BAGYO","LIMLIM","AMBON","ULAP","SUN",
         "RAIN","CLOUD","DILIM","HAMOG","INIT"]:
@@ -84,7 +83,7 @@ def parse_surficial_text(text):
             recisvalid = True
             break
     if not recisvalid:
-        raise SurficialParserError(c.reply.failweaen)
+        raise SurficialParserError(sc["replymessages"]["failweaen"])
     # except AttributeError:
     #     raise ValueError(c.reply.failweaen)
       
@@ -93,7 +92,7 @@ def parse_surficial_text(text):
         observer_name = re.search("(?<="+wrecord+" ).+$",data_field).group(0)
         # print observer_name
     except AttributeError:
-        raise SurficialParserError(c.reply.failobven)
+        raise SurficialParserError(sc["replymessages"]["failobven"])
 
     obv = dict()
     obv['ts']=  date_str+" "+time_str
@@ -157,14 +156,14 @@ def get_time_from_sms(text):
                 time_str = dt.strptime(time_str,time_format_dict[fmt]).strftime("%H:%M:%S")
             except ValueError:
                 print 'match for', fmt, 'but error in conversion'
-                raise SurficialParserError(c.reply.failtimeen)
+                raise SurficialParserError(sc["replymessages"]["failtimeen"])
             break
         # else:
         #     print 'not', fmt
         count += 1
 
     if count == len(time_format_dict):
-        raise SurficialParserError(c.reply.failtimeen)
+        raise SurficialParserError(sc["replymessages"]["failtimeen"])
       
       # sanity check
     time_val = dt.strptime(time_str,"%H:%M:%S").time()
@@ -175,7 +174,7 @@ def get_time_from_sms(text):
     if (time_val > dt.strptime("18:00:00","%H:%M:%S").time() or time_val < 
         dt.strptime("05:00:00","%H:%M:%S").time()):
         print 'Time out of bounds. Unrealizable time to measure' 
-        raise SurficialParserError(c.reply.failtimeen)
+        raise SurficialParserError(sc["replymessages"]["failtimeen"])
 
     return time_str
 
@@ -226,7 +225,7 @@ def get_date_from_sms(text):
                     date_str = date_str + cur_year 
                     date_str = dt.strptime(date_str,date_format_dict[fmt]).strftime("%Y-%m-%d")
                 except ValueError:
-                    raise SurficialParserError(c.reply.faildateen)
+                    raise SurficialParserError(sc["replymessages"]["faildateen"])
             break
         # else:
         #     print 'No match for', fmt
@@ -234,11 +233,11 @@ def get_date_from_sms(text):
 
     # no match detected
     if count == len(date_format_dict):
-        raise SurficialParserError(c.reply.faildateen)
+        raise SurficialParserError(sc["replymessages"]["faildateen"])
 
     date_val = dt.strptime(date_str,"%Y-%m-%d")
     if date_val > dt.now():
-        raise SurficialParserError(c.reply.faildateen)        
+        raise SurficialParserError(sc["replymessages"]["faildateen"])
     return date_str
 
 def get_site_id(site_code):

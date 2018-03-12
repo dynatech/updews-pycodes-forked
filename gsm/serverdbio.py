@@ -6,10 +6,6 @@ import cfgfileio as cfg
 import memcache
 mc = memcache.Client(['127.0.0.1:11211'],debug=0)
 
-# cfg = ConfigParser.ConfigParser()
-# cfg.read(sys.path[0] + "/senslope-server-config.txt")
-c = cfg.config()
-
 class dbInstance:
     def __init__(self,host):
         sc = mc.get('server_config')
@@ -22,8 +18,6 @@ class dbInstance:
        # self.user = c.db["user"]
        # self.password = c.db["password"]
 
-# def db_connect():
-# Definition: Connect to senslopedb in mysql
 def db_connect(host='local'):
     dbc = dbInstance(host)
 

@@ -19,7 +19,6 @@ import dynadb.db as dynadb
 
 mc = memcache.Client(['127.0.0.1:11211'],debug=0)
 
-
 def logger_response(msg,log_type,log='False'):
     if log:
         query = ("INSERT INTO logger_response (`logger_Id`, `inbox_id`, `log_type`)"
@@ -718,25 +717,6 @@ def process_rain(sms):
         
     print 'End of Process weather data'
 
-def check_message_source(msg):
-    c = cfg.config()
-    identity = dbio.check_number_if_exists(msg.simnum,'community')
-    if identity:
-        smsmsg = "From: %s %s of %s\n" % (identity[0][1],identity[0][0],
-            identity[0][2])
-        smsmsg += msg.data
-        # server.write_outbox_message_to_db(smsmsg,c.smsalert.communitynum)
-        return
-    elif dbio.check_number_if_exists(msg.simnum,'dewsl'):
-        print ">> From senslope staff"
-        return
-
-    name = dbio.check_number_if_exists(msg.simnum,'sensor')    
-    if name:
-        print ">> From sensor", name[0][0]
-    else:
-        print "From unknown number ", msg.simnum
-
 def spawn_alert_gen(tsm_name, timestamp):
     # spawn alert alert_gens
 
@@ -789,7 +769,6 @@ def process_surficial_observation(msg):
       :returns: N/A.  
 
     """
-    c = cfg.config()
     sc = mc.get('server_config')
     has_parse_error = False
     
@@ -945,7 +924,6 @@ def parse_all_messages(args,allmsgs=[]):
                 print '>> Unrecognized message format: '
                 print 'NUM: ' , msg.simnum
                 print 'MSG: ' , msg.data
-                # check_message_source(msg)            
                 isMsgProcSuccess = False
                 
             if isMsgProcSuccess:
