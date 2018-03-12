@@ -68,10 +68,12 @@ def init_gsm(gsm_info):
     #     Port = c.serialio.smartport
     Port = gsm_info['port']
     print 'Connecting to GSM modem at', Port
+
+    sc = mc.get('server_config')
     
     gsm.port = Port
-    gsm.baudrate = c["serial"]["baudrate"]
-    gsm.timeout = c["serial"]["timeout"]
+    gsm.baudrate = sc["serial"]["baudrate"]
+    gsm.timeout = sc["serial"]["timeout"]
     
     if(gsm.isOpen() == False):
         gsm.open()
