@@ -815,7 +815,9 @@ def check_number_in_users(num):
 
     query = "select user_id from user_mobile where sim_num = '%s'" % (num)
 
-    user_id = dbio.query_database(query,'cnin')
+    sc = mc.get('server_config')
+
+    user_id = dbio.query_database(query, 'cnin', False, sc["resource"]["smsdb"])
 
     print user_id
 
@@ -1054,16 +1056,15 @@ def get_arguments():
     parser.add_argument("-t", "--table", help="smsinbox table")
     parser.add_argument("-m", "--mode", help="mode to run")
     parser.add_argument("-g", "--gsm", help="gsm name")
-    parser.add_argument("-s", "--status", help="inbox/outbox status",type=int)
+    parser.add_argument("-s", "--status", help="inbox/outbox status", type=int)
     parser.add_argument("-l", "--messagelimit", 
-        help="maximum number of messages to process at a time",type=int)
+        help="maximum number of messages to process at a time", type=int)
     parser.add_argument("-r", "--runtest", 
-        help="run test function",action="store_true")
+        help="run test function", action="store_true")
     parser.add_argument("-b", "--bypasslock", 
-        help="bypass lock script function",action="store_true")
+        help="bypass lock script function", action="store_true")
     parser.add_argument("-ns", "--nospawn", 
-        help="do not spawn alert gen",action="store_true")
-    
+        help="do not spawn alert gen", action="store_true")
     
     try:
         args = parser.parse_args()
@@ -1081,11 +1082,6 @@ def get_arguments():
         print error
         sys.exit()
 
-
-def test():
-    sms = ""
-    msg = gsmio.sms('', '', sms, '')
-    
 def main():
     """
         **Description:**
