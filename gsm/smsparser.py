@@ -817,7 +817,7 @@ def check_number_in_users(num):
 
     sc = mc.get('server_config')
 
-    user_id = dbio.query_database(query, 'cnin', False, sc["resource"]["smsdb"])
+    user_id = dbio.query_database(query, 'cnin', sc["resource"]["smsdb"])
 
     print user_id
 
@@ -851,104 +851,99 @@ def parse_all_messages(args,allmsgs=[]):
     total_msgs = len(allmsgs)
     
     while allmsgs:
-        try:
-            isMsgProcSuccess = True
-            print '\n\n*******************************************************'
+        isMsgProcSuccess = True
+        print '\n\n*******************************************************'
 
-            msg = allmsgs.pop(0)
-            ref_count += 1
-                         
-            msgname = check_name_of_number(msg.simnum)
-            if len(msgname) == 0:
-                if check_number_in_users(msg.simnum):
-                    print '>> User number'
-                else:
-                    print '>> Number not in loggers or user mobile'
-                    read_fail_list.append(msg.num)
-                    continue
-            
-            # Added for V1 sensors removes unnecessary characters 
-            # pls see function pre_process_col_v1(data)
-            if re.search("^[A-Z]{3}X[A-Z]{1}\*L\*",msg.data):
-                isMsgProcSuccess = uts.parse_extensometer_uts(msg)
-            elif re.search("\*FF",msg.data) or re.search("PZ\*",msg.data):
-                isMsgProcSuccess = process_piezometer(msg)
-            # elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*\d+T?$",msg.data):
-            elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*.*",msg.data):
-               msg.data = pre_process_col_v1(msg)
-               process_column_v1(msg)
-            elif re.search("EQINFO",msg.data.upper()):
-                isMsgProcSuccess = process_earthquake(msg)
-            # elif re.search("^PSIR ",msg.data.upper()):
-            #     isMsgProcSuccess = qsi.process_server_info_request(msg)
-            elif re.search("^SENDGM ",msg.data.upper()):
-                isMsgProcSuccess = qsi.server_messaging(msg)
-            elif re.search("^SANDBOX ACK \d+ .+",msg.data.upper()):
-                isMsgProcSuccess = amsg.process_ack_to_alert(msg)   
-            elif re.search("^ *(R(O|0)*U*TI*N*E )|(EVE*NT )", msg.data.upper()):
-                process_surficial_observation(msg)                  
-            elif re.search("^[A-Z]{4,5}\*[xyabcXYABC]\*[A-F0-9]+\*[0-9]+T?$",
-                msg.data):
-                try:
-                    dlist = process_two_accel_col_data(msg)
-                    if dlist:
-                        if len(dlist[0]) < 7:
-                            write_soms_data_to_db(dlist,msg)
-                        else:
-                            write_two_accel_data_to_db(dlist,msg)
-                    isMsgProcSuccess = True
-                except IndexError:
-                    print "\n\n>> Error: Possible data type error"
-                    print msg.data
-                    isMsgProcSuccess = False
-                except ValueError:
-                    print ">> Value error detected"
-                    isMsgProcSuccess = False
-                except MySQLdb.ProgrammingError:
-                    print ">> Error writing data to DB"
-                    isMsgProcSuccess = False
-            elif re.search("[A-Z]{4}\*[A-F0-9]+\*[0-9]+$",msg.data):
-                #process_column_v1(msg.data)
-                process_column_v1(msg)
-            #check if message is from rain gauge
-            # elif re.search("^\w{4},[\d\/:,]+,[\d,\.]+$",msg.data):
-            elif re.search("^\w{4},[\d\/:,]+",msg.data):
-                process_rain(msg)
-            elif re.search("ARQ\+[0-9\.\+/\- ]+$",msg.data):
-                process_arq_weather(msg)
-            elif (msg.data.split('*')[0] == 'COORDINATOR' or 
-                msg.data.split('*')[0] == 'GATEWAY'):
-                isMsgProcSuccess = process_gateway_msg(msg)
-            elif common_logger_sms(msg) > 0:
-                print 'inbox_id: ', msg.num
-                print 'match'
+        msg = allmsgs.pop(0)
+        ref_count += 1
+                     
+        msgname = check_name_of_number(msg.simnum)
+        if len(msgname) == 0:
+            if check_number_in_users(msg.simnum):
+                print '>> User number'
             else:
-                print '>> Unrecognized message format: '
-                print 'NUM: ' , msg.simnum
-                print 'MSG: ' , msg.data
-                isMsgProcSuccess = False
-                
-            if isMsgProcSuccess:
-                read_success_list.append(msg.num)
-            else:
+                print '>> Number not in loggers or user mobile'
                 read_fail_list.append(msg.num)
+                continue
+        
+        # Added for V1 sensors removes unnecessary characters 
+        # pls see function pre_process_col_v1(data)
+        if re.search("^[A-Z]{3}X[A-Z]{1}\*L\*",msg.data):
+            isMsgProcSuccess = uts.parse_extensometer_uts(msg)
+        elif re.search("\*FF",msg.data) or re.search("PZ\*",msg.data):
+            isMsgProcSuccess = process_piezometer(msg)
+        # elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*\d+T?$",msg.data):
+        elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*.*",msg.data):
+           msg.data = pre_process_col_v1(msg)
+           process_column_v1(msg)
+        elif re.search("EQINFO",msg.data.upper()):
+            isMsgProcSuccess = process_earthquake(msg)
+        # elif re.search("^PSIR ",msg.data.upper()):
+        #     isMsgProcSuccess = qsi.process_server_info_request(msg)
+        elif re.search("^SENDGM ",msg.data.upper()):
+            isMsgProcSuccess = qsi.server_messaging(msg)
+        elif re.search("^SANDBOX ACK \d+ .+",msg.data.upper()):
+            isMsgProcSuccess = amsg.process_ack_to_alert(msg)   
+        elif re.search("^ *(R(O|0)*U*TI*N*E )|(EVE*NT )", msg.data.upper()):
+            process_surficial_observation(msg)                  
+        elif re.search("^[A-Z]{4,5}\*[xyabcXYABC]\*[A-F0-9]+\*[0-9]+T?$",
+            msg.data):
+            try:
+                dlist = process_two_accel_col_data(msg)
+                if dlist:
+                    if len(dlist[0]) < 7:
+                        write_soms_data_to_db(dlist,msg)
+                    else:
+                        write_two_accel_data_to_db(dlist,msg)
+                isMsgProcSuccess = True
+            except IndexError:
+                print "\n\n>> Error: Possible data type error"
+                print msg.data
+                isMsgProcSuccess = False
+            except ValueError:
+                print ">> Value error detected"
+                isMsgProcSuccess = False
+            except MySQLdb.ProgrammingError:
+                print ">> Error writing data to DB"
+                isMsgProcSuccess = False
+        elif re.search("[A-Z]{4}\*[A-F0-9]+\*[0-9]+$",msg.data):
+            #process_column_v1(msg.data)
+            process_column_v1(msg)
+        #check if message is from rain gauge
+        # elif re.search("^\w{4},[\d\/:,]+,[\d,\.]+$",msg.data):
+        elif re.search("^\w{4},[\d\/:,]+",msg.data):
+            process_rain(msg)
+        elif re.search("ARQ\+[0-9\.\+/\- ]+$",msg.data):
+            process_arq_weather(msg)
+        elif (msg.data.split('*')[0] == 'COORDINATOR' or 
+            msg.data.split('*')[0] == 'GATEWAY'):
+            isMsgProcSuccess = process_gateway_msg(msg)
+        elif common_logger_sms(msg) > 0:
+            print 'inbox_id: ', msg.num
+            print 'match'
+        else:
+            print '>> Unrecognized message format: '
+            print 'NUM: ' , msg.simnum
+            print 'MSG: ' , msg.data
+            isMsgProcSuccess = False
+            
+        if isMsgProcSuccess:
+            read_success_list.append(msg.num)
+        else:
+            read_fail_list.append(msg.num)
 
-            print ">> SMS count processed:", ref_count
+        print ">> SMS count processed:", ref_count
 
-            # method for updating the read_status all messages that have been processed
-            # so that they will not be processed again in another run
-            if ref_count % 200 == 0:
-                dbio.set_read_status(read_success_list, read_status = 1,
-                    table = args.table, instance = args.dbhost)
-                dbio.set_read_status(read_fail_list, read_status = -1,
-                    table = args.table, instance = args.dbhost)
+        # method for updating the read_status all messages that have been processed
+        # so that they will not be processed again in another run
+        if ref_count % 200 == 0:
+            dbio.set_read_status(read_success_list, read_status = 1,
+                table = args.table, instance = args.dbhost)
+            dbio.set_read_status(read_fail_list, read_status = -1,
+                table = args.table, instance = args.dbhost)
 
-                read_success_list = []
-                read_fail_list = []
-
-        except KeyboardInterrupt:
-            print '>> User exit'
-            sys.exit()
+            read_success_list = []
+            read_fail_list = []
 
     dbio.set_read_status(read_success_list, read_status = 1,
         table = args.table, instance = args.dbhost)
@@ -1101,33 +1096,30 @@ def main():
     # dbio.create_table("runtimelog","runtime")
     # logRuntimeStatus("procfromdb","startup")
 
-    if args.runtest:
-        test()
-        sys.exit()
-
     print 'SMS Parser'
 
-    # force backup
-    while True:
-        print args.dbhost, args.table, args.status, args.messagelimit
-        allmsgs = dbio.get_all_sms_from_db(host=args.dbhost, table=args.table,
-            read_status=args.status, limit=args.messagelimit)
-        
-        if len(allmsgs) > 0:
-            msglist = []
-            for item in allmsgs:
-                smsItem = gsmio.sms(item[0], str(item[2]), str(item[3]), 
-                    str(item[1]))
-                msglist.append(smsItem)
-             
-            allmsgs = msglist
+    print args.dbhost, args.table, args.status, args.messagelimit
+    allmsgs = dbio.get_all_sms_from_db(host=args.dbhost, table=args.table,
+        read_status=args.status, limit=args.messagelimit)
+    
+    if len(allmsgs) > 0:
+        msglist = []
+        for item in allmsgs:
+            smsItem = gsmio.sms(item[0], str(item[2]), str(item[3]), 
+                str(item[1]))
+            msglist.append(smsItem)
+         
+        allmsgs = msglist
 
-            read_success_list, read_fail_list = parse_all_messages(args,allmsgs)
+        try:
+            parse_all_messages(args,allmsgs)
+        except KeyboardInterrupt:
+            print '>> User exit'
+            sys.exit()
 
-        else:
-            print dt.today().strftime("\nServer active as of %A, %B %d, %Y, %X")
-            return
-        sys.exit()
+    else:
+        print dt.today().strftime("\nServer active as of %A, %B %d, %Y, %X")
+        return
 
 if __name__ == "__main__":
     main()
