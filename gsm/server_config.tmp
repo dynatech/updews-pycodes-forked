@@ -18,24 +18,6 @@ password = senslope
 name = senslopedb
 user = root
 
-[LocalDB]
-username = root
-host = 192.168.1.105
-password = senslope
-dbname = senslopedb
-
-[GSMDB]
-username = root
-host = 127.0.0.1
-password = senslope
-dbname = senslopedb
-
-[BackupDB]
-username = root
-host = 192.168.1.105
-password = senslope
-dbname = senslopedb
-
 [Serial]
 baudrate = 57600
 sunport = COM16
