@@ -811,6 +811,8 @@ def process_surficial_observation(msg):
         p = subprocess.Popen(surf_cmd_line, stdout=subprocess.PIPE, shell=True, 
             stderr=subprocess.STDOUT)
 
+    return not has_parse_error
+
 def check_number_in_users(num):
 
     query = "select user_id from user_mobile where sim_num = '%s'" % (num)
@@ -861,12 +863,6 @@ def parse_all_messages(args,allmsgs=[]):
         ref_count += 1
 
         if args.table == 'loggers':
-            # check if sim num in list of known numbers
-            if msg.simnum not in table_sim_nums:
-                print ">> SIMNUM %s not in %s table" % (msg.simnum, args.table)
-                is_msg_proc_success = False
-                continue
-
             # start of sms parsing
 
             if re.search("^[A-Z]{3}X[A-Z]{1}\*L\*",msg.data):
@@ -920,11 +916,6 @@ def parse_all_messages(args,allmsgs=[]):
 
 
         elif args.table == 'users':
-            if msg.simnum not in table_sim_nums:
-                print ">> SIMNUM %s not in %s table" % (msg.simnum, args.table)
-                is_msg_proc_success = False
-                continue
-
             if re.search("EQINFO",msg.data.upper()):
                 is_msg_proc_success = process_earthquake(msg)
             # elif re.search("^PSIR ",msg.data.upper()):
@@ -934,7 +925,7 @@ def parse_all_messages(args,allmsgs=[]):
             elif re.search("^SANDBOX ACK \d+ .+",msg.data.upper()):
                 is_msg_proc_success = amsg.process_ack_to_alert(msg)   
             elif re.search("^ *(R(O|0)*U*TI*N*E )|(EVE*NT )", msg.data.upper()):
-                process_surficial_observation(msg)                  
+                is_msg_proc_success = process_surficial_observation(msg)                  
             else:
                 print "User SMS not in known template."
                 is_msg_proc_success = True
