@@ -1,5 +1,0 @@
-http://www.astroml.org/sklearn_tutorial/general_concepts.html#features-and-feature-extraction
--- "If y has values in a fixed set of categorical outcomes (represented by integers) the task to predict y is called classification."
--- "given a list of movies a person has watched and their personal rating of the movie, recommend a list of movies they would like (A famous example is the Netflix Prize)."
-
-* mukhang ganito kasimple yung kailangan for event of non event classification ng data na available
