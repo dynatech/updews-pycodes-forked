@@ -446,9 +446,11 @@ def site_public_alert(site_props, end, public_symbols, internal_symbols,
         rainfall = -1
 
     # INTERNAL ALERT
+    internal_id = internal_symbols[internal_symbols.trigger_source == \
+            'internal']['source_id'].values[0]
     if public_alert > 0:
         # validity of alert
-        validity = pd.to_datetime(min(pos_trig['ts_updated'].values)) \
+        validity = pd.to_datetime(max(pos_trig['ts_updated'].values)) \
                                  + timedelta(1)
         if public_alert == 3:
             validity += timedelta(1)
@@ -469,14 +471,13 @@ def site_public_alert(site_props, end, public_symbols, internal_symbols,
             internal_alert = public_symbols[public_symbols.alert_level == \
                              public_alert]['alert_symbol'].values[0] + '-' + \
                              internal_alert
+
     # ground data presence: subsurface, surficial, moms
     if public_alert <= 1:
         if surficial == -1 and len(subsurface[subsurface.alert_level != -1]) == 0:
             ground_alert = -1
         else:
             ground_alert = 0
-        internal_id = internal_symbols[internal_symbols.trigger_source == \
-                'internal']['source_id'].values[0]
         if public_alert == 0 or ground_alert == -1:
             pub_internal = internal_symbols[(internal_symbols.alert_level == \
                              ground_alert) & (internal_symbols.source_id == \
@@ -492,21 +493,21 @@ def site_public_alert(site_props, end, public_symbols, internal_symbols,
                              internal_alert
             hyphen = '-'
         internal_alert = pub_internal + hyphen + internal_alert
-    elif -1 in internal_df['alert_level'].values:
+    elif -1 in internal_df[internal_df.trigger_source != 'rainfall']['alert_level'].values:
         ground_alert = -1
     else:
         ground_alert = 0
-    
+
     # PUBLIC ALERT
     # check if end of validity: lower alert if with data and not rain75
     if public_alert > 0:
         # check if end of validity: lower alert if with data and not rain75
         if validity > end + timedelta(hours=0.5):
             pass
-        elif (validity + timedelta(3) > end + timedelta(hours=0.5) and \
-                        ground_alert == -1) \
-                    or rain75_id in internal_df['trigger_sym_id'].values \
-                    or not (end.time() in [time(3, 30), time(7, 30),
+        elif rain75_id in internal_df['trigger_sym_id'].values \
+                or validity + timedelta(3) > end + timedelta(hours=0.5) \
+                    and ground_alert == -1 \
+                    and not (end.time() in [time(3, 30), time(7, 30),
                         time(11, 30), time(15, 30), time(19, 30),
                         time(23, 30)] and int(start_time.strftime('%M')) > 45):
             validity = release_time(end)
@@ -545,20 +546,25 @@ def site_public_alert(site_props, end, public_symbols, internal_symbols,
         tech_info = pd.DataFrame()
     
     try:    
-        ts = max(op_trig[op_trig.alert_level != 0]['ts_updated'].values)
+        ts = max(op_trig[op_trig.alert_level != -1]['ts_updated'].values)
         ts = data_ts(pd.to_datetime(ts))
     except:
         ts = end
-    ts = str(ts)
-    
+        
+    if ts > end or (int(start_time.strftime('%M')) >= 45 \
+                    or int(start_time.strftime('%M')) >= 15
+                    and int(start_time.strftime('%M')) < 30) and ts != end:
+        ts = end
+
+    ts = str(ts)    
     validity = str(validity)
-    
+
     public_df = pd.DataFrame({'ts': [ts], 'site_code': [site_code], \
             'public_alert': [public_alert], 'internal_alert': [internal_alert], \
             'validity': [validity], 'subsurface': [subsurface], \
             'surficial': [surficial], 'rainfall': [rainfall], \
             'triggers': [triggers], 'tech_info': [tech_info]})
-    
+
     # writes public alert to database
     pub_sym_id =  public_symbols[public_symbols.alert_level == \
                   public_alert]['pub_sym_id'].values[0]
@@ -611,7 +617,7 @@ def main(end=datetime.now()):
     alerts = alerts.sort_values(['cat', 'site_code']).drop('cat', axis=1)
     
     all_alerts = pd.DataFrame({'invalids': [np.nan], 'alerts': [alerts]})
-    
+
     public_json = all_alerts.to_json(orient="records")
 
     output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
