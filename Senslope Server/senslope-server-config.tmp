@@ -75,3 +75,5 @@ script_mode = procmsg
 [io]
 proc_limit = 10
 active_lgr_limit = 40
+enable_masync = True
+enable_alertgen = True

@@ -117,5 +117,6 @@ class config:
 		self.io = Container()
 		self.io.proc_limit = cfg.getint("io","proc_limit")
 		self.io.active_lgr_limit = cfg.getint("io","active_lgr_limit")
-		
+		self.io.enable_masync = cfg.getboolean("io","enable_masync")
+		self.io.enable_alertgen = cfg.getboolean("io","enable_alertgen")
 
