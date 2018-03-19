@@ -19,7 +19,6 @@ import dynadb.db as dynadb
 
 mc = memcache.Client(['127.0.0.1:11211'],debug=0)
 
-
 def logger_response(msg,log_type,log='False'):
     if log:
         query = ("INSERT INTO logger_response (`logger_Id`, `inbox_id`, `log_type`)"
@@ -718,25 +717,6 @@ def process_rain(sms):
         
     print 'End of Process weather data'
 
-def check_message_source(msg):
-    c = cfg.config()
-    identity = dbio.check_number_if_exists(msg.simnum,'community')
-    if identity:
-        smsmsg = "From: %s %s of %s\n" % (identity[0][1],identity[0][0],
-            identity[0][2])
-        smsmsg += msg.data
-        # server.write_outbox_message_to_db(smsmsg,c.smsalert.communitynum)
-        return
-    elif dbio.check_number_if_exists(msg.simnum,'dewsl'):
-        print ">> From senslope staff"
-        return
-
-    name = dbio.check_number_if_exists(msg.simnum,'sensor')    
-    if name:
-        print ">> From sensor", name[0][0]
-    else:
-        print "From unknown number ", msg.simnum
-
 def spawn_alert_gen(tsm_name, timestamp):
     # spawn alert alert_gens
 
@@ -789,7 +769,6 @@ def process_surficial_observation(msg):
       :returns: N/A.  
 
     """
-    c = cfg.config()
     sc = mc.get('server_config')
     has_parse_error = False
     
@@ -832,11 +811,15 @@ def process_surficial_observation(msg):
         p = subprocess.Popen(surf_cmd_line, stdout=subprocess.PIPE, shell=True, 
             stderr=subprocess.STDOUT)
 
+    return not has_parse_error
+
 def check_number_in_users(num):
 
     query = "select user_id from user_mobile where sim_num = '%s'" % (num)
 
-    user_id = dbio.query_database(query,'cnin')
+    sc = mc.get('server_config')
+
+    user_id = dbio.query_database(query, 'cnin', sc["resource"]["smsdb"])
 
     print user_id
 
@@ -868,48 +851,28 @@ def parse_all_messages(args,allmsgs=[]):
         sys.exit()
 
     total_msgs = len(allmsgs)
-    
-    while allmsgs:
-        try:
-            isMsgProcSuccess = True
-            print '\n\n*******************************************************'
-            #gets per text message
-            msg = allmsgs.pop(0)
-            # msg.data = msg.data.upper()
-           
 
-                         
-            msgname = check_name_of_number(msg.simnum)
-            if len(msgname) == 0:
-                print ">> Error unknown logger number:", msg.simnum
-            
-                if check_number_in_users(msg.simnum):
-                    print '>> User number'
-                else:
-                    print '>> Number not in loggers or user mobile'
-                    read_fail_list.append(msg.num)
-                    continue
-            
-            # Added for V1 sensors removes unnecessary characters 
-            # pls see function pre_process_col_v1(data)
+    sc = mc.get('server_config')
+    table_sim_nums = mc.get('%s_mobile_sim_nums' % args.table[:-1])
+
+    while allmsgs:
+        is_msg_proc_success = True
+        print '\n\n*******************************************************'
+
+        msg = allmsgs.pop(0)
+        ref_count += 1
+
+        if args.table == 'loggers':
+            # start of sms parsing
+
             if re.search("^[A-Z]{3}X[A-Z]{1}\*L\*",msg.data):
-                isMsgProcSuccess = uts.parse_extensometer_uts(msg)
+                is_msg_proc_success = uts.parse_extensometer_uts(msg)
             elif re.search("\*FF",msg.data) or re.search("PZ\*",msg.data):
-                isMsgProcSuccess = process_piezometer(msg)
+                is_msg_proc_success = process_piezometer(msg)
             # elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*\d+T?$",msg.data):
             elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*.*",msg.data):
                msg.data = pre_process_col_v1(msg)
                process_column_v1(msg)
-            elif re.search("EQINFO",msg.data.upper()):
-                isMsgProcSuccess = process_earthquake(msg)
-            # elif re.search("^PSIR ",msg.data.upper()):
-            #     isMsgProcSuccess = qsi.process_server_info_request(msg)
-            elif re.search("^SENDGM ",msg.data.upper()):
-                isMsgProcSuccess = qsi.server_messaging(msg)
-            elif re.search("^SANDBOX ACK \d+ .+",msg.data.upper()):
-                isMsgProcSuccess = amsg.process_ack_to_alert(msg)   
-            elif re.search("^ *(R(O|0)*U*TI*N*E )|(EVE*NT )", msg.data.upper()):
-                process_surficial_observation(msg)                  
             elif re.search("^[A-Z]{4,5}\*[xyabcXYABC]\*[A-F0-9]+\*[0-9]+T?$",
                 msg.data):
                 try:
@@ -919,17 +882,17 @@ def parse_all_messages(args,allmsgs=[]):
                             write_soms_data_to_db(dlist,msg)
                         else:
                             write_two_accel_data_to_db(dlist,msg)
-                    isMsgProcSuccess = True
+                    is_msg_proc_success = True
                 except IndexError:
                     print "\n\n>> Error: Possible data type error"
                     print msg.data
-                    isMsgProcSuccess = False
+                    is_msg_proc_success = False
                 except ValueError:
                     print ">> Value error detected"
-                    isMsgProcSuccess = False
+                    is_msg_proc_success = False
                 except MySQLdb.ProgrammingError:
                     print ">> Error writing data to DB"
-                    isMsgProcSuccess = False
+                    is_msg_proc_success = False
             elif re.search("[A-Z]{4}\*[A-F0-9]+\*[0-9]+$",msg.data):
                 #process_column_v1(msg.data)
                 process_column_v1(msg)
@@ -941,7 +904,7 @@ def parse_all_messages(args,allmsgs=[]):
                 process_arq_weather(msg)
             elif (msg.data.split('*')[0] == 'COORDINATOR' or 
                 msg.data.split('*')[0] == 'GATEWAY'):
-                isMsgProcSuccess = process_gateway_msg(msg)
+                is_msg_proc_success = process_gateway_msg(msg)
             elif common_logger_sms(msg) > 0:
                 print 'inbox_id: ', msg.num
                 print 'match'
@@ -949,34 +912,52 @@ def parse_all_messages(args,allmsgs=[]):
                 print '>> Unrecognized message format: '
                 print 'NUM: ' , msg.simnum
                 print 'MSG: ' , msg.data
-                # check_message_source(msg)            
-                isMsgProcSuccess = False
-                
-            if isMsgProcSuccess:
-                read_success_list.append(msg.num)
+                is_msg_proc_success = False
+
+
+        elif args.table == 'users':
+            if re.search("EQINFO",msg.data.upper()):
+                is_msg_proc_success = process_earthquake(msg)
+            # elif re.search("^PSIR ",msg.data.upper()):
+            #     is_msg_proc_success = qsi.process_server_info_request(msg)
+            elif re.search("^SENDGM ",msg.data.upper()):
+                is_msg_proc_success = qsi.server_messaging(msg)
+            elif re.search("^SANDBOX ACK \d+ .+",msg.data.upper()):
+                is_msg_proc_success = amsg.process_ack_to_alert(msg)   
+            elif re.search("^ *(R(O|0)*U*TI*N*E )|(EVE*NT )", msg.data.upper()):
+                is_msg_proc_success = process_surficial_observation(msg)                  
             else:
-                read_fail_list.append(msg.num)
+                print "User SMS not in known template."
+                is_msg_proc_success = True
 
-            ref_count += 1
-            print ">> SMS count processed:", ref_count
-
-            # method for updating the read_status all messages that have been processed
-            # so that they will not be processed again in another run
-            if ref_count % 200 == 0 or ref_count == total_msgs:
-                dbio.set_read_status(read_success_list, read_status = 1,
-                    table = args.table, instance = args.dbhost)
-                dbio.set_read_status(read_fail_list, read_status = -1,
-                    table = args.table, instance = args.dbhost)
-
-                read_success_list = []
-                read_fail_list = []
-
-        except KeyboardInterrupt:
-            print '>> User exit'
+        else:
+            raise ValueError("Table value not recognized (%s)" % (args.table))
             sys.exit()
+
+            
+        if is_msg_proc_success:
+            read_success_list.append(msg.num)
+        else:
+            read_fail_list.append(msg.num)
+
+        print ">> SMS count processed:", ref_count
+
+        # method for updating the read_status all messages that have been processed
+        # so that they will not be processed again in another run
+        if ref_count % 200 == 0:
+            dbio.set_read_status(read_success_list, read_status = 1,
+                table = args.table, instance = args.dbhost)
+            dbio.set_read_status(read_fail_list, read_status = -1,
+                table = args.table, instance = args.dbhost)
+
+            read_success_list = []
+            read_fail_list = []
+
+    dbio.set_read_status(read_success_list, read_status = 1,
+        table = args.table, instance = args.dbhost)
+    dbio.set_read_status(read_fail_list, read_status = -1,
+        table = args.table, instance = args.dbhost)
         
-    return read_success_list, read_fail_list
-    
 def get_router_ids():
     """
        -The function that get rounters id. .
@@ -1076,16 +1057,15 @@ def get_arguments():
     parser.add_argument("-t", "--table", help="smsinbox table")
     parser.add_argument("-m", "--mode", help="mode to run")
     parser.add_argument("-g", "--gsm", help="gsm name")
-    parser.add_argument("-s", "--status", help="inbox/outbox status",type=int)
+    parser.add_argument("-s", "--status", help="inbox/outbox status", type=int)
     parser.add_argument("-l", "--messagelimit", 
-        help="maximum number of messages to process at a time",type=int)
+        help="maximum number of messages to process at a time", type=int)
     parser.add_argument("-r", "--runtest", 
-        help="run test function",action="store_true")
+        help="run test function", action="store_true")
     parser.add_argument("-b", "--bypasslock", 
-        help="bypass lock script function",action="store_true")
+        help="bypass lock script function", action="store_true")
     parser.add_argument("-ns", "--nospawn", 
-        help="do not spawn alert gen",action="store_true")
-    
+        help="do not spawn alert gen", action="store_true")
     
     try:
         args = parser.parse_args()
@@ -1103,11 +1083,6 @@ def get_arguments():
         print error
         sys.exit()
 
-
-def test():
-    sms = ""
-    msg = gsmio.sms('', '', sms, '')
-    
 def main():
     """
         **Description:**
@@ -1127,33 +1102,30 @@ def main():
     # dbio.create_table("runtimelog","runtime")
     # logRuntimeStatus("procfromdb","startup")
 
-    if args.runtest:
-        test()
-        sys.exit()
-
     print 'SMS Parser'
 
-    # force backup
-    while True:
-        print args.dbhost, args.table, args.status, args.messagelimit
-        allmsgs = dbio.get_all_sms_from_db(host=args.dbhost, table=args.table,
-            read_status=args.status, limit=args.messagelimit)
-        
-        if len(allmsgs) > 0:
-            msglist = []
-            for item in allmsgs:
-                smsItem = gsmio.sms(item[0], str(item[2]), str(item[3]), 
-                    str(item[1]))
-                msglist.append(smsItem)
-             
-            allmsgs = msglist
+    print args.dbhost, args.table, args.status, args.messagelimit
+    allmsgs = dbio.get_all_sms_from_db(host=args.dbhost, table=args.table,
+        read_status=args.status, limit=args.messagelimit)
+    
+    if len(allmsgs) > 0:
+        msglist = []
+        for item in allmsgs:
+            smsItem = gsmio.sms(item[0], str(item[2]), str(item[3]), 
+                str(item[1]))
+            msglist.append(smsItem)
+         
+        allmsgs = msglist
 
-            read_success_list, read_fail_list = parse_all_messages(args,allmsgs)
+        try:
+            parse_all_messages(args,allmsgs)
+        except KeyboardInterrupt:
+            print '>> User exit'
+            sys.exit()
 
-        else:
-            print dt.today().strftime("\nServer active as of %A, %B %d, %Y, %X")
-            return
-        sys.exit()
+    else:
+        print dt.today().strftime("\nServer active as of %A, %B %d, %Y, %X")
+        return
 
 if __name__ == "__main__":
     main()

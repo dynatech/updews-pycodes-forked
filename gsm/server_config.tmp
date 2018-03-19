@@ -18,24 +18,6 @@ password = senslope
 name = senslopedb
 user = root
 
-[LocalDB]
-username = root
-host = 192.168.1.105
-password = senslope
-dbname = senslopedb
-
-[GSMDB]
-username = root
-host = 127.0.0.1
-password = senslope
-dbname = senslopedb
-
-[BackupDB]
-username = root
-host = 192.168.1.105
-password = senslope
-dbname = senslopedb
-
 [Serial]
 baudrate = 57600
 sunport = COM16
@@ -75,7 +57,7 @@ gndalert1 = /home/dewsl/centralserver/analysis/surficial/markeralerts.py
 gndalert2 = /home/dynaslope/Desktop/updews-pycodes/Data\ Analysis/GroundAlert/GenerateGroundAlertWithTrendingNewAlerts.py
 gndalert3 = /home/dynaslope/Desktop/updews-pycodes/Data\ Analysis/GroundAlert/GenerateGroundAlertWithTrending.py 
 surficialscript = /home/dewsl/centralserver/analysis/surficial/markeralerts.py
-surfscriptlogs = /home/dewsl/scriptlogs/marker_alerts.txt
+surfscriptlogs = /home/dewsl/logs/marker_alerts.txt
 output_path = /Documents/monitoringoutput/
 realtime_path = /Documents/monitoringoutput/realtime/
 rainfall_path = /Documents/monitoringoutput/rainfall/

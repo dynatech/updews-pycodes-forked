@@ -16,11 +16,11 @@ def count_alert_analysis_instances():
 def main():
 	print dt.today().strftime("%c")
 
-	c = cfg.config()
-
 	ongoing = []
+
+	sc = mc.get('server_config')
 	
- 	proc_limit = c.io.proc_limit
+ 	proc_limit = sc["io"]["proc_limit"]
 	
 	while True:
 		alertgenlist = mc.get('alertgenlist')
@@ -38,7 +38,7 @@ def main():
 		mc.set('alertgenlist',[])
 		mc.set('alertgenlist',alertgenlist)
 
-		command = "python %s %s '%s'" % (c.fileio.alertgenscript, 
+		command = "python %s %s '%s'" % (sc["fileio"]["alertgenscript"], 
 			alert_info['tsm_name'], alert_info['ts'])
 
 		print "Running", alert_info['tsm_name'], "alertgen"
@@ -65,7 +65,7 @@ if __name__ == "__main__":
     mc.set('alertgenexec', True)
     try:
 		main()
-    except:
+    except KeyboardInterrupt:
 		print 'Unexpected Error'
 	    	
     mc.set('alertgenexec', False)

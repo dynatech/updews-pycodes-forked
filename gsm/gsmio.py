@@ -10,10 +10,12 @@ from random import random
 import memcache
 mc = memcache.Client(['127.0.0.1:11211'],debug=0)
 
-if cfg.config().mode.script_mode == 'gsmserver':
+sc = mc.get("server_config")
+
+if sc["mode"]["script_mode"] == 'gsmserver':
     import RPi.GPIO as GPIO
 
-    resetpin = cfg.config().gsmio.resetpin
+    resetpin = sc["gsmio"]["resetpin"]
     gsm = ''
 
     GPIO.setmode(GPIO.BOARD)
@@ -62,17 +64,18 @@ def init_gsm(gsm_info):
     global gsm
     power_gsm(True,gsm_info["pwr_on_pin"])
     gsm = serial.Serial()
-    c = cfg.config()
     # if network[:5].lower() == 'globe':
     #     Port = c.serialio.globeport
     # else:
     #     Port = c.serialio.smartport
     Port = gsm_info['port']
     print 'Connecting to GSM modem at', Port
+
+    sc = mc.get('server_config')
     
     gsm.port = Port
-    gsm.baudrate = c.serialio.baudrate
-    gsm.timeout = c.serialio.timeout
+    gsm.baudrate = sc["serial"]["baudrate"]
+    gsm.timeout = sc["serial"]["timeout"]
     
     if(gsm.isOpen() == False):
         gsm.open()
