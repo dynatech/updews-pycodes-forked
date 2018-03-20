@@ -16,6 +16,8 @@ import gsmio
 import surficialparser as surfp
 import utsparser as uts
 import dynadb.db as dynadb
+import gsm.smsparser2.tilt as tilt
+
 
 mc = memcache.Client(['127.0.0.1:11211'],debug=0)
 
@@ -871,12 +873,12 @@ def parse_all_messages(args,allmsgs=[]):
                 is_msg_proc_success = process_piezometer(msg)
             # elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*\d+T?$",msg.data):
             elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*.*",msg.data):
-               msg.data = pre_process_col_v1(msg)
-               process_column_v1(msg)
+               # msg.data = pre_process_col_v1(msg)
+               tilt.v1(msg)
             elif re.search("^[A-Z]{4,5}\*[xyabcXYABC]\*[A-F0-9]+\*[0-9]+T?$",
                 msg.data):
                 try:
-                    dlist = process_two_accel_col_data(msg)
+                    dlist = tilt.v2(msg)
                     if dlist:
                         if len(dlist[0]) < 7:
                             write_soms_data_to_db(dlist,msg)
@@ -895,7 +897,7 @@ def parse_all_messages(args,allmsgs=[]):
                     is_msg_proc_success = False
             elif re.search("[A-Z]{4}\*[A-F0-9]+\*[0-9]+$",msg.data):
                 #process_column_v1(msg.data)
-                process_column_v1(msg)
+                tilt.v1(msg)
             #check if message is from rain gauge
             # elif re.search("^\w{4},[\d\/:,]+,[\d,\.]+$",msg.data):
             elif re.search("^\w{4},[\d\/:,]+",msg.data):

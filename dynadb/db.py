@@ -86,4 +86,13 @@ def read(query='', identifier='', instance='local'):
         a =  None
     except KeyError:
         a = None
-   
+def update_sim_num_table(name,sim_num,date_activated):
+    return
+    db, cur = connect('local')
+    
+    query = ("INSERT IGNORE INTO site_column_sim_nums (name,sim_num, "
+        "date_activated) VALUES ('%s','%s','%s')" % (name.upper(),
+        sim_num, date_activated)
+        )
+
+    write(query, 'update_sim_num_table')
