@@ -73,6 +73,10 @@ def main():
 	mc.set("server_config",c.config)
 	print 'done'
 
+	print 'Reset alergenexec',
+	mc.set("alertgenexec", False)
+	print 'done'
+
 	# set_server_cfg(mc)
 	try:
 		set_mysql_tables(mc)
