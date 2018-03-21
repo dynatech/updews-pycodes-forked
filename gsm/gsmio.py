@@ -20,7 +20,7 @@ try:
 
         GPIO.setmode(GPIO.BOARD)
         GPIO.setup(resetpin, GPIO.OUT)
-except (NameError, TypeError) as error:
+except (NameError, TypeError, KeyError) as error:
     print "Error: memcache not yet set"
 
 class sms:
