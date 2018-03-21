@@ -1,7 +1,6 @@
 import os,time,re,sys
 import MySQLdb
 import datetime
-import cfgfileio as cfg
 from datetime import datetime as dt
 from datetime import timedelta as td
 import serverdbio as dbio

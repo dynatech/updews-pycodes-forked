@@ -11,7 +11,6 @@ import gsmio
 import multiprocessing
 import somsparser as ssp
 import math
-import cfgfileio as cfg
 import memcache
 import argparse
 mc = memcache.Client(['127.0.0.1:11211'],debug=0)
@@ -209,27 +208,6 @@ def write_outbox_message_to_db(message='',recipients='',gsm_id='',table=''):
         last_insert = False, instance = host)
             
     
-def check_alert_messages():
-    """
-        **Description:**
-          -The check alert message is a function that checks alert message in allalertsfile.
-         
-        :parameters: N/A
-        :returns: **alllines** (*str*) - status if the file  alert file is read.
-       
-    """
-    c = cfg.config()
-    alllines = ''
-    print c.fileio.allalertsfile
-    if (os.path.isfile(c.fileio.allalertsfile) 
-        and os.path.getsize(c.fileio.allalertsfile) > 0):
-        f = open(c.fileio.allalertsfile,'r')
-        alllines = f.read()
-        f.close()
-    else:
-        print '>> Error in reading file', alllines
-    return alllines
-
 def get_allowed_prefixes(network):
     """
         **Description:**

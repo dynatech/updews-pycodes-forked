@@ -4,7 +4,6 @@ from datetime import timedelta as td
 import serverdbio as dbio 
 from messaging.sms import SmsDeliver as smsdeliver
 from messaging.sms import SmsSubmit as smssubmit
-import cfgfileio as cfg
 import argparse
 from random import random
 import memcache

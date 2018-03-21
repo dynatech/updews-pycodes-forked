@@ -1,6 +1,5 @@
 import re, sys
 from datetime import datetime as dt
-import cfgfileio as cfg
 import subprocess, time
 import serverdbio as dbio
 import pandas as pd

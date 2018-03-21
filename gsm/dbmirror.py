@@ -3,7 +3,6 @@
 import serverdbio as dbio
 import MySQLdb
 import subprocess
-import cfgfileio as cfg
 import argparse
 import memcache
 import sys
