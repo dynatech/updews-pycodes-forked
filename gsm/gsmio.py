@@ -12,14 +12,17 @@ mc = memcache.Client(['127.0.0.1:11211'],debug=0)
 
 sc = mc.get("server_config")
 
-if sc["mode"]["script_mode"] == 'gsmserver':
-    import RPi.GPIO as GPIO
+try:
+    if sc["mode"]["script_mode"] == 'gsmserver':
+        import RPi.GPIO as GPIO
 
-    resetpin = sc["gsmio"]["resetpin"]
-    gsm = ''
+        resetpin = sc["gsmio"]["resetpin"]
+        gsm = ''
 
-    GPIO.setmode(GPIO.BOARD)
-    GPIO.setup(resetpin, GPIO.OUT)
+        GPIO.setmode(GPIO.BOARD)
+        GPIO.setup(resetpin, GPIO.OUT)
+except (NameError, TypeError) as error:
+    print "Error: memcache not yet set"
 
 class sms:
     def __init__(self,num,sender,data,dt):
