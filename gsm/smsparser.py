@@ -18,8 +18,6 @@ import utsparser as uts
 import dynadb.db as dynadb
 import smstables
 
-mc = memcache.Client(['127.0.0.1:11211'],debug=0)
-
 def logger_response(msg,log_type,log='False'):
     if log:
         query = ("INSERT INTO logger_response (`logger_Id`, `inbox_id`, `log_type`)"
@@ -734,6 +732,7 @@ def spawn_alert_gen(tsm_name, timestamp):
     # print timestamp
     # return
 
+    mc = mem.get_handle()
     alertgenlist = mc.get('alertgenlist')
 
     if alertgenlist == None:
@@ -770,7 +769,7 @@ def process_surficial_observation(msg):
       :returns: N/A.  
 
     """
-    sc = mc.get('server_config')
+    sc = mem.server_config()
     has_parse_error = False
     
     obv = []
@@ -818,7 +817,7 @@ def check_number_in_users(num):
 
     query = "select user_id from user_mobile where sim_num = '%s'" % (num)
 
-    sc = mc.get('server_config')
+    sc = mem.server_config()
 
     user_id = dbio.query_database(query, 'cnin', sc["resource"]["smsdb"])
 
@@ -853,7 +852,8 @@ def parse_all_messages(args,allmsgs=[]):
 
     total_msgs = len(allmsgs)
 
-    sc = mc.get('server_config')
+    sc = mem.server_config()
+    mc = mem.get_handle()
     table_sim_nums = mc.get('%s_mobile_sim_nums' % args.table[:-1])
 
     while allmsgs:
