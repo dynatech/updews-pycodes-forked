@@ -1,5 +1,7 @@
 import dynadb.db as dbio
 import volatile.memory as mem
+import volatile.static as static
+from datetime import datetime as dt
 import time
 import MySQLdb
 
@@ -110,3 +112,131 @@ def get_all_outbox_sms_from_db(table='users',send_status=5,gsm_id=5,limit=10):
         except MySQLdb.OperationalError:
             print '10.',
             time.sleep(20)
+
+def write_inbox(msglist,gsm_info):
+    """
+        **Description:**
+          -The write raw sms to database function that write raw  message in database.
+         
+        :param msglist: The message list.
+        :param gsm_info: The gsm_info that being use.
+        :type msglist: obj
+        :type gsm_info: obj
+        :returns: N/A
+    """
+    sc = mem.server_config()
+    mobile_nums_db = sc["resource"]["mobile_nums_db"]
+
+    logger_mobile_sim_nums = static.get_mobiles('loggers', mobile_nums_db)
+    user_mobile_sim_nums = static.get_mobiles('users', mobile_nums_db)
+
+    # gsm_ids = get_gsm_modules()
+
+    ts_stored = dt.today().strftime("%Y-%m-%d %H:%M:%S")
+
+    gsm_id = gsm_info['id']
+
+    loggers_count = 0
+    users_count = 0
+
+    query_loggers = ("insert into smsinbox_loggers (ts_sms, ts_stored, mobile_id, "
+        "sms_msg,read_status,gsm_id) values ")
+    query_users = ("insert into smsinbox_users (ts_sms, ts_stored, mobile_id, "
+        "sms_msg,read_status,gsm_id) values ")
+
+    sms_id_ok = []
+    sms_id_unk = []
+    ts_sms = 0
+    ltr_mobile_id= 0
+
+    for m in msglist:
+        # print m.simnum, m.data, m.dt, m.num
+        ts_sms = m.dt
+        sms_msg = m.data
+        read_status = 0 
+    
+        if m.simnum in logger_mobile_sim_nums.keys():
+            query_loggers += "('%s','%s',%d,'%s',%d,%d)," % (ts_sms, ts_stored,
+                logger_mobile_sim_nums[m.simnum], sms_msg, read_status, gsm_id)
+            ltr_mobile_id= logger_mobile_sim_nums[m.simnum]
+            loggers_count += 1
+        elif m.simnum in user_mobile_sim_nums.keys():
+            query_users += "('%s','%s',%d,'%s',%d,%d)," % (ts_sms, ts_stored,
+                user_mobile_sim_nums[m.simnum], sms_msg, read_status, gsm_id)
+            users_count += 1
+        else:            
+            print 'Unknown number', m.simnum
+            sms_id_unk.append(m.num)
+            continue
+
+        sms_id_ok.append(m.num)
+
+    query_loggers = query_loggers[:-1]
+    query_users = query_users[:-1]
+
+    sc = mem.server_config()
+    sms_instance = sc["resource"]["smsdb"]
+
+    if len(sms_id_ok)>0:
+        if loggers_count > 0:
+            dbio.write(query_loggers,'write_raw_sms_to_db',
+                instance = sms_instance)
+        if users_count > 0:
+            dbio.write(query_users,'write_raw_sms_to_db',
+                instance = sms_instance)
+        
+def write_outbox(message='',recipients='',gsm_id='',table=''):
+    """
+        **Description:**
+          -The write outbox message to database is a function that insert message to smsoutbox with 
+          timestamp written,message source and mobile id.
+         
+        :param message: The message that will be sent to the recipients.
+        :param recipients: The number of the recipients.
+        :param gsm_id: The gsm id .
+        :param table: table use of the number.
+        :type message: str
+        :type recipients: str
+        :type recipients: int
+        :type table: str
+        :returns: N/A
+    """
+    # if table == '':
+    #     print "Error: No table indicated"
+    #     raise ValueError
+    #     return
+
+    sc = mem.server_config()
+
+    host = sc['resource']['smsdb']
+
+    tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
+
+    if table == '':
+        table_name = check_number_in_table(recipients[0])
+    else:
+        table_name = table
+
+    query = ("insert into smsoutbox_%s (ts_written,sms_msg,source) VALUES "
+        "('%s','%s','central')") % (table_name,tsw,message)
+        
+    outbox_id = db.write(query = query, identifier = "womtdb", 
+        last_insert = True, instance = host)[0][0]
+
+    query = ("INSERT INTO smsoutbox_%s_status (outbox_id,mobile_id,gsm_id)"
+            " VALUES ") % (table_name[:-1])
+
+    table_mobile = static.get_mobiles(table_name, host)
+
+    for r in recipients.split(","):        
+        tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
+        try:
+            print outbox_id, table_mobile[r], gsm_id
+            query += "(%d,%d,%d)," % (outbox_id,table_mobile[r],gsm_id)
+        except KeyError:
+            print ">> Error: Possible key error for", r
+            continue
+    query = query[:-1]
+
+    dbio.write(query = query, identifier = "womtdb", 
+        last_insert = False, instance = host)
