@@ -1,8 +1,6 @@
 class Sms:
-    def __init__(self,table,tswritten,tilt,soms):
+    def __init__(self,table,tswritten,df):
        self.table = table
        self.ts = tswritten
-       self.tilt = tilt
-       self.soms = soms
-
+       self.df = df
      

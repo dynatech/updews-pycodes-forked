@@ -121,7 +121,7 @@ def v1(sms):
             
         df_tilt = pd.DataFrame(outl_tilt).set_index(['ts'])
         df_soms = pd.DataFrame(outl_soms).set_index(['ts'])
-        data = smsclass.Sms(tsm_name,timestamp,df_tilt,df_soms)
+        data = smsclass.Sms(tsm_name,timestamp,[df_tilt,df_soms])
         print df_tilt
         print df_soms
         return data
@@ -276,5 +276,5 @@ def v2(sms):
     # spawn_alert_gen(tsm_name,timestamp)
     df_tilt = pd.DataFrame(outl_tilt)
     print df_tilt
-    df_data = smsclass.Sms(tsm_name,timestamp,df_tilt,outl)
+    df_data = smsclass.Sms(tsm_name,timestamp,[df_tilt,outl])
     return df_data

@@ -874,16 +874,16 @@ def parse_all_messages(args,allmsgs=[]):
             # elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*\d+T?$",msg.data):
             elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*.*",msg.data):
                # msg.data = pre_process_col_v1(msg)
-                df= parser.subsurface.v1(msg)
-                print df
-                if df:
-                    dynadb.df_write(frame=df.tilt, table='tilt_%s'% df.table)
-                    dynadb.df_write(frame=df.soms, table='soms_%s'% df.table)
+                df_data= parser.subsurface.v1(msg)
+                print df_data
+                if df_data:
+                    dynadb.df_write(frame=df_data.df[0], table='tilt_%s'% df_data.table)
+                    dynadb.df_write(frame=df_data.df[1], table='soms_%s'% df_data.table)
 
             elif re.search("^[A-Z]{4,5}\*[xyabcXYABC]\*[A-F0-9]+\*[0-9]+T?$",
                 msg.data):
                 try:
-                    df = parser.tilt.v2(msg)
+                    df_data = parser.subsurface.v2(msg)
                     dlist = process_two_accel_col_data(msg)
 
                     if dlist:
@@ -891,8 +891,8 @@ def parse_all_messages(args,allmsgs=[]):
                             write_soms_data_to_db(dlist,msg)
                         # else:
                         #     write_two_accel_data_to_db(dlist,msg)
-                    if df:
-                        dynadb.df_write(frame=df.tilt, table='tilt_%s'% df.table)
+                    if df_data:
+                        dynadb.df_write(frame=df_data.df[0], table='tilt_%s'% df_data.table)
                      
                     is_msg_proc_success = True
                 except IndexError:
@@ -907,11 +907,11 @@ def parse_all_messages(args,allmsgs=[]):
                     is_msg_proc_success = False
             elif re.search("[A-Z]{4}\*[A-F0-9]+\*[0-9]+$",msg.data):
                 #process_column_v1(msg.data)
-                df= parser.tilt.v1(msg)
+                df_data= parser.subsurface.v1(msg)
                 if df:
                     print 'here'
-                    dynadb.df_write(frame=df.tilt, table='tilt_%s'% df.table)
-                    dynadb.df_write(frame=df.soms, table='soms_%s'% df.table)
+                    dynadb.df_write(frame=df_data.df[0], table='tilt_%s'% df_data.table)
+                    dynadb.df_write(frame=df_data.df[1], table='soms_%s'% df_data.table)
                 
             #check if message is from rain gauge
             # elif re.search("^\w{4},[\d\/:,]+,[\d,\.]+$",msg.data):
