@@ -6,8 +6,7 @@ import subprocess
 import argparse
 import memcache
 import sys
-
-mc = memcache.Client(['127.0.0.1:11211'],debug=0)
+import volatile.memory as mem
 
 def get_arguments():
     """
@@ -51,7 +50,7 @@ def dyna_to_sandbox():
 
     # get latest sms_id
     # print c.db["user"],c.dbhost["local"],c.db["name"],c.db["password"]
-    sc = mc.get('server_config')
+    sc = mem.server_config()
     
     user = sc["db"]["user"]
     password = sc["db"]["password"]
@@ -122,7 +121,7 @@ def get_max_index_from_table(table_name):
           data in dyna.
       
     """
-    sc = mc.get("server_config")
+    sc = mem.server_config()
     smsdb_host = sc["hosts"][sc["resource"]["smsdb"]]
     user = sc["db"]["user"]
     password = sc["db"]["password"]
@@ -165,7 +164,7 @@ def import_sql_file_to_dyna(table, max_inbox_id, max_index_last_copied):
     print "importing to dyna tables"
     print table
 
-    sc = mc.get("server_config")
+    sc = mem.server_config()
     
     smsdb_host = sc["resource"]["smsdb"]
     smsdb2_host = sc["resource"]["smsdb2"]

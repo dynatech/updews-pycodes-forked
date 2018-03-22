@@ -1,11 +1,8 @@
-import memcache
-import cfgfileio as cfg
 import sys
 import subprocess
 import lockscript, time
 from datetime import datetime as dt
-
-mc = memcache.Client(['127.0.0.1:11211'],debug=0)
+import volatile.memory as mem
 
 def count_alert_analysis_instances():
 	p = subprocess.Popen("ps ax | grep alertgen.py -c", stdout=subprocess.PIPE, 
@@ -13,7 +10,7 @@ def count_alert_analysis_instances():
 	out, err = p.communicate()
 	return int(out)
 
-def main():
+def main(mc):
 	print dt.today().strftime("%c")
 
 	ongoing = []
@@ -57,15 +54,18 @@ def main():
 
 
 if __name__ == "__main__":
-    ag_instance = mc.get('alertgenexec')
-    if ag_instance == True:
-        print 'Process already exists (via memcache).. aborting'
-        sys.exit()
 
-    mc.set('alertgenexec', True)
-    try:
-		main()
-    except KeyboardInterrupt:
+	mc = mem.get_handle()
+	ag_instance = mc.get('alertgenexec')
+
+	if ag_instance == True:
+		print 'Process already exists (via memcache).. aborting'
+		sys.exit()
+
+	mc.set('alertgenexec', True)
+	try:
+		main(mc)
+	except KeyboardInterrupt:
 		print 'Unexpected Error'
 	    	
-    mc.set('alertgenexec', False)
+mc.set('alertgenexec', False)
