@@ -1,13 +1,9 @@
 import sys,re
+import pandas as pd
 import dynadb.db as dynadb
 from datetime import datetime as dt
-
-class sms:
-    def __init__(self,num,sender,data,ts):
-       self.num = num
-       self.simnum = sender
-       self.msg = data
-       self.ts = dt
+import gsm.somsparser as ssp
+import smsclass
 
 def v1_due(sms):
     data = sms.data
@@ -68,7 +64,8 @@ def v1(sms):
     query_soms = ("INSERT IGNORE INTO soms_%s (ts,node_id,mval1) "
         "VALUES " % (str(tsm_name.lower()))
         )
-    
+    outl_tilt = []
+    outl_soms = []
     try:    
         i = 0
         while i < valid:
@@ -116,22 +113,30 @@ def v1(sms):
                 )
             query_soms += "('%s',%d,%d)," % (str(timestamp),node_id,valueF)
 
-            print "%s\t%s\t%s\t%s\t%s" % (str(node_id), str(valueX),
-                str(valueY), str(valueZ), str(valueF))
+            tsm_name=tsm_name.lower()
+            line_tilt = {"ts":timestamp,"node_id": node_id,"xval":valueX,"yval":valueY,"zval":valueZ}
+            line_soms = {"ts":timestamp,"node_id": node_id,"mval1":valueF}
+            outl_tilt.append(line_tilt)
+            outl_soms.append(line_soms)
             
-        query_tilt = query_tilt[:-1]
-        query_soms = query_soms[:-1]
-
+        df_tilt = pd.DataFrame(outl_tilt).set_index(['ts'])
+        df_soms = pd.DataFrame(outl_soms).set_index(['ts'])
+        data = smsclass.Sms(tsm_name,timestamp,df_tilt,df_soms)
+        print df_tilt
+        print df_soms
+        return data
         # print query_tilt
         # print query_soms
         
+        
         # print query
 
-        if i!=0:
+        # if i!=0:
         #     # dbio.create_table(str(tsm_name), "sensor v1")
         #     dbio.commit_to_db(query_tilt, 'process_column_v1')
-            dynadb.write(query_tilt, 'process_column_v1')
-            dynadb.write(query_soms, 'process_column_v1')
+            # dynadb.write(query_tilt, 'process_column_v1')
+            # dynadb.write(query_soms, 'process_column_v1')
+
         
         # spawn_alert_gen(tsm_name,timestamp)
                 
@@ -159,7 +164,7 @@ def v2(sms):
     msg = sms.data
     sender = sms.simnum
     txtdatetime = sms.dt
-    
+
     if len(msg.split(",")) == 3:
         print ">> Editing old data format"
         datafield = msg.split(",")[1]
@@ -179,92 +184,97 @@ def v2(sms):
         i = msg.find(",")
         msg = msg[:i] + "*" + dtypestr + "*" + msg[i+1:]
         msg = msg.replace(",","*").replace("/","")
-            
+    
+    outl = []
+    outl_tilt = []
+    msgsplit = msg.split('*')
+    tsm_name = msgsplit[0] # column id
+
+    if len(msgsplit) != 4:
+        print 'wrong data format'
+        # print msg
+        return
+
+    if len(tsm_name) != 5:
+        print 'wrong master name'
+        return
+
+    # print msg
+    dtype = msgsplit[1].upper()
+   
+    datastr = msgsplit[2]
+    
+    if len(datastr) == 136:
+        datastr = datastr[0:72] + datastr[73:]
+    
+    ts = msgsplit[3].strip()
+  
+    if datastr == '':
+        datastr = '000000000000000'
+        print ">> Error: No parsed data in sms"
+        return
+   
+    if len(ts) < 10:
+       print '>> Error in time value format: '
+       return
+    
+    ts_patterns = ['%y%m%d%H%M%S', '%Y-%m-%d %H:%M:%S']
+    timestamp = ''
+    ts = re.sub("[^0-9]","",ts)
+    for pattern in ts_patterns:
+        try:
+            timestamp = dt.strptime(ts,pattern).strftime('%Y-%m-%d %H:%M:00')
+            break
+        except ValueError:
+            print "Error: wrong timestamp format", ts, "for pattern", pattern
+ 
+    if timestamp == '':
+        raise ValueError(">> Error: Unrecognized timestamp pattern " + ts)
+
+    # update_sim_num_table(tsm_name,sender,timestamp[:8])
+
+ # PARTITION the message into n characters
+    if dtype == 'Y' or dtype == 'X':
+       n = 15
+       # PARTITION the message into n characters
+       sd = [datastr[i:i+n] for i in range(0,len(datastr),n)]
+    elif dtype == 'B':
+        # do parsing for datatype 'B' (SOMS RAW)
+        outl = ssp.soms_parser(msg,1,10,0)       
+        for piece in outl:
+            print piece
+    elif dtype == 'C':
+        # do parsing for datatype 'C' (SOMS CALIB/NORMALIZED)
+        outl = ssp.soms_parser(msg,2,7,0)
+        for piece in outl:
+            print piece
+    else:
+        raise IndexError("Undefined data format " + dtype )
+
+    # do parsing for datatype 'X' or 'Y' (accel data)
+    if dtype.upper() == 'X' or dtype.upper() =='Y':
         outl = []
-        msgsplit = msg.split('*')
-        tsm_name = msgsplit[0] # column id
-
-        if len(msgsplit) != 4:
-            print 'wrong data format'
-            # print msg
-            return
-
-        if len(tsm_name) != 5:
-            print 'wrong master name'
-            return
-
-        print msg
-
-        dtype = msgsplit[1].upper()
-       
-        datastr = msgsplit[2]
-        
-        if len(datastr) == 136:
-            datastr = datastr[0:72] + datastr[73:]
-        
-        ts = msgsplit[3].strip()
-      
-        if datastr == '':
-            datastr = '000000000000000'
-            print ">> Error: No parsed data in sms"
-            return
-       
-        if len(ts) < 10:
-           print '>> Error in time value format: '
-           return
-        
-        ts_patterns = ['%y%m%d%H%M%S', '%Y-%m-%d %H:%M:%S']
-        timestamp = ''
-        ts = re.sub("[^0-9]","",ts)
-        for pattern in ts_patterns:
+        outl_tilt = []
+        for piece in sd:
             try:
-                timestamp = dt.strptime(ts,pattern).strftime('%Y-%m-%d %H:%M:00')
-                break
+                # print piece
+                ID = int(piece[0:2],16)
+                msgID = int(piece[2:4],16)
+                xd = twos_comp(piece[4:7])
+                yd = twos_comp(piece[7:10])
+                zd = twos_comp(piece[10:13])
+                bd = (int(piece[13:15],16)+200)/100.0
+                line = [tsm_name,timestamp,ID,msgID,xd,yd,zd,bd]
+                line_tilt = {'ts':timestamp,'node_id': ID,'type_num':msgID,'xval':xd,'yval':yd,'zval':zd,'batt':bd}
+                # print line_tilt
+                # outl.append(line)
+                outl_tilt.append(line_tilt)
             except ValueError:
-                print "Error: wrong timestamp format", ts, "for pattern", pattern
-     
-        if timestamp == '':
-            raise ValueError(">> Error: Unrecognized timestamp pattern " + ts)
-
-        # dynadb.update_sim_num_table(tsm_name,sender,timestamp[:8])
-
-     # PARTITION the message into n characters
-        if dtype == 'Y' or dtype == 'X':
-           n = 15
-           # PARTITION the message into n characters
-           sd = [datastr[i:i+n] for i in range(0,len(datastr),n)]
-        elif dtype == 'B':
-            # do parsing for datatype 'B' (SOMS RAW)
-            outl = ssp.soms_parser(msg,1,10,0)       
-            for piece in outl:
-                print piece
-        elif dtype == 'C':
-            # do parsing for datatype 'C' (SOMS CALIB/NORMALIZED)
-            outl = ssp.soms_parser(msg,2,7,0)
-            for piece in outl:
-                print piece
-        else:
-            raise IndexError("Undefined data format " + dtype )
-        
-        # do parsing for datatype 'X' or 'Y' (accel data)
-        if dtype.upper() == 'X' or dtype.upper() =='Y':
-            outl = []
-            for piece in sd:
-                try:
-                    # print piece
-                    ID = int(piece[0:2],16)
-                    msgID = int(piece[2:4],16)
-                    xd = twos_comp(piece[4:7])
-                    yd = twos_comp(piece[7:10])
-                    zd = twos_comp(piece[10:13])
-                    bd = (int(piece[13:15],16)+200)/100.0
-                    line = [tsm_name,timestamp,ID,msgID,xd,yd,zd,bd]
-                    print line
-                    outl.append(line)
-                except ValueError:
-                    print ">> Value Error detected.", piece,
-                    print "Piece of data to be ignored"
-        
-        # spawn_alert_gen(tsm_name,timestamp)
-
-        return outl
+                print ">> Value Error detected.", piece,
+                print "Piece of data to be ignored"
+    
+    # spawn_alert_gen(tsm_name,timestamp)
+    df_tilt = pd.DataFrame(outl_tilt)
+    print df_tilt
+    df_data = smsclass.Sms(tsm_name,timestamp,df_tilt,outl)
+    return df_data

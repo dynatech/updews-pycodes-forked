@@ -1,6 +1,6 @@
 
 import MySQLdb, time 
-#import cfgfileio as cfg
+from sqlalchemy import create_engine
 import memcache
 mc = memcache.Client(['127.0.0.1:11211'],debug=0)
 
@@ -86,13 +86,16 @@ def read(query='', identifier='', instance='local'):
         a =  None
     except KeyError:
         a = None
-def update_sim_num_table(name,sim_num,date_activated):
-    return
-    db, cur = connect('local')
-    
-    query = ("INSERT IGNORE INTO site_column_sim_nums (name,sim_num, "
-        "date_activated) VALUES ('%s','%s','%s')" % (name.upper(),
-        sim_num, date_activated)
-        )
 
-    write(query, 'update_sim_num_table')
+def df_engine(host='local'):
+    dbc = dbInstance(host)
+    engine = create_engine('mysql+pymysql://'+dbc.user+':'+dbc.password+'@'+dbc.host+':3306/'+dbc.name)
+    return engine
+
+def df_write(frame='',table='',host='local'):
+    print frame
+    engine = df_engine(host)
+    try:
+        frame.to_sql(name = table, con = engine, if_exists = 'append',index_label=None)
+    except:
+        print 'already in db'
