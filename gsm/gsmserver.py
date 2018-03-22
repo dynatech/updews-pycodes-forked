@@ -6,7 +6,6 @@ import datetime
 import ConfigParser
 from datetime import datetime as dt
 from datetime import timedelta as td
-import serverdbio as dbio
 import gsmio
 import multiprocessing
 import somsparser as ssp
@@ -16,6 +15,7 @@ import argparse
 import volatile.memory as mem
 import volatile.static as static
 import dynadb.db as db
+import smstables
 
 def check_id_in_table(table,gsm_id):
     """
@@ -251,7 +251,7 @@ def send_messages_from_db(table='users',send_status=0,gsm_id=0,limit=10):
     sc = mem.server_config()
     host = sc['resource']['smsdb']
 
-    allmsgs = dbio.get_all_outbox_sms_from_db(table,send_status,gsm_id,limit)
+    allmsgs = smstables.get_all_outbox_sms_from_db(table,send_status,gsm_id,limit)
     if len(allmsgs) <= 0:
         return
     
@@ -300,7 +300,7 @@ def send_messages_from_db(table='users',send_status=0,gsm_id=0,limit=10):
             status_list.append(stat)
             continue
 
-    dbio.set_send_status(table, status_list, host)
+    smstables.set_send_status(table, status_list, host)
 
     
     #Get all outbox messages with send_status "SENT" and attempt to send
@@ -361,7 +361,7 @@ def simulate_gsm(network='simulate'):
     mobile_nums_db = sc["resource"]["mobile_nums_db"]
     smsdb_host = sc["resource"]["smsdb"]
     
-    db, cur = dbio.db_connect(sms_mirror_host)
+    db, cur = smstables.db_connect(sms_mirror_host)
     
     smsinbox_sms = []
 
