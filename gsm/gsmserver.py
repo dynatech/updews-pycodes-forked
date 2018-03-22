@@ -15,6 +15,7 @@ import memcache
 import argparse
 import volatile.memory as mem
 import volatile.static as static
+import dynadb.db as db
 
 def check_id_in_table(table,gsm_id):
     """
@@ -28,7 +29,7 @@ def check_id_in_table(table,gsm_id):
         :returns: recipient number (*int*)
     """
     query = "select * from %s_mobile where mobile_id='%s' limit 80"%(table[:-1],gsm_id)
-    query_number = dbio.query_database(query,'check id in table') 
+    query_number = db.read(query,'check id in table') 
     if len(query_number.sim_num) != 0:
         return query_number[0][0]
     else:
@@ -45,7 +46,7 @@ def check_number_in_table(num):
     """
     query = ("Select  IF((select count(*) FROM user_mobile where sim_num ='%s')>0,'1','0')" 
     "as user,IF((select count(*) FROM logger_mobile where sim_num ='%s')>0,'1','0') as logger limit 80"%(num,num))
-    query_check_number = dbio.query_database(query,'check number in table')
+    query_check_number = db.read(query,'check number in table')
 
     if query_check_number[0][0] > query_check_number[0][1]:
         return 'users'
@@ -78,7 +79,7 @@ def log_runtime_status(script_name,status):
     query = ("insert ignore into runtimelog (ts, script_name, log_details) "
         "Values ('%s','%s','%s')") % (logtimestamp, script_name, status)
     
-    dbio.commit_to_db(query, 'log_runtime_status')
+    db.write(query, 'log_runtime_status')
        
 def write_raw_sms_to_db(msglist,gsm_info):
     """
@@ -146,10 +147,10 @@ def write_raw_sms_to_db(msglist,gsm_info):
 
     if len(sms_id_ok)>0:
         if loggers_count > 0:
-            dbio.commit_to_db(query_loggers,'write_raw_sms_to_db',
+            db.write(query_loggers,'write_raw_sms_to_db',
                 instance = sms_instance)
         if users_count > 0:
-            dbio.commit_to_db(query_users,'write_raw_sms_to_db',
+            db.write(query_users,'write_raw_sms_to_db',
                 instance = sms_instance)
         
 def write_outbox_message_to_db(message='',recipients='',gsm_id='',table=''):
@@ -187,7 +188,7 @@ def write_outbox_message_to_db(message='',recipients='',gsm_id='',table=''):
     query = ("insert into smsoutbox_%s (ts_written,sms_msg,source) VALUES "
         "('%s','%s','central')") % (table_name,tsw,message)
         
-    outbox_id = dbio.commit_to_db(query = query, identifier = "womtdb", 
+    outbox_id = db.write(query = query, identifier = "womtdb", 
         last_insert = True, instance = host)[0][0]
 
     query = ("INSERT INTO smsoutbox_%s_status (outbox_id,mobile_id,gsm_id)"
@@ -205,7 +206,7 @@ def write_outbox_message_to_db(message='',recipients='',gsm_id='',table=''):
             continue
     query = query[:-1]
 
-    dbio.commit_to_db(query = query, identifier = "womtdb", 
+    db.write(query = query, identifier = "womtdb", 
         last_insert = False, instance = host)
             
     
@@ -426,22 +427,22 @@ def simulate_gsm(network='simulate'):
     if len(sms_id_ok)>0:
 
         if loggers_count > 0:
-            dbio.commit_to_db(query_loggers, 'simulate_gsm', False, smsdb_host)
+            db.write(query_loggers, 'simulate_gsm', False, smsdb_host)
 
         if users_count > 0:
-            dbio.commit_to_db(query_users, 'simulate_gsm', False, smsdb_host)
+            db.write(query_users, 'simulate_gsm', False, smsdb_host)
         
         sms_id_ok = str(sms_id_ok).replace("L","")[1:-1]
         query = ("update smsinbox set web_flag = '0' "
             "where sms_id in (%s);") % (sms_id_ok)
-        dbio.commit_to_db(query, 'simulate_gsm', False, sms_mirror_host)
+        db.write(query, 'simulate_gsm', False, sms_mirror_host)
 
     if len(sms_id_unk)>0:
         # print sms_id_unk
         sms_id_unk = str(sms_id_unk).replace("L","")[1:-1]
         query = ("update smsinbox set web_flag = '-1' "
             "where sms_id in (%s);") % (sms_id_unk)
-        dbio.commit_to_db(query, 'simulate_gsm', False, sms_mirror_host)
+        db.write(query, 'simulate_gsm', False, sms_mirror_host)
     
     sys.exit()
 
@@ -454,7 +455,7 @@ def log_csq(gsm_id):
     query = ("insert into gsm_csq_logs (`ts`,`gsm_id`,`csq_val`) "
         "values ('%s', %d, %d)") % (ts_today, gsm_id, csq_val)
 
-    dbio.commit_to_db(query = query, identifier = "", last_insert = False, 
+    db.write(query = query, identifier = "", last_insert = False, 
         instance = "local")
 
     return csq_val 
@@ -593,7 +594,7 @@ def get_gsm_modules(reset_val = False):
     if reset_val or (gsm_modules == None or len(gsm_modules.keys()) == 0):
         print "Getting gsm modules information..."
         query = "select * from gsm_modules"
-        result_set = dbio.query_database(query,'get_gsm_ids','local')
+        result_set = db.read(query,'get_gsm_ids','local')
         # print gsm_modules
 
         # ids = dict() 
