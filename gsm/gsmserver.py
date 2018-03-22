@@ -11,10 +11,10 @@ import gsmio
 import multiprocessing
 import somsparser as ssp
 import math
-import cfgfileio as cfg
 import memcache
 import argparse
-mc = memcache.Client(['127.0.0.1:11211'],debug=0)
+import volatile.memory as mem
+import volatile.static as static
 
 def check_id_in_table(table,gsm_id):
     """
@@ -91,11 +91,11 @@ def write_raw_sms_to_db(msglist,gsm_info):
         :type gsm_info: obj
         :returns: N/A
     """
-    sc = mc.get('server_config')
+    sc = mem.server_config()
     mobile_nums_db = sc["resource"]["mobile_nums_db"]
 
-    logger_mobile_sim_nums = get_mobile_sim_nums('loggers', mobile_nums_db)
-    user_mobile_sim_nums = get_mobile_sim_nums('users', mobile_nums_db)
+    logger_mobile_sim_nums = static.get_mobiles('loggers', mobile_nums_db)
+    user_mobile_sim_nums = static.get_mobiles('users', mobile_nums_db)
 
     # gsm_ids = get_gsm_modules()
 
@@ -141,7 +141,7 @@ def write_raw_sms_to_db(msglist,gsm_info):
     query_loggers = query_loggers[:-1]
     query_users = query_users[:-1]
 
-    sc = mc.get('server_config')
+    sc = mem.server_config()
     sms_instance = sc["resource"]["smsdb"]
 
     if len(sms_id_ok)>0:
@@ -173,7 +173,7 @@ def write_outbox_message_to_db(message='',recipients='',gsm_id='',table=''):
     #     raise ValueError
     #     return
 
-    sc = mc.get('server_config')
+    sc = mem.server_config()
 
     host = sc['resource']['smsdb']
 
@@ -193,7 +193,7 @@ def write_outbox_message_to_db(message='',recipients='',gsm_id='',table=''):
     query = ("INSERT INTO smsoutbox_%s_status (outbox_id,mobile_id,gsm_id)"
             " VALUES ") % (table_name[:-1])
 
-    table_mobile = get_mobile_sim_nums(table_name, host)
+    table_mobile = static.get_mobiles(table_name, host)
 
     for r in recipients.split(","):        
         tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
@@ -209,27 +209,6 @@ def write_outbox_message_to_db(message='',recipients='',gsm_id='',table=''):
         last_insert = False, instance = host)
             
     
-def check_alert_messages():
-    """
-        **Description:**
-          -The check alert message is a function that checks alert message in allalertsfile.
-         
-        :parameters: N/A
-        :returns: **alllines** (*str*) - status if the file  alert file is read.
-       
-    """
-    c = cfg.config()
-    alllines = ''
-    print c.fileio.allalertsfile
-    if (os.path.isfile(c.fileio.allalertsfile) 
-        and os.path.getsize(c.fileio.allalertsfile) > 0):
-        f = open(c.fileio.allalertsfile,'r')
-        alllines = f.read()
-        f.close()
-    else:
-        print '>> Error in reading file', alllines
-    return alllines
-
 def get_allowed_prefixes(network):
     """
         **Description:**
@@ -239,7 +218,7 @@ def get_allowed_prefixes(network):
         :type network: str
         :returns: **extended_prefix_list** (*int*) - The extended prefix
     """
-    sc = mc.get('server_config')
+    sc = mem.server_config()
     if network.upper() == 'SMART':
         prefix_list = sc["simprefix"]["smart"].split(',')
     else:
@@ -268,22 +247,16 @@ def send_messages_from_db(table='users',send_status=0,gsm_id=0,limit=10):
         :type limit: int
         :returns: N/A
     """
-    sc = mc.get('server_config')
-    instance = sc['resource']['smsdb']
+    sc = mem.server_config()
+    host = sc['resource']['smsdb']
 
-    # if not c.mode.send_msg:
-    #     return
     allmsgs = dbio.get_all_outbox_sms_from_db(table,send_status,gsm_id,limit)
     if len(allmsgs) <= 0:
         return
     
     print ">> Sending messagess from db"
 
-    # for m in allmsgs:
-    #     print m
-        
-    
-    table_mobile = get_mobile_sim_nums(table, instance)
+    table_mobile = static.get_mobiles(table, host)
     inv_table_mobile = {v: k for k, v in table_mobile.iteritems()}
     # print inv_table_mobile
         
@@ -326,7 +299,7 @@ def send_messages_from_db(table='users',send_status=0,gsm_id=0,limit=10):
             status_list.append(stat)
             continue
 
-    dbio.set_send_status(table, status_list, instance)
+    dbio.set_send_status(table, status_list, host)
 
     
     #Get all outbox messages with send_status "SENT" and attempt to send
@@ -334,102 +307,6 @@ def send_messages_from_db(table='users',send_status=0,gsm_id=0,limit=10):
     #   send_status will be changed to "SENT-WSS" if successful
     # dsll.sendAllAckSentGSMtoDEWS()    
     
-def get_sensor_numbers():
-    """
-        **Description:**
-          -The get sensor numbers is a function that get number of the sensors in the database.
-         
-        :parameters: N/A
-        :returns:  **mobile number** (*int*) -mobile number of all sensors
-    """
-    querys = "SELECT sim_num from site_column_sim_nums"
-
-    # print querys
-
-    nums = dbio.query_database(querys,'get_sensor_numbers','LOCAL')
-
-    return nums
-
-def get_mobile_sim_nums(table, host = None):
-    """
-        **Description:**
-          -The get mobile sim nums is a function that get the number of the loggers or users in the database.
-         
-        :param table: loggers or users table.
-        :param host: host name of the number and  **Default** to **None**
-        :type table: str
-        :type host: str 
-        :returns:  **mobile number** (*int*) - mobile number of user or logger
-    """
-
-    if host is None:
-        raise ValueError("No host value given for mobile number")
-
-    if table == 'loggers':
-
-        logger_mobile_sim_nums = mc.get('logger_mobile_sim_nums')
-        if logger_mobile_sim_nums:
-            return logger_mobile_sim_nums
-
-        query = ("SELECT t1.mobile_id,t1.sim_num "
-            "FROM logger_mobile AS t1 "
-            "LEFT OUTER JOIN logger_mobile AS t2 "
-            "ON t1.sim_num = t2.sim_num "
-            "AND (t1.date_activated < t2.date_activated "
-            "OR (t1.date_activated = t2.date_activated "
-            "AND t1.mobile_id < t2.mobile_id)) "
-            "WHERE t2.sim_num IS NULL and t1.sim_num is not null")
-
-        nums = dbio.query_database(query,'get_mobile_sim_nums', host)
-        nums = {key: value for (value, key) in nums}
-
-        logger_mobile_sim_nums = nums
-        mc.set("logger_mobile_sim_nums",logger_mobile_sim_nums)
-
-    elif table == 'users':
-
-        user_mobile_sim_nums = mc.get('user_mobile_sim_nums')
-        if user_mobile_sim_nums:
-            return user_mobile_sim_nums
-        
-        query = "select mobile_id,sim_num from user_mobile"
-
-        nums = dbio.query_database(query,'get_mobile_sim_nums', host)
-        nums = {key: value for (value, key) in nums}
-
-        user_mobile_sim_nums = nums
-        mc.set("user_mobile_sim_nums",user_mobile_sim_nums)
-
-    else:
-        print 'Error: table', table
-        sys.exit()
-
-    return nums
-
-def save_to_cache(key,value):
-    """
-        **Description:**
-          -The save to cache is a function that save values in cache.
-         
-        :param key: cache key.
-        :param value: cache value.
-        :type key: str
-        :type value: int,str
-        :returns: N/A
-    """
-    mc.set(key,value)
-
-def get_value_from_cache(key):
-    """
-        **Description:**
-          -The get value from cache is a function that get the cache.
-         
-        :param key: cache key.
-        :type key: str
-        :returns: N/A
-    """
-    value = mc.get(key)
-
 def try_sending_messages(gsm_id):
     """
         **Description:**
@@ -478,7 +355,7 @@ def simulate_gsm(network='simulate'):
     """
     print "Simulating GSM"
 
-    sc = mc.get('server_config')
+    sc = mem.server_config()
     sms_mirror_host = sc["resource"]["sms_mirror_db"]
     mobile_nums_db = sc["resource"]["mobile_nums_db"]
     smsdb_host = sc["resource"]["smsdb"]
@@ -500,8 +377,8 @@ def simulate_gsm(network='simulate'):
         print '9.',
         time.sleep(20)
 
-    logger_mobile_sim_nums = get_mobile_sim_nums('loggers', mobile_nums_db)
-    user_mobile_sim_nums = get_mobile_sim_nums('users', mobile_nums_db)
+    logger_mobile_sim_nums = static.get_mobiles('loggers', mobile_nums_db)
+    user_mobile_sim_nums = static.get_mobiles('users', mobile_nums_db)
 
     gsm_id = 1
     loggers_count = 0
@@ -711,6 +588,7 @@ def get_gsm_modules(reset_val = False):
         :type table: boolean
         :returns: **gsm_modules** (*obj*) - returns gsm module data of (networ,name,num,port,pwr_on_pin,id).
     """
+    mc = mem.get_handle()
     gsm_modules = mc.get('gsm_modules')
     if reset_val or (gsm_modules == None or len(gsm_modules.keys()) == 0):
         print "Getting gsm modules information..."

@@ -25,9 +25,6 @@ def save_cfg_changes(cfg):
     with open(cfile, 'wb') as c:
         cfg.write(c)
 
-class Container(object):
-	pass
-
 class dewsl_server_config:
 	def __init__(self):
 		self.version = 1

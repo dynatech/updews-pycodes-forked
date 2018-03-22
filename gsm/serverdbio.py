@@ -2,7 +2,6 @@
 
 import ConfigParser, MySQLdb, time, sys, argparse
 from datetime import datetime as dt
-import cfgfileio as cfg
 import memcache
 mc = memcache.Client(['127.0.0.1:11211'],debug=0)
 
