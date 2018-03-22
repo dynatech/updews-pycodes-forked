@@ -1,9 +1,11 @@
 import memcache
 
-def get_handle():
-	print "Connecting to memcache client ...",
+def get_handle(print_out = False):
+	if print_out:
+		print "Connecting to memcache client ...",
 	mc = memcache.Client(['127.0.0.1:11211'],debug=0)
-	print "done"
+	if print_out:
+		print "done"
 	return mc
 
 def print_config(cfg = None):
