@@ -1,6 +1,5 @@
 """ Mirroring Data from dyna to sanbox and sandbox to dyna."""
 
-import serverdbio as dbio
 import MySQLdb
 import subprocess
 import argparse
