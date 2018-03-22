@@ -874,7 +874,7 @@ def parse_all_messages(args,allmsgs=[]):
             # elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*\d+T?$",msg.data):
             elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*.*",msg.data):
                # msg.data = pre_process_col_v1(msg)
-                df= parser.tilt.v1(msg)
+                df= parser.subsurface.v1(msg)
                 print df
                 if df:
                     dynadb.df_write(frame=df.tilt, table='tilt_%s'% df.table)
