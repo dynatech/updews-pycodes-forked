@@ -6,22 +6,9 @@ from messaging.sms import SmsDeliver as smsdeliver
 from messaging.sms import SmsSubmit as smssubmit
 import argparse
 from random import random
-import memcache
-mc = memcache.Client(['127.0.0.1:11211'],debug=0)
+import volatile.memory as mem
 
-sc = mc.get("server_config")
 
-try:
-    if sc["mode"]["script_mode"] == 'gsmserver':
-        import RPi.GPIO as GPIO
-
-        resetpin = sc["gsmio"]["resetpin"]
-        gsm = ''
-
-        GPIO.setmode(GPIO.BOARD)
-        GPIO.setup(resetpin, GPIO.OUT)
-except (NameError, TypeError, KeyError) as error:
-    print "Error: memcache not yet set"
 
 class sms:
     def __init__(self,num,sender,data,dt):
@@ -51,6 +38,7 @@ def reset_gsm():
         return
 
 def csq():
+    mc = mem.get_handle()
     csq_reply = gsm_cmd('AT+CSQ')
 
     try:
@@ -63,9 +51,11 @@ def csq():
         return 0
        
 def init_gsm(gsm_info):
+
     global gsm
     power_gsm(True,gsm_info["pwr_on_pin"])
     gsm = serial.Serial()
+    sc = mem.server_config()
     # if network[:5].lower() == 'globe':
     #     Port = c.serialio.globeport
     # else:
@@ -73,8 +63,6 @@ def init_gsm(gsm_info):
     Port = gsm_info['port']
     print 'Connecting to GSM modem at', Port
 
-    sc = mc.get('server_config')
-    
     gsm.port = Port
     gsm.baudrate = sc["serial"]["baudrate"]
     gsm.timeout = sc["serial"]["timeout"]
@@ -249,6 +237,7 @@ def manage_multi_messages(smsdata):
     sms_ref = smsdata['ref']
     
     # get/set multipart_sms_list
+    mc = mem.get_handle()
     multipart_sms = mc.get("multipart_sms")
     if multipart_sms is None:
         multipart_sms = {}
@@ -339,6 +328,19 @@ def get_all_sms(network):
 
 
 if __name__ == '__main__':
+
+    sc = mem.get_handle()
+    try:
+        if sc["mode"]["script_mode"] == 'gsmserver':
+            import RPi.GPIO as GPIO
+
+            resetpin = sc["gsmio"]["resetpin"]
+            gsm = ''
+
+            GPIO.setmode(GPIO.BOARD)
+            GPIO.setup(resetpin, GPIO.OUT)
+    except (NameError, TypeError, KeyError) as error:
+        print "Error: memcache not yet set"
 
     parser = argparse.ArgumentParser(description="RPI GSM command options")
     parser.add_argument("-r", "--reset_gsm", help="hard reset of gsm modules", 
