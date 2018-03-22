@@ -3,17 +3,18 @@ import MySQLdb
 import datetime
 from datetime import datetime as dt
 from datetime import timedelta as td
-import serverdbio as dbio
+import dynadb.db as dbio
 import gsmserver as server
 import queryserverinfo as qsi
 import argparse
+import smstables
 #---------------------------------------------------------------------------------------------------------------------------
 
 def get_alert_staff_numbers():
     query = ("select t1.user_id,t2.sim_num from user_alert_info t1 inner join"
         " user_mobile t2 on t1.user_id = t2.user_id where t1.send_alert = 1;")
 
-    contacts = dbio.query_database(query,'checkalert')
+    contacts = dbio.read(query,'checkalert')
     return contacts
 
 def write_outbox_dyna(msg,num):
@@ -43,7 +44,7 @@ def write_outbox_dyna(msg,num):
         "('%s','%s','%s','UNSENT','%s');") % (ts_written,msg,num,gsm_id)
 
     # print query
-    dbio.commit_to_db(query,'wod',False,'gsm') 
+    dbio.write(query,'wod',False,'gsm') 
 
 def send_alert_message():
     # check due alert messages
@@ -51,7 +52,7 @@ def send_alert_message():
     # query = ("select alert_id, alert_msg from sms_alerts where alert_status is"
     #     " null and ts_set <= '%s'") % (ts_due.strftime("%Y-%m-%d %H:%M:%S"))
 
-    # alertmsg = dbio.query_database(query,'send_alert_message')
+    # alertmsg = dbio.read(query,'send_alert_message')
     alert_msgs = check_alerts()
 
     if len(alert_msgs) == 0:
@@ -75,7 +76,7 @@ def send_alert_message():
         for mobile_id, sim_num in contacts:
             recipients_list += "%s," % (sim_num)
         recipients_list = recipients_list[:-1]
-        server.write_outbox_message_to_db(message=message, recipients=recipients_list,
+        smstables.write_outbox(message=message, recipients=recipients_list,
             gsm_id=4, table='users')
         
         # # set alert to 15 mins later
@@ -84,7 +85,7 @@ def send_alert_message():
             "stat_id = %s") % (ts_due.strftime("%Y-%m-%d %H:%M:%S"),
             stat_id)
 
-        dbio.commit_to_db(query, 'checkalertmsg')
+        dbio.write(query, 'checkalertmsg')
 
 def check_alerts():
     ts_now = dt.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -115,7 +116,7 @@ def check_alerts():
             "sites "
             "USING (site_id)") % (ts_now)
 
-    alert_msgs = dbio.query_database(query,'check_alerts')
+    alert_msgs = dbio.read(query,'check_alerts')
 
     print "alert messages:", alert_msgs
 
@@ -126,7 +127,7 @@ def process_ack_to_alert(msg):
         stat_id = re.search("(?<=K )\d+(?= )",msg.data,re.IGNORECASE).group(0)
     except:
         errmsg = "Error in parsing alert id. Please try again"
-        # server.write_outbox_message_to_db(errmsg,msg.simnum)
+        # smstables.write_outbox(errmsg,msg.simnum)
         return False
 
     user_id, nickname = qsi.get_name_of_staff(msg.simnum)
@@ -144,7 +145,7 @@ def process_ack_to_alert(msg):
             re.IGNORECASE).group(0)
     except AttributeError:
         errmsg = "Please put in your remarks."
-        server.write_outbox_message_to_db(message = errmsg, recipients = msg.simnum,
+        smstables.write_outbox(message = errmsg, recipients = msg.simnum,
             gsm_id=4,table='users')
         # write_outbox_dyna(errmsg, msg.simnum)
         return True
@@ -156,7 +157,7 @@ def process_ack_to_alert(msg):
     except AttributeError:
         errmsg = ("Please put in the alert status validity."
             " i.e (VALID, INVALID, VALIDATING)")
-        server.write_outbox_message_to_db(message = errmsg, recipients = msg.simnum,
+        smstables.write_outbox(message = errmsg, recipients = msg.simnum,
             gsm_id=4, table='users')
         # write_outbox_dyna(errmsg, msg.simnum)
         return True
@@ -167,7 +168,7 @@ def process_ack_to_alert(msg):
         "ts_ack = '%s', remarks = '%s' where stat_id = %s") % (user_id,
         alert_status_dict[alert_status.lower()], msg.dt, remarks, stat_id)
     # print query
-    dbio.commit_to_db(query,process_ack_to_alert)
+    dbio.write(query,process_ack_to_alert)
 
     contacts = get_alert_staff_numbers()
     message = ("SANDBOX (test ack):\nAlert ID %s ACK by %s on %s\nStatus: %s\n"
@@ -178,7 +179,7 @@ def process_ack_to_alert(msg):
     for mobile_id, sim_num in contacts:
         recipients_list += "%s," % (sim_num)
     recipents_list = recipients_list[:-1]
-    server.write_outbox_message_to_db(message = message, recipients = recipients_list,
+    smstables.write_outbox(message = message, recipients = recipients_list,
         gsm_id=4, table='users')
     # write_outbox_dyna(message,sim_num)
     # print message, sim_num
@@ -192,7 +193,7 @@ def update_shift_tags():
 
     query = ("update senslopedb.dewslcontacts set grouptags = "
         "replace(grouptags,',alert-mon','') where grouptags like '%alert-mon%'")
-    dbio.commit_to_db(query, 'update_shift_tags')
+    dbio.write(query, 'update_shift_tags')
 
     # update the tags of current shifts
     query = (
@@ -208,7 +209,7 @@ def update_shift_tags():
         "t1.nickname = t2.oompmt or"
         "t1.nickname = t2.oompct"
         ) % (today)
-    dbio.commit_to_db(query, 'update_shift_tags')
+    dbio.write(query, 'update_shift_tags')
 
 def main():
     desc_str = "Request information from server\n PSIR [-options]"

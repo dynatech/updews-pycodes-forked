@@ -16,8 +16,7 @@ import gsmio
 import surficialparser as surfp
 import utsparser as uts
 import dynadb.db as dynadb
-import gsm.smsparser2 as parser
-
+import smstables
 
 mc = memcache.Client(['127.0.0.1:11211'],debug=0)
 
@@ -873,27 +872,17 @@ def parse_all_messages(args,allmsgs=[]):
                 is_msg_proc_success = process_piezometer(msg)
             # elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*\d+T?$",msg.data):
             elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*.*",msg.data):
-               # msg.data = pre_process_col_v1(msg)
-                df_data= parser.subsurface.v1(msg)
-                print df_data
-                if df_data:
-                    dynadb.df_write(frame=df_data.df[0], table='tilt_%s'% df_data.table)
-                    dynadb.df_write(frame=df_data.df[1], table='soms_%s'% df_data.table)
-
+               msg.data = pre_process_col_v1(msg)
+               process_column_v1(msg)
             elif re.search("^[A-Z]{4,5}\*[xyabcXYABC]\*[A-F0-9]+\*[0-9]+T?$",
                 msg.data):
                 try:
-                    df_data = parser.subsurface.v2(msg)
                     dlist = process_two_accel_col_data(msg)
-
                     if dlist:
                         if len(dlist[0]) < 7:
                             write_soms_data_to_db(dlist,msg)
-                        # else:
-                        #     write_two_accel_data_to_db(dlist,msg)
-                    if df_data:
-                        dynadb.df_write(frame=df_data.df[0], table='tilt_%s'% df_data.table)
-                     
+                        else:
+                            write_two_accel_data_to_db(dlist,msg)
                     is_msg_proc_success = True
                 except IndexError:
                     print "\n\n>> Error: Possible data type error"
@@ -907,12 +896,7 @@ def parse_all_messages(args,allmsgs=[]):
                     is_msg_proc_success = False
             elif re.search("[A-Z]{4}\*[A-F0-9]+\*[0-9]+$",msg.data):
                 #process_column_v1(msg.data)
-                df_data= parser.subsurface.v1(msg)
-                if df:
-                    print 'here'
-                    dynadb.df_write(frame=df_data.df[0], table='tilt_%s'% df_data.table)
-                    dynadb.df_write(frame=df_data.df[1], table='soms_%s'% df_data.table)
-                
+                process_column_v1(msg)
             #check if message is from rain gauge
             # elif re.search("^\w{4},[\d\/:,]+,[\d,\.]+$",msg.data):
             elif re.search("^\w{4},[\d\/:,]+",msg.data):
@@ -962,18 +946,18 @@ def parse_all_messages(args,allmsgs=[]):
         # method for updating the read_status all messages that have been processed
         # so that they will not be processed again in another run
         if ref_count % 200 == 0:
-            dbio.set_read_status(read_success_list, read_status = 1,
-                table = args.table, instance = args.dbhost)
-            dbio.set_read_status(read_fail_list, read_status = -1,
-                table = args.table, instance = args.dbhost)
+            smstables.set_read_status(read_success_list, read_status = 1,
+                table = args.table, host = args.dbhost)
+            smstables.set_read_status(read_fail_list, read_status = -1,
+                table = args.table, host = args.dbhost)
 
             read_success_list = []
             read_fail_list = []
 
-    dbio.set_read_status(read_success_list, read_status = 1,
-        table = args.table, instance = args.dbhost)
-    dbio.set_read_status(read_fail_list, read_status = -1,
-        table = args.table, instance = args.dbhost)
+    smstables.set_read_status(read_success_list, read_status = 1,
+        table = args.table, host = args.dbhost)
+    smstables.set_read_status(read_fail_list, read_status = -1,
+        table = args.table, host = args.dbhost)
         
 def get_router_ids():
     """
@@ -1122,7 +1106,7 @@ def main():
     print 'SMS Parser'
 
     print args.dbhost, args.table, args.status, args.messagelimit
-    allmsgs = dbio.get_all_sms_from_db(host=args.dbhost, table=args.table,
+    allmsgs = smstables.get_inbox(host=args.dbhost, table=args.table,
         read_status=args.status, limit=args.messagelimit)
     
     if len(allmsgs) > 0:
