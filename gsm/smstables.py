@@ -43,7 +43,7 @@ def set_send_status(table, status_list, host):
     
     dbio.write(query, "set_send_status", False, host)
 
-def get_all_sms_from_db(host='local', read_status=0, table='loggers', limit=200):
+def get_inbox(host='local', read_status=0, table='loggers', limit=200):
     db, cur = dbio.connect(host)
 
     if table in ['loggers','users']:
@@ -220,7 +220,7 @@ def write_outbox(message='',recipients='',gsm_id='',table=''):
     query = ("insert into smsoutbox_%s (ts_written,sms_msg,source) VALUES "
         "('%s','%s','central')") % (table_name,tsw,message)
         
-    outbox_id = db.write(query = query, identifier = "womtdb", 
+    outbox_id = dbio.write(query = query, identifier = "womtdb", 
         last_insert = True, instance = host)[0][0]
 
     query = ("INSERT INTO smsoutbox_%s_status (outbox_id,mobile_id,gsm_id)"

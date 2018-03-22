@@ -16,6 +16,7 @@ import gsmio
 import surficialparser as surfp
 import utsparser as uts
 import dynadb.db as dynadb
+import smstables
 
 mc = memcache.Client(['127.0.0.1:11211'],debug=0)
 
@@ -945,18 +946,18 @@ def parse_all_messages(args,allmsgs=[]):
         # method for updating the read_status all messages that have been processed
         # so that they will not be processed again in another run
         if ref_count % 200 == 0:
-            dbio.set_read_status(read_success_list, read_status = 1,
-                table = args.table, instance = args.dbhost)
-            dbio.set_read_status(read_fail_list, read_status = -1,
-                table = args.table, instance = args.dbhost)
+            smstables.set_read_status(read_success_list, read_status = 1,
+                table = args.table, host = args.dbhost)
+            smstables.set_read_status(read_fail_list, read_status = -1,
+                table = args.table, host = args.dbhost)
 
             read_success_list = []
             read_fail_list = []
 
-    dbio.set_read_status(read_success_list, read_status = 1,
-        table = args.table, instance = args.dbhost)
-    dbio.set_read_status(read_fail_list, read_status = -1,
-        table = args.table, instance = args.dbhost)
+    smstables.set_read_status(read_success_list, read_status = 1,
+        table = args.table, host = args.dbhost)
+    smstables.set_read_status(read_fail_list, read_status = -1,
+        table = args.table, host = args.dbhost)
         
 def get_router_ids():
     """
@@ -1105,7 +1106,7 @@ def main():
     print 'SMS Parser'
 
     print args.dbhost, args.table, args.status, args.messagelimit
-    allmsgs = dbio.get_all_sms_from_db(host=args.dbhost, table=args.table,
+    allmsgs = smstables.get_inbox(host=args.dbhost, table=args.table,
         read_status=args.status, limit=args.messagelimit)
     
     if len(allmsgs) > 0:
