@@ -17,6 +17,7 @@ import surficialparser as surfp
 import utsparser as uts
 import dynadb.db as dynadb
 import smstables
+import volatile.memory as mem
 
 def logger_response(msg,log_type,log='False'):
     if log:
