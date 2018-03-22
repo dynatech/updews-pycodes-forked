@@ -14,7 +14,7 @@ def get_alert_staff_numbers():
     query = ("select t1.user_id,t2.sim_num from user_alert_info t1 inner join"
         " user_mobile t2 on t1.user_id = t2.user_id where t1.send_alert = 1;")
 
-    contacts = dbio.query_database(query,'checkalert')
+    contacts = dbio.read(query,'checkalert')
     return contacts
 
 def write_outbox_dyna(msg,num):
@@ -52,7 +52,7 @@ def send_alert_message():
     # query = ("select alert_id, alert_msg from sms_alerts where alert_status is"
     #     " null and ts_set <= '%s'") % (ts_due.strftime("%Y-%m-%d %H:%M:%S"))
 
-    # alertmsg = dbio.query_database(query,'send_alert_message')
+    # alertmsg = dbio.read(query,'send_alert_message')
     alert_msgs = check_alerts()
 
     if len(alert_msgs) == 0:
@@ -116,7 +116,7 @@ def check_alerts():
             "sites "
             "USING (site_id)") % (ts_now)
 
-    alert_msgs = dbio.query_database(query,'check_alerts')
+    alert_msgs = dbio.read(query,'check_alerts')
 
     print "alert messages:", alert_msgs
 
