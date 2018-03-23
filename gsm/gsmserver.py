@@ -233,7 +233,7 @@ def simulate_gsm(network='simulate'):
     mobile_nums_db = sc["resource"]["mobile_nums_db"]
     smsdb_host = sc["resource"]["smsdb"]
     
-    db, cur = smstables.db_connect(sms_mirror_host)
+    db, cur = smstables.connect(sms_mirror_host)
     
     smsinbox_sms = []
 
