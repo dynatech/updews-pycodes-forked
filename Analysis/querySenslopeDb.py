@@ -550,7 +550,7 @@ def GetNodeStatus(statusid = 1):
     
     try:
         query =  "SELECT * FROM ( "
-        query += "  SELECT MAX(post_id) AS post_id, date_of_identification, "
+        query += "  SELECT MAX(post_id) AS post_id, post_timestamp, date_of_identification, "
         query += "  site, node, status FROM ( "
         query += "    SELECT * FROM node_status "
         query += "    ) AS node_status GROUP BY site, node "

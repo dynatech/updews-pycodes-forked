@@ -1,7 +1,7 @@
 import subprocess
 import os
 import time
-import signal   
+import signal
 import querySenslopeDb as q
 
 query = "SELECT * FROM senslopedb.smsalerts order by alert_id desc limit 100"
