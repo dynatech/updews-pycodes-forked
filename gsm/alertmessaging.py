@@ -61,7 +61,7 @@ def monitoring_start(site_id, ts_last_retrigger):
     query += "ORDER BY ts DESC LIMIT 3"
 
     # previous positive alert
-    prev_pub_alerts = pd.DataFrame(list(dbio.query_database(query)),
+    prev_pub_alerts = pd.DataFrame(list(dbio.read(query)),
                                       columns=['ts', 'ts_updated'])
 
     if len(prev_pub_alerts) == 1:
@@ -104,7 +104,7 @@ def rainfall_details(site_id, start_monitor, ts_last_retrigger):
     query += "INNER JOIN "
     query += "  rainfall_gauges "
     query += "USING (rain_id) "
-    data_source_df = pd.DataFrame(list(dbio.query_database(query)),
+    data_source_df = pd.DataFrame(list(dbio.read(query)),
                                   columns=['gauge_name'])
     data_source = ':' + ','.join(set(data_source_df['gauge_name']))
     return data_source
@@ -120,7 +120,7 @@ def subsurface_details(site_id, start_monitor, ts_last_retrigger):
     query += "  WHERE site_id = '%s' " %site_id
     query += "  ) AS sensors "
     query += "USING (tsm_id)"
-    data_source_df = pd.DataFrame(list(dbio.query_database(query)),
+    data_source_df = pd.DataFrame(list(dbio.read(query)),
                                   columns=['node', 'tsm_name'])
     data_source_df = data_source_df.drop_duplicates(['node', 'tsm_name'])
     tsm_source_df = data_source_df.groupby('tsm_name', as_index=False)
@@ -164,7 +164,7 @@ def surficial_details(site_id, start_monitor, ts_last_retrigger):
     query += "  USING(history_id) "
     query += "  ) AS names "
     query += "USING (marker_id) "
-    data_source_df = pd.DataFrame(list(dbio.query_database(query)),
+    data_source_df = pd.DataFrame(list(dbio.read(query)),
                                   columns=['marker_name'])
     data_source = ':' + ','.join(set(data_source_df['marker_name']))
     
