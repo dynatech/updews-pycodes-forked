@@ -1,9 +1,8 @@
-import serverdbio as dbio
+import dynadb.db as dbio
 from datetime import datetime as dt
 from datetime import timedelta as td
 import argparse
-import memcache
-mc = memcache.Client(['127.0.0.1:11211'],debug=0)
+import volatile.memory as mem
 
 def count_items(ts_end = None, ts_start = None, table = None, stat_col = None,
 	stat = None, pq = False, write_to_db = False, timelag = 5, 
@@ -50,10 +49,11 @@ def count_items(ts_end = None, ts_start = None, table = None, stat_col = None,
 	if pq:
 		print "Count query:", query
 
+	mc = mem.get_handle()
 	sc = mc.get("server_config")
 	smsdb_host = sc['resource']['smsdb']
 
-	rs = dbio.query_database(query, "ci", smsdb_host)
+	rs = dbio.read(query, "ci", smsdb_host)
 
 	try:
 		item_count = rs[0][0]
@@ -83,7 +83,7 @@ def count_items(ts_end = None, ts_start = None, table = None, stat_col = None,
 		if pq:
 			print "Write query:", query
 
-		dbio.commit_to_db(query, 'item_count', dbinstance)
+		dbio.write(query, 'item_count', dbinstance)
 
 def get_arguments():
     parser = argparse.ArgumentParser(description=("Run performance "

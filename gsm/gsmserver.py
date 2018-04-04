@@ -233,22 +233,12 @@ def simulate_gsm(network='simulate'):
     mobile_nums_db = sc["resource"]["mobile_nums_db"]
     smsdb_host = sc["resource"]["smsdb"]
     
-    db, cur = smstables.db_connect(sms_mirror_host)
-    
     smsinbox_sms = []
 
-    try:
-        query = """select sms_id, timestamp, sim_num, sms_msg from smsinbox
-            where web_flag not in ('0','-1') limit 1000"""
-    
-        a = cur.execute(query)
-        out = []
-        if a:
-            smsinbox_sms = cur.fetchall()
-        
-    except MySQLdb.OperationalError:
-        print '9.',
-        time.sleep(20)
+    query = """select sms_id, timestamp, sim_num, sms_msg from smsinbox
+        where web_flag not in ('0','-1') limit 1000"""
+
+    smsinbox_sms = db.read(query, "simulate", "sandbox")
 
     logger_mobile_sim_nums = static.get_mobiles('loggers', mobile_nums_db)
     user_mobile_sim_nums = static.get_mobiles('users', mobile_nums_db)

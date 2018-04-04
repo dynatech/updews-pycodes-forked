@@ -1,6 +1,4 @@
-import os,time,re,sys
-import MySQLdb
-import datetime
+import re
 from datetime import datetime as dt
 from datetime import timedelta as td
 import dynadb.db as dbio
@@ -8,6 +6,7 @@ import gsmserver as server
 import queryserverinfo as qsi
 import argparse
 import smstables
+import pandas as pd
 #---------------------------------------------------------------------------------------------------------------------------
 
 def get_alert_staff_numbers():
@@ -46,6 +45,148 @@ def write_outbox_dyna(msg,num):
     # print query
     dbio.write(query,'wod',False,'gsm') 
 
+def monitoring_start(site_id, ts_last_retrigger):
+
+    query =  "SELECT ts, ts_updated FROM "
+    query += "  (SELECT * FROM public_alerts "
+    query += "  WHERE site_id = %s " %site_id
+    query += "  AND (ts_updated <= '%s' " %ts_last_retrigger
+    query += "    OR (ts_updated >= '%s' " %ts_last_retrigger
+    query += "      AND ts <= '%s')) " %ts_last_retrigger
+    query += "  ) AS pub "
+    query += "INNER JOIN "
+    query += "  (SELECT * FROM public_alert_symbols "
+    query += "  WHERE alert_type = 'event') AS sym "
+    query += "ON pub.pub_sym_id = sym.pub_sym_id "
+    query += "ORDER BY ts DESC LIMIT 3"
+
+    # previous positive alert
+    prev_pub_alerts = pd.DataFrame(list(dbio.read(query)),
+                                      columns=['ts', 'ts_updated'])
+
+    if len(prev_pub_alerts) == 1:
+        start_monitor = pd.to_datetime(prev_pub_alerts['ts'].values[0])
+    # two previous positive alert
+    elif len(prev_pub_alerts) == 2:
+        # one event with two previous positive alert
+        if pd.to_datetime(prev_pub_alerts['ts'].values[0]) - \
+                pd.to_datetime(prev_pub_alerts['ts_updated'].values[1]) <= \
+                td(hours=0.5):
+            start_monitor = pd.to_datetime(prev_pub_alerts['ts'].values[1])
+        else:
+            start_monitor = pd.to_datetime(prev_pub_alerts['ts'].values[0])
+    # three previous positive alert
+    else:
+        if pd.to_datetime(prev_pub_alerts['ts'].values[0]) - \
+                pd.to_datetime(prev_pub_alerts['ts_updated'].values[1]) <= \
+                td(hours=0.5):
+            # one event with three previous positive alert
+            if pd.to_datetime(prev_pub_alerts['ts'].values[1]) - \
+                    pd.to_datetime(prev_pub_alerts['ts_updated'].values[2]) \
+                    <= td(hours=0.5):
+                start_monitor = pd.to_datetime(prev_pub_alerts['timestamp']\
+                        .values[2])
+            # one event with two previous positive alert
+            else:
+                start_monitor = pd.to_datetime(prev_pub_alerts['ts'].values[1])
+        else:
+            start_monitor = pd.to_datetime(prev_pub_alerts['ts'].values[0])
+
+    return start_monitor
+
+def rainfall_details(site_id, start_monitor, ts_last_retrigger):
+    query =  "SELECT gauge_name FROM "
+    query += "  (SELECT * FROM rainfall_alerts "
+    query += "  WHERE site_id = %s " %site_id
+    query += "  AND ts >= '%s' " %start_monitor
+    query += "  AND ts <= '%s' " %ts_last_retrigger
+    query += "  ) AS alerts "
+    query += "INNER JOIN "
+    query += "  rainfall_gauges "
+    query += "USING (rain_id) "
+    data_source_df = pd.DataFrame(list(dbio.read(query)),
+                                  columns=['gauge_name'])
+    data_source = ':' + ','.join(set(data_source_df['gauge_name']))
+    return data_source
+
+def subsurface_details(site_id, start_monitor, ts_last_retrigger):
+    query =  "SELECT node_id, tsm_name FROM "
+    query += "  (SELECT * FROM node_alerts "
+    query += "  WHERE ts >= '%s' " %start_monitor
+    query += "  AND ts <= '%s' " %ts_last_retrigger
+    query += "  ) AS alerts "
+    query += "INNER JOIN "
+    query += "  (SELECT * FROM tsm_sensors "
+    query += "  WHERE site_id = '%s' " %site_id
+    query += "  ) AS sensors "
+    query += "USING (tsm_id)"
+    data_source_df = pd.DataFrame(list(dbio.read(query)),
+                                  columns=['node', 'tsm_name'])
+    data_source_df = data_source_df.drop_duplicates(['node', 'tsm_name'])
+    tsm_source_df = data_source_df.groupby('tsm_name', as_index=False)
+    data_source = ':'+','.join(tsm_source_df.apply(tsm_details))
+    
+    return data_source
+
+def tsm_details(df):
+    nodes = ','.join(set(df['node'].apply(lambda x: str(x))))
+    lst = df['tsm_name'] + '(' + nodes + ')'
+    return lst
+
+def surficial_details(site_id, start_monitor, ts_last_retrigger):
+    query =  "SELECT marker_name FROM "
+    query += "  (SELECT * FROM marker_alerts "
+    query += "  WHERE ts >= '%s' " %start_monitor
+    query += "  AND ts <= '%s' " %ts_last_retrigger
+    query += "  AND alert_level > 0 "
+    query += "  ) AS alerts "
+    query += "INNER JOIN "
+    query += "  (SELECT marker_id, marker_name FROM "
+    query += "    (SELECT hist.marker_id, hist.history_id FROM "
+    query += "        (SELECT marker_id, MAX(ts) AS ts "
+    query += "        FROM marker_history "
+    query += "        WHERE event in ('add', 'rename') "
+    query += "        GROUP BY marker_id "
+    query += "        ) AS M "
+    query += "      INNER JOIN "
+    query += "        (SELECT * "
+    query += "        FROM marker_history "
+    query += "        WHERE event in ('add', 'rename') "
+    query += "        ) AS hist "
+    query += "      USING (marker_id, ts) "
+    query += "    WHERE marker_id IN ( "
+    query += "      SELECT marker_id "
+    query += "      FROM markers "
+    query += "      WHERE site_id = %s) " %site_id
+    query += "    ) AS site_hist "
+    query += "  INNER JOIN "
+    query += "    marker_names "
+    query += "  USING(history_id) "
+    query += "  ) AS names "
+    query += "USING (marker_id) "
+    data_source_df = pd.DataFrame(list(dbio.read(query)),
+                                  columns=['marker_name'])
+    data_source = ':' + ','.join(set(data_source_df['marker_name']))
+    
+    return data_source
+
+def alert_details(site_id, trigger_source, ts_last_retrigger):
+    
+    start_monitor = monitoring_start(site_id, ts_last_retrigger)
+    
+    if trigger_source == 'rainfall':
+        data_source = rainfall_details(site_id, start_monitor, ts_last_retrigger)
+        
+    elif trigger_source == 'subsurface':
+        data_source = subsurface_details(site_id, start_monitor, ts_last_retrigger)
+        
+    elif trigger_source == 'surficial':
+        data_source = surficial_details(site_id, start_monitor, ts_last_retrigger)
+    else:  
+        data_source = ''
+    
+    return data_source
+
 def send_alert_message():
     # check due alert messages
     # ts_due = dt.today()
@@ -59,14 +200,17 @@ def send_alert_message():
         print 'No alertmsg set for sending'
         return
 
-    for stat_id, site_code, trigger_source, alert_symbol, ts_last_retrigger in alert_msgs:
+    for stat_id, site_id, site_code, trigger_source, alert_symbol, ts_last_retrigger in alert_msgs:
         tlr_str = ts_last_retrigger.strftime("%Y-%m-%d %H:%M:%S")
         message = ("SANDBOX:\n"
             "As of %s\n"
             "Alert ID %d:\n"
-            "%s:%s:%s\n\n"
-            "Text\nSandbox ACK <alert_id> <validity> <remarks>") % (tlr_str,
-            stat_id, site_code, alert_symbol, trigger_source)
+            "%s:%s:%s") % (tlr_str, stat_id, site_code,
+                          alert_symbol, trigger_source)
+        
+        message += alert_details(site_id, trigger_source, ts_last_retrigger)
+            
+        message += "\n\nText\nSandbox ACK <alert_id> <validity> <remarks>"
 
         print message
     
@@ -89,7 +233,7 @@ def send_alert_message():
 
 def check_alerts():
     ts_now = dt.now().strftime("%Y-%m-%d %H:%M:%S")
-    query = ("SELECT stat_id, site_code, trigger_source, "
+    query = ("SELECT stat_id, site_id, site_code, trigger_source, "
             "alert_symbol, ts_last_retrigger FROM "
             "(SELECT stat_id, ts_last_retrigger, site_id, "
             "trigger_source, alert_symbol FROM "
