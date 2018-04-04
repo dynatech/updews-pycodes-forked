@@ -1,6 +1,7 @@
 
 import MySQLdb, time 
 from sqlalchemy import create_engine
+from sqlalchemy import exc
 import memcache
 mc = memcache.Client(['127.0.0.1:11211'],debug=0)
 
@@ -92,10 +93,14 @@ def df_engine(host='local'):
     engine = create_engine('mysql+pymysql://'+dbc.user+':'+dbc.password+'@'+dbc.host+':3306/'+dbc.name)
     return engine
 
-def df_write(frame='',table='',host='local'):
-    print frame
+def df_write(dataFrame,host='local'):
     engine = df_engine(host)
+    df = dataFrame.data
     try:
-        frame.to_sql(name = table, con = engine, if_exists = 'append',index_label=None)
-    except:
-        print 'already in db'
+       data.to_sql(name = dataFrame.name, con = engine, if_exists = 'append',index_label=None)
+
+    except exc.SQLalchemyError:
+        print '\n>>Error: Unknown Error'
+        return
+            
+      
