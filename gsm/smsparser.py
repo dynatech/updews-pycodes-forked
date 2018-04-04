@@ -18,6 +18,7 @@ import utsparser as uts
 import dynadb.db as dynadb
 import smstables
 import volatile.memory as mem
+import smsparser2.subsurface as subsurface
 
 def logger_response(msg,log_type,log='False'):
     if log:
@@ -212,7 +213,7 @@ def process_two_accel_col_data(sms):
                 print "Piece of data to be ignored"
     
     spawn_alert_gen(tsm_name,timestamp)
-
+    print outl
     return outl
 
 def write_two_accel_data_to_db(dlist,msgtime):
@@ -371,7 +372,9 @@ def process_column_v1(sms):
             dbio.commit_to_db(query_soms, 'process_column_v1')
         
         spawn_alert_gen(tsm_name,timestamp)
-                
+        return [[str(timestamp),node_id,valueX,valueY,valueZ],
+        [str(timestamp),node_id,valueF]]
+
     except KeyboardInterrupt:
         print '\n>>Error: Unknown'
         raise KeyboardInterrupt
@@ -873,12 +876,26 @@ def parse_all_messages(args,allmsgs=[]):
                 is_msg_proc_success = process_piezometer(msg)
             # elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*\d+T?$",msg.data):
             elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*.*",msg.data):
-               msg.data = pre_process_col_v1(msg)
-               process_column_v1(msg)
+                msg.data = pre_process_col_v1(msg)
+                data = process_column_v1(msg)
+                df_data = subsurface.v1(msg)
+                print data
+                if df_data:
+                    print df_data[0].data ,df_data[1].data
+                else:
+                    print '>> Value Error'
+              
             elif re.search("^[A-Z]{4,5}\*[xyabcXYABC]\*[A-F0-9]+\*[0-9]+T?$",
                 msg.data):
                 try:
                     dlist = process_two_accel_col_data(msg)
+                    df_data = subsurface.v2(msg)
+                    print dlist
+                    # print df_data.data
+                    if df_data:
+                        print df_data.data
+                    else:
+                        print '>> Value Error'
                     if dlist:
                         if len(dlist[0]) < 7:
                             write_soms_data_to_db(dlist,msg)
@@ -895,9 +912,18 @@ def parse_all_messages(args,allmsgs=[]):
                 except MySQLdb.ProgrammingError:
                     print ">> Error writing data to DB"
                     is_msg_proc_success = False
+                    
             elif re.search("[A-Z]{4}\*[A-F0-9]+\*[0-9]+$",msg.data):
                 #process_column_v1(msg.data)
-                process_column_v1(msg)
+                data = process_column_v1(msg)
+                df_data =subsurface.v1(msg)
+
+                print data
+                if df_data:
+                    print df_data[0].data ,df_data[1].data
+                else:
+                    print '>> Value Error'
+            
             #check if message is from rain gauge
             # elif re.search("^\w{4},[\d\/:,]+,[\d,\.]+$",msg.data):
             elif re.search("^\w{4},[\d\/:,]+",msg.data):

@@ -1,6 +1,7 @@
 
 import MySQLdb, time 
-#import cfgfileio as cfg
+from sqlalchemy import create_engine
+from sqlalchemy import exc
 import memcache
 mc = memcache.Client(['127.0.0.1:11211'],debug=0)
 
@@ -86,4 +87,20 @@ def read(query='', identifier='', instance='local'):
         a =  None
     except KeyError:
         a = None
-   
+
+def df_engine(host='local'):
+    dbc = dbInstance(host)
+    engine = create_engine('mysql+pymysql://'+dbc.user+':'+dbc.password+'@'+dbc.host+':3306/'+dbc.name)
+    return engine
+
+def df_write(dataFrame,host='local'):
+    engine = df_engine(host)
+    df = dataFrame.data
+    try:
+       data.to_sql(name = dataFrame.name, con = engine, if_exists = 'append',index_label=None)
+
+    except exc.SQLalchemyError:
+        print '\n>>Error: Unknown Error'
+        return
+            
+      
