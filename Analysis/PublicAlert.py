@@ -385,7 +385,7 @@ def SitePublicAlert(PublicAlert, end, start_time, file_path):
     
     # surficial data presence
     if internal_alert == 'A0':
-        ground_ts = pd.to_datetime(end)
+        ground_ts = pd.to_datetime(end.date())
     else:
         ground_ts = round_release_time(end) - timedelta(hours=4)
     ground_alert = op_trigger.loc[(op_trigger.source == 'ground') & (op_trigger.updateTS >= ground_ts)]
