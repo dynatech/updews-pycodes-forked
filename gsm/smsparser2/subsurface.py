@@ -3,7 +3,6 @@ import pandas as pd
 import numpy as np
 import dynadb.db as dynadb
 from datetime import datetime as dt
-import gsm.somsparser as ssp
 import smsclass
 
 

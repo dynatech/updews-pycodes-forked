@@ -1,4 +1,3 @@
-import gsmserver
 import serverdbio
 import gsmio
 import smsparser
