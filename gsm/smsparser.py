@@ -5,7 +5,6 @@ from datetime import timedelta as td
 import serverdbio as dbio
 import somsparser as ssp
 import gsmserver as server
-import cfgfileio as cfg
 import argparse
 import queryserverinfo as qsi
 import lockscript as lock
@@ -842,7 +841,6 @@ def parse_all_messages(args,allmsgs=[]):
 
      
     """
-    c = cfg.config()
     read_success_list = []
     read_fail_list = []
 
