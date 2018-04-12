@@ -120,7 +120,6 @@ def df_write(dataframe,host='local'):
     try:
         write(query=query, 
             identifier='Insert dataFrame values')
-        print query
     except IndexError:
         print "\n\n>> Error: Possible data type error"
     except ValueError:

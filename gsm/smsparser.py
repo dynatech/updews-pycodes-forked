@@ -878,12 +878,14 @@ def parse_all_messages(args,allmsgs=[]):
             elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*.*",msg.data):
                 df_data = subsurface.v1(msg)
                 if df_data:
+                    print df_data
                     dynadb.df_write(df_data[0])
                     dynadb.df_write(df_data[1])
                     tsm_name = df_data[0].name.split("_")
+                    tsm_name = str(tsm_name[1])
                     timestamp = df_data[0].data.reset_index()
-                    timestamp = timestamp['ts'][0]
-                    spawn_alert_gen(tsm_name[1],timestamp)
+                    timestamp = str(timestamp['ts'][0])
+                    spawn_alert_gen(tsm_name,timestamp)
                 else:
                     print '>> Value Error'
                     is_msg_proc_success = False
@@ -893,11 +895,13 @@ def parse_all_messages(args,allmsgs=[]):
                 try:
                     df_data = subsurface.v2(msg)
                     if df_data:
+                        print df_data
                         dynadb.df_write(df_data)
                         tsm_name = df_data.name.split("_")
+                        tsm_name = str(tsm_name[1])
                         timestamp = df_data.data.reset_index()
-                        timestamp = timestamp['ts'][0]
-                        spawn_alert_gen(tsm_name[1],timestamp)
+                        timestamp = str(timestamp['ts'][0])
+                        spawn_alert_gen(tsm_name,timestamp)
                     else:
                         print '>> Value Error'
                         is_msg_proc_success = False
@@ -916,11 +920,13 @@ def parse_all_messages(args,allmsgs=[]):
             elif re.search("[A-Z]{4}\*[A-F0-9]+\*[0-9]+$",msg.data):
                 df_data =subsurface.v1(msg)
                 if df_data:
+                    print df_data
                     dynadb.df_write(df_data[0])
                     dynadb.df_write(df_data[1])
                     tsm_name = df_data[0].name.split("_")
+                    tsm_name = str(tsm_name[1])
                     timestamp = df_data[0].data.reset_index()
-                    timestamp = timestamp['ts'][0]
+                    timestamp = str(timestamp['ts'][0])
                     spawn_alert_gen(tsm_name,timestamp)
                 else:
                     print '>> Value Error'
