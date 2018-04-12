@@ -2,7 +2,6 @@ import re
 from datetime import datetime as dt
 from datetime import timedelta as td
 import dynadb.db as dbio
-import gsmserver as server
 import queryserverinfo as qsi
 import argparse
 import smstables
@@ -15,35 +14,6 @@ def get_alert_staff_numbers():
 
     contacts = dbio.read(query,'checkalert')
     return contacts
-
-def write_outbox_dyna(msg,num):
-    ts_written = dt.today().strftime("%Y-%m-%d %H:%M:%S")
-    
-    smart_prefixes = server.get_allowed_prefixes('SMART')
-    globe_prefixes = server.get_allowed_prefixes('GLOBE')
-
-    try:
-        num_prefix = re.match("^((0)|(63))9\d\d",num).group()
-    except:
-        print '>> Unable to send sim number in this gsm module'
-        return -1
-
-    if num_prefix in smart_prefixes:
-        # return 'SMART'
-        gsm_id = 'SMART'
-    elif num_prefix in globe_prefixes:
-        # return 2
-        gsm_id = 'GLOBE'
-    else:
-        print '>> Prefix', num_prefix, 'cannot be sent'
-        return -1
-
-    query = ("insert into smsoutbox (timestamp_written,sms_msg,recepients,"
-        "send_status,gsm_id) values "
-        "('%s','%s','%s','UNSENT','%s');") % (ts_written,msg,num,gsm_id)
-
-    # print query
-    dbio.write(query,'wod',False,'gsm') 
 
 def monitoring_start(site_id, ts_last_retrigger):
 
