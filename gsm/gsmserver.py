@@ -16,6 +16,7 @@ import volatile.memory as mem
 import volatile.static as static
 import dynadb.db as db
 import smstables
+import modem.modem as modem
 
 def check_id_in_table(table,gsm_id):
     """
@@ -104,7 +105,8 @@ def get_allowed_prefixes(network):
 
     return extended_prefix_list
     
-def send_messages_from_db(table='users',send_status=0,gsm_id=0,limit=10):
+def send_messages_from_db(gsm = None, table = 'users', send_status = 0, 
+    gsm_info = None, limit = 10):
    
     """
         **Description:**
@@ -120,10 +122,14 @@ def send_messages_from_db(table='users',send_status=0,gsm_id=0,limit=10):
         :type limit: int
         :returns: N/A
     """
+    if gsm == None:
+        raise ValueError("No gsm instance defined")
+
     sc = mem.server_config()
     host = sc['resource']['smsdb']
 
-    allmsgs = smstables.get_all_outbox_sms_from_db(table,send_status,gsm_id,limit)
+    allmsgs = smstables.get_all_outbox_sms_from_db(table, send_status, 
+        gsm_info["id"], limit)
     if len(allmsgs) <= 0:
         return
     
@@ -134,15 +140,15 @@ def send_messages_from_db(table='users',send_status=0,gsm_id=0,limit=10):
     # print inv_table_mobile
         
     msglist = []
-    for stat_id,mobile_id,outbox_id,gsm_id,sms_msg in allmsgs:
-        smsItem = gsmio.sms(stat_id, inv_table_mobile[mobile_id], sms_msg,'')
-        msglist.append([smsItem,gsm_id,outbox_id,mobile_id])
+    for stat_id, mobile_id, outbox_id, gsm_id, sms_msg in allmsgs:
+        smsItem = modem.GsmSms(stat_id, inv_table_mobile[mobile_id], sms_msg,'')
+        msglist.append([smsItem, gsm_id, outbox_id, mobile_id])
         
     allmsgs = msglist
 
     status_list = []
     
-    allowed_prefixes = get_allowed_prefixes('globe')
+    allowed_prefixes = get_allowed_prefixes(gsm_info["network"])
 
     # # cycle through all messages
     for msg in allmsgs:
@@ -155,7 +161,7 @@ def send_messages_from_db(table='users',send_status=0,gsm_id=0,limit=10):
             continue
             # check if recepient number in allowed prefixed list    
         if num_prefix in allowed_prefixes:
-            ret = gsmio.send_msg(msg[0].data,msg[0].simnum.strip())
+            ret = gsm.send_msg(msg[0].data, msg[0].simnum.strip())
             today = dt.today().strftime("%Y-%m-%d %H:%M:%S")
             if ret:
                 send_stat = 1
@@ -180,7 +186,7 @@ def send_messages_from_db(table='users',send_status=0,gsm_id=0,limit=10):
     #   send_status will be changed to "SENT-WSS" if successful
     # dsll.sendAllAckSentGSMtoDEWS()    
     
-def try_sending_messages(gsm_id):
+def try_sending_messages(gsm, gsm_info):
     """
         **Description:**
           -The try sending message is a function that try to send message in the gsm network for loggers and users .
@@ -195,8 +201,10 @@ def try_sending_messages(gsm_id):
     start = dt.now()
     while True:  
         # send_messages_from_db(network)
-        send_messages_from_db(table='users',send_status=5,gsm_id=gsm_id)
-        send_messages_from_db(table='loggers',send_status=5,gsm_id=gsm_id)
+        send_messages_from_db(gsm, table = 'users', send_status = 5,
+            gsm_info = gsm_info)
+        send_messages_from_db(gsm, table = 'loggers', send_status = 5, 
+            gsm_info = gsm_info)
         print '.',
         time.sleep(5)
         if (dt.now()-start).seconds > 30:
@@ -308,11 +316,11 @@ def simulate_gsm(network='simulate'):
     
     sys.exit()
 
-def log_csq(gsm_id):
+def log_csq(gsm, gsm_id):
     
     ts_today = dt.today().strftime('%Y-%m-%d %H:%M:%S')
 
-    csq_val = gsmio.csq()
+    csq_val = gsm.csq()
 
     query = ("insert into gsm_csq_logs (`ts`,`gsm_id`,`csq_val`) "
         "values ('%s', %d, %d)") % (ts_today, gsm_id, csq_val)
@@ -340,20 +348,21 @@ def run_server(gsm_info,table='loggers'):
     timetosend = 0
     lastAlertMsgSent = ''
     logruntimeflag = True
-    global checkIfActive 
     checkIfActive = True
+
+    sc = mem.server_config()
 
     if gsm_info['name'] == 'simulate':
         simulate_gsm(gsm_info['network'])
         sys.exit()
 
     try:
-        gsm = gsmio.init_gsm(gsm_info)        
+        gsm = modem.GsmModem(gsm_info['port'], sc["serial"]["baudrate"], 
+            gsm_info["pwr_on_pin"], gsm_info["ring_pin"])
+        gsm.set_defaults()       
     except serial.SerialException:
         print '**NO COM PORT FOUND**'
         serverstate = 'serial'
-        gsm.close()
-        log_runtime_status(network,"com port error")
         raise ValueError(">> Error: no com port found")
             
     log_runtime_status(gsm_info["name"],"startup")
@@ -361,39 +370,38 @@ def run_server(gsm_info,table='loggers'):
     print '**' + gsm_info['name'] + ' GSM server active**'
     print time.asctime()
     network = gsm_info['name'].upper()
-    print "CSQ:", log_csq(gsm_info['id'])
+    print "CSQ:", log_csq(gsm, gsm_info['id'])
     while True:
-        m = gsmio.count_msg()
+        m = gsm.count_msg()
         if m>0:
-            allmsgs = gsmio.get_all_sms(network)
+            allmsgs = gsm.get_all_sms(network)
 
             try:
                 smstables.write_inbox(allmsgs,gsm_info)
             except KeyboardInterrupt:
                 print ">> Error: May be an empty line.. skipping message storing"
             
-            delete_messages_from_gsm()
+            gsm.delete_sms(gsm_info["module"])
                 
             print dt.today().strftime("\n" + network 
                 + " Server active as of %A, %B %d, %Y, %X")
 
-            print "CSQ:", log_csq(gsm_info['id'])
+            print "CSQ:", log_csq(gsm, gsm_info['id'])
 
             log_runtime_status(gsm_info["name"],"alive")
 
-            try_sending_messages(gsm_info["id"])
+            try_sending_messages(gsm, gsm_info)
             
         elif m == 0:
             
-            try_sending_messages(gsm_info["id"])
+            try_sending_messages(gsm, gsm_info)
             
-            gsmio.flush_gsm()
             today = dt.today()
             if (today.minute % 10 == 0):
                 if checkIfActive:
                     print "\n", network, today.strftime("Server active as of "
                         "%A, %B %d, %Y, %X")
-                    print "CSQ:", log_csq(gsm_info['id'])
+                    print "CSQ:", log_csq(gsm, gsm_info['id'])
                 checkIfActive = False
             else:
                 checkIfActive = True
@@ -402,14 +410,14 @@ def run_server(gsm_info,table='loggers'):
             print'GSM MODULE MAYBE INACTIVE'
             serverstate = 'inactive'
             # log_runtime_status(network,"gsm inactive")
-            gsmio.reset_gsm()
+            gsm.reset()
 
         elif m == -2:
             print '>> Error in parsing mesages: No data returned by GSM'
-            gsmio.reset_gsm()            
+            gsm.reset()
         else:
             print '>> Error in parsing mesages: Error unknown'
-            gsmio.reset_gsm()
+            gsm.reset()
 
 def get_arguments():
     """
@@ -455,20 +463,21 @@ def get_gsm_modules(reset_val = False):
     gsm_modules = mc.get('gsm_modules')
     if reset_val or (gsm_modules == None or len(gsm_modules.keys()) == 0):
         print "Getting gsm modules information..."
-        query = "select * from gsm_modules"
+        query = ("select gsm_id, gsm_name, gsm_sim_num, network_type, ser_port, "
+            "pwr_on_pin, ring_pin, module_type from gsm_modules")
         result_set = db.read(query,'get_gsm_ids','local')
-        # print gsm_modules
 
-        # ids = dict() 
         gsm_modules = dict()
-        for gsm_id, name, num, net, port, pwr_on_pin in result_set:
+        for gsm_id, name, num, net, port, pwr_on_pin, ring_pin, module in result_set:
             gsm_info = dict()
             gsm_info["network"] = net
             gsm_info["name"] = name
             gsm_info["num"] = num
             gsm_info["port"] = port
-            gsm_info["pwr_on_pin"] = pwr_on_pin
+            gsm_info["pwr_on_pin"] = int(pwr_on_pin)
+            gsm_info["ring_pin"] = int(ring_pin)
             gsm_info["id"] = gsm_id
+            gsm_info["module"] = module
             gsm_modules[gsm_id] = gsm_info 
 
         mc.set('gsm_modules',gsm_modules)
