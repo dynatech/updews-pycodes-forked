@@ -918,6 +918,7 @@ def parse_all_messages(args,allmsgs=[]):
                 if df_data:
                     dynadb.df_write(df_data[0])
                     dynadb.df_write(df_data[1])
+                    tsm_name = df_data[0].name.split("_")
                     timestamp = df_data[0].data.reset_index()
                     timestamp = timestamp['ts'][0]
                     spawn_alert_gen(tsm_name,timestamp)
