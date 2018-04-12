@@ -5,7 +5,6 @@ from datetime import timedelta as td
 import serverdbio as dbio
 import somsparser as ssp
 import argparse
-import queryserverinfo as qsi
 import lockscript as lock
 import alertmessaging as amsg
 import memcache
@@ -951,8 +950,6 @@ def parse_all_messages(args,allmsgs=[]):
                 is_msg_proc_success = process_earthquake(msg)
             # elif re.search("^PSIR ",msg.data.upper()):
             #     is_msg_proc_success = qsi.process_server_info_request(msg)
-            elif re.search("^SENDGM ",msg.data.upper()):
-                is_msg_proc_success = qsi.server_messaging(msg)
             elif re.search("^SANDBOX ACK \d+ .+",msg.data.upper()):
                 is_msg_proc_success = amsg.process_ack_to_alert(msg)   
             elif re.search("^ *(R(O|0)*U*TI*N*E )|(EVE*NT )", msg.data.upper()):
