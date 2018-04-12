@@ -4,7 +4,6 @@ from datetime import datetime as dt
 from datetime import timedelta as td
 import serverdbio as dbio
 import somsparser as ssp
-import gsmserver as server
 import argparse
 import queryserverinfo as qsi
 import lockscript as lock
