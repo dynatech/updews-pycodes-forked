@@ -116,7 +116,10 @@ def v1(sms):
         df_soms = smsclass.DataTable('soms_'+tsm_name,pd.DataFrame(outl_soms).set_index(['ts']))
         data = [df_tilt,df_soms]
         return data
-       
+      
+    except KeyError:
+        print '\n>>Error: Error in Data format'
+        return 
     except KeyboardInterrupt:
         print '\n>>Error: Unknown'
         raise KeyboardInterrupt
