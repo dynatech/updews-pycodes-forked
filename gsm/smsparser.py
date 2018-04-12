@@ -876,32 +876,24 @@ def parse_all_messages(args,allmsgs=[]):
                 is_msg_proc_success = process_piezometer(msg)
             # elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*\d+T?$",msg.data):
             elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*.*",msg.data):
-                msg.data = pre_process_col_v1(msg)
-                data = process_column_v1(msg)
                 df_data = subsurface.v1(msg)
-                print data
                 if df_data:
-                    print df_data[0].data ,df_data[1].data
+                    dynadb.df_write(df_data[0])
+                    dynadb.df_write(df_data[1])
                 else:
                     print '>> Value Error'
               
             elif re.search("^[A-Z]{4,5}\*[xyabcXYABC]\*[A-F0-9]+\*[0-9]+T?$",
                 msg.data):
                 try:
-                    dlist = process_two_accel_col_data(msg)
                     df_data = subsurface.v2(msg)
-                    print dlist
-                    # print df_data.data
                     if df_data:
-                        print df_data.data
+                        dynadb.df_write(df_data)
+
                     else:
                         print '>> Value Error'
-                    if dlist:
-                        if len(dlist[0]) < 7:
-                            write_soms_data_to_db(dlist,msg)
-                        else:
-                            write_two_accel_data_to_db(dlist,msg)
-                    is_msg_proc_success = True
+                        is_msg_proc_success = False
+
                 except IndexError:
                     print "\n\n>> Error: Possible data type error"
                     print msg.data
@@ -914,18 +906,14 @@ def parse_all_messages(args,allmsgs=[]):
                     is_msg_proc_success = False
                     
             elif re.search("[A-Z]{4}\*[A-F0-9]+\*[0-9]+$",msg.data):
-                #process_column_v1(msg.data)
-                data = process_column_v1(msg)
                 df_data =subsurface.v1(msg)
-
-                print data
                 if df_data:
-                    print df_data[0].data ,df_data[1].data
+                    dynadb.df_write(df_data[0])
+                    dynadb.df_write(df_data[1])
                 else:
                     print '>> Value Error'
             
             #check if message is from rain gauge
-            # elif re.search("^\w{4},[\d\/:,]+,[\d,\.]+$",msg.data):
             elif re.search("^\w{4},[\d\/:,]+",msg.data):
                 process_rain(msg)
             elif re.search("ARQ\+[0-9\.\+/\- ]+$",msg.data):

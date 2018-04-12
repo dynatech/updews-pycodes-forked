@@ -102,6 +102,9 @@ def df_engine(host='local'):
 def df_write(dFrame,host='local'):
     engine = df_engine(host)
     df = dFrame.data
+    df = df.drop_duplicates(subset=None, keep='first',
+     inplace=False)
+    df = df.reset_index()
     df_list = str(df.values.tolist())[:-1][1:]
     df_list =df_list.replace("]",")").replace("[","(")
     df_header = str(list(df))[:-1][1:].replace("\'","")
@@ -115,8 +118,9 @@ def df_write(dFrame,host='local'):
         df_header,df_list)
     query += " on DUPLICATE key update  %s " % (df_keys)
     try:
-        write(query=query, identifier='Insert dataFrame values')
-        print df_list
+        write(query=query, 
+            identifier='Insert dataFrame values')
+        print query
     except IndexError:
         print "\n\n>> Error: Possible data type error"
     except ValueError:
