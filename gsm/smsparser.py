@@ -880,8 +880,13 @@ def parse_all_messages(args,allmsgs=[]):
                 if df_data:
                     dynadb.df_write(df_data[0])
                     dynadb.df_write(df_data[1])
+                    tsm_name = df_data[0].name.split("_")
+                    timestamp = df_data.data.reset_index()
+                    timestamp = timestamp['ts'][0]
+                    spawn_alert_gen(tsm_name[1],timestamp)
                 else:
                     print '>> Value Error'
+                    is_msg_proc_success = False
               
             elif re.search("^[A-Z]{4,5}\*[xyabcXYABC]\*[A-F0-9]+\*[0-9]+T?$",
                 msg.data):
@@ -889,7 +894,10 @@ def parse_all_messages(args,allmsgs=[]):
                     df_data = subsurface.v2(msg)
                     if df_data:
                         dynadb.df_write(df_data)
-
+                        tsm_name = df_data.name.split("_")
+                        timestamp = df_data.data.reset_index()
+                        timestamp = timestamp['ts'][0]
+                        spawn_alert_gen(tsm_name[1],timestamp)
                     else:
                         print '>> Value Error'
                         is_msg_proc_success = False
@@ -910,9 +918,12 @@ def parse_all_messages(args,allmsgs=[]):
                 if df_data:
                     dynadb.df_write(df_data[0])
                     dynadb.df_write(df_data[1])
+                    timestamp = df_data[0].data.reset_index()
+                    timestamp = timestamp['ts'][0]
+                    spawn_alert_gen(tsm_name,timestamp)
                 else:
                     print '>> Value Error'
-            
+                    is_msg_proc_success = False
             #check if message is from rain gauge
             elif re.search("^\w{4},[\d\/:,]+",msg.data):
                 process_rain(msg)

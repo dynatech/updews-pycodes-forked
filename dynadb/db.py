@@ -99,9 +99,9 @@ def df_engine(host='local'):
         +dbc.password+'@'+dbc.host+':3306/'+dbc.name)
     return engine
 
-def df_write(dFrame,host='local'):
+def df_write(dataframe,host='local'):
     engine = df_engine(host)
-    df = dFrame.data
+    df = dataframe.data
     df = df.drop_duplicates(subset=None, keep='first',
      inplace=False)
     df = df.reset_index()
@@ -114,7 +114,7 @@ def df_write(dFrame,host='local'):
     df_keys = str(df_keys)[:-1][1:]
     df_keys =df_keys.replace("]",")")
     df_keys =df_keys.replace("[", "(").replace("\'", "")
-    query = "insert into %s (%s) values %s" % (dFrame.name,
+    query = "insert into %s (%s) values %s" % (dataframe.name,
         df_header,df_list)
     query += " on DUPLICATE key update  %s " % (df_keys)
     try:
