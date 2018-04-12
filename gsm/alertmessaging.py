@@ -2,7 +2,6 @@ import re
 from datetime import datetime as dt
 from datetime import timedelta as td
 import dynadb.db as dbio
-import queryserverinfo as qsi
 import argparse
 import smstables
 import pandas as pd
@@ -236,6 +235,16 @@ def check_alerts():
 
     return alert_msgs
 
+def get_name_of_staff(number):
+    query =  ("select t1.user_id, t2.nickname from user_mobile t1 inner join users t2 on "
+        "t1.user_id = t2.user_id where t1.sim_num = '%s';") % (number)
+
+    # print query
+
+    name = dbio.read(query,'customquery')[0]
+
+    return name
+
 def process_ack_to_alert(msg):
     try:
         stat_id = re.search("(?<=K )\d+(?= )",msg.data,re.IGNORECASE).group(0)
@@ -244,7 +253,7 @@ def process_ack_to_alert(msg):
         # smstables.write_outbox(errmsg,msg.simnum)
         return False
 
-    user_id, nickname = qsi.get_name_of_staff(msg.simnum)
+    user_id, nickname = get_name_of_staff(msg.simnum)
     print user_id, nickname, msg.data
     if re.search("server",nickname.lower()):
         try:
