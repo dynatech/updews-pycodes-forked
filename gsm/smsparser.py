@@ -878,7 +878,7 @@ def parse_all_messages(args,allmsgs=[]):
             elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*.*",msg.data):
                 df_data = subsurface.v1(msg)
                 if df_data:
-                    print df_data
+                    print df_data[0].data ,  df_data[1].data
                     dynadb.df_write(df_data[0])
                     dynadb.df_write(df_data[1])
                     tsm_name = df_data[0].name.split("_")
@@ -895,7 +895,7 @@ def parse_all_messages(args,allmsgs=[]):
                 try:
                     df_data = subsurface.v2(msg)
                     if df_data:
-                        print df_data
+                        print df_data.data
                         dynadb.df_write(df_data)
                         tsm_name = df_data.name.split("_")
                         tsm_name = str(tsm_name[1])
@@ -920,7 +920,7 @@ def parse_all_messages(args,allmsgs=[]):
             elif re.search("[A-Z]{4}\*[A-F0-9]+\*[0-9]+$",msg.data):
                 df_data =subsurface.v1(msg)
                 if df_data:
-                    print df_data
+                    print df_data[0].data ,  df_data[1].data
                     dynadb.df_write(df_data[0])
                     dynadb.df_write(df_data[1])
                     tsm_name = df_data[0].name.split("_")
