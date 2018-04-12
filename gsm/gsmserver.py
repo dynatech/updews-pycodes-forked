@@ -210,21 +210,6 @@ def try_sending_messages(gsm, gsm_info):
         if (dt.now()-start).seconds > 30:
             break
 
-def delete_messages_from_gsm():
-    """
-        **Description:**
-          -The delete message from gms is a function that delete messages in the gsm module
-         
-        :parameters: N/A
-        :returns: N/A
-    """
-    print "\n>> Deleting all read messages"
-    try:
-        gsmio.gsm_cmd('AT+CMGD=0,2').strip()
-        print 'OK'
-    except ValueError:
-        print '>> Error deleting messages'
-
 def simulate_gsm(network='simulate'):
     """
         **Description:**
