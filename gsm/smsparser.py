@@ -16,6 +16,7 @@ import dynadb.db as dynadb
 import smstables
 import volatile.memory as mem
 import smsparser2.subsurface as subsurface
+import smsparser2 as parser
 
 def logger_response(msg,log_type,log='False'):
     if log:
@@ -454,124 +455,6 @@ def process_piezometer(sms):
     print 'End of Process Piezometer data'
     return True
 
-def process_earthquake(msg):
-    line = msg.data.upper()
-    print "Processing earthquake data"
-    print line
-
-    # dbio.create_table('earthquake', 'earthquake')
-
-    #find date
-    if re.search("\d{1,2}\w+201[6789]",line):
-        datestr_init = re.search("\d{1,2}\w+201[6789]",msg.data).group(0)
-        pattern = ["%d%B%Y","%d%b%Y"]
-        datestr = None
-        for p in pattern:
-            try:
-                datestr = dt.strptime(datestr_init,p).strftime("%Y-%m-%d")
-                break
-            except:
-                print ">> Error in datetime conversion", datestr, "for pattern", p
-        if datestr == None:
-            return False
-    else:
-        print ">> No date string recognized"
-        return False
-
-    #find time
-    if re.search("\d{1,2}[:\.]\d{1,2} *[AP]M",line):
-        timestr = re.search("\d{1,2}[:\.]\d{1,2} *[AP]M",line).group(0)
-        timestr = timestr.replace(" ","").replace(".",":")
-        try:
-            timestr = dt.strptime(timestr,"%I:%M%p").strftime("%H:%M:00")
-        except:
-            print ">> Error in datetime conversion", timestr
-            return False
-    else:
-        print ">> No time string recognized"
-        return False
-
-    datetimestr = datestr + ' ' + timestr
-    
-    #find magnitude
-    if re.search("((?<=M[SBLVOW]\=)|(?<=M\=)|(?<=MLV\=))\d+\.\d+(?= )",line):
-        magstr = re.search("((?<=M[SBLVOW]\=)|(?<=M\=)|(?<=MLV\=))\d+\.\d+(?= )"
-            ,line).group(0)
-    else:
-        print ">> No magnitude string recognized"
-        magstr = 'NULL'
-
-    #find depth
-    if re.search("(?<=D\=)\d+(?=K*M)",line):
-        depthstr = re.search("(?<=D\=)\d+(?=K*M)",line).group(0)
-    else:
-        print ">> No depth string recognized"
-        depthstr = 'NULL'
-
-    #find latitude
-    if re.search("\d+\.\d+(?=N)",line):
-        latstr = re.search("\d+\.\d+(?=N)",line).group(0)
-    else:
-        print ">> No latitude string recognized"
-        latstr = 'NULL'
-
-    #find longitude
-    if re.search("\d+\.\d+(?=E)",line):
-        longstr = re.search("\d+\.\d+(?=E)",line).group(0)
-    else:
-        print ">> No longitude string recognized"
-        longstr = 'NULL'
-
-    #find epicenter distance
-    if re.search("(?<=OR )\d+(?=KM)",line):
-        diststr = re.search("(?<=OR )\d+(?=KM)",line).group(0)
-    else:
-        print ">> No distance string recognized"
-        diststr = 'NULL'
-
-    # find heading
-    if re.search("[NS]\d+[EW]",line):
-        headstr = re.search("[NS]\d+[EW]",line).group(0)
-    else:
-        print ">> No heading string recognized"
-        headstr = 'NULL'
-
-    # find Municipality
-    if re.search("(?<=OF )[A-Z ]+(?= \()",line):
-        munistr = re.search("(?<=OF )[A-Z ]+(?= \()",line).group(0)
-    else:
-        print ">> No municipality string recognized"
-        munistr = 'NULL'
-
-    # find province
-    if re.search("(?<=\()[A-Z ]+(?=\))",line):
-        provistr = re.search("(?<=\()[A-Z ]+(?=\))",line).group(0)
-    else:
-        print ">> No province string recognized"
-        provistr = 'NULL'
-
-    # find issuer
-    if re.search("(?<=\<)[A-Z]+(?=\>)",line):
-        issuerstr = re.search("(?<=\<)[A-Z]+(?=\>)",line).group(0)
-    else:
-        print ">> No issuer string recognized"
-        issuerstr = 'NULL'
-
-    query = ("INSERT INTO earthquake_events (ts, magnitude, depth, latitude, "
-        "longitude, issuer) VALUES ('%s',%s,%s,%s,%s,'%s') ON DUPLICATE KEY "
-        "UPDATE magnitude=magnitude, depth=depth, latitude=latitude, longitude="
-        "longitude, issuer=issuer;") % (datetimestr,magstr,depthstr,
-        latstr,longstr,issuerstr)
-
-    # print query
-
-    query.replace("'NULL'","NULL")
-
-    dbio.commit_to_db(query, 'earthquake')
-
-    return True
-
-
 def process_arq_weather(sms):
     
     #msg = message
@@ -947,9 +830,11 @@ def parse_all_messages(args,allmsgs=[]):
 
         elif args.table == 'users':
             if re.search("EQINFO",msg.data.upper()):
-                is_msg_proc_success = process_earthquake(msg)
-            # elif re.search("^PSIR ",msg.data.upper()):
-            #     is_msg_proc_success = qsi.process_server_info_request(msg)
+                data_table = parser.eq(msg)
+                if data_table:
+                    dynadb.df_write(data_table)
+                else:
+                    is_msg_proc_success = False
             elif re.search("^SANDBOX ACK \d+ .+",msg.data.upper()):
                 is_msg_proc_success = amsg.process_ack_to_alert(msg)   
             elif re.search("^ *(R(O|0)*U*TI*N*E )|(EVE*NT )", msg.data.upper()):
