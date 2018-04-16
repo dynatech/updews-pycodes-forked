@@ -9,36 +9,37 @@ import lockscript as lock
 import alertmessaging as amsg
 import memcache
 import lockscript
-import gsmio
 import surficialparser as surfp
 import utsparser as uts
 import dynadb.db as dynadb
 import smstables
 import volatile.memory as mem
 import smsparser2.subsurface as subsurface
+import smsparser2.rain as rain
 import smsparser2 as parser
+import smsparser2.smsclass as smsclass
 
-def logger_response(msg,log_type,log='False'):
+def logger_response(sms,log_type,log='False'):
     if log:
         query = ("INSERT INTO logger_response (`logger_Id`, `inbox_id`, `log_type`)"
          "values((Select logger_id from logger_mobile where sim_num = %s order by"
           " date_activated desc limit 1),'%s','%s')" 
-         % (msg.simnum,msg.num,log_type))
+         % (sms.sim_num,sms.inbox_id,log_type))
                     
         dynadb.write(query, 'insert new log for logger response',instance='sandbox')
         print '>> Log response'
     else:
         return False
 
-def common_logger_sms(msg):
+def common_logger_sms(sms):
     log_match = {'NO DATA FROM SENSELOPE':1,'PARSED':2,'^\w{4,5}\*0\*\*[0-9]{10,12}':2,'^ \*':3,
     '^\*[0-9]{10,12}$':3,'^[A-F0-9]+\*[0-9]{10,12}$':3,'^[A-F0-9]+\*[A-F0-9]{10,13}':3,'^[A-F0-9]+\*[A-F0-9]{6,7}':3,
     'REGISTERED':4,'SERVER NUMBER':5,'^MANUAL RESET':6,'POWER UP':7, 'SYSTEM STARTUP': 8,'SMS RESET':9, 
     'POWER SAVING DEACTIVATED':10,'POWER SAVING ACTIVATED':11,'NODATAFROMSENSLOPE':12,
     '^\w{4,5}\*[xyabcXYABC]\*[A-F0-9]+$':13,'!\*':15}
     for key,value in log_match.items():    
-        if re.search(key, msg.data.upper()):
-            logger_response(msg,value,True)
+        if re.search(key, sms.msg.upper()):
+            logger_response(sms,value,True)
             return value
     return False
 
@@ -101,9 +102,9 @@ def twos_comp(hexstr):
         return num
 
 def process_two_accel_col_data(sms):
-    msg = sms.data
-    sender = sms.simnum
-    txtdatetime = sms.dt
+    msg = sms.msg
+    sender = sms.sim_num
+    txtdatetime = sms.ts
     
     if len(msg.split(",")) == 3:
         print ">> Editing old data format"
@@ -247,7 +248,7 @@ def write_soms_data_to_db(dlist,msgtime):
     dbio.commit_to_db(query, 'write_soms_data_to_db')
     
 def pre_process_col_v1(sms):
-    data = sms.data
+    data = sms.msg
     data = data.replace("DUE","")
     data = data.replace(",","*")
     data = data.replace("/","")
@@ -255,9 +256,9 @@ def pre_process_col_v1(sms):
     return data
     
 def process_column_v1(sms):
-    line = sms.data
-    txtdatetime = sms.dt
-    sender = sms.simnum
+    line = sms.msg
+    txtdatetime = sms.ts
+    sender = sms.sim_num
 
     tsm_name = line[0:4]
     print 'SITE: ' + tsm_name
@@ -309,27 +310,27 @@ def process_column_v1(sms):
         i = 0
         while i < valid:
             #NODE ID
-            #parsed msg.data - NODE ID:
+            #parsed sms.msg - NODE ID:
             node_id = int('0x' + msgdata[i:i+2],16)
             i=i+2
             
             #X VALUE
-            #parsed msg.data - TEMPX VALUE:
+            #parsed sms.msg - TEMPX VALUE:
             tempx = int('0x' + msgdata[i:i+3],16)
             i=i+3
             
             #Y VALUE
-            #parsed msg.data - TEMPY VALUE:
+            #parsed sms.msg - TEMPY VALUE:
             tempy = int('0x' + msgdata[i:i+3],16)
             i=i+3
             
             #Z VALUE
-            #parsed msg.data - ZVALUE:
+            #parsed sms.msg - ZVALUE:
             tempz = int('0x' + msgdata[i:i+3],16)
             i=i+3
             
             #M VALUE
-            #parsed msg.data - TEMPF VALUE:
+            #parsed sms.msg - TEMPF VALUE:
             tempf = int('0x' + msgdata[i:i+4],16)
             i=i+4
             
@@ -383,8 +384,8 @@ def process_column_v1(sms):
 
 def process_piezometer(sms):    
     #msg = message
-    line = sms.data
-    sender = sms.simnum
+    line = sms.msg
+    sender = sms.sim_num
     print 'Piezometer data: ' + line
     line = re.sub("\*\*","*",line)
     try:
@@ -424,9 +425,9 @@ def process_piezometer(sms):
                 '%y%m%d%H%M').strftime('%Y-%m-%d %H:%M:00')
 
         if int(txtdatetime[0:4]) < 2009:
-            txtdatetime = sms.dt
+            txtdatetime = sms.ts
             
-    except IndexError and AttributeError:
+    except IndexError, AttributeError:
         print '\n>> Error: Piezometer message format is not recognized'
         print line
         return
@@ -458,8 +459,8 @@ def process_piezometer(sms):
 def process_arq_weather(sms):
     
     #msg = message
-    line = sms.data
-    sender = sms.simnum
+    line = sms.msg
+    sender = sms.sim_num
 
     print 'ARQ Weather data: ' + line
 
@@ -522,15 +523,15 @@ def process_arq_weather(sms):
     print 'End of Process ARQ weather data'
 
 def check_logger_model(logger_name):
-    query = ("SELECT model_id FROM senslopedb.loggers where "
+    query = ("SELECT model_id FROM loggers where "
         "logger_name = '%s'") % logger_name
 
     return dynadb.read(query,'check_logger_model')[0][0]
     
 def process_rain(sms):
 
-    line = sms.data
-    sender = sms.simnum
+    line = sms.msg
+    sender = sms.sim_num
     
     #msg = message
     line = re.sub("[^A-Z0-9,\/:\.\-]","",line)
@@ -644,7 +645,7 @@ def spawn_alert_gen(tsm_name, timestamp):
         mc.set('alertgenlist',[])
         mc.set('alertgenlist',alertgenlist)
 
-def process_surficial_observation(msg):
+def process_surficial_observation(sms):
     """
        -The function that process surficial observation .
       
@@ -658,11 +659,11 @@ def process_surficial_observation(msg):
     
     obv = []
     try:
-        obv = surfp.parse_surficial_text(msg.data)
+        obv = surfp.parse_surficial_text(sms.msg)
         print 'Updating observations'
         mo_id = surfp.update_surficial_observations(obv)
         surfp.update_surficial_data(obv,mo_id)
-        # server.write_outbox_message_to_db("READ-SUCCESS: \n" + msg.data,
+        # server.write_outbox_message_to_db("READ-SUCCESS: \n" + sms.msg,
         #     c.smsalert.communitynum,'users')
         # server.write_outbox_message_to_db(c.reply.successen, msg.simnum,'users')
         # proceed_with_analysis = True
@@ -674,17 +675,17 @@ def process_surficial_observation(msg):
         has_parse_error = True
 
         # server.write_outbox_message_to_db("READ-FAIL: (%s)\n%s" % 
-            # (errortype,msg.data),c.smsalert.communitynum,'users')
+            # (errortype,sms.msg),c.smsalert.communitynum,'users')
         # server.write_outbox_message_to_db(str(e), msg.simnum,'users')
     except KeyError:
         print '>> Error: Possible site code error'
         # server.write_outbox_message_to_db("READ-FAIL: (site code)\n%s" % 
-        #     (msg.data),c.smsalert.communitynum,'users')
+        #     (sms.msg),c.smsalert.communitynum,'users')
         has_parse_error = True
     # except:
     #     # pass
     #     server.write_outbox_message_to_db("READ-FAIL: (Unhandled) \n" + 
-    #         msg.data,c.smsalert.communitynum,'users')
+    #         sms.msg,c.smsalert.communitynum,'users')
 
     # spawn surficial measurement analysis
     proceed_with_analysis = sc['subsurface']['enable_analysis']
@@ -743,19 +744,19 @@ def parse_all_messages(args,allmsgs=[]):
         is_msg_proc_success = True
         print '\n\n*******************************************************'
 
-        msg = allmsgs.pop(0)
+        sms = allmsgs.pop(0)
         ref_count += 1
 
         if args.table == 'loggers':
             # start of sms parsing
 
-            if re.search("^[A-Z]{3}X[A-Z]{1}\*L\*",msg.data):
-                is_msg_proc_success = uts.parse_extensometer_uts(msg)
-            elif re.search("\*FF",msg.data) or re.search("PZ\*",msg.data):
-                is_msg_proc_success = process_piezometer(msg)
-            # elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*\d+T?$",msg.data):
-            elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*.*",msg.data):
-                df_data = subsurface.v1(msg)
+            if re.search("^[A-Z]{3}X[A-Z]{1}\*L\*",sms.msg):
+                is_msg_proc_success = uts.parse_extensometer_uts(sms)
+            elif re.search("\*FF",sms.msg) or re.search("PZ\*",sms.msg):
+                is_msg_proc_success = process_piezometer(sms)
+            # elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*\d+T?$",sms.msg):
+            elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*.*",sms.msg):
+                df_data = subsurface.v1(sms)
                 if df_data:
                     print df_data[0].data ,  df_data[1].data
                     dynadb.df_write(df_data[0])
@@ -770,9 +771,9 @@ def parse_all_messages(args,allmsgs=[]):
                     is_msg_proc_success = False
               
             elif re.search("^[A-Z]{4,5}\*[xyabcXYABC]\*[A-F0-9]+\*[0-9]+T?$",
-                msg.data):
+                sms.msg):
                 try:
-                    df_data = subsurface.v2(msg)
+                    df_data = subsurface.v2(sms)
                     if df_data:
                         print df_data.data
                         dynadb.df_write(df_data)
@@ -787,7 +788,7 @@ def parse_all_messages(args,allmsgs=[]):
 
                 except IndexError:
                     print "\n\n>> Error: Possible data type error"
-                    print msg.data
+                    print sms.msg
                     is_msg_proc_success = False
                 except ValueError:
                     print ">> Value error detected"
@@ -796,8 +797,8 @@ def parse_all_messages(args,allmsgs=[]):
                     print ">> Error writing data to DB"
                     is_msg_proc_success = False
                     
-            elif re.search("[A-Z]{4}\*[A-F0-9]+\*[0-9]+$",msg.data):
-                df_data =subsurface.v1(msg)
+            elif re.search("[A-Z]{4}\*[A-F0-9]+\*[0-9]+$",sms.msg):
+                df_data =subsurface.v1(sms)
                 if df_data:
                     print df_data[0].data ,  df_data[1].data
                     dynadb.df_write(df_data[0])
@@ -811,34 +812,48 @@ def parse_all_messages(args,allmsgs=[]):
                     print '>> Value Error'
                     is_msg_proc_success = False
             #check if message is from rain gauge
-            elif re.search("^\w{4},[\d\/:,]+",msg.data):
-                process_rain(msg)
-            elif re.search("ARQ\+[0-9\.\+/\- ]+$",msg.data):
-                process_arq_weather(msg)
-            elif (msg.data.split('*')[0] == 'COORDINATOR' or 
-                msg.data.split('*')[0] == 'GATEWAY'):
-                is_msg_proc_success = process_gateway_msg(msg)
-            elif common_logger_sms(msg) > 0:
-                print 'inbox_id: ', msg.num
+            elif re.search("^\w{4},[\d\/:,]+",sms.msg):
+                # process_rain(sms)
+
+                df_data = rain.v3(sms)
+                if df_data:
+                    print df_data.data
+                    dynadb.df_write(df_data)
+                else:
+                    print '>> Value Error'
+
+            elif re.search("ARQ\+[0-9\.\+/\- ]+$",sms.msg):
+                # process_arq_weather(sms)
+                df_data = rain.rain_arq(sms)
+                if df_data:
+                    print df_data.data
+                    dynadb.df_write(df_data)
+                else:
+                    print '>> Value Error'
+
+            elif (sms.msg.split('*')[0] == 'COORDINATOR' or 
+                sms.msg.split('*')[0] == 'GATEWAY'):
+                is_msg_proc_success = process_gateway_msg(sms)
+            elif common_logger_sms(sms) > 0:
+                print 'inbox_id: ', sms.inbox_id
                 print 'match'
             else:
                 print '>> Unrecognized message format: '
-                print 'NUM: ' , msg.simnum
-                print 'MSG: ' , msg.data
+                print 'NUM: ' , sms.sim_num
+                print 'MSG: ' , sms.msg
                 is_msg_proc_success = False
 
-
         elif args.table == 'users':
-            if re.search("EQINFO",msg.data.upper()):
-                data_table = parser.eq(msg)
+            if re.search("EQINFO",sms.msg.upper()):
+                data_table = parser.eq(sms)
                 if data_table:
                     dynadb.df_write(data_table)
                 else:
                     is_msg_proc_success = False
-            elif re.search("^SANDBOX ACK \d+ .+",msg.data.upper()):
-                is_msg_proc_success = amsg.process_ack_to_alert(msg)   
-            elif re.search("^ *(R(O|0)*U*TI*N*E )|(EVE*NT )", msg.data.upper()):
-                is_msg_proc_success = process_surficial_observation(msg)                  
+            elif re.search("^SANDBOX ACK \d+ .+",sms.msg.upper()):
+                is_msg_proc_success = amsg.process_ack_to_alert(sms)   
+            elif re.search("^ *(R(O|0)*U*TI*N*E )|(EVE*NT )", sms.msg.upper()):
+                is_msg_proc_success = process_surficial_observation(sms)                  
             else:
                 print "User SMS not in known template."
                 is_msg_proc_success = True
@@ -849,9 +864,9 @@ def parse_all_messages(args,allmsgs=[]):
 
             
         if is_msg_proc_success:
-            read_success_list.append(msg.num)
+            read_success_list.append(sms.inbox_id)
         else:
-            read_fail_list.append(msg.num)
+            read_fail_list.append(sms.inbox_id)
 
         print ">> SMS count processed:", ref_count
 
@@ -890,7 +905,7 @@ def get_router_ids():
 
     return nums
         
-def process_gateway_msg(msg):
+def process_gateway_msg(sms):
     """
        -The function that process the gateway message .
       
@@ -900,17 +915,17 @@ def process_gateway_msg(msg):
      
     """
     print ">> Coordinator message received"
-    print msg.data
+    print sms.msg
     
     # dbio.create_table("coordrssi","coordrssi")
 
     routers = get_router_ids()
     
-    msg.data = re.sub("(?<=,)(?=(,|$))","NULL",msg.data)
+    sms.msg = re.sub("(?<=,)(?=(,|$))","NULL",sms.msg)
     
     try:
-        datafield = msg.data.split('*')[1]
-        timefield = msg.data.split('*')[2]
+        datafield = sms.msg.split('*')[1]
+        timefield = sms.msg.split('*')[2]
         timestamp = dt.strptime(timefield,
             "%y%m%d%H%M%S").strftime("%Y-%m-%d %H:%M:%S")
         
@@ -951,7 +966,7 @@ def process_gateway_msg(msg):
         print "IndexError: list index out of range"
         logger_response(msg,14,True)
     except:
-        print ">> Unknown Error", msg.data
+        print ">> Unknown Error", sms.msg
         return False
 
 def get_arguments():
@@ -1023,10 +1038,9 @@ def main():
     
     if len(allmsgs) > 0:
         msglist = []
-        for item in allmsgs:
-            smsItem = gsmio.sms(item[0], str(item[2]), str(item[3]), 
-                str(item[1]))
-            msglist.append(smsItem)
+        for inbox_id, ts, sim_num, msg in allmsgs:
+            sms_item = smsclass.SmsInbox(inbox_id, msg, sim_num, str(ts))
+            msglist.append(sms_item)
          
         allmsgs = msglist
 
