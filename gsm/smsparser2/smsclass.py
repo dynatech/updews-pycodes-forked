@@ -3,7 +3,7 @@ class SmsInbox:
 		self.inbox_id = inbox_id
 		self.msg = msg
 		self.sim_num = sim_num
-		self.ts=ts     
+		self.ts = ts     
 
 class DataTable:
 	def __init__(self,name,data):

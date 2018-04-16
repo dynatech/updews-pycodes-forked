@@ -16,7 +16,7 @@ buff=[]
 SOMS=[]
 
 def v1(sms):
-    data = sms.data
+    data = sms.msg
     data = data.replace("DUE","")
     data = data.replace(",","*")
     data = data.replace("/","")
@@ -140,7 +140,7 @@ def twos_comp(hexstr):
         return num
 
 def v2(sms):
-    msg = sms.data
+    msg = sms.msg
     
     if len(msg.split(",")) == 3:
         print ">> Editing old data format"
