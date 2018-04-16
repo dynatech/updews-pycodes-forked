@@ -1,2 +1,3 @@
+import smsclass
 import subsurface
-import rain
+import earthquake

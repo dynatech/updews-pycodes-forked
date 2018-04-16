@@ -1,8 +1,6 @@
-import gsmio
 import re
 import ast
 from datetime import datetime as dt
-import serverdbio as dbio
 
 def get_extensometer_id(uts_name):
 	query = ("select extensometer_id from extensometers where "
@@ -17,10 +15,10 @@ def get_extensometer_id(uts_name):
 	return x_id
 
 
-def parse_extensometer_uts(msg):
+def parse_extensometer_uts(sms):
 	values = {}
 
-	uts_name = re.search("^[A-Z]{5}(?=\*L\*)",msg.data).group(0)
+	uts_name = re.search("^[A-Z]{5}(?=\*L\*)",sms.msg).group(0)
 	values["uts_name"] = uts_name
 
 	x_id = get_extensometer_id(uts_name)
@@ -29,7 +27,7 @@ def parse_extensometer_uts(msg):
 	else:
 		values['x_id'] = x_id	
 
-	uts_data = re.search("(?<=[A-Z]{5}\*L\*).*(?=\*[0-9]{12})",msg.data).group(0).lower()
+	uts_data = re.search("(?<=[A-Z]{5}\*L\*).*(?=\*[0-9]{12})",sms.msg).group(0).lower()
 	
 	for val_pair in uts_data.split(","):
 		val_pair_unpacked = val_pair.split(":")
@@ -45,7 +43,7 @@ def parse_extensometer_uts(msg):
 				print ">> Value conversion error %s" % (key)
 				return False
 
-	ts = re.search("(?<=\*)[0-9]{12}(?=$)",msg.data).group(0)
+	ts = re.search("(?<=\*)[0-9]{12}(?=$)",sms.msg).group(0)
 	ts = dt.strptime(ts,"%y%m%d%H%M%S").strftime("%Y-%m-%d %H:%M:%S")
 	values["ts"] = ts
 

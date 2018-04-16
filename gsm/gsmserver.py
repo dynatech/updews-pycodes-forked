@@ -6,7 +6,6 @@ import datetime
 import ConfigParser
 from datetime import datetime as dt
 from datetime import timedelta as td
-import gsmio
 import multiprocessing
 import somsparser as ssp
 import math
@@ -507,7 +506,7 @@ if __name__ == '__main__':
         except KeyboardInterrupt:
             print 'Bye'
             break
-        except gsmio.CustomGSMResetException:
-            print "> Resetting system because of GSM failure"
-            gsmio.resetGsm()
-            continue
+        # except gsmio.CustomGSMResetException:
+        #     print "> Resetting system because of GSM failure"
+        #     gsmio.resetGsm()
+        #     continue

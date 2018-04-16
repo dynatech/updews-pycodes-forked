@@ -1,7 +1,6 @@
 import re, sys
 from datetime import datetime as dt
 import subprocess, time
-import serverdbio as dbio
 import pandas as pd
 import memcache
 mc = memcache.Client(['127.0.0.1:11211'],debug=0)
