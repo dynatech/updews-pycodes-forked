@@ -2,7 +2,6 @@ import os,time,serial,re,sys,traceback
 import MySQLdb, subprocess
 from datetime import datetime as dt
 from datetime import timedelta as td
-import serverdbio as dbio
 import somsparser as ssp
 import argparse
 import lockscript as lock
@@ -50,19 +49,8 @@ def update_last_msg_received_table(txtdatetime,name,sim_num,msg):
         sim_num,msg)
         )
                 
-    dbio.commit_to_db(query, 'update_last_msg_received_table')
+    dynadb.write(query, 'update_last_msg_received_table')
     
-def update_sim_num_table(name,sim_num,date_activated):
-    return
-    db, cur = dbio.db_connect('local')
-    
-    query = ("INSERT IGNORE INTO site_column_sim_nums (name,sim_num, "
-        "date_activated) VALUES ('%s','%s','%s')" % (name.upper(),
-        sim_num, date_activated)
-        )
-
-    dbio.commit_to_db(query, 'update_sim_num_table')
-
 def check_name_of_number(number):
     db, cur = dynadb.connect()
     
@@ -171,7 +159,7 @@ def process_two_accel_col_data(sms):
     if timestamp == '':
         raise ValueError(">> Error: Unrecognized timestamp pattern " + ts)
 
-    update_sim_num_table(tsm_name,sender,timestamp[:8])
+    # update_sim_num_table(tsm_name,sender,timestamp[:8])
 
  # PARTITION the message into n characters
     if dtype == 'Y' or dtype == 'X':
@@ -227,7 +215,7 @@ def write_two_accel_data_to_db(dlist,msgtime):
     query = query[:-1]
     # print len(query)
     
-    dbio.commit_to_db(query, 'write_two_accel_data_to_db')
+    dynadb.write(query, 'write_two_accel_data_to_db')
    
 def write_soms_data_to_db(dlist,msgtime):
     query = ("INSERT IGNORE INTO soms_%s (ts,node_id,type_num,mval1,mval2) "
@@ -244,7 +232,7 @@ def write_soms_data_to_db(dlist,msgtime):
     query = query[:-1]
     query = query.replace("nan","NULL")
     
-    dbio.commit_to_db(query, 'write_soms_data_to_db')
+    dynadb.write(query, 'write_soms_data_to_db')
     
 def pre_process_col_v1(sms):
     data = sms.msg
@@ -296,7 +284,7 @@ def process_column_v1(sms):
         print 'Warning: Excess data will be ignored!'
         valid = nodenum*15
         
-    update_sim_num_table(tsm_name,sender,timestamp[:10])
+    # update_sim_num_table(tsm_name,sender,timestamp[:10])
         
     query_tilt = ("INSERT IGNORE INTO tilt_%s (ts,node_id,xval,yval,zval) "
         "VALUES " % (str(tsm_name.lower()))
@@ -365,9 +353,9 @@ def process_column_v1(sms):
 
         if i!=0:
         #     # dbio.create_table(str(tsm_name), "sensor v1")
-        #     dbio.commit_to_db(query_tilt, 'process_column_v1')
-            dbio.commit_to_db(query_tilt, 'process_column_v1')
-            dbio.commit_to_db(query_soms, 'process_column_v1')
+        #     dynadb.write(query_tilt, 'process_column_v1')
+            dynadb.write(query_tilt, 'process_column_v1')
+            dynadb.write(query_soms, 'process_column_v1')
         
         spawn_alert_gen(tsm_name,timestamp)
         return [[str(timestamp),node_id,valueX,valueY,valueZ],
@@ -439,7 +427,7 @@ def process_piezometer(sms):
     try:
       query = ("INSERT INTO piezo_%s (ts, frequency_shift, temperature ) VALUES"
       " ('%s', %s, %s)") % (msgname,txtdatetime,str(piezodata), str(tempdata))
-      print query
+      # print query
         # print query
     except ValueError:
         print '>> Error writing query string.', 
@@ -447,7 +435,7 @@ def process_piezometer(sms):
    
     
     try:
-        dbio.commit_to_db(query, 'process_piezometer')
+        dynadb.write(query, 'process_piezometer')
     except MySQLdb.ProgrammingError:
         print '>> Unexpected programing error'
         return False
@@ -517,7 +505,7 @@ def process_arq_weather(sms):
         print '>> Error writing query string.', 
         return
 
-    dbio.commit_to_db(query, 'process_arq_weather')
+    dynadb.write(query, 'process_arq_weather')
            
     print 'End of Process ARQ weather data'
 
@@ -593,10 +581,10 @@ def process_rain(sms):
         return
 
     try:
-        dbio.commit_to_db(query, 'ProcesRain')
+        dynadb.write(query, 'ProcesRain')
     except MySQLdb.ProgrammingError:
         # print query[:-2]
-        dbio.commit_to_db(query[:-2]+')', 'process_rain')
+        dynadb.write(query[:-2]+')', 'process_rain')
         
     print 'End of Process weather data'
 
@@ -703,7 +691,7 @@ def check_number_in_users(num):
 
     sc = mem.server_config()
 
-    user_id = dbio.query_database(query, 'cnin', sc["resource"]["smsdb"])
+    user_id = dynadb.read(query, 'cnin', sc["resource"]["smsdb"])
 
     print user_id
 
@@ -879,7 +867,7 @@ def get_router_ids():
       :returns: **nums **.(*obj*) - list of keys and values from model_id table;
      
     """
-    db, cur = dbio.db_connect()
+    db, cur = dbio.connect()
 
     query = ("SELECT `logger_id`,`logger_name` from `loggers` where `model_id`"
         " in (SELECT `model_id` FROM `logger_models` where "
@@ -941,7 +929,7 @@ def process_gateway_msg(sms):
             
             if count != 0:
                 print 'count', count
-                dbio.commit_to_db(query, 'process_gateway_msg')
+                dynadb.write(query, 'process_gateway_msg')
             else:
                 print '>> no data to commit'
             return True

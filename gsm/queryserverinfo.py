@@ -2,7 +2,6 @@ import os,time,serial,re,sys
 import datetime
 from datetime import datetime as dt
 from datetime import timedelta as td
-import serverdbio as dbio
 import gsmserver as server
 import cfgfileio as cfg
 import argparse

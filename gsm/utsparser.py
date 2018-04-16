@@ -1,8 +1,6 @@
-import gsmio
 import re
 import ast
 from datetime import datetime as dt
-import serverdbio as dbio
 
 def get_extensometer_id(uts_name):
 	query = ("select extensometer_id from extensometers where "
