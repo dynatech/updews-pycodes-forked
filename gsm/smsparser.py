@@ -31,11 +31,27 @@ def logger_response(sms,log_type,log='False'):
         return False
 
 def common_logger_sms(sms):
-    log_match = {'NO DATA FROM SENSELOPE':1,'PARSED':2,'^\w{4,5}\*0\*\*[0-9]{10,12}':2,'^ \*':3,
-    '^\*[0-9]{10,12}$':3,'^[A-F0-9]+\*[0-9]{10,12}$':3,'^[A-F0-9]+\*[A-F0-9]{10,13}':3,'^[A-F0-9]+\*[A-F0-9]{6,7}':3,
-    'REGISTERED':4,'SERVER NUMBER':5,'^MANUAL RESET':6,'POWER UP':7, 'SYSTEM STARTUP': 8,'SMS RESET':9, 
-    'POWER SAVING DEACTIVATED':10,'POWER SAVING ACTIVATED':11,'NODATAFROMSENSLOPE':12,
-    '^\w{4,5}\*[xyabcXYABC]\*[A-F0-9]+$':13,'!\*':15}
+    log_match = {
+        'NO DATA FROM SENSELOPE':1,
+        'PARSED':2,
+        '^\w{4,5}\*0\*\*[0-9]{10,12}':2,
+        '^ \*':3,
+        '^\*[0-9]{10,12}$':3,
+        '^[A-F0-9]+\*[0-9]{10,12}$':3,
+        '^[A-F0-9]+\*[A-F0-9]{10,13}':3,
+        '^[A-F0-9]+\*[A-F0-9]{6,7}':3,
+        'REGISTERED':4,
+        'SERVER NUMBER':5,
+        '^MANUAL RESET':6,
+        'POWER UP':7, 
+        'SYSTEM STARTUP': 8,
+        'SMS RESET':9, 
+        'POWER SAVING DEACTIVATED':10,
+        'POWER SAVING ACTIVATED':11,
+        'NODATAFROMSENSLOPE':12,
+        '^\w{4,5}\*[xyabcXYABC]\*[A-F0-9]+$':13,
+        '!\*':15
+    }
     for key,value in log_match.items():    
         if re.search(key, sms.msg.upper()):
             logger_response(sms,value,True)
@@ -423,13 +439,13 @@ def get_router_ids():
       :returns: **nums **.(*obj*) - list of keys and values from model_id table;
      
     """
-    db, cur = dbio.connect()
+    db, cur = dynadb.connect()
 
     query = ("SELECT `logger_id`,`logger_name` from `loggers` where `model_id`"
         " in (SELECT `model_id` FROM `logger_models` where "
         "`logger_type`='router') and `logger_name` is not null")
 
-    nums = dbio.query_database(query,'get_router_ids')
+    nums = dynadb.read(query,'get_router_ids')
     nums = {key: value for (value, key) in nums}
 
     return nums
