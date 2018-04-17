@@ -16,6 +16,7 @@ import volatile.memory as mem
 import smsparser2.subsurface as subsurface
 import smsparser2 as parser
 import smsparser2.smsclass as smsclass
+import smsparser2.rain as rain
 
 def logger_response(sms,log_type,log='False'):
     if log:
@@ -800,9 +801,22 @@ def parse_all_messages(args,allmsgs=[]):
                     is_msg_proc_success = False
             #check if message is from rain gauge
             elif re.search("^\w{4},[\d\/:,]+",sms.msg):
-                process_rain(sms)
+                # process_rain(sms)
+                df_data = rain.v3(sms)
+                if df_data:
+                    print df_data.data
+                    dynadb.df_write(df_data)
+                else:
+                    print '>> Value Error'
             elif re.search("ARQ\+[0-9\.\+/\- ]+$",sms.msg):
-                process_arq_weather(sms)
+                # process_arq_weather(sms)
+                df_data = rain.rain_arq(sms)
+                if df_data:
+                    print df_data.data
+                    dynadb.df_write(df_data)
+                else:
+                    print '>> Value Error'
+
             elif (sms.msg.split('*')[0] == 'COORDINATOR' or 
                 sms.msg.split('*')[0] == 'GATEWAY'):
                 is_msg_proc_success = process_gateway_msg(sms)
