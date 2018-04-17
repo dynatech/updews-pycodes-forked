@@ -445,11 +445,13 @@ def get_gsm_modules(reset_val = False):
     """
     mc = mem.get_handle()
     gsm_modules = mc.get('gsm_modules')
+    sc = mem.server_config()
+    gsm_modules_host = sc["resource"]["smsdb"]
     if reset_val or (gsm_modules == None or len(gsm_modules.keys()) == 0):
         print "Getting gsm modules information..."
         query = ("select gsm_id, gsm_name, gsm_sim_num, network_type, ser_port, "
             "pwr_on_pin, ring_pin, module_type from gsm_modules")
-        result_set = db.read(query,'get_gsm_ids','local')
+        result_set = db.read(query,'get_gsm_ids', gsm_modules_host)
 
         gsm_modules = dict()
         for gsm_id, name, num, net, port, pwr_on_pin, ring_pin, module in result_set:
