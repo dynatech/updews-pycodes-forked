@@ -3,10 +3,15 @@ import time
 import re
 from messaging.sms import SmsDeliver as smsdeliver
 from messaging.sms import SmsSubmit as smssubmit
-import RPi.GPIO as GPIO
 import volatile.memory as mem
 from datetime import datetime as dt
 from datetime import timedelta as td
+
+try:
+    import RPi.GPIO as GPIO
+except ImportError:
+    print "Warning: RPi.GPIO module Skipping import"
+
 
 class GsmSms:
     def __init__(self,num,sender,data,dt):
