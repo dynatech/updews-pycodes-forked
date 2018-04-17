@@ -51,8 +51,7 @@ def update_last_msg_received_table(txtdatetime,name,sim_num,msg):
         )
                 
     dynadb.write(query, 'update_last_msg_received_table')
-
-
+    
 def process_piezometer(sms):    
     #msg = message
     line = sms.msg
@@ -126,7 +125,6 @@ def process_piezometer(sms):
         
     print 'End of Process Piezometer data'
     return True
-
 
 def check_logger_model(logger_name):
     query = ("SELECT model_id FROM senslopedb.loggers where "
@@ -231,6 +229,18 @@ def process_surficial_observation(sms):
 
     return not has_parse_error
 
+def check_number_in_users(num):
+
+    query = "select user_id from user_mobile where sim_num = '%s'" % (num)
+
+    sc = mem.server_config()
+
+    user_id = dynadb.read(query, 'cnin', sc["resource"]["smsdb"])
+
+    print user_id
+
+    return user_id
+
 def parse_all_messages(args,allmsgs=[]):
     """
        -The function that all the message from gsm module .
@@ -333,7 +343,6 @@ def parse_all_messages(args,allmsgs=[]):
                     is_msg_proc_success = False
             #check if message is from rain gauge
             elif re.search("^\w{4},[\d\/:,]+",sms.msg):
-                # process_rain(sms)
                 df_data = rain.v3(sms)
                 if df_data:
                     print df_data.data
@@ -341,7 +350,6 @@ def parse_all_messages(args,allmsgs=[]):
                 else:
                     print '>> Value Error'
             elif re.search("ARQ\+[0-9\.\+/\- ]+$",sms.msg):
-                # process_arq_weather(sms)
                 df_data = rain.rain_arq(sms)
                 if df_data:
                     print df_data.data
