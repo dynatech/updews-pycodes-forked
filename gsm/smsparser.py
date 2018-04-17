@@ -52,6 +52,7 @@ def update_last_msg_received_table(txtdatetime,name,sim_num,msg):
                 
     dynadb.write(query, 'update_last_msg_received_table')
     
+
 def process_piezometer(sms):    
     #msg = message
     line = sms.msg
@@ -240,6 +241,7 @@ def check_number_in_users(num):
     print user_id
 
     return user_id
+
 
 def parse_all_messages(args,allmsgs=[]):
     """
