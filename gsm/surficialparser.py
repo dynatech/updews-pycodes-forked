@@ -5,6 +5,7 @@ import pandas as pd
 import memcache
 mc = memcache.Client(['127.0.0.1:11211'],debug=0)
 sc = mc.get('server_config')
+import dynadb.db as dynadb
 
 class SurficialParserError(Exception):
     pass
@@ -239,7 +240,7 @@ def get_date_from_sms(text):
     return date_str
 
 def get_site_id(site_code):
-    db, cur = dbio.db_connect('local') 
+    db, cur = dynadb.connect('local') 
 
     site_code = site_code.lower()
     
@@ -270,7 +271,7 @@ def get_site_id(site_code):
 
 def get_marker_id(site_id,marker_name):
 
-    db, cur = dbio.db_connect('local') 
+    db, cur = dynadb.connect('local') 
     
     try:
         query = ("SELECT markers.marker_id FROM markers "
@@ -291,7 +292,7 @@ def get_marker_id(site_id,marker_name):
         return marker_id
 
 def insert_new_markers(site_id, marker_name, ts):
-    db, cur = dbio.db_connect() 
+    db, cur = dynadb.connect() 
     # query = 'INSERT INTO markers (site_id) VALUES ({})'.format(site_id)
     # print query
     # cur.execute(query)
@@ -318,7 +319,7 @@ def insert_new_markers(site_id, marker_name, ts):
 
 def update_surficial_observations(obv):
     
-    db, cur = dbio.db_connect('local') 
+    db, cur = dynadb.connect('local') 
 
     # input marker_observation
     query = ("INSERT IGNORE INTO marker_observations "
@@ -328,7 +329,7 @@ def update_surficial_observations(obv):
             obv['weather'], obv['data_source'],obv['site_id'])
         )
 
-    mo_id = dbio.commit_to_db(query, 'uso', last_insert=True)[0][0]
+    mo_id = dynadb.write(query, 'uso', last_insert=True)[0][0]
 
     # check if entry is duplicate
     if mo_id == 0:
@@ -338,12 +339,12 @@ def update_surficial_observations(obv):
             "WHERE ts = '{}' and site_id = '{}'".format(obv['ts'],
             obv['site_id'])
             )    
-        mo_id = dbio.query_database(query,'uso')[0][0]
+        mo_id = dynadb.read(query,'uso')[0][0]
 
     return mo_id
 
 def update_surficial_data(obv, mo_id):
-    db, cur = dbio.db_connect('local') 
+    db, cur = dynadb.connect('local') 
 
     data_records = obv['data_records']
 
@@ -360,6 +361,6 @@ def update_surficial_data(obv, mo_id):
             mo_id, data_records[marker_name])
             )
 
-        dbio.commit_to_db(query,'usd')
+        dynadb.write(query,'usd')
 
     db.close()
