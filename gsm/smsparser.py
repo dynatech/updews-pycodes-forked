@@ -400,7 +400,7 @@ def parse_all_messages(args,allmsgs=[]):
             elif re.search("^ *(R(O|0)*U*TI*N*E )|(EVE*NT )", sms.msg.upper()):
                 is_msg_proc_success = process_surficial_observation(sms)                  
             else:
-                print "User SMS not in known template."
+                print "User SMS not in known template.", sms.msg
                 is_msg_proc_success = True
 
         else:

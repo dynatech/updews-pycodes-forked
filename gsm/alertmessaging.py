@@ -245,32 +245,34 @@ def get_name_of_staff(number):
 
     return name
 
-def process_ack_to_alert(msg):
+def process_ack_to_alert(sms):
+
+
     try:
-        stat_id = re.search("(?<=K )\d+(?= )",msg.data,re.IGNORECASE).group(0)
-    except:
+        stat_id = re.search("(?<=K )\d+(?= )", sms.msg,re.IGNORECASE).group(0)
+    except IndexError:
         errmsg = "Error in parsing alert id. Please try again"
-        # smstables.write_outbox(errmsg,msg.simnum)
+        # smstables.write_outbox(errmsg,sms.sim_num)
         return False
 
-    user_id, nickname = get_name_of_staff(msg.simnum)
-    print user_id, nickname, msg.data
+    user_id, nickname = get_name_of_staff(sms.sim_num)
+    print user_id, nickname, sms.msg
     if re.search("server",nickname.lower()):
         try:
-            nickname = re.search("(?<=-).+(?= from)", msg.data).group(0)
+            nickname = re.search("(?<=-).+(?= from)", sms.msg).group(0)
         except AttributeError:
             print "Error in processing nickname"
     # else:
     #     name = nickname
 
     try:
-        remarks = re.search("(?<=\d ).+(?=($|\r|\n))",msg.data, 
+        remarks = re.search("(?<=\d ).+(?=($|\r|\n))",sms.msg, 
             re.IGNORECASE).group(0)
     except AttributeError:
         errmsg = "Please put in your remarks."
-        smstables.write_outbox(message = errmsg, recipients = msg.simnum,
+        smstables.write_outbox(message = errmsg, recipients = sms.sim_num,
             gsm_id=4,table='users')
-        # write_outbox_dyna(errmsg, msg.simnum)
+        # write_outbox_dyna(errmsg, sms.sim_num)
         return True
 
     try:
@@ -280,22 +282,22 @@ def process_ack_to_alert(msg):
     except AttributeError:
         errmsg = ("Please put in the alert status validity."
             " i.e (VALID, INVALID, VALIDATING)")
-        smstables.write_outbox(message = errmsg, recipients = msg.simnum,
+        smstables.write_outbox(message = errmsg, recipients = sms.sim_num,
             gsm_id=4, table='users')
-        # write_outbox_dyna(errmsg, msg.simnum)
+        # write_outbox_dyna(errmsg, sms.sim_num)
         return True
 
     alert_status_dict = {"validating": 0, "valid": 1, "invalid": -1}
 
     query = ("update alert_status set user_id = %d, alert_status = %d, "
         "ts_ack = '%s', remarks = '%s' where stat_id = %s") % (user_id,
-        alert_status_dict[alert_status.lower()], msg.dt, remarks, stat_id)
+        alert_status_dict[alert_status.lower()], sms.ts, remarks, stat_id)
     # print query
     dbio.write(query,process_ack_to_alert)
 
     contacts = get_alert_staff_numbers()
     message = ("SANDBOX (test ack):\nAlert ID %s ACK by %s on %s\nStatus: %s\n"
-        "Remarks: %s") % (stat_id, nickname, msg.dt, alert_status, remarks)
+        "Remarks: %s") % (stat_id, nickname, sms.ts, alert_status, remarks)
     
     tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
     recipients_list = ""
