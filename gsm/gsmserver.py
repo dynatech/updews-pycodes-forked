@@ -355,6 +355,8 @@ def run_server(gsm_info,table='loggers'):
     print time.asctime()
     network = gsm_info['name'].upper()
     print "CSQ:", log_csq(gsm, gsm_info['id'])
+
+    gsm.reset()
     while True:
         m = gsm.count_msg()
         if m>0:
@@ -391,17 +393,14 @@ def run_server(gsm_info,table='loggers'):
                 checkIfActive = True
                 
         elif m == -1:
-            print'GSM MODULE MAYBE INACTIVE'
             serverstate = 'inactive'
             # log_runtime_status(network,"gsm inactive")
-            gsm.reset()
+            raise modem.ResetException("GSM MODULE MAYBE INACTIVE")
 
         elif m == -2:
-            print '>> Error in parsing mesages: No data returned by GSM'
-            gsm.reset()
+            raise modem.ResetException("Error in parsing mesages: No data returned by GSM")
         else:
-            print '>> Error in parsing mesages: Error unknown'
-            gsm.reset()
+            raise modem.ResetException("Error in parsing mesages: Error unknown")
 
 def get_arguments():
     """
@@ -508,7 +507,7 @@ if __name__ == '__main__':
         except KeyboardInterrupt:
             print 'Bye'
             break
-        # except gsmio.CustomGSMResetException:
-        #     print "> Resetting system because of GSM failure"
-        #     gsmio.resetGsm()
-        #     continue
+        except modem.ResetException:
+            print "> Resetting system because of GSM failure"
+            modem.reset()
+            continue

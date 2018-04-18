@@ -12,6 +12,8 @@ try:
 except ImportError:
     print "Warning: RPi.GPIO module Skipping import"
 
+class ResetException(Exception):
+    pass
 
 class GsmSms:
     def __init__(self,num,sender,data,dt):
@@ -62,7 +64,7 @@ class GsmModem:
                 a = '>> Error: GSM Unresponsive'
                 except_str = (">> Raising exception to reset code "
                     "from GSM module reset")
-                raise CustomGSMResetException()
+                raise ResetException(except_str)
             elif a.find('ERROR') >= 0:
                 print "Modem: ERROR"
                 return False
@@ -271,8 +273,7 @@ class GsmModem:
                 print '>> ValueError:'
                 print b
                 print '>> Retryring message reading'
-                # log_error(b)
-                # return -2
+                return -2
 
     def send_msg(self, msg, number, simulate=False):
         """
