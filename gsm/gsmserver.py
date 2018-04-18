@@ -356,7 +356,6 @@ def run_server(gsm_info,table='loggers'):
     network = gsm_info['name'].upper()
     print "CSQ:", log_csq(gsm, gsm_info['id'])
 
-    gsm.reset()
     while True:
         m = gsm.count_msg()
         if m>0:
