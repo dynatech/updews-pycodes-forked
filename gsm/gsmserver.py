@@ -66,6 +66,10 @@ def log_runtime_status(script_name,status):
         :type status: str
         :returns: N/A
     """
+
+    mc = mem.get_handle()
+    gsm_modules_host = sc["resource"]["smsdb"]
+
     if (status == 'alive'):
         ts = dt.today()
         diff = (ts.minute%10) * 60 + ts.second
@@ -79,7 +83,7 @@ def log_runtime_status(script_name,status):
     query = ("insert ignore into runtimelog (ts, script_name, log_details) "
         "Values ('%s','%s','%s')") % (logtimestamp, script_name, status)
     
-    db.write(query, 'log_runtime_status')
+    db.write(query, 'log_runtime_status', False,gsm_modules_host)
     """
         **Description:**
           - Log the runtime of script ro know its status.
