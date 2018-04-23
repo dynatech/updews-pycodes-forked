@@ -18,7 +18,14 @@ EQ_SMS_PATTERNS = {
 }
 
 def eq(sms):
+    """
+       - Process the sms message that fits for eq data.
+      
+      :param sms: list data info of sms message .
+      :type sms: list
+      :returns: **Dataframe**  - Return Dataframe structure output and if not return False for fail to parse message.
 
+    """  
     pattern_matches = {}
 
     # search for matches

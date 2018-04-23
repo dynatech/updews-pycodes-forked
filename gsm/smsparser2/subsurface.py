@@ -16,6 +16,14 @@ buff=[]
 SOMS=[]
 
 def v1(sms):
+    """
+       - Process the sms message that fits for subsurface version 1 data.
+      
+      :param sms: list data info of sms message .
+      :type sms: list
+      :returns: **Dataframe**  - The Parse data of the message and into Dataframe structure.
+
+    """    
     data = sms.msg
     data = data.replace("DUE","")
     data = data.replace(",","*")
@@ -128,7 +136,14 @@ def v1(sms):
         return
 
 def twos_comp(hexstr):
-    # print hexstr
+    """
+       - Process the convertion of x, y and z data for subsurface version 2 data.
+      
+      :param hexstr: String dat of x, y or z .
+      :type str: str
+      :returns: **num - sub or num**  - Converted value.
+
+    """
     num = int(hexstr[2:4]+hexstr[0:2],16)
     if len(hexstr) == 4:
         sub = 65536
@@ -140,6 +155,14 @@ def twos_comp(hexstr):
         return num
 
 def v2(sms):
+    """
+       - Process the sms message that fits for subsurface version 2 data.
+      
+      :param sms: list data info of sms message .
+      :type sms: list
+      :returns: **Dataframe**  - The Parse data of the message and into Dataframe structure.
+
+    """
     msg = sms.msg
     
     if len(msg.split(",")) == 3:
@@ -274,6 +297,20 @@ def log_errors(errortype, line, dt):
     text_file.close()
 
 def soms_parser(msgline,mode,div,err):
+    """
+       - Process the sms message that fits for soms data of version 2 and 3.
+      
+      :param msgline: Sms line of message for soms .
+      :param mode: Mode of the data of soms.
+      :param div: Soms division of data .
+      :param err: Error line in the message.
+      :type msgline: str
+      :type mode: str
+      :type div: str
+      :type err: str
+      :returns: **Dataframe**  - The Parse data of the message and into Dataframe structure.
+
+    """
 #    global prevdatetime
     global backupGID
     global tempbuff

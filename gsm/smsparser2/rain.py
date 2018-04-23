@@ -6,30 +6,69 @@ import dynadb.db as dynadb
 
 
 def check_number_in_users(num):
+    """
+       - Checks if the number exists in the user_mobile table.
+      
+      :param num: Cellphone number.
+      :type num: int
+      :returns: **query output** - Data output from the query.  
 
+     
+    """
     query = "select user_id from user_mobile where sim_num = '%s'" % (num)
     query = read(query=query, identifier='check if number user exists', 
         instance='local')
     return query
 
 def check_logger_model(logger_name):
+    """
+       - Checks if the logger name exists in the loggers table.
+      
+      :param logger_name: Logger Name.
+      :type logger_name: str
+      :returns: **query output** - Data output from the query.   
+
+     
+    """
     query = ("SELECT model_id FROM loggers where "
         "logger_name = '%s'") % logger_name
 
-    query = dynadb.read(query,'check_logger_model')[0][0]
-    return query
+    query = dynadb.read(query,'check_logger_model')
+    if len(query) != 0:
+        return query[0][0]
+    else:
+        return
 
 def check_name_of_number(number):
+    """
+       - Checks if the name of the number exists in the loggers table.
+      
+      :param number: Cellphone number.
+      :type number: int
+      :returns: **query output** - Data output from the query.  
+
+     
+    """
     query = ("select logger_name from loggers where "
                 "logger_id = (select logger_id from logger_mobile "
                 "where sim_num = '%s' order by date_activated desc limit 1)" 
                 % (number)
                 )
-    query = dynadb.read(query,'check_name_of_number')[0][0]
-    return query
+    query = dynadb.read(query,'check_name_of_number')
+    if len(query) != 0:
+        return query[0][0]
+    else:
+        return
 
 def rain_arq(sms):
-    
+    """
+       - Process the sms message that fits for rain arq data.
+      
+      :param sms: list data info of sms message .
+      :type sms: list
+      :returns: **Dataframe**  - Retuen Dataframe structure output and if not return False for fail to parse message.
+
+    """    
     #msg = message
     line = sms.msg
     sender = sms.sim_num
@@ -86,7 +125,14 @@ def rain_arq(sms):
 
 
 def v3 (sms):
+    """
+       - Process the sms message that fits for v3 data rain data.
+      
+      :param sms: list data info of sms message .
+      :type sms: list
+      :returns: **Dataframe**  - Retuen Dataframe structure output and if not return False for fail to parse message.
 
+    """    
     line = sms.msg
     sender = sms.sim_num
     

@@ -20,7 +20,7 @@ import modem.modem as modem
 def check_id_in_table(table,gsm_id):
     """
         **Description:**
-          -The check id in table is a function that select data from user or logger mobile with mobile id.
+          - Select data from user or logger mobile with mobile id.
          
         :param table: table name of the gsm_id.
         :param gsm_id: gsm_id of the recipient.
@@ -38,7 +38,7 @@ def check_id_in_table(table,gsm_id):
 def check_number_in_table(num):
     """
         **Description:**
-          -The check number in table is a function that checks if the number exists in users or loggers table.
+          - Checks if the cellphone number exists in users or loggers table.
          
         :param num: number of the recipient.
         :type num: int
@@ -80,16 +80,25 @@ def log_runtime_status(script_name,status):
         "Values ('%s','%s','%s')") % (logtimestamp, script_name, status)
     
     db.write(query, 'log_runtime_status')
-       
+    """
+        **Description:**
+          - Log the runtime of script ro know its status.
+         
+        :param script_name: Script file name.
+        :param status: script runtime status.
+        :type script_name: str
+        :type status: str
+        :returns: N/A
+    """       
     
 def get_allowed_prefixes(network):
     """
         **Description:**
-          -The get allowed prefixes is a function that runs to check network prefixes extensions.
+          - Checks network prefixes extensions in the volatile.memory funtion server_config.
          
         :param netwok: Table name (users and loggers) and **Default** to **users** table .
         :type network: str
-        :returns: **extended_prefix_list** (*int*) - The extended prefix
+        :returns: **extended_prefix_list** (*int*) - number with extended 639 or 09 in the  number.
     """
     sc = mem.server_config()
     if network.upper() == 'SMART':
@@ -106,10 +115,9 @@ def get_allowed_prefixes(network):
     
 def send_messages_from_db(gsm = None, table = 'users', send_status = 0, 
     gsm_info = None, limit = 10):
-   
     """
         **Description:**
-          -The send massages from database is a function that get all message unset and try to send the message again.
+          - Get all message unset and try to send the message again.
          
         :param table: Table name and **Default** to **users** table .
         :param send_status: the id number of the gsm message status and  **Default** to **0**.
@@ -188,9 +196,9 @@ def send_messages_from_db(gsm = None, table = 'users', send_status = 0,
 def try_sending_messages(gsm, gsm_info):
     """
         **Description:**
-          -The try sending message is a function that try to send message in the gsm network for loggers and users .
+          - Resending messages that have read_status **1 to 5** for smsinbox_(**loggers or users**).
          
-        :param gsm_id: gsm_id of 4(globe) and 5(smart).
+        :param gsm_id: gsm_id of 4 (globe) and 5 (smart).
         :type gsm_id: int
         :returns: N/A
     """
@@ -301,7 +309,18 @@ def simulate_gsm(network='simulate'):
     sys.exit()
 
 def log_csq(gsm, gsm_id):
-    
+    """
+        **Description:**
+          - Logs the gsm signal of the gsm id .
+         
+        :param gsm: List data of gsm.
+        :param gsm_id: Id of the gsm in the database table.
+        :type gsm: list
+        :type gsm_id: int
+        :returns: **csq_val** (*int*) -Signal value of gsm module.
+
+    """
+        
     ts_today = dt.today().strftime('%Y-%m-%d %H:%M:%S')
 
     csq_val = gsm.csq()
@@ -316,10 +335,11 @@ def log_csq(gsm, gsm_id):
 
         
 def run_server(gsm_info,table='loggers'):
-    # print gsm_info["id"]
     """
         **Description:**
-          -The run server is a function that runs the gsm server to read the recieved message and to try to send message from outbox.
+          - Runs the gsm server to read the recieved message and to try to send message from outbox.
+          
+          - It checks gsm info **(name, network, id)** to read messages from inbox and outbox of the table.
          
         :param gsm_info: id of the gsm server.
         :param table: table name to use and **Default** to **loggers**
@@ -327,6 +347,7 @@ def run_server(gsm_info,table='loggers'):
         :type gsm_info: int
         :type table: str
         :returns: N/A
+
     """
     minute_of_last_alert = dt.now().minute
     timetosend = 0
@@ -404,11 +425,26 @@ def run_server(gsm_info,table='loggers'):
 def get_arguments():
     """
         **Description:**
-          -The get_arguments is a function that checks the argument that being sent from main function and returns the
-        arguement list of the function.
+          - Checks the argument that being sent from main function and returns the arguement list of function.
          
         :parameters: N/A
-        :returns: **args** (*int,str*) - Mode of action from running python **loggers or users** (*smsinbox table*), **smart/globe/simulate** (*network name*)  and **gsm id** (*1,2,3...*) .
+        :returns: **args** (*int,str*) -Mode of action from running python when it reads the following.
+
+                :Example Input: **-t loggers -n smart -g 1**
+
+                **args.table**
+                    *Smsinbox table (loggers or users)*
+
+                    :Example Output: *loggers*
+                **args.network** 
+                    *Network name ( smart/globe/simulate )* 
+
+                    :Example Output: *smart*
+                **args.gsm_id**
+                    *GSM id ( 1, 2 ,3... )*
+
+                    :Example Output: *1*
+
     """
     parser = argparse.ArgumentParser(description="Run SMS server [-options]")
     parser.add_argument("-t", "--table", 
@@ -435,11 +471,24 @@ def get_arguments():
 def get_gsm_modules(reset_val = False):
     """
         **Description:**
-          -The get_gsm_modules is a function that get and check the gsm modules information.
+          - Checks the gsm modules information.
          
         :param reset_val: Trigger value to check the gsm information and **Default** to **False**
-        :type table: boolean
-        :returns: **gsm_modules** (*obj*) - returns gsm module data of (networ,name,num,port,pwr_on_pin,id).
+        :type table: boolean, default False
+        :returns: **gsm_modules** (*obj*) -Returns gsm module with the following.
+
+             **id**
+                -*GSM id* 
+             **network**
+                -*Globe or Smart* 
+             **name**
+                -*GSM name (globe1, smart1, globe2, smart2)* 
+             **num**
+                -*Cellphone number that starts with 639*
+             **port**
+                -*Port serial /dev/(smartport or globeport)*
+             **pwr_on_pin**
+                -*Power on pin ex. ( for globe1 pwr_on_pin 40 )*
     """
     mc = mem.get_handle()
     gsm_modules = mc.get('gsm_modules')
@@ -472,15 +521,12 @@ def main():
 
     """
         **Description:**
-          -The main is a function that runs the whole gsmserver with the logic of
-          checking if the gsmserver arguement is being initialize as gsm_id, table or network 
-          with respective agruement id.
-         
-        :parameters: N/A
-        :returns: N/A
-        .. note:: To run in terminal **python mainserver.py** **-g** *<gsm id (1,2,3...)>* **-t** *<smsinbox table (loggers or users)>* **-n** *<network name (smart/globe/simulate)>*.
+          - Runs the whole gsmserver by checking if the gsmserver arguement is being initialize as 
+          gsm_id, table or network with respective agruement id.
+        
+        .. note:: To run the script **open** a terminal or bash, then set your terminal/bash path to **/centraserver/gsm/** and type ""**python gsmserver.py** **-g** *<gsm id (1,2,3...)>* **-t** *<smsinbox table (loggers or users)>* **-n** *<network name (smart/globe/simulate)>* "" then **Enter**.
+        
     """
-
 
     args = get_arguments()
     
