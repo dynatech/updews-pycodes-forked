@@ -562,7 +562,7 @@ def process_gateway_msg(sms):
             print ">> Processing coordinator weather"
     except IndexError:
         print "IndexError: list index out of range"
-        logger_response(msg,14,True)
+        logger_response(sms,14,True)
     except:
         print ">> Unknown Error", sms.msg
         return False
