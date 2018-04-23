@@ -67,7 +67,7 @@ def log_runtime_status(script_name,status):
         :returns: N/A
     """
 
-    mc = mem.get_handle()
+    sc = mem.server_config()
     gsm_modules_host = sc["resource"]["smsdb"]
 
     if (status == 'alive'):
