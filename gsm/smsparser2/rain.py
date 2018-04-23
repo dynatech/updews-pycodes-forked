@@ -33,8 +33,11 @@ def check_logger_model(logger_name):
     query = ("SELECT model_id FROM loggers where "
         "logger_name = '%s'") % logger_name
 
-    query = dynadb.read(query,'check_logger_model')[0][0]
-    return query
+    query = dynadb.read(query,'check_logger_model')
+    if len(query) != 0:
+        return query[0][0]
+    else:
+        return
 
 def check_name_of_number(number):
     """
@@ -51,8 +54,11 @@ def check_name_of_number(number):
                 "where sim_num = '%s' order by date_activated desc limit 1)" 
                 % (number)
                 )
-    query = dynadb.read(query,'check_name_of_number')[0][0]
-    return query
+    query = dynadb.read(query,'check_name_of_number')
+    if len(query) != 0:
+        return query[0][0]
+    else:
+        return
 
 def rain_arq(sms):
     """
