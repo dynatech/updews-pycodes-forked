@@ -81,8 +81,9 @@ def rain_arq(sms):
         #table name
         linesplit = line.split('+')
        
-        msgname = check_name_of_number(sender).lower()
+        msgname = check_name_of_number(sender)
         if msgname:
+            msgname = msgname.lower()
             print ">> Number registered as", msgname
             msgname_contact = msgname
         else:
