@@ -108,10 +108,11 @@ def write(query='', identifier='', last_insert=False, instance='local'):
                     retry += 1
                     time.sleep(2)
     except KeyError:
+        dbi.close()
         print '>> Error: Writing to database', identifier
     except MySQLdb.IntegrityError:
+        dbi.close()
         print '>> Warning: Duplicate entry detected', identifier
-    dbi.close()
     return response_b
 
 def read(query='', identifier='', instance='local'):
