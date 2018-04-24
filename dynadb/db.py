@@ -73,27 +73,29 @@ def write(query='', identifier='', last_insert=False, instance='local'):
       :type instance: str , Default(local)
       :returns: N/A.
 
-    """  
-    db, cur = connect(instance)
+    """
+    dbi, cur = connect(instance)
 
-    b=''
+    response_b=''
     try:
         retry = 0
         while True:
             try:
-                a = cur.execute(query)
+                response_a = cur.execute(query)
 
-                b = ''
+                response_b = ''
                 if last_insert:
-                    b = cur.execute('select last_insert_id()')
-                    b = cur.fetchall()
+                    response_b = cur.execute('select last_insert_id()')
+                    response_b = cur.fetchall()
 
-                if a:
-                    db.commit()
+                if response_a:
+                    dbi.commit()
+                    dbi.close()
                     break
                 else:
 
-                    db.commit()
+                    dbi.commit()
+                    dbi.close()
                     time.sleep(0.1)
                     break
 
@@ -109,8 +111,8 @@ def write(query='', identifier='', last_insert=False, instance='local'):
         print '>> Error: Writing to database', identifier
     except MySQLdb.IntegrityError:
         print '>> Warning: Duplicate entry detected', identifier
-    db.close()
-    return b
+    dbi.close()
+    return response_b
 
 def read(query='', identifier='', instance='local'):
     """
@@ -125,21 +127,25 @@ def read(query='', identifier='', instance='local'):
       :returns: **a** - Return output from the query, Return False if Error .
 
     """  
-    db, cur = connect(instance)
-    a = ''
+    dbi, cur = connect(instance)
+    response_a = ''
     
     try:
-        a = cur.execute(query)
-        a = None
+        response_a = cur.execute(query)
+        response_a = None
         try:
-            a = cur.fetchall()
-            return a
+            response_a = cur.fetchall()
+            dbi.close()
+            return response_a
         except ValueError:
             return None
     except MySQLdb.OperationalError:
-        a =  None
+        response_a =  None
     except KeyError:
-        a = None
+        response_a = None
+
+    dbi.close()
+    return response_a
 
 def df_engine(host='local'):
     """
