@@ -206,7 +206,7 @@ def write_inbox(msglist,gsm_info):
             dbio.write(query_users,'write_raw_sms_to_db',
                 instance = sms_instance)
         
-def write_outbox(message='',recipients='',gsm_id='',table=''):
+def write_outbox(message = None, recipients = None, gsm_id = None, table = None):
     """
         **Description:**
           -The write outbox message to database is a function that insert message to smsoutbox with 
@@ -228,15 +228,26 @@ def write_outbox(message='',recipients='',gsm_id='',table=''):
     #     return
 
     sc = mem.server_config()
+    mc = mem.get_handle()
 
     host = sc['resource']['smsdb']
 
     tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
 
-    if table == '':
+    if not message:
+        raise ValueError("No message specified for sending")
+
+    if not recipients:
+        raise ValueError("No recipients specified for sending")
+    elif type(recipients).__name__ == 'str':
+        recipients = recipients.split(",")
+
+    if not table:
         table_name = check_number_in_table(recipients[0])
     else:
         table_name = table
+
+    print "table_name:", table_name
 
     query = ("insert into smsoutbox_%s (ts_written,sms_msg,source) VALUES "
         "('%s','%s','central')") % (table_name,tsw,message)
@@ -248,12 +259,15 @@ def write_outbox(message='',recipients='',gsm_id='',table=''):
             " VALUES ") % (table_name[:-1])
 
     table_mobile = static.get_mobiles(table_name, host)
+    def_gsm_id = mc.get(table_name[:-1] + "_mobile_def_gsm_id")
 
-    for r in recipients.split(","):        
+    for r in recipients:        
         tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
         try:
-            print outbox_id, table_mobile[r], gsm_id
-            query += "(%d,%d,%d)," % (outbox_id,table_mobile[r],gsm_id)
+            mobile_id = table_mobile[r]
+            gsm_id = def_gsm_id[mobile_id]
+            print outbox_id, mobile_id, gsm_id
+            query += "(%d, %d, %d)," % (outbox_id, mobile_id, gsm_id)
         except KeyError:
             print ">> Error: Possible key error for", r
             continue
