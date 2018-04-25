@@ -42,25 +42,6 @@ def logger_response(sms,log_type,log='False'):
     else:
         return False
 
-def check_number_in_table(num):
-    """
-        **Description:**
-          - Checks if the cellphone number exists in users or loggers table.
-         
-        :param num: number of the recipient.
-        :type num: int
-        :returns: table name **users** or **loggers** (*int*)
-    """
-    query = ("Select  IF((select count(*) FROM user_mobile where sim_num ='%s')>0,'1','0')" 
-    "as user,IF((select count(*) FROM logger_mobile where sim_num ='%s')>0,'1','0') as logger limit 80"%(num,num))
-    query_check_number = db.read(query,'check number in table')
-
-    if query_check_number[0][0] > query_check_number[0][1]:
-        return 'users'
-    elif query_check_number[0][0] < query_check_number[0][1]:
-        return 'loggers'
-    elif query_check_number[0][0] == '0' and query_check_number[0][1] == '0':
-        return False
 
 def common_logger_sms(sms):
     """
