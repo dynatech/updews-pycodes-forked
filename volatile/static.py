@@ -39,7 +39,7 @@ def set_mysql_tables(mc):
 
 	print ' ... done'
 
-def get_mobiles(table, host = None):
+def get_mobiles(table, host = None, args = None):
     """
         **Description:**
           -The get mobile sim nums is a function that get the number of the loggers or users in the database.
@@ -55,13 +55,20 @@ def get_mobiles(table, host = None):
     if host is None:
         raise ValueError("No host value given for mobile number")
 
+    if args:
+        is_reset_variables = args.reset_variables
+    else:
+        is_reset_variables = False
+
     if table == 'loggers':
 
         logger_mobile_sim_nums = mc.get('logger_mobile_sim_nums')
-        if logger_mobile_sim_nums:
+        if logger_mobile_sim_nums and not is_reset_variables:
             return logger_mobile_sim_nums
 
-        query = ("SELECT t1.mobile_id,t1.sim_num "
+        print "Force reset logger mobiles in memory"
+
+        query = ("SELECT t1.mobile_id, t1.sim_num, t1.gsm_id "
             "FROM logger_mobile AS t1 "
             "LEFT OUTER JOIN logger_mobile AS t2 "
             "ON t1.sim_num = t2.sim_num "
@@ -70,25 +77,35 @@ def get_mobiles(table, host = None):
             "AND t1.mobile_id < t2.mobile_id)) "
             "WHERE t2.sim_num IS NULL and t1.sim_num is not null")
 
-        nums = dbio.read(query,'get_mobile_sim_nums', host)
-        nums = {key: value for (value, key) in nums}
+        nums = dbio.read(query, 'get_mobile_sim_nums', host)
 
-        logger_mobile_sim_nums = nums
-        mc.set("logger_mobile_sim_nums",logger_mobile_sim_nums)
+        logger_mobile_sim_nums = {sim_num: mobile_id for (mobile_id, sim_num, 
+            gsm_id) in nums}
+        mc.set("logger_mobile_sim_nums", logger_mobile_sim_nums)
+
+        logger_mobile_def_gsm_id = {mobile_id: gsm_id for (mobile_id, sim_num, 
+            gsm_id) in nums}
+        mc.set("logger_mobile_def_gsm_id", logger_mobile_def_gsm_id)
 
     elif table == 'users':
 
         user_mobile_sim_nums = mc.get('user_mobile_sim_nums')
-        if user_mobile_sim_nums:
+        if user_mobile_sim_nums and not is_reset_variables:
             return user_mobile_sim_nums
+
+        print "Force reset user mobiles in memory"
         
-        query = "select mobile_id,sim_num from user_mobile"
+        query = "select mobile_id, sim_num, gsm_id from user_mobile"
 
-        nums = dbio.read(query,'get_mobile_sim_nums', host)
-        nums = {key: value for (value, key) in nums}
+        nums = dbio.read(query, 'get_mobile_sim_nums', host)
 
-        user_mobile_sim_nums = nums
+        user_mobile_sim_nums = {sim_num: mobile_id for (mobile_id, sim_num, 
+            gsm_id) in nums}
         mc.set("user_mobile_sim_nums",user_mobile_sim_nums)
+
+        user_mobile_def_gsm_id = {mobile_id: gsm_id for (mobile_id, sim_num, 
+            gsm_id) in nums}
+        mc.set("user_mobile_def_gsm_id", user_mobile_def_gsm_id)
 
     else:
         print 'Error: table', table
@@ -96,7 +113,7 @@ def get_mobiles(table, host = None):
 
     return nums
 
-def main():
+def main(args):
 
 	print dt.today().strftime('%Y-%m-%d %H:%M:%S')	
 	mc = memory.get_handle()
@@ -115,8 +132,8 @@ def main():
 
 	print "Set mobile numbers to memory",
 	mobiles_host = sc["resource"]["mobile_nums_db"]
-	get_mobiles("loggers", mobiles_host)
-	get_mobiles("users", mobiles_host)
+	get_mobiles("loggers", mobiles_host, args)
+	get_mobiles("users", mobiles_host, args)
 	print "done"
 	
 if __name__ == "__main__":
