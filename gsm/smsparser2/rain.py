@@ -7,29 +7,36 @@ import dynadb.db as dynadb
 
 def check_number_in_users(num):
     """
-       - Checks if the number exists in the user_mobile table.
-      
-      :param num: Cellphone number.
-      :type num: int
-      :returns: **query output** - Data output from the query.  
+    - The process of querying the mobile number  to check if the number exists.
 
-     
-    """
-    query = "select user_id from user_mobile where sim_num = '%s'" % (num)
-    query = read(query=query, identifier='check if number user exists', 
+    :param num: Instance hostname.
+    :type num: int
+
+    Returns:
+        str: Query output for success and return False if fails.
+
+    """   
+    query = "select user_id from user_mobile" 
+    query += "where sim_num = '%s'" % (num)
+    query = dynadb.read(query=query, 
+        identifier='check if number user exists', 
         instance='local')
-    return query
+    if len(query) != 0:
+        return query[0][0]
+    else:
+        return
 
 def check_logger_model(logger_name):
     """
-       - Checks if the logger name exists in the loggers table.
-      
-      :param logger_name: Logger Name.
-      :type logger_name: str
-      :returns: **query output** - Data output from the query.   
+    - The process of querying the logger name  to check if the logger name exists.
 
-     
-    """
+    :param logger_name: Instance hostname.
+    :type logger_name: str
+
+    Returns:
+       str: Query output for success and return False if fails.
+       
+    """  
     query = ("SELECT model_id FROM loggers where "
         "logger_name = '%s'") % logger_name
 
@@ -41,14 +48,15 @@ def check_logger_model(logger_name):
 
 def check_name_of_number(number):
     """
-       - Checks if the name of the number exists in the loggers table.
-      
-      :param number: Cellphone number.
-      :type number: int
-      :returns: **query output** - Data output from the query.  
+    - The process of querying the mobile number  to check the cellphone number logger name.
 
-     
-    """
+    :param number: Cellphone number.
+    :type number: int
+
+    Returns:
+      str: Query output for success and return False if fails.
+       
+    """  
     query = ("select logger_name from loggers where "
                 "logger_id = (select logger_id from logger_mobile "
                 "where sim_num = '%s' order by date_activated desc limit 1)" 
@@ -62,13 +70,23 @@ def check_name_of_number(number):
 
 def rain_arq(sms):
     """
-       - Process the sms message that fits for rain arq data.
-      
-      :param sms: list data info of sms message .
-      :type sms: list
-      :returns: **Dataframe**  - Retuen Dataframe structure output and if not return False for fail to parse message.
+    - The process of parsing data of Arq message of rain.
 
-    """    
+    :param sms: Dictionary of sms info.
+    :type sms: obj
+
+    Returns:
+       DataFrame: Dataframe output for success parsing and return
+       False if fails.
+
+    Example Output::
+
+            {
+                'param1': param1,
+                'param2': param2
+            }
+       
+    """       
     #msg = message
     line = sms.msg
     sender = sms.sim_num
@@ -125,14 +143,24 @@ def rain_arq(sms):
 
 
 
-def v3 (sms):
+def v3 (sms): 
     """
-       - Process the sms message that fits for v3 data rain data.
-      
-      :param sms: list data info of sms message .
-      :type sms: list
-      :returns: **Dataframe**  - Retuen Dataframe structure output and if not return False for fail to parse message.
+    - The process of parsing data of v3 message of rain.
 
+    :param sms: Dictionary of sms info.
+    :type sms: obj
+
+    Returns:
+       DataFrame: Dataframe output for success parsing and return
+       False if fails.
+
+    Example Output::
+
+            {
+                'param1': param1,
+                'param2': param2
+            }
+       
     """    
     line = sms.msg
     sender = sms.sim_num
