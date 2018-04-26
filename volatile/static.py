@@ -2,6 +2,7 @@ import memory
 import dynadb.db as dbio
 from datetime import datetime as dt
 import pandas.io.sql as psql
+import pandas as pd
 
 def get_db_dataframe(query):
     try:
@@ -113,28 +114,60 @@ def get_mobiles(table, host = None, args = None):
 
     return nums
 
+def get_surficial_markers(host = None, from_memory = True):
+    mc = memory.get_handle()
+    sc = memory.server_config()
+
+    if from_memory:
+        return mc.get("surficial_markers")
+
+    if not host:
+        print "Host defaults to datadb"
+        host = sc["resource"]["datadb"]
+
+    query = ("select m2.marker_id, m3.marker_name, m4.site_id from "
+        "(select max(history_id) as history_id, "
+        "marker_id from marker_history as m1 "
+        "group by m1.marker_id "
+        ") as m2 "
+        "inner join marker_names as m3 "
+        "on m2.history_id = m3.history_id "
+        "inner join markers as m4 "
+        "on m2.marker_id = m4.marker_id ")
+
+    engine = dbio.df_engine(host)
+    surficial_markers = pd.read_sql(query, engine)
+    mc.set("surficial_markers", surficial_markers)
+
+    return surficial_markers
+
+
 def main(args):
 
-	print dt.today().strftime('%Y-%m-%d %H:%M:%S')	
-	mc = memory.get_handle()
-	sc = memory.server_config()
-	
-	print "Reset alergenexec",
-	mc.set("alertgenexec", False)
-	print "done"
+    print dt.today().strftime('%Y-%m-%d %H:%M:%S')	
+    mc = memory.get_handle()
+    sc = memory.server_config()
 
-	print "Set static tables to memory",
-	try:
-		set_mysql_tables(mc)
-	except KeyError:
-		print ">> KeyError"
-	print "done"
+    print "Reset alergenexec",
+    mc.set("alertgenexec", False)
+    print "done"
 
-	print "Set mobile numbers to memory",
-	mobiles_host = sc["resource"]["mobile_nums_db"]
-	get_mobiles("loggers", mobiles_host, args)
-	get_mobiles("users", mobiles_host, args)
-	print "done"
+    print "Set static tables to memory",
+    try:
+    	set_mysql_tables(mc)
+    except KeyError:
+    	print ">> KeyError"
+    print "done"
+
+    print "Set mobile numbers to memory",
+    mobiles_host = sc["resource"]["mobile_nums_db"]
+    get_mobiles("loggers", mobiles_host, args)
+    get_mobiles("users", mobiles_host, args)
+    print "done"
+
+    print "Set surficial_markers to memory", 
+    get_surficial_markers(from_memory = False)
+    print "done"
 	
 if __name__ == "__main__":
     main()
