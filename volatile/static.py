@@ -141,6 +141,14 @@ def get_surficial_markers(host = None, from_memory = True):
 
     return surficial_markers
 
+def get_surficial_parser_reply_messages():
+    query = "select * from surficial_parser_reply_messages"
+    
+    df = get_db_dataframe(query)
+    df = df.set_index("msg_id")
+
+    return df
+
 
 def main(args):
 
@@ -167,6 +175,11 @@ def main(args):
 
     print "Set surficial_markers to memory", 
     get_surficial_markers(from_memory = False)
+    print "done"
+
+    print "Set surficial_parser_reply_messages",
+    df = get_surficial_parser_reply_messages()
+    mc.set("surficial_parser_reply_messages", df)
     print "done"
 	
 if __name__ == "__main__":
