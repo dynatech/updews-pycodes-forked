@@ -11,9 +11,9 @@ mc = memcache.Client(['127.0.0.1:11211'],debug=0)
 
 #c = cfg.config()
 
-class dbInstance:
+class DbInstance:
        
-  def __init__(self,host):
+  def __init__(self, host):
     """
     - The constructor for database instance.
 
@@ -23,7 +23,7 @@ class dbInstance:
 
     Example Output::
 
-        >>> x = dbInstance('local')
+        >>> x = DbInstance('local')
         >>> x.name, x.host, x.user, x.password
         ('senslopedb', '127.0.0.1', 'root', 'admin')
 
@@ -36,7 +36,7 @@ class dbInstance:
     self.password = sc['db']['password']
       
 
-def connect(host='local'):   
+def connect(host = 'local'):   
     """
     - Creating the ``MySQLdb.connect`` connetion for the database.
 
@@ -51,7 +51,7 @@ def connect(host='local'):
         MySQLdb.OperationalError: Error in database connection.
 
     """ 
-    dbc = dbInstance(host)
+    dbc = DbInstance(host)
 
     while True:
         try:
@@ -65,7 +65,7 @@ def connect(host='local'):
             time.sleep(2)
 
 
-def write(query='', identifier='', last_insert=False, instance='local'):
+def write(query = '', identifier = '', last_insert = False, instance = 'local'):
     """
     - The process of writing to the database by a query statement.
 
@@ -119,7 +119,7 @@ def write(query='', identifier='', last_insert=False, instance='local'):
     db.close()
     return b
 
-def read(query='', identifier='', instance='local'):
+def read(query = '', identifier = '', instance = 'local'):
     """
     - The process of reading the output from the query statement.
 
@@ -161,7 +161,7 @@ def read(query='', identifier='', instance='local'):
     except KeyError:
         a = None
 
-def df_engine(host='local'):
+def df_engine(host = 'local'):
     """
     - Creating the engine connection for the database.
 
@@ -173,9 +173,9 @@ def df_engine(host='local'):
 
 
     """ 
-    dbc = dbInstance(host)
-    engine = create_engine('mysql+pymysql://'+dbc.user+':'
-        +dbc.password+'@'+dbc.host+':3306/'+dbc.name)
+    dbc = DbInstance(host)
+    engine = create_engine('mysql+pymysql://' + dbc.user + ':'
+        + dbc.password + '@' + dbc.host + ':3306/' + dbc.name)
     return engine
 
 def df_write(data_table, host = 'local', last_insert = False):
@@ -183,7 +183,7 @@ def df_write(data_table, host = 'local', last_insert = False):
     - The process of writing data frame data to a database.
 
     Args:
-        data_table (obj): data_table class data from smsclass.py.
+        data_table (obj): DataTable class object from smsclass.py.
         host (str): Hostname. Defaults to local.
 
     Raises:
@@ -195,12 +195,11 @@ def df_write(data_table, host = 'local', last_insert = False):
     """
     engine = df_engine(host)
     df = data_table.data
-    df = df.drop_duplicates(subset=None, keep='first',
-     inplace=False)
+    df = df.drop_duplicates(subset = None, keep = 'first', inplace = False)
     value_list = str(df.values.tolist())[:-1][1:]
     value_list = value_list.replace("]",")").replace("[","(")
     column_name_str = str(list(df))[:-1][1:].replace("\'","")
-    duplicate_value_str = ", ".join(["%s = VALUES(%s)"%(name, name) 
+    duplicate_value_str = ", ".join(["%s = VALUES(%s)" % (name, name) 
         for name in list(df)]) 
     query = "insert into %s (%s) values %s" % (data_table.name,
         column_name_str, value_list)
