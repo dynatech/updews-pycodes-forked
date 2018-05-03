@@ -205,6 +205,7 @@ def df_write(data_table, host = 'local', last_insert = False):
     query = "insert into %s (%s) values %s" % (data_table.name,
         column_name_str, value_list)
     query += " on DUPLICATE key update  %s " % (duplicate_value_str)
+    print  query
     try:
         last_insert_id = write(query = query, 
             identifier = 'Insert dataFrame values', 
