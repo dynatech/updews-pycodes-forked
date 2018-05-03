@@ -182,7 +182,7 @@ def df_write(data_table, host = 'local', last_insert = False):
     - The process of writing data frame data to a database.
 
     Args:
-        data_table (args): data_table class data from smsclass.py.
+        data_table (obj): data_table class data from smsclass.py.
         host (str): Hostname. Defaults to local.
 
     Raises:
