@@ -19,9 +19,10 @@ def v1(sms):
     """
     - The process of parsing version 1 subsurface data.
       
-    :param sms: Dictionary of sms info.
-    :type sms: obj
-
+    # :param sms: Dictionary of sms info.
+    # :type sms: obj
+    Args:
+        sms (obj): Dictionary of sms info.
     Returns:
        DataFrame: Dataframe output for success parsing and return
        False if fails.
@@ -146,8 +147,8 @@ def v1(sms):
             outl_tilt.append(line_tilt)
             outl_soms.append(line_soms)
             
-        df_tilt = smsclass.DataTable('tilt_'+tsm_name,pd.DataFrame(outl_tilt).set_index(['ts']))
-        df_soms = smsclass.DataTable('soms_'+tsm_name,pd.DataFrame(outl_soms).set_index(['ts']))
+        df_tilt = smsclass.DataTable('tilt_'+tsm_name,pd.DataFrame(outl_tilt))
+        df_soms = smsclass.DataTable('soms_'+tsm_name,pd.DataFrame(outl_soms))
         data = [df_tilt,df_soms]
         return data
       

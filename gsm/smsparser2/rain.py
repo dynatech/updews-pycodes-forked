@@ -148,7 +148,7 @@ def rain_arq(sms):
             df_data = [{'ts':txtdatetime,'rain':rain,'temperature':temp,
             'humidity':hum,'battery1':batv1,'battery2':batv2}]
 
-        df_data = pd.DataFrame(df_data).set_index('ts')
+        df_data = pd.DataFrame(df_data)
         df_data = smsclass.DataTable('rain_'+msgname,df_data)
         return df_data
     except ValueError:
@@ -235,7 +235,7 @@ def v3 (sms):
         else:
            df_data = [{'ts':txtdatetime,'rain':rain}]
 
-        df_data = pd.DataFrame(df_data).set_index('ts')
+        df_data = pd.DataFrame(df_data)
         df_data = smsclass.DataTable('rain_'+msgtable.lower()
             ,df_data)
         return df_data         

@@ -19,6 +19,7 @@ class dbInstance:
 
     :param host: Instance hostname.
     :type host: str
+    
 
     Example Output::
 
@@ -192,14 +193,16 @@ def df_write(data_table, host = 'local', last_insert = False):
 
 
     """
-    engine = df_engine(host)
+    # engine = df_engine(host)
     df = data_table.data
     df = df.drop_duplicates(subset=None, keep='first',
      inplace=False)
-    df = df.reset_index()
-    df_list = str(df.values.tolist())[:-1][1:]
-    df_list =df_list.replace("]",")").replace("[","(")
-    df_header = str(list(df))[:-1][1:].replace("\'","")
+    value_list = str(df.values.tolist())[:-1][1:]
+    value_list = value_list.replace("]",")").replace("[","(")
+    column_name_str = str(list(df))[:-1][1:].replace("\'","")
+    duplicate_value_str = ",".join("%s = VALUES(%s)" %(name,name)
+        for name in list(value_list))
+    print duplicate_value_str 
     df_keys = [];
     for value in list(df):
         df_keys.append(value +" = VALUES("+value+")")
@@ -209,14 +212,15 @@ def df_write(data_table, host = 'local', last_insert = False):
     query = "insert into %s (%s) values %s" % (data_table.name,
         df_header, df_list)
     query += " on DUPLICATE key update  %s " % (df_keys)
-    try:
-        last_insert_id = write(query = query, 
-            identifier = 'Insert dataFrame values', last_insert = last_insert,
-            host = host)
-        return last_insert_id
-    except IndexError:
-        print "\n\n>> Error: Possible data type error"
-    except ValueError:
-        print ">> Value error detected"   
-    except AttributeError:
-        print ">> Value error in data pass"       
+
+    # try:
+    #     last_insert_id = write(query = query, 
+    #         identifier = 'Insert dataFrame values', last_insert = last_insert,
+    #         host = host)
+    #     return last_insert_id
+    # except IndexError:
+    #     print "\n\n>> Error: Possible data type error"
+    # except ValueError:
+    #     print ">> Value error detected"   
+    # except AttributeError:
+    #     print ">> Value error in data pass"       
