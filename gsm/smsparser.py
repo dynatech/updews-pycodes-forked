@@ -20,15 +20,14 @@ import smsparser2.rain as rain
 
 def logger_response(sms,log_type,log='False'):
     """
-       - Log the id of the match expression on table logger_respose.
-      
-      :param sms: list data info of sms message .
-      :param Log_type: list data info of sms message .
-      :param Log: Switch on or off the logging of the response.
-      :type sms: list
-      :type sms: str
-      :type sms: str, Default(False)
-      :returns: N/A.
+    - The process of logging the id of the match expression on table logger_respose.
+
+    :param sms: list data info of sms message .
+    :param Log_type: list data info of sms message .
+    :param Log: Switch on or off the logging of the response.
+    :type sms: list
+    :type sms: str
+    :type sms: str, Default(False)
 
     """ 
     if log:
@@ -45,11 +44,12 @@ def logger_response(sms,log_type,log='False'):
 
 def common_logger_sms(sms):
     """
-       - Check sms message if matches to the regular expression.
-      
-      :param sms: list data info of sms message .
-      :type sms: list
-      :returns: **value** - Return the id value number of the match regular expression and Return False if not.
+    - Check sms message if matches to the regular expression.
+
+    :param sms: list data info of sms message .
+    :type sms: list
+    Returns: 
+        bool: Outputs the id value number of the match regular expression and Return False if not.
 
     """ 
     log_match = {
@@ -81,17 +81,16 @@ def common_logger_sms(sms):
 
 def update_last_msg_received_table(txtdatetime,name,sim_num,msg):
     """
-       - Update recieved message from the last_msg_recived table.
-      
-      :param txtdatetime: list data info of sms message .
-      :param name: list data info of sms message .
-      :param sim_num: list data info of sms message .
-      :param msg: list data info of sms message .
-      :type txtdatetime: date
-      :type name: str
-      :type sim_num: str
-      :type msg: str    
-      :returns: N/A.
+    - Update recieved message from the last_msg_recived table.
+
+    :param txtdatetime: list data info of sms message .
+    :param name: list data info of sms message .
+    :param sim_num: list data info of sms message .
+    :param msg: list data info of sms message .
+    :type txtdatetime: date
+    :type name: str
+    :type sim_num: str
+    :type msg: str    
 
     """
     query = ("insert into senslopedb.last_msg_received"
@@ -106,11 +105,13 @@ def update_last_msg_received_table(txtdatetime,name,sim_num,msg):
 
 def process_piezometer(sms):
     """
-       - Process the sms message that fits for process_piezometer and save paserse message to database.
-      
-      :param sms: list data info of sms message .
-      :type sms: list
-      :returns: **has_parse_error**  - Return False for fail to parse message .
+    - The process of parsing  process_piezometer data.
+
+    :param sms: list data info of sms message .
+    :type sms: list
+    Returns:
+        bool: True output for success parsing and return
+              False if fails.
 
     """     
     #msg = message
@@ -194,13 +195,12 @@ def check_logger_model(logger_name):
     
 def spawn_alert_gen(tsm_name, timestamp):
     """
-       - Process of sending data to alert generator for loggers and users.
-      
-      :param tsm_name: name of logger or user .
-      :param timestamp: Data timestamp of message .
-      :type tsm_name: str
-      :type timestamp: date
-      :returns: N/A.
+    - The process of sending data to alert generator for loggers and users.
+
+    :param tsm_name: name of logger or user .
+    :param timestamp: Data timestamp of message .
+    :type tsm_name: str
+    :type timestamp: date
 
     """
     # spawn alert alert_gens
@@ -248,11 +248,13 @@ def spawn_alert_gen(tsm_name, timestamp):
 
 def process_surficial_observation(sms):
     """
-       - Process the sms message that fits for surficial observation and save paserse message to database.
-      
-      :param sms: list data info of sms message .
-      :type sms: list
-      :returns: **has_parse_error**  - Return False for fail to parse message .
+    - Process the sms message that fits for surficial observation and save paserse message to database.
+
+    :param sms: list data info of sms message .
+    :type sms: list
+    Returns:
+        bool: True output for success process and return
+       False if fails.
 
     """
     sc = mem.server_config()
@@ -315,13 +317,16 @@ def check_number_in_users(num):
 
 def parse_all_messages(args,allmsgs=[]):
     """
-       - Processing all messages that came from smsinbox_(loggers/users) and select parsing method dependent to sms message .
-      
-      :param args: arguement list of modes and criteria of sms message.
-      :param allmsgs: list of all messages that being selected from loggers and users table.
-      :type args: obj
-      :type allmsgs: array
-      :returns: **read_success_list, read_fail_list** (*array*)- list of  success and fail message parse.  
+    - Processing all messages that came from smsinbox_(loggers/users) and select parsing method dependent to sms message .
+
+    :param args: arguement list of modes and criteria of sms message.
+    :param allmsgs: list of all messages that being selected from loggers and users table.
+    :type args: obj
+    :type allmsgs: obj
+    
+    Returns:
+        bool: True output for success parsing and return
+       False if fails.
 
      
     """
@@ -487,10 +492,11 @@ def parse_all_messages(args,allmsgs=[]):
         
 def get_router_ids():
     """
-       - Select Router id from loggers table
-      
-      :parameter: N/A
-      :returns: **nums **.(*obj*) - list of keys and values from model_id table;
+    - The process of selecting router id from loggers table
+
+    :parameter: N/A
+    Returns: 
+        obj: list of keys and values from model_id table;
      
     """
     db, cur = dynadb.connect()
@@ -506,12 +512,13 @@ def get_router_ids():
         
 def process_gateway_msg(sms):
     """
-       - Processing the gateway message parser for sms data and save data to database.
-      
-      :param sms: list data info of sms message .
-      :type msg: list
-      :returns: **True or False ** - Return False for fail to parse message .
-     
+    - The process of processing the gateway message parser for sms data and save data to database.
+
+    :param sms: list data info of sms message .
+    :type msg: list
+    Returns:
+        bool: True output for success parsing and return
+       False if fails.
     """
     print ">> Coordinator message received"
     print sms.msg
@@ -570,36 +577,32 @@ def process_gateway_msg(sms):
 
 def get_arguments():
     """
-       -The function that checks the argument that being sent from main function and returns the
-        arguement of the function.
-      
-      :parameters: N/A
-      :returns: **args** - Mode of action from running python **-db,-ns,-b,-r,-l,-s,-g,-m,-t**.
-         
-         :Example Input: **-db gsm2 -l 5000 -s 1 -t loggers**
+    -The function that checks the argument that being sent from main function and returns the
+    arguement of the function.
 
-             **args.dbhost**
-                -*Database host it can be (local or gsm2)*
+    Returns: 
+        dict: Mode of action from running python **-db,-ns,-b,-r,-l,-s,-g,-m,-t**.
+     
+    Example Output::
 
-                :Example Output: *gsm2*
-             **args.table**
-                -*Smsinbox table (loggers or users)*
-
-                :Example Output: *loggers* 
-             **args.mode**
-                -*Mode id* 
-             **args.gsm**
-                -*GSM name (globe1, smart1, globe2, smart2)*
-             **args.status**
-                -*GSM status of inbox/outbox*
-             **args.messagelimit**
-                -*Number of message to read in the process*
-             **args.runtest**
-                -*Default value False. Set True when running a test in the process*
-             **args.bypasslock**
-                -*Default value False.*
-             **args.nospawn**
-                -*Default value False.*
+         >> print args.dbhost
+           gsm2 #Database host it can be (local or gsm2)
+         >> print args.table
+           loggers #Smsinbox table (loggers or users)
+         >> print args.mode
+            #Mode id
+         >> print args.gsm
+            globe #GSM name (globe1, smart1, globe2, smart2)*
+         >> print args.status**
+            2 #GSM status of inbox/outbox#
+         >> print args.messagelimit**
+            5000 #Number of message to read in the process
+         >> print args.runtest**
+            #Default value False. Set True when running a test in the process
+         >> print args.bypasslock**
+            #Default value False
+         >> print args.nospawn
+            #Default value False
     """
     parser = argparse.ArgumentParser(description = ("Run SMS parser\n "
         "smsparser [-options]"))
@@ -636,35 +639,32 @@ def get_arguments():
 
 def main():
     """
-        **Description:**
-          - Runs the whole smsparser with the logic of parsing sms txt of users and loggers.
+    - The process of running the whole smsparser with the logic of parsing sms txt of users and loggers.
 
-                 :Example Input: **-db gsm2 -l 5000 -s 1 -t loggers**
+        **-db**
+        -*Database host it can be (local or gsm2)*
 
-             **-db**
-                -*Database host it can be (local or gsm2)*
+        :Example Output: *gsm2*
+        **-t**
+        -*Smsinbox table (loggers or users)*
 
-                :Example Output: *gsm2*
-             **-t**
-                -*Smsinbox table (loggers or users)*
+        :Example Output: *loggers* 
+        **-m**
+        -*Mode id* 
+        **-g**
+        -*GSM name (globe1, smart1, globe2, smart2)*
+        **-s**
+        -*GSM status of inbox/outbox*
+        **-l**
+        -*Number of message to read in the process*
+        **-r**
+        -*Default value False. Set True when running a test in the process*
+        **-b**
+        -*Default value False.*
+        **-ns**
+        -*Default value False.*
 
-                :Example Output: *loggers* 
-             **-m**
-                -*Mode id* 
-             **-g**
-                -*GSM name (globe1, smart1, globe2, smart2)*
-             **-s**
-                -*GSM status of inbox/outbox*
-             **-l**
-                -*Number of message to read in the process*
-             **-r**
-                -*Default value False. Set True when running a test in the process*
-             **-b**
-                -*Default value False.*
-             **-ns**
-                -*Default value False.*
-
-        .. note:: To run in terminal **python smsparser.py ** with arguments (** -db,-ns,-b,-r,-l,-s,-g,-m,-t**).
+    .. note:: To run in terminal **python smsparser.py ** with arguments (** -db,-ns,-b,-r,-l,-s,-g,-m,-t**).
     """
 
     args = get_arguments()

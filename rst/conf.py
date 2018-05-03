@@ -41,20 +41,29 @@ autodoc_default_flags = [
          "show-inheritance",
  ]
 autosummary_generate = True  # Make _autosummary files and include them
-napoleon_numpy_docstring = False  # Force consistency, leave only Google
-napoleon_use_rtype = False  # More legible
-
-
-
-
-
 
 extensions = ['sphinx.ext.autodoc',
     'sphinx.ext.intersphinx',
     'sphinx.ext.coverage',
     'sphinx.ext.viewcode',
     'sphinx.ext.autosummary',
-    'sphinx.ext.napoleon']
+    'sphinx.ext.napoleon',
+    'sphinx.ext.todo']
+
+
+# Napoleon settings
+napoleon_google_docstring = True
+napoleon_numpy_docstring = True
+napoleon_include_init_with_doc = False
+napoleon_include_private_with_doc = False
+napoleon_include_special_with_doc = False
+napoleon_use_admonition_for_examples = False
+napoleon_use_admonition_for_notes = False
+napoleon_use_admonition_for_references = False
+napoleon_use_ivar = False
+napoleon_use_param = True
+napoleon_use_rtype = True
+napoleon_use_keyword = True
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -70,7 +79,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'Central Server Documentation'
-copyright = u'2018, 1.0'
+copyright = u'2018'
 author = u'DYNASLOPE'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -98,7 +107,7 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 pygments_style = 'sphinx'
 
 # If true, `todo` and `todoList` produce output, else they produce nothing.
-todo_include_todos = False
+todo_include_todos = True
 
 
 # -- Options for HTML output ----------------------------------------------

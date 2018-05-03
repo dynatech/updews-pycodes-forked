@@ -6,45 +6,50 @@ import memcache
 from sqlalchemy import MetaData
 from sqlalchemy import Table
 
-
-
 mc = memcache.Client(['127.0.0.1:11211'],debug=0)
 
 
 #c = cfg.config()
 
 class dbInstance:
+       
+  def __init__(self,host):
     """
-       - Class for database info to class
-      
-      :param name: Name of the database.
-      :param host: Hostname for connection.
-      :param user: User for host.
-      :param password: Password for host.
-      :type name: str
-      :type host: str
-      :type user: str
-      :type password: str
-      :returns: Class Dictionary.
+    - The constructor for database instance.
 
-    """       
-    def __init__(self,host):
-        sc = mc.get('server_config')
-        self.name = sc['db']['name']
-        self.host = sc['hosts'][host]
-        self.user = sc['db']['user']
-        self.password = sc['db']['password']
+    :param host: Instance hostname.
+    :type host: str
+
+    Example Output::
+
+        >>> x = dbInstance('local')
+        >>> x.name, x.host, x.user, x.password
+        ('senslopedb', '127.0.0.1', 'root', 'admin')
+
+
+    """      
+    sc = mc.get('server_config')
+    self.name = sc['db']['name'] 
+    self.host = sc['hosts'][host] 
+    self.user = sc['db']['user'] 
+    self.password = sc['db']['password']
       
 
-def connect(host='local'):
+def connect(host='local'):   
     """
-       - Connect to the database by a Mysqldb.
-      
-      :param host: Host Name of the database.
-      :type host: str , Default(local)
-      :returns: **db , cur** - The database connection extension.
+    - Creating the ``MySQLdb.connect`` connetion for the database.
 
-    """   
+    Args:
+        host (str): Hostname.
+
+    Returns:
+        Returns the ``MySQLdb.connect()`` as db and ``db.cursor()`` as cur 
+        connection to the host.
+
+    Raises:
+        MySQLdb.OperationalError: Error in database connection.
+
+    """ 
     dbc = dbInstance(host)
 
     while True:
@@ -61,41 +66,40 @@ def connect(host='local'):
 
 def write(query='', identifier='', last_insert=False, instance='local'):
     """
-       - Process of the writing to the database by a query statement.
-      
-      :param query: Query statement on writing in the database.
-      :param identifier: Identifier statement for the query when it runs.
-      :param Last_insert: Select the last insert.
-      :param instance: Hostname where the query will be running.
-      :type query: str
-      :type identifier: str
-      :type Last_insert: str , Default(False)
-      :type instance: str , Default(local)
-      :returns: N/A.
+    - The process of writing to the database by a query statement.
 
-    """
-    dbi, cur = connect(instance)
+    Args:
+        query (str): Query statement.
+        identifier (str): Identifier statement for the query.
+        Last_insert (str): Select the last insert. Defaults to False.
+        instance (str): Hostname. Defaults to local.
+    
+    Raises:
+        IndexError: Error in retry index.
+        KeyError: Error on writing to database.
+        MySQLdb.IntegrityError: If duplicate entry detected.
 
-    response_b=''
+    """ 
+    db, cur = connect(instance)
+
+    b=''
     try:
         retry = 0
         while True:
             try:
-                response_a = cur.execute(query)
+                a = cur.execute(query)
 
-                response_b = ''
+                b = ''
                 if last_insert:
-                    response_b = cur.execute('select last_insert_id()')
-                    response_b = cur.fetchall()
+                    b = cur.execute('select last_insert_id()')
+                    b = cur.fetchall()
 
-                if response_a:
-                    dbi.commit()
-                    dbi.close()
+                if a:
+                    db.commit()
                     break
                 else:
 
-                    dbi.commit()
-                    dbi.close()
+                    db.commit()
                     time.sleep(0.1)
                     break
 
@@ -108,53 +112,64 @@ def write(query='', identifier='', last_insert=False, instance='local'):
                     retry += 1
                     time.sleep(2)
     except KeyError:
-        dbi.close()
         print '>> Error: Writing to database', identifier
     except MySQLdb.IntegrityError:
-        dbi.close()
         print '>> Warning: Duplicate entry detected', identifier
-    return response_b
+    db.close()
+    return b
 
 def read(query='', identifier='', instance='local'):
     """
-       - Process of the reading to the database by a query statement.
-      
-      :param query: Query statement on reading in the database.
-      :param identifier: Identifier statement for the query when it runs.
-      :param instance: Hostname where the query will be running.
-      :type query: str
-      :type identifier: str
-      :type instance: str , Default(local)
-      :returns: **a** - Return output from the query, Return False if Error .
+    - The process of reading the output from the query statement.
 
-    """  
-    dbi, cur = connect(instance)
-    response_a = ''
+    Args:
+        query (str): Query statement.
+        identifier (str): Identifier statement for the query.
+        instance (str): Hostname. Defaults to local.
+
+    Returns:
+      tuple: Returns the query output and fetch by a ``cur.fetchall()``.
+
+    Raises:
+        KeyError: Key interruption.
+        MySQLdb.OperationalError: Error in database connection.
+        ValueError: Error in execution of the query.
+
+    Example Output::
+            
+        >> print read(query='SELECT * FROM senslopedb.loggers limit 3', identifier='select loggers')
+        ((1, 1, 'agbsb', datetime.date(2015, 8, 31), None, Decimal('11.280820'), Decimal('122.831300'), 3), 
+        (2, 1, 'agbta', datetime.date(2015, 8, 31), None, Decimal('11.281370'), Decimal('122.831100'), 6), 
+        (3, 2, 'bakg', datetime.date(2016, 8, 9), None, Decimal('16.789631'), Decimal('120.660903'), 31))
+
+    """ 
+
+    db, cur = connect(instance)
+    a = ''
     
     try:
-        response_a = cur.execute(query)
-        response_a = None
+        a = cur.execute(query)
+        a = None
         try:
-            response_a = cur.fetchall()
-            dbi.close()
-            return response_a
+            a = cur.fetchall()
+            return a
         except ValueError:
             return None
     except MySQLdb.OperationalError:
-        response_a =  None
+        a =  None
     except KeyError:
-        response_a = None
-
-    dbi.close()
-    return response_a
+        a = None
 
 def df_engine(host='local'):
     """
-       - Connetion for the database process for pymyql on writing dataframe to database.
-      
-      :param host: Hostname where the query will be running.
-      :type host: str , Default(local)
-      :returns: **engine** - Return engine connection.
+    - Creating the engine connection for the database.
+
+    Args:
+        host (str): Hostname. Defaults to local.
+
+    Returns:
+        Returns the ``create_engine()`` connection to the host.
+
 
     """ 
     dbc = dbInstance(host)
@@ -164,15 +179,19 @@ def df_engine(host='local'):
 
 def df_write(dataframe,host='local'):
     """
-       - Process of the writing to the database of dataframe output.
-      
-      :param dataframe: Dataframe data output.
-      :param host: Hostname where the query will be running.
-      :type dataframe: dataframe
-      :type host: str , Default(local)
-      :returns: N/A.
+    - The process of writing data frame data to a database.
 
-    """  
+    Args:
+        dataframe (DataFrame): DataFrame data.
+        host (str): Hostname. Defaults to local.
+
+    Raises:
+        IndexError: Possible data type error.
+        ValueError: Value error detected.
+        AttributeError: Value error in data pass.
+
+
+    """
     engine = df_engine(host)
     df = dataframe.data
     df = df.drop_duplicates(subset=None, keep='first',
@@ -199,4 +218,3 @@ def df_write(dataframe,host='local'):
         print ">> Value error detected"   
     except AttributeError:
         print ">> Value error in data pass"       
-

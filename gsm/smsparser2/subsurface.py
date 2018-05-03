@@ -17,11 +17,38 @@ SOMS=[]
 
 def v1(sms):
     """
-       - Process the sms message that fits for subsurface version 1 data.
+    - The process of parsing version 1 subsurface data.
       
-      :param sms: list data info of sms message .
-      :type sms: list
-      :returns: **Dataframe**  - The Parse data of the message and into Dataframe structure.
+    :param sms: Dictionary of sms info.
+    :type sms: obj
+
+    Returns:
+       DataFrame: Dataframe output for success parsing and return
+       False if fails.
+
+    Example Output::
+                           
+                             node_id  xval  yval  zval
+        ts
+        2018-04-30 16:32:00        1   991    41    28
+        2018-04-30 16:32:00        2   964    17   109
+        2018-04-30 16:32:00        3  1015    20   -39
+        2018-04-30 16:32:00        4  1001    11    -2
+        2018-04-30 16:32:00        5   971     6    50
+        2018-04-30 16:32:00        6 -3015   106  -109
+        2018-04-30 16:32:00        7  1013    30     3
+        2018-04-30 16:32:00        8  1008     4    32
+        2018-04-30 16:32:00        9  1001    41     3                      
+        ts                    mval1  node_id
+        2018-04-30 16:32:00   2394        1
+        2018-04-30 16:32:00   2446        2
+        2018-04-30 16:32:00   2677        3
+        2018-04-30 16:32:00   2779        4
+        2018-04-30 16:32:00   2691        5
+        2018-04-30 16:32:00   2480        6
+        2018-04-30 16:32:00   2657        7
+        2018-04-30 16:32:00   2954        8
+        2018-04-30 16:32:00   2464        9
 
     """    
     data = sms.msg
@@ -137,11 +164,13 @@ def v1(sms):
 
 def twos_comp(hexstr):
     """
-       - Process the convertion of x, y and z data for subsurface version 2 data.
-      
-      :param hexstr: String dat of x, y or z .
-      :type str: str
-      :returns: **num - sub or num**  - Converted value.
+    - Process the convertion of x, y and z data for subsurface version 2 data.
+
+    :param hexstr: String dat of x, y or z.
+    :type hexstr: str
+
+    Returns:
+       int: The converted value of hex str.
 
     """
     num = int(hexstr[2:4]+hexstr[0:2],16)
@@ -156,11 +185,23 @@ def twos_comp(hexstr):
 
 def v2(sms):
     """
-       - Process the sms message that fits for subsurface version 2 data.
+    - The process of parsing version 2 and 3 subsurface data.
       
-      :param sms: list data info of sms message .
-      :type sms: list
-      :returns: **Dataframe**  - The Parse data of the message and into Dataframe structure.
+    :param sms: Dictionary of sms info.
+    :type sms: obj
+
+    Returns:
+       DataFrame: Dataframe output for success parsing and return
+       False if fails.
+
+    Example Output::
+        
+        BLCTA*x*010BFC3EEFEBF831D0BFF3D9FF2F82*180430163121
+                             batt  node_id  type_num  xval  yval  zval
+        ts
+        2018-04-30 16:31:00  3.31        1        11  1020   -18   -21
+        2018-04-30 16:31:00  3.30       29        11  1023   -39   -14
+
 
     """
     msg = sms.msg
@@ -281,6 +322,16 @@ def v2(sms):
     return  data
        
 def log_errors(errortype, line, dt):
+    """
+    - The process of logging of errors in SOMS MSG ERROR text file..
+
+    :param errortype: Error type id.
+    :param line: Message line.
+    :param dt: Date and time.
+    :type errortype: int
+    :type line: str
+    :type dt: date
+    """  
     error=""
     writefolder=''
     
@@ -298,18 +349,24 @@ def log_errors(errortype, line, dt):
 
 def soms_parser(msgline,mode,div,err):
     """
-       - Process the sms message that fits for soms data of version 2 and 3.
-      
-      :param msgline: Sms line of message for soms .
-      :param mode: Mode of the data of soms.
-      :param div: Soms division of data .
-      :param err: Error line in the message.
-      :type msgline: str
-      :type mode: str
-      :type div: str
-      :type err: str
-      :returns: **Dataframe**  - The Parse data of the message and into Dataframe structure.
+    - The process of parsing soms data of version 2 and 3.
 
+    :param msgline: Sms line of message for soms .
+    :param mode: Mode of the data of soms.
+    :param div: Soms division of data .
+    :param err: Error line in the message.
+    :type msgline: str
+    :type mode: str
+    :type div: str
+    :type err: str
+
+    Returns:
+       DataFrame: Dataframe output for success parsing and return
+       False if fails.
+
+    Example Output::
+        
+    
     """
 #    global prevdatetime
     global backupGID
