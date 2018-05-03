@@ -177,12 +177,12 @@ def df_engine(host='local'):
         +dbc.password+'@'+dbc.host+':3306/'+dbc.name)
     return engine
 
-def df_write(dataframe, host = 'local', last_insert = False):
+def df_write(DataTable, host = 'local', last_insert = False):
     """
     - The process of writing data frame data to a database.
 
     Args:
-        dataframe (DataFrame): DataFrame data.
+        DataTable (class): DataTable class data from smsclass.py.
         host (str): Hostname. Defaults to local.
 
     Raises:
@@ -193,21 +193,21 @@ def df_write(dataframe, host = 'local', last_insert = False):
 
     """
     engine = df_engine(host)
-    df = dataframe.data
+    df = DataTable.data
     df = df.drop_duplicates(subset=None, keep='first',
      inplace=False)
     df = df.reset_index()
     df_list = str(df.values.tolist())[:-1][1:]
     df_list =df_list.replace("]",")").replace("[","(")
     df_header = str(list(df))[:-1][1:].replace("\'","")
-    df_keys =[];
+    df_keys = [];
     for value in list(df):
         df_keys.append(value +" = VALUES("+value+")")
     df_keys = str(df_keys)[:-1][1:]
-    df_keys =df_keys.replace("]",")")
-    df_keys =df_keys.replace("[", "(").replace("\'", "")
-    query = "insert into %s (%s) values %s" % (dataframe.name,
-        df_header,df_list)
+    df_keys = df_keys.replace("]",")")
+    df_keys = df_keys.replace("[", "(").replace("\'", "")
+    query = "insert into %s (%s) values %s" % (DataTable.name,
+        df_header, df_list)
     query += " on DUPLICATE key update  %s " % (df_keys)
     try:
         last_insert_id = write(query = query, 
