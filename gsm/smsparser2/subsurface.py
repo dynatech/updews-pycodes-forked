@@ -318,7 +318,6 @@ def v2(sms):
                 return
     
     df = pd.DataFrame(outl)
-    df = df.set_index(['ts'])
     data = smsclass.DataTable(name_df,df)
     return  data
        
