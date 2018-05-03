@@ -69,7 +69,9 @@ def rainfall_gauges(end=datetime.now()):
     query += "    rain_id, distance FROM "
     query += "      rainfall_priorities AS rp "
     query += "    INNER JOIN "
-    query += "	     sites as s "
+    query += "	     (SELECT * FROM sites "
+    query += "        WHERE active = 1 "
+    query += "        ) AS s "
     query += "	     ON rp.site_id = s.site_id "
     query += "	     ) AS sub "
     query += "  INNER JOIN "
@@ -82,7 +84,7 @@ def rainfall_gauges(end=datetime.now()):
     query += "INNER JOIN"
     query += "  (SELECT * FROM rainfall_thresholds "
     query += "  WHERE threshold_name = '%s' " %'two_year_max'
-    query += "  ) as rt "
+    query += "  ) AS rt "
     query += "ON rt.site_id = sub2.site_id"
     
     gauges = qdb.get_db_dataframe(query)

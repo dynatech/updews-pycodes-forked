@@ -1,6 +1,7 @@
 from datetime import datetime
 import numpy as np
 import os
+import pandas as pd
 import sys
 
 #include the path of "Analysis" folder for the python scripts searching
@@ -19,9 +20,11 @@ def all_site_coord():
     df = df.sort_values('site_id')
     return df
     
-def all_rg_coord():
-    query = "SELECT * FROM rainfall_gauges where gauge_name not like 'mes'"
-    query += " and (date_deactivated >= '2017-05-10' or date_deactivated is null)"
+def all_rg_coord(end):
+    query =  "SELECT * FROM rainfall_gauges "
+    query += "WHERE gauge_name NOT LIKE 'mes' "
+    query += "AND (date_deactivated >= '%s' " %(datetime.now())
+    query += "OR date_deactivated IS NULL)"
     df = qdb.get_db_dataframe(query)
     return df
 
@@ -87,12 +90,14 @@ def get_distance(site_coord, rg_coord):
     
     return nearest_rg
 
-def main():
+def main(end=datetime.now()):
     start = datetime.now()
     qdb.print_out(start)
+    
+    end = pd.to_datetime(end)
 
     coord = all_site_coord()
-    rg_coord = all_rg_coord()
+    rg_coord = all_rg_coord(end)  
     site_coord = coord.groupby('site_id')
     nearest_rg = site_coord.apply(get_distance, rg_coord=rg_coord)
     nearest_rg['distance'] = np.round(nearest_rg.distance,2)
