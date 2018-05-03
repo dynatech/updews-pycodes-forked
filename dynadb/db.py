@@ -177,7 +177,7 @@ def df_engine(host='local'):
         +dbc.password+'@'+dbc.host+':3306/'+dbc.name)
     return engine
 
-def df_write(dataframe,host='local'):
+def df_write(dataframe, host = 'local', last_insert = False):
     """
     - The process of writing data frame data to a database.
 
@@ -210,8 +210,10 @@ def df_write(dataframe,host='local'):
         df_header,df_list)
     query += " on DUPLICATE key update  %s " % (df_keys)
     try:
-        write(query=query, 
-            identifier='Insert dataFrame values')
+        last_insert_id = write(query = query, 
+            identifier = 'Insert dataFrame values', last_insert = last_insert,
+            host = host)
+        return last_insert_id
     except IndexError:
         print "\n\n>> Error: Possible data type error"
     except ValueError:
