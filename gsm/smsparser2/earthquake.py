@@ -70,7 +70,7 @@ def eq(sms):
     for col_name in pattern_matches.keys():
         out[col_name] = pattern_matches[col_name]
 
-    df = pd.DataFrame([out]).set_index("ts")
+    df = pd.DataFrame([out])
     print df
     return smsclass.DataTable("earthquake_events", df)
 

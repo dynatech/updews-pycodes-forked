@@ -19,6 +19,7 @@ class dbInstance:
 
     :param host: Instance hostname.
     :type host: str
+    
 
     Example Output::
 
@@ -196,23 +197,19 @@ def df_write(data_table, host = 'local', last_insert = False):
     df = data_table.data
     df = df.drop_duplicates(subset=None, keep='first',
      inplace=False)
-    df = df.reset_index()
-    df_list = str(df.values.tolist())[:-1][1:]
-    df_list =df_list.replace("]",")").replace("[","(")
-    df_header = str(list(df))[:-1][1:].replace("\'","")
-    df_keys = [];
-    for value in list(df):
-        df_keys.append(value +" = VALUES("+value+")")
-    df_keys = str(df_keys)[:-1][1:]
-    df_keys = df_keys.replace("]",")")
-    df_keys = df_keys.replace("[", "(").replace("\'", "")
+    value_list = str(df.values.tolist())[:-1][1:]
+    value_list = value_list.replace("]",")").replace("[","(")
+    column_name_str = str(list(df))[:-1][1:].replace("\'","")
+    duplicate_value_str = ", ".join(["%s = VALUES(%s)"%(name, name) 
+        for name in list(df)]) 
     query = "insert into %s (%s) values %s" % (data_table.name,
-        df_header, df_list)
-    query += " on DUPLICATE key update  %s " % (df_keys)
+        column_name_str, value_list)
+    query += " on DUPLICATE key update  %s " % (duplicate_value_str)
     try:
         last_insert_id = write(query = query, 
-            identifier = 'Insert dataFrame values', last_insert = last_insert,
-            host = host)
+            identifier = 'Insert dataFrame values', 
+            last_insert = last_insert,
+            instance = host)
         return last_insert_id
     except IndexError:
         print "\n\n>> Error: Possible data type error"
