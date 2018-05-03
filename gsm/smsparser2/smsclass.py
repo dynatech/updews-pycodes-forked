@@ -1,7 +1,7 @@
 class SmsInbox:
 	def __init__(self,inbox_id,msg,sim_num,ts):
 		"""
-		- Bundling data of sms info.
+		- The constructor for sms info.
 
 		:param inbox_id: Inbox id number.
 		:param msg: Sms message text.
@@ -20,7 +20,7 @@ class SmsInbox:
 class DataTable:
 	def __init__(self,name,data):
 		"""
-		- Bundling data of table data.
+		- The constructor for table data.
 
 		:param name: Table name.
 		:param data: Any type of data

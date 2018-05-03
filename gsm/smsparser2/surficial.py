@@ -22,7 +22,16 @@ SURFICIAL_PARSER_ERROR_VALUE = {
 }
 
 def get_obv_type(text):
+    """
+    - The processing of getting data of observer type.
 
+    :param text: Sms line of message for soms .
+    :type text: str
+
+    Returns:
+       list: List data output for success parsing and it break
+       if fails.
+    """
     err_val = 0
 
     OBV_TYPES_REGEX_TEXT = {
@@ -47,7 +56,16 @@ def get_obv_type(text):
     return {"value": obv_type, "match": match, "err_val": err_val}
 
 def get_site_code(text):
+    """
+    - The processing of getting data of site code.
 
+    :param text: Sms line of message for soms .
+    :type text: str
+
+    Returns:
+       list: List data output for success parsing and it break
+       if fails.
+    """
     err_val = 0
     site_id = 0
     mc = mem.get_handle()
@@ -64,6 +82,16 @@ def get_site_code(text):
     return {"value": site_id, "match": str(site_code_match), "err_val": err_val}
 
 def adjust_site_code(site_code):
+    """
+    - The processing of getting data of  adjusted site code.
+
+    :param site_code: 3 letter site code of sensor.
+    :type site_code: str
+
+    Returns:
+       dict: Dictionary list of site that adjusted if succesful and
+       site code name fails.
+    """
     translation_dict = {
         'man':'mng','bat':'bto','tag':'tga','pan':'png','pob':'jor'
     }
@@ -74,6 +102,16 @@ def adjust_site_code(site_code):
         return site_code
 
 def get_date(text):
+    """
+    - The processing of getting date.
+
+    :param text: Sms line of message for soms .
+    :type text: str
+
+    Returns:
+       list: List data output for success parsing and it break
+       if fails.
+    """
   # timetxt = ""
 
     err_val = 0
@@ -126,7 +164,16 @@ def get_date(text):
             "err_val": err_val}
 
 def get_time(text):
+    """
+    - The processing of getting time.
 
+    :param text: Sms line of message from community .
+    :type text: str
+
+    Returns:
+       list: List data output for success parsing and it break
+       if fails.
+    """
     err_val = 0
   # timetxt = ""
     HM = "\d{1,2}"
@@ -177,7 +224,16 @@ def get_time(text):
             "err_val": err_val}
 
 def get_measurements(text):
+    """
+    - The processing of getting measurement.
 
+    :param text: Sms line of message from community .
+    :type text: str
+
+    Returns:
+       list: List data output for success parsing and it break
+       if fails.
+    """
     err_val = 0
     text = " " + text
 
@@ -191,7 +247,16 @@ def get_measurements(text):
         "err_val": err_val}
 
 def get_weather_description(text):
+    """
+    - The processing of getting weather description.
 
+    :param text: Sms line of message from community .
+    :type text: str
+
+    Returns:
+       list: List data output for success parsing and it break
+       if fails.
+    """
     err_val = 0
     match = None
     match_str = None
@@ -212,6 +277,16 @@ def get_weather_description(text):
     return {"value": match_str, "match": match_str, "err_val": err_val}
 
 def get_observer_names(text):
+    """
+    - The processing of getting observer name.
+
+    :param text: Sms line of message from community .
+    :type text: str
+
+    Returns:
+       list: List data output for success parsing and it break
+       if fails.
+    """
     err_val = 0
 
     NAME_PATTERN = "((?<= )|(?<=^))[A-Z]{4,}((?= )|(?=$)|(?=\.$))"
@@ -233,6 +308,19 @@ def get_observer_names(text):
     return {"value": value, "match": names, "err_val": err_val}    
 
 def find_match_in_text(match_func, text):
+    """
+    - The finding error match text.
+
+    :param match_func: Sms line of message from community.
+    :param text: Sms line of message from community.
+    :type match_func: str
+    :type text: str
+
+
+    Returns:
+       list and str : List data output and usparsed text 
+       for success parsing and it break if fails.
+    """
     match_result = match_func(text)
 
     if match_result["err_val"] > 0 or match_result["match"] is None:
@@ -255,6 +343,17 @@ def find_match_in_text(match_func, text):
     return match_result["value"], text_unparsed.lstrip()
 
 def get_marker_measurements(pattern_matches):
+    """
+    - The getting marker measurement.
+
+    :param pattern_matches: Measurement value from text.
+    :type pattern_matches: str
+
+
+    Returns:
+        str : Data records output and usparsed text 
+       for success parsing and it break if fails.
+    """
     data_records = dict()
 
     for match in pattern_matches:
@@ -274,7 +373,16 @@ def get_marker_measurements(pattern_matches):
     return data_records
 
 def observation(text):
+    """
+    - The processing of getting observer name.
 
+    :param text: Sms line of message from community .
+    :type text: str
+
+    Returns:
+       str: Marker measurement data output for success
+        parsing.
+    """
     obv = {}
     
     text = re.sub(" +", " ", text.upper())

@@ -7,13 +7,18 @@ import dynadb.db as dynadb
 
 def check_number_in_users(num):
     """
-    - The process of querying the mobile number  to check if the number exists.
+    - The process of querying the mobile number to check if the number exists.
 
     :param num: Instance hostname.
-    :type num: int
+    :type num: str
 
     Returns:
-        str: Query output for success and return False if fails.
+        tuple: Query output for success and return False if fails.
+
+    Example Output::
+
+        >>> x = check_number_in_users('639263818956')
+        ((2,),)
 
     """   
     query = "select user_id from user_mobile" 
@@ -34,8 +39,13 @@ def check_logger_model(logger_name):
     :type logger_name: str
 
     Returns:
-       str: Query output for success and return False if fails.
-       
+        str: Query output for success and return False if fails.
+
+    Example Output::
+
+        >>> x = check_logger_model('agbta')
+        6
+
     """  
     query = ("SELECT model_id FROM loggers where "
         "logger_name = '%s'") % logger_name
@@ -54,8 +64,13 @@ def check_name_of_number(number):
     :type number: int
 
     Returns:
-      str: Query output for success and return False if fails.
-       
+        str: Query output for success and return False if fails.
+
+    Example Output::
+
+        >>> x = check_name_of_number('639173082161')
+        agbta
+
     """  
     query = ("select logger_name from loggers where "
                 "logger_id = (select logger_id from logger_mobile "
@@ -80,11 +95,10 @@ def rain_arq(sms):
        False if fails.
 
     Example Output::
-
-            {
-                'param1': param1,
-                'param2': param2
-            }
+        
+                            battery1 battery2 csq humidity  rain temperature
+        ts
+        2018-04-26 13:30:58    4.143    4.158   9     69.8   0.0        30.0
        
     """       
     #msg = message
@@ -156,11 +170,10 @@ def v3 (sms):
 
     Example Output::
 
-            {
-                'param1': param1,
-                'param2': param2
-            }
-       
+
+                            battery1 battery2 csq humidity  rain temperature
+        ts
+        2018-04-26 13:30:58    null    null   15     null   0        null
     """    
     line = sms.msg
     sender = sms.sim_num

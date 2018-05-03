@@ -9,13 +9,13 @@ import volatile.memory as mem
 
 def get_arguments():
     """
-      **Description:**
-        -The get arguments is a function that checks the argument that being sent from main function and returns the
-        arguement of the function.
-      
-      :parameters: N/A
-      :returns: **args** (*int*) - Mode of action from running python **1** (*dyna to sandbox*) and **2** (*sandbox to dyna*).
-      .. note:: For mode 2 it also return **users or loggers** for sanbox to dyna.
+    - The get arguments is a function that checks the argument that being sent from main function and returns the
+      arguement of the function.
+
+    Returns: 
+        int: Outputs mode of action from running python **1** (*dyna to sandbox*) and **2** (*sandbox to dyna*).
+    
+    .. note:: For mode 2 it also return **users or loggers** for sanbox to dyna.
     """
     parser = argparse.ArgumentParser(description = ("copy items from different"
      "inboxes [-options]"))
@@ -38,13 +38,9 @@ def get_arguments():
 
 def dyna_to_sandbox():
     """
-      **Description:**
-        -The dyna to sandbox is a function that process the exporting of data from dyna and importing data to sandbox by 
-        loading  the data from XML.
-      
-      :parameters: N/A
-      :returns: N/A
-          
+    - The process of dyna to sandbox is a function that process the exporting of data from dyna and importing data to sandbox by 
+      loading  the data from XML.
+            
     """ 
 
     # get latest sms_id
@@ -111,13 +107,13 @@ def dyna_to_sandbox():
 
 def get_max_index_from_table(table_name):
     """
-      **Description:**
-        -The get max index from table is a function that get the max index of the smsinbox.
+    - The process getting of  max index from table is a function that get the max index of the smsinbox.
           
-          :param table: Name of the table for smsinbox
-          :type table: str
-          :returns: **max_inbox_id** (*int*) - Index id of the not yet copied 
-          data in dyna.
+      :param table: Name of the table for smsinbox
+      :type table: str
+
+    Returns: 
+         int: Index id of the not yet copied data in dyna.
       
     """
     sc = mem.server_config()
@@ -136,11 +132,11 @@ def get_max_index_from_table(table_name):
 
 def get_last_copied_index(table_name):
     """
-        **Description:**
-            -The get last copied index is a  function that reads the value of the index inside the user_inbox_index.tmp.
+    - The process of getting last copied index is a  function that reads the 
+      value of the index inside the user_inbox_index.tmp.
         
-        :parameters: N/A
-        :returns: **max_index_last_copied** (*int*) - Index id that stored from the user_inbox_index.tmp.
+    Returns: 
+        int: Outputs index id that stored from the user_inbox_index.tmp.
     """
     f_index = open("/home/dyna/logs/%s_inbox_index.tmp" % table_name, 'r')
     max_index_last_copied = int(f_index.readline())
@@ -149,16 +145,16 @@ def get_last_copied_index(table_name):
 
 def import_sql_file_to_dyna(table, max_inbox_id, max_index_last_copied):
     """
-        **Description:**
-         -The import sql file to dyna is a function that process the exporting of data from sanbox and importing data to dyna smsibox2.
-         This function also change the value of the index in user_inbox_index.tmp.
-        :param table: Name of the table for smsinbox
-        :param max_inbox_id: Index id of the not yet copied data in dyna
-        :param max_index_last_copied: Index id that stored from the user_inbox_index.tmp
-        :type table: str
-        :type max_inbox_id: int
-        :type max_index_last_copied: int
-        :returns: N/A
+    - The process of importing sql file to dyna is a function that process the exporting of data from sanbox and importing data to dyna smsibox2.
+    This function also change the value of the index in user_inbox_index.tmp.
+
+    :param table: Name of the table for smsinbox
+    :param max_inbox_id: Index id of the not yet copied data in dyna
+    :param max_index_last_copied: Index id that stored from the user_inbox_index.tmp
+    :type table: str
+    :type max_inbox_id: int
+    :type max_index_last_copied: int
+
     """
     print "importing to dyna tables"
     print table
@@ -215,14 +211,9 @@ def import_sql_file_to_dyna(table, max_inbox_id, max_index_last_copied):
 
 def sandbox_to_dyna(table_name):
     """
-      **Description:**
-        -The sandbox to dyna is a function that process the mirroring data of sandbox to dyna by comparing
-        the max index of  the not yet copied data from dyna and the last copied index
-        from dyna.
-      
-      :parameters: N/A
-      :returns: N/A
-      
+    - The process of sandbox to dyna is a function that process the mirroring data of sandbox to dyna by comparing
+    the max index of  the not yet copied data from dyna and the last copied index
+    from dyna.
     """
     # get index of items not yet copied to dyna
     print "sandbox -> dyna"
@@ -242,14 +233,18 @@ def sandbox_to_dyna(table_name):
 
 def main():
     """
-        **Description:**
-          -The main is a function that runs the whole dbmirror with the logic of
-          checking if the dbmirror must run the dyna to sandbox 
-          or the sandbox to dyna for mirroring the data.
-         
-        :parameters: N/A
-        :returns: N/A
-        .. note:: To run in terminal **python dbmirror.py -m1** for dyna to sandbox and **python dbmirror.py -m2 -t users/loggers** for sanbox to dyna.
+    - The main is a function that runs the whole dbmirror with the logic of
+      checking if the dbmirror must run the dyna to sandbox 
+      or the sandbox to dyna for mirroring the data.
+
+    .. todo::
+        1. To run the script **open** a terminal or bash 
+        2. Set your terminal/bash path to **/centraserver/gsm/**
+        3. Type inside the terminal/bash  **python dbmirror.py -m1** for dyna
+           to sandbox and **python dbmirror.py -m2 -t users/loggers** for sanbox 
+           to dyna.
+        4. Click Enter
+       
     """
 
     args = get_arguments()
