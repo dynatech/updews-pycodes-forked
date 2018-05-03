@@ -26,10 +26,10 @@ def get_obv_type(text):
     err_val = 0
 
     OBV_TYPES_REGEX_TEXT = {
-        "^ROUTINE\W+": 1,
-        "^R0UTINE\W+": 1,
-        "^EVENT\W+": 2,
-        "^EVNT\W+": 2,
+        "^ROUTINE\W+": "ROUTINE",
+        "^R0UTINE\W+": "ROUTINE",
+        "^EVENT\W+": "EVENT",
+        "^EVNT\W+": "EVENT",
     }
 
     obv_type = None
@@ -298,11 +298,11 @@ def observation(text):
     del obv["date"] 
     del obv["time"] 
 
-    print obv
-
     marker_measurements = get_marker_measurements(obv["measurement_matches"])
-    print marker_measurements
-    # get actual marker measurements
+    
+    obv["marker_measurements"] = marker_measurements
+
+    return obv
 
 
     

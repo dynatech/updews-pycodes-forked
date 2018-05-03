@@ -412,6 +412,7 @@ def run_server(gsm_info,table='loggers'):
                     print "\n", network, today.strftime("Server active as of "
                         "%A, %B %d, %Y, %X")
                     print "CSQ:", log_csq(gsm, gsm_info['id'])
+                    log_runtime_status(gsm_info["name"],"alive")
                 checkIfActive = False
             else:
                 checkIfActive = True
