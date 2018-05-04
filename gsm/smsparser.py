@@ -257,49 +257,122 @@ def process_surficial_observation(sms):
        False if fails.
 
     """
-    sc = mem.server_config()
-    has_parse_error = False
+    mc = mem.get_handle()
+    surf_mark = mc.get("surficial_markers")
+    reply_msgs = mc.get("surficial_parser_reply_messages")
+    sc = mc.get("server_config")
+    data_host = sc["resource"]["datadb"]
+    ct_sim_num = [sc["surficial"]["ct_sim_num"]]
+    enable_analysis = sc["surficial"]["enable_analysis"]
     
     obv = []
     try:
-        obv = surfp.parse_surficial_text(sms.msg)
-        print 'Updating observations'
-        mo_id = surfp.update_surficial_observations(obv)
-        surfp.update_surficial_data(obv,mo_id)
-        # server.write_outbox_message_to_db("READ-SUCCESS: \n" + sms.msg,
-        #     c.smsalert.communitynum,'users')
-        # server.write_outbox_message_to_db(c.reply.successen, msg.simnum,'users')
-        # proceed_with_analysis = True
-    except surfp.SurficialParserError as e:
-        print "stre(e)", str(e)
-        errortype = re.search("(WEATHER|DATE|TIME|GROUND MEASUREMENTS|NAME|CODE)", 
-            str(e).upper()).group(0)
-        print ">> Error in manual ground measurement SMS", errortype
-        has_parse_error = True
+        obv = parser.surficial.observation(sms.msg)
+        print obv["obv"]
+        print obv["markers"]
+        
+    except ValueError as err_val:
+        err_val = int(str(err_val))
+        mc = mem.get_handle()    
+        messages = mc.get("surficial_parser_reply_messages")
 
-        # server.write_outbox_message_to_db("READ-FAIL: (%s)\n%s" % 
-            # (errortype,sms.msg),c.smsalert.communitynum,'users')
-        # server.write_outbox_message_to_db(str(e), msg.simnum,'users')
-    except KeyError:
-        print '>> Error: Possible site code error'
-        # server.write_outbox_message_to_db("READ-FAIL: (site code)\n%s" % 
-        #     (sms.msg),c.smsalert.communitynum,'users')
-        has_parse_error = True
-    # except:
-    #     # pass
-    #     server.write_outbox_message_to_db("READ-FAIL: (Unhandled) \n" + 
-    #         sms.msg,c.smsalert.communitynum,'users')
+        # print messages.iloc[err_val - 1].internal_msg
+        # print messages.iloc[err_val - 1].external_msg
+        smstables.write_outbox(messages.iloc[err_val - 1].internal_msg, 
+            ct_sim_num)
+
+        return False
+
+    site_surf_mark = surf_mark[surf_mark["site_id"] == obv["obv"]["site_id"]]
+       
+    df_meas = pd.DataFrame()
+    df_meas = df_meas.from_dict(obv["markers"]["measurements"], orient = 'index')
+    
+    df_meas.columns = ["measurement"]
+    markers = site_surf_mark.join(df_meas, on = "marker_name", how = "outer")
+
+    # send message for unknown marker names
+    markers_unk = markers[~(markers["marker_id"] > 0)]
+    markers_unk = markers_unk[["marker_name", "measurement"]]
+    markers_unk = markers_unk.set_index(["marker_name"])
+    markers_unk = markers_unk.to_dict()
+    internal_msg = "SANDBOX TEST MESSAGE:\n\n%s\n\n" % (sms.msg)
+    if len(markers_unk["measurement"].keys()) > 0:
+        internal_msg += "%s\n%s\n\n" % (reply_msgs.iloc[13]["internal_msg"],
+            "\n".join(["%s = %s" % (key, value) for (key, value) in \
+                markers_unk["measurement"].items()]))
+
+    # send message for unreported marker measurements
+    markers_nd = markers[~(markers["measurement"] > 0)]
+    markers_nd = markers_nd[["marker_name", "measurement"]].to_dict()
+    if len(markers_nd["marker_name"].keys()) > 0:
+        internal_msg += "%s\n%s" % (reply_msgs.iloc[14]["internal_msg"],
+            ", ".join(["%s" % name for name in \
+            markers_nd["marker_name"].values()]))
+
+    print ">> Updating observations"
+
+    df_obv = pd.DataFrame(obv["obv"], index = [0])
+
+    mo_id = dynadb.df_write(data_table = smsclass.DataTable("marker_observations", 
+        df_obv), host = data_host, last_insert = True)
+
+    try:
+        mo_id = int(mo_id[0][0])
+    except ValueError, TypeError:
+        print "Error: conversion of measurement observation id during last insert"
+        internal_msg += "\n\nERROR: Resultset conversion"
+        smstables.write_outbox(internal_msg, ct_sim_num)
+        return False
+
+    print ">> Updating marker measurements"
+    if mo_id == 0:
+        # Duplicate entry
+        query = ("SELECT marker_observations.mo_id FROM marker_observations "
+            "WHERE ts = '{}' and site_id = '{}'".format(obv["obv"]['ts'],
+            obv["obv"]['site_id'])
+            )    
+        mo_id = dynadb.read(query,'uso')[0][0]
+
+    markers_ok = markers[markers["marker_id"] > 0]
+    markers_ok = markers_ok[markers_ok["measurement"] > 0]
+    markers_ok_for_report = markers_ok[["marker_name", "measurement"]]
+    markers_ok = markers_ok[["marker_id", "measurement"]]
+    markers_ok["mo_id"] = mo_id
+
+    markers_ok.columns = ["%s" % (str(col)) for col in markers_ok.columns]
+
+    dynadb.df_write(data_table = smsclass.DataTable("marker_data", 
+        markers_ok), host = data_host)
+
+    # send success messages
+    markers_ok_for_report = markers_ok_for_report.set_index(["marker_name"])
+    markers_ok_for_report = markers_ok_for_report.to_dict()
+
+    updated_measurements_str = "\n".join(["%s = %0.2f CM" % (name, meas) \
+        for name, meas in markers_ok_for_report["measurement"].items()])
+
+    success_msg = "%s\n%s\n%s" % (reply_msgs.iloc[12]["external_msg"], 
+        dt.strptime(obv["obv"]["ts"], "%Y-%m-%d %H:%M:%S").strftime("%c"),
+        updated_measurements_str)
+
+    internal_msg += "Updated measurements:\n%s" % (updated_measurements_str)
+
+    # for ct phone c/o iomp-ct
+    smstables.write_outbox(internal_msg, ct_sim_num)
+    # for community who sent the data
+    smstables.write_outbox(success_msg, ct_sim_num)
 
     # spawn surficial measurement analysis
-    proceed_with_analysis = sc['subsurface']['enable_analysis']
-    # proceed_with_analysis = False
-    if proceed_with_analysis and not has_parse_error:
+    if enable_analysis:
+        obv = obv["obv"]
         surf_cmd_line = "python %s %d '%s' > %s 2>&1" % (sc['fileio']['gndalert1'],
             obv['site_id'], obv['ts'], sc['fileio']['surfscriptlogs'])
         p = subprocess.Popen(surf_cmd_line, stdout=subprocess.PIPE, shell=True, 
             stderr=subprocess.STDOUT)
 
-    return not has_parse_error
+    return True
+
 
 def check_number_in_users(num):
    

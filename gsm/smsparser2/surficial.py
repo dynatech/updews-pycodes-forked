@@ -303,8 +303,6 @@ def get_observer_names(text):
     else:
         err_val = SURFICIAL_PARSER_ERROR_VALUE["names_no_matches"]
 
-    print "names:", names
-
     return {"value": value, "match": names, "err_val": err_val}    
 
 def find_match_in_text(match_func, text):
@@ -384,6 +382,7 @@ def observation(text):
         parsing.
     """
     obv = {}
+    markers = {}
     
     text = re.sub(" +", " ", text.upper())
     text = re.sub("\.+", ".", text)
@@ -394,23 +393,19 @@ def observation(text):
     # find values in patterns
     obv["meas_type"], text = find_match_in_text(get_obv_type, text)
     obv["site_id"], text = find_match_in_text(get_site_code, text)
-    obv["date"], text = find_match_in_text(get_date, text)
-    obv["time"], text = find_match_in_text(get_time, text)
-    obv["measurement_matches"], text = find_match_in_text(get_measurements, text)
+    date_str, text = find_match_in_text(get_date, text)
+    time_str, text = find_match_in_text(get_time, text)
+    measurement_matches, text = find_match_in_text(get_measurements, text)
     obv["weather"], text = find_match_in_text(get_weather_description, text)
     obv["observer_name"], text = find_match_in_text(get_observer_names, text)
     
     obv['reliability'] = 1
     obv['data_source'] = 'SMS'
-    obv['ts']= "%s %s" % (obv["date"], obv["time"])
-    del obv["date"] 
-    del obv["time"] 
+    obv['ts']= "%s %s" % (date_str, time_str)
 
-    marker_measurements = get_marker_measurements(obv["measurement_matches"])
+    markers["measurements"] = get_marker_measurements(measurement_matches)
     
-    obv["marker_measurements"] = marker_measurements
-
-    return obv
+    return {"obv": obv, "markers": markers}
 
 
     
