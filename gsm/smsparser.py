@@ -17,6 +17,7 @@ import smsparser2.subsurface as subsurface
 import smsparser2 as parser
 import smsparser2.smsclass as smsclass
 import smsparser2.rain as rain
+import pandas as pd
 
 def logger_response(sms,log_type,log='False'):
     """
