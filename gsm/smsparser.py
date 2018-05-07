@@ -2,13 +2,11 @@ import os,time,serial,re,sys,traceback
 import MySQLdb, subprocess
 from datetime import datetime as dt
 from datetime import timedelta as td
-import somsparser as ssp
 import argparse
 import lockscript as lock
 import alertmessaging as amsg
 import memcache
 import lockscript
-import surficialparser as surfp
 import utsparser as uts
 import dynadb.db as dynadb
 import smstables
