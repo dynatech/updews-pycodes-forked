@@ -147,10 +147,14 @@ def v1(sms):
             outl_tilt.append(line_tilt)
             outl_soms.append(line_soms)
             
-        df_tilt = smsclass.DataTable('tilt_'+tsm_name,pd.DataFrame(outl_tilt))
-        df_soms = smsclass.DataTable('soms_'+tsm_name,pd.DataFrame(outl_soms))
-        data = [df_tilt,df_soms]
-        return data
+        if len(outl_tilt) != 0:
+            df_tilt = smsclass.DataTable('tilt_'+tsm_name,pd.DataFrame(outl_tilt))
+            df_soms = smsclass.DataTable('soms_'+tsm_name,pd.DataFrame(outl_soms))
+            data = [df_tilt,df_soms]
+            return data
+        else:
+            print '\n>>Error: Error in Data format'
+            return 
       
     except KeyError:
         print '\n>>Error: Error in Data format'
