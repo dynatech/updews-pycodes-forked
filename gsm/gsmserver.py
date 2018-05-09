@@ -7,7 +7,6 @@ import ConfigParser
 from datetime import datetime as dt
 from datetime import timedelta as td
 import multiprocessing
-import somsparser as ssp
 import math
 import memcache
 import argparse

@@ -7,7 +7,7 @@ from datetime import timedelta as td
 from senslopedbio import *
 from groundMeasurements import *
 import multiprocessing
-import SomsServerParser as SSP
+from subsurface import soms_parser as SSP
 import messageprocesses as proc
 from os import listdir
 from os.path import isfile, join
