@@ -296,7 +296,7 @@ def get_tsm_alert(site_id, end):
     query += "  (SELECT tsm_name, alert_level FROM "
     query += "    (SELECT * FROM tsm_alerts "
     query += "     WHERE ts <= '%s' " %end
-    query += "    AND ts_updated >= '%s' " %end
+    query += "    AND ts_updated >= '%s' " %(end - timedelta(hours=0.5))
     query += "    ORDER BY ts DESC "
     query += "    ) AS alert "
     query += "  INNER JOIN "
@@ -362,7 +362,7 @@ def check_rainfall_alert(internal_df, internal_symbols, site_id,
     return internal_df
 
 def site_public_alert(site_props, end, public_symbols, internal_symbols,
-                      trig_symbols, start_time):  
+                      start_time):  
     """Dataframe containing necessary information for public release.
 
     Args:
@@ -372,8 +372,6 @@ def site_public_alert(site_props, end, public_symbols, internal_symbols,
                                     to its alert level.
         internal_symbols (dataframe): Internal alert symbols and id
                                       corresponding to its alert level.
-        trig_symbols (dataframe): Operational trigger symbols and id
-                                  corresponding to its alert level.
 
     Returns:
         dataframe: Contains timestamp, three-letter site code, public alert, 
@@ -441,7 +439,8 @@ def site_public_alert(site_props, end, public_symbols, internal_symbols,
             'rainfall']['source_id'].values[0]
     try:
         rainfall = op_trig[(op_trig.source_id == rainfall_id) & \
-                 (op_trig.ts_updated >= end)]['alert_level'].values[0]
+                           (op_trig.ts_updated >= end - \
+                            timedelta(hours=0.5))]['alert_level'].values[0]
     except:
         rainfall = -1
 
@@ -457,6 +456,7 @@ def site_public_alert(site_props, end, public_symbols, internal_symbols,
         # internal alert based on positive triggers and data presence
         internal_df = get_internal_alert(pos_trig, release_op_trig,       
                                   internal_symbols)
+
         # check if rainfall > 0.75% of threshold
         rain75_id = internal_symbols[(internal_symbols.source_id == \
                         rainfall_id)&(internal_symbols.alert_level \
@@ -465,8 +465,10 @@ def site_public_alert(site_props, end, public_symbols, internal_symbols,
             internal_df = check_rainfall_alert(internal_df, internal_symbols,
                                                site_id, end, rainfall_id,
                                                rain75_id)
+
         internal_df = internal_df.sort_values('hierarchy_id')
         internal_alert = ''.join(internal_df['alert_symbol'].values)
+
         if public_alert > 1:
             internal_alert = public_symbols[public_symbols.alert_level == \
                              public_alert]['alert_symbol'].values[0] + '-' + \
@@ -489,8 +491,7 @@ def site_public_alert(site_props, end, public_symbols, internal_symbols,
                 hyphen = '-'
         else:
             pub_internal = public_symbols[public_symbols.alert_level == \
-                             public_alert]['alert_symbol'].values[0] + '-' + \
-                             internal_alert
+                             public_alert]['alert_symbol'].values[0]
             hyphen = '-'
         internal_alert = pub_internal + hyphen + internal_alert
     elif -1 in internal_df[internal_df.trigger_source != 'rainfall']['alert_level'].values:
@@ -512,13 +513,13 @@ def site_public_alert(site_props, end, public_symbols, internal_symbols,
                         time(23, 30)] and int(start_time.strftime('%M')) > 45):
             validity = release_time(end)
         else:
-            validity = '-'
+            validity = ''
             public_alert = 0
             internal_alert = internal_symbols[(internal_symbols.alert_level == \
                              ground_alert) & (internal_symbols.source_id == \
                              internal_id)]['alert_symbol'].values[0]
     else:
-        validity = '-'
+        validity = ''
         public_alert = 0
         internal_alert = internal_symbols[(internal_symbols.alert_level == \
                          ground_alert) & (internal_symbols.source_id == \
@@ -559,11 +560,12 @@ def site_public_alert(site_props, end, public_symbols, internal_symbols,
     ts = str(ts)    
     validity = str(validity)
 
-    public_df = pd.DataFrame({'ts': [ts], 'site_code': [site_code], \
-            'public_alert': [public_alert], 'internal_alert': [internal_alert], \
-            'validity': [validity], 'subsurface': [subsurface], \
-            'surficial': [surficial], 'rainfall': [rainfall], \
-            'triggers': [triggers], 'tech_info': [tech_info]})
+    public_df = pd.DataFrame({'ts': [ts], 'site_id': [site_id],
+                    'site_code': [site_code], 'public_alert': [public_alert],
+                    'internal_alert': [internal_alert], 'validity': [validity],
+                    'subsurface': [subsurface], 'surficial': [surficial],
+                    'rainfall': [rainfall], 'triggers': [triggers],
+                    'tech_info': [tech_info]})
 
     # writes public alert to database
     pub_sym_id =  public_symbols[public_symbols.alert_level == \
@@ -579,10 +581,22 @@ def site_public_alert(site_props, end, public_symbols, internal_symbols,
     
     qdb.alert_to_db(site_public_df, 'public_alerts')
     
-    public_df['public_alert'] = public_symbols[public_symbols.alert_level == \
-                             public_alert]['alert_symbol'].values[0]
-
     return public_df
+
+def alert_map(df):
+    dict_map = df[['alert_symbol', 'alert_level']]
+    dict_map = dict_map.set_index('alert_level').to_dict()['alert_symbol']
+    return dict_map
+
+def subsurface_sym(df, sym_map):
+    if len(df['subsurface'].values[0]) != 0:
+        try:
+            int(df['subsurface'].values[0]['alert_level'].values[0])
+            df['subsurface'].values[0]['alert_level'] = \
+                  df['subsurface'].values[0]['alert_level'].map(sym_map)
+        except:
+            pass
+    return df
 
 def main(end=datetime.now()):
     """Compiles all alerts to compute for public alert and internal alert.
@@ -597,25 +611,47 @@ def main(end=datetime.now()):
     end = data_ts(pd.to_datetime(end))
     
     # alert symbols
-    public_symbols = get_public_symbols()     
+    # public alert
+    public_symbols = get_public_symbols()
+    pub_map = alert_map(public_symbols)
+    # internal alert
     internal_symbols = get_internal_symbols()
+    # operational triggers
     trig_symbols = get_trigger_symbols()
-
+    # subsurface alert
+    subsurface_map = trig_symbols[trig_symbols.trigger_source == 'subsurface']
+    subsurface_map = alert_map(subsurface_map)
+    # surficial alert
+    surficial_map = trig_symbols[trig_symbols.trigger_source == 'surficial']
+    surficial_map = alert_map(surficial_map)
+    # Manifestation Of Movement
+    moms_map = trig_symbols[trig_symbols.trigger_source == 'moms']
+    moms_map = alert_map(moms_map)
+    # rainfall alert
+    rain_map = trig_symbols[trig_symbols.trigger_source == 'rainfall']
+    rain_map = alert_map(rain_map)
+    
     # site id and code
-    query = "SELECT site_id, site_code FROM sites WHERE site_code != 'mes'"
+    query = "SELECT site_id, site_code FROM sites WHERE active = 1"
     props = qdb.get_db_dataframe(query)
-
+#    props = props[props.site_code == 'gaa']
     site_props = props.groupby('site_id', as_index=False)
     
     alerts = site_props.apply(site_public_alert, end=end,
                               public_symbols=public_symbols,
                               internal_symbols=internal_symbols, 
-                              trig_symbols=trig_symbols, start_time=start_time)
+                              start_time=start_time).reset_index(drop=True)
 
-    alerts['cat'] = pd.Categorical(alerts['public_alert'],
-              categories=public_symbols['alert_symbol'].values, ordered=True)
-    alerts = alerts.sort_values(['cat', 'site_code']).drop('cat', axis=1)
-    
+    alerts = alerts.sort_values(['public_alert', 'site_code'], ascending=[False, True])
+
+    # map alert level to alert symbol
+    alerts['public_alert'] = alerts['public_alert'].map(pub_map)
+    alerts['rainfall'] = alerts['rainfall'].map(rain_map)
+    alerts['surficial'] = alerts['surficial'].map(surficial_map)
+    site_alerts = alerts.groupby('site_code', as_index=False)
+    alerts = site_alerts.apply(subsurface_sym,
+                               sym_map=subsurface_map).reset_index(drop=True)
+
     all_alerts = pd.DataFrame({'invalids': [np.nan], 'alerts': [alerts]})
 
     public_json = all_alerts.to_json(orient="records")
@@ -635,4 +671,4 @@ def main(end=datetime.now()):
 ################################################################################
 
 if __name__ == "__main__":
-    main()
+    df = main()
