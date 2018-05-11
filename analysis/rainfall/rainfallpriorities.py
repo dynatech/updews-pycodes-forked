@@ -20,10 +20,9 @@ def all_site_coord():
     df = df.sort_values('site_id')
     return df
     
-def all_rg_coord(end):
+def all_rg_coord():
     query =  "SELECT * FROM rainfall_gauges "
-    query += "WHERE gauge_name NOT LIKE 'mes' "
-    query += "AND (date_deactivated >= '%s' " %(datetime.now())
+    query += "WHERE (date_deactivated >= '%s' " %(datetime.now())
     query += "OR date_deactivated IS NULL)"
     df = qdb.get_db_dataframe(query)
     return df
