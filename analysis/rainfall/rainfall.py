@@ -47,12 +47,6 @@ def get_rt_window(rt_window_length, roll_window_length, end=datetime.now()):
     
     return end, start, offsetstart
 
-def rainfall_threshold(threshold_name='two_year_max'):
-    query =  "SELECT site_id, threshold_value FROM rainfall_thresholds "
-    query += "where threshold_name = '%s'" %threshold_name
-    threshold = qdb.get_db_dataframe(query)
-    return threshold
-
 def rainfall_priorities(df):
     priorities = df.sort_values('distance')
     priorities = priorities[0:4]
@@ -76,8 +70,8 @@ def rainfall_gauges(end=datetime.now()):
     query += "	     ) AS sub "
     query += "  INNER JOIN "
     query += "    (SELECT * FROM rainfall_gauges "
-    query += "    where date_activated <= '%s' " %end
-    query += "    and (date_deactivated >= '%s' " %end
+    query += "    where date_activated <= '%s' " %datetime.now()
+    query += "    and (date_deactivated >= '%s' " %datetime.now()
     query += "    or date_deactivated is null) "
     query += "    ) as rg "
     query += "  on rg.rain_id = sub.rain_id) AS sub2 "
