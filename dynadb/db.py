@@ -36,7 +36,7 @@ class DbInstance:
     self.password = sc['db']['password']
       
 
-def connect(host = 'local'):   
+def connect(host = 'local', data_format = 'tuple'):   
     """
     - Creating the ``MySQLdb.connect`` connetion for the database.
 
@@ -57,7 +57,9 @@ def connect(host = 'local'):
         try:
             db = MySQLdb.connect(host = dbc.host, user = dbc.user, 
                 passwd = dbc.password, db = dbc.name)
+
             cur = db.cursor()
+
             return db, cur
         except MySQLdb.OperationalError:
         # except IndexError:
@@ -216,3 +218,19 @@ def df_write(data_table, host = 'local', last_insert = False):
         print ">> Value error detected"   
     except AttributeError:
         print ">> Value error in data pass"       
+
+def df_read(query = ''):
+    db, cur = connect()
+    # try
+    df = psql.read_sql(query, db)
+
+    db.close()
+    return df
+    # except KeyboardInterrupt:
+    #     print "Exception detected in accessing database"
+    #     sys.exit()
+    # except psql.DatabaseError:
+    #     print "Error getting query %s" % (query)
+    #     return None
+
+
