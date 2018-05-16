@@ -5,6 +5,7 @@ import  sqlalchemy.exc
 import memcache
 from sqlalchemy import MetaData
 from sqlalchemy import Table
+import pandas.io.sql as psql
 
 mc = memcache.Client(['127.0.0.1:11211'],debug=0)
 
