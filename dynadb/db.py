@@ -222,16 +222,15 @@ def df_write(data_table, host = 'local', last_insert = False):
 
 def df_read(query = ''):
     db, cur = connect()
-    # try
-    df = psql.read_sql(query, db)
-
-    db.close()
-    return df
-    # except KeyboardInterrupt:
-    #     print "Exception detected in accessing database"
-    #     sys.exit()
-    # except psql.DatabaseError:
-    #     print "Error getting query %s" % (query)
-    #     return None
+    try:
+        df = psql.read_sql(query, db)
+        db.close()
+        return df
+    except KeyboardInterrupt:
+        print "Exception detected in accessing database"
+        sys.exit()
+    except psql.DatabaseError:
+        print "Error getting query %s" % (query)
+        return None
 
 
