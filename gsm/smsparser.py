@@ -263,6 +263,8 @@ def process_surficial_observation(sms):
     data_host = sc["resource"]["datadb"]
     ct_sim_num = str(sc["surficial"]["ct_sim_num"])
     enable_analysis = sc["surficial"]["enable_analysis"]
+    SEND_REPLY_TO_COMMUNITY = sc["surficial"]["send_reply_to_community"]
+    SEND_ACK_TO_CT_PHONE = sc["surficial"]["send_ack_to_ct_phone"]
     
     obv = []
     try:
@@ -358,9 +360,11 @@ def process_surficial_observation(sms):
     internal_msg += "Updated measurements:\n%s" % (updated_measurements_str)
 
     # for ct phone c/o iomp-ct
-    smstables.write_outbox(internal_msg, ct_sim_num)
+    if SEND_ACK_TO_CT_PHONE:
+        smstables.write_outbox(internal_msg, ct_sim_num)
     # for community who sent the data
-    smstables.write_outbox(success_msg, ct_sim_num)
+    if SEND_REPLY_TO_COMMUNITY:
+        smstables.write_outbox(success_msg, ct_sim_num)
 
     # spawn surficial measurement analysis
     if enable_analysis:
