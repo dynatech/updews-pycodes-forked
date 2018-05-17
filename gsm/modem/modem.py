@@ -27,6 +27,9 @@ class GsmModem:
     REPLY_TIMEOUT = 30
     SEND_INITIATE_REPLY_TIMEOUT = 20
     SENDING_REPLY_TIMEOUT = 60
+    RESET_DEASSERT_DELAY = 1
+    RESET_ASSERT_DELAY = 3
+    WAIT_FOR_BYTES_DELAY = 0.5
 
     def __init__(self, ser_port, ser_baud, pow_pin, ring_pin):
         self.ser_port = ser_port
@@ -58,7 +61,7 @@ class GsmModem:
             while (a.find(expected_reply) < 0 and a.find('ERROR') < 0 and 
                 time.time() < now + self.REPLY_TIMEOUT):
                 a += self.gsm.read(self.gsm.inWaiting())
-                time.sleep(0.5)
+                time.sleep(self.WAIT_FOR_BYTES_DELAY)
 
             if time.time() > now + self.REPLY_TIMEOUT:
                 a = '>> Error: GSM Unresponsive'
@@ -196,9 +199,9 @@ class GsmModem:
         try:
             self.at_cmd("AT+CPOWD=1", "NORMAL POWER DOWN")
             GPIO.output(self.pow_pin, 1)
-            time.sleep(1)
+            time.sleep(self.RESET_DEASSERT_DELAY)
             GPIO.output(self.pow_pin, 0)
-            time.sleep(1)
+            time.sleep(self.RESET_ASSERT_DELAY)
             GPIO.output(self.pow_pin, 1)
 
             print 'done'
@@ -311,7 +314,7 @@ class GsmModem:
             while (a.find('>') < 0 and a.find("ERROR") < 0 and 
                 time.time() < now + self.SEND_INITIATE_REPLY_TIMEOUT):
                 a += self.gsm.read(self.gsm.inWaiting())
-                time.sleep(0.5)
+                time.sleep(self.WAIT_FOR_BYTES_DELAY)
                 print '.',
 
             if (time.time() > now + self.SEND_INITIATE_REPLY_TIMEOUT or 
@@ -326,9 +329,9 @@ class GsmModem:
             now = time.time()
             self.gsm.write(pdu.pdu+chr(26))
             while (a.find('OK') < 0 and a.find("ERROR") < 0 and 
-                time.time() < now + 60):
+                time.time() < now + self.REPLY_TIMEOUT):
                     a += self.gsm.read(self.gsm.inWaiting())
-                    time.sleep(0.5)
+                    time.sleep(self.WAIT_FOR_BYTES_DELAY)
                     print ':',
 
             if time.time() - self.SENDING_REPLY_TIMEOUT > now:
