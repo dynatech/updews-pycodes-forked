@@ -26,8 +26,9 @@ def set_static_variable(name=""):
     if name != "":
         query += " where name = '%s'" % (name)
     
-    variables = dynadb.read(query=query,
-    identifier='Set static_variables')
+    variables = dynadb.read(
+      query=query,
+      identifier='Set static_variables')
     
     for data in variables:
         variable_info = VariableInfo(data)
@@ -36,7 +37,8 @@ def set_static_variable(name=""):
         if variable_info.type == 'data_frame':
             static_output = dynadb.df_read(query_string)
         elif variable_info.type == 'dict':
-            static_output = dict_format(query_string, 
+            static_output = dict_format(
+              query_string, 
               variable_info)
         else:
             static_output = dynadb.read(query_string)
