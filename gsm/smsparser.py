@@ -261,7 +261,7 @@ def process_surficial_observation(sms):
     reply_msgs = mc.get("surficial_parser_reply_messages")
     sc = mc.get("server_config")
     data_host = sc["resource"]["datadb"]
-    ct_sim_num = [sc["surficial"]["ct_sim_num"]]
+    ct_sim_num = str(sc["surficial"]["ct_sim_num"])
     enable_analysis = sc["surficial"]["enable_analysis"]
     
     obv = []
