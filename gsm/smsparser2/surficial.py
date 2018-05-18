@@ -273,8 +273,8 @@ def get_weather_description(text):
 
     if match is None:
         err_val = SURFICIAL_PARSER_ERROR_VALUE["weather_no_match"]
-
-    match_str = match_str[:20]
+    else:
+        match_str = match_str[:20]
 
     return {"value": match_str, "match": match_str, "err_val": err_val}
 
@@ -302,10 +302,9 @@ def get_observer_names(text):
             names.append(name)
             value += name + " "
         value.rstrip()
+        value = value[:100]
     else:
         err_val = SURFICIAL_PARSER_ERROR_VALUE["names_no_matches"]
-
-    value = value[:100]
 
     return {"value": value, "match": names, "err_val": err_val}    
 
