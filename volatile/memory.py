@@ -9,12 +9,12 @@ def get_handle(print_out = False):
 	return mc
 
 def get(name=""):
-	name = name..upper()
+	name = name.upper()
 	mc = get_handle()
 	return mc.get(name)
 
 def set(name="",data=""):
-	name = name..upper()
+	name = name.upper()
 	mc = get_handle()
 	return mc.set(name,data)
 
