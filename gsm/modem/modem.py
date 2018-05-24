@@ -188,7 +188,7 @@ class GsmModem:
         try:
             csq_val = int(re.search("(?<=: )\d{1,2}(?=,)",csq_reply).group(0))
             return csq_val
-        except ValueError, AttributeError:
+        except (ValueError, AttributeError) as e:
             return 0
         except TypeError:
             return 0
