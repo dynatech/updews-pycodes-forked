@@ -7,7 +7,6 @@ import lockscript as lock
 import alertmessaging as amsg
 import memcache
 import lockscript
-import utsparser as uts
 import dynadb.db as dynadb
 import smstables
 import volatile.memory as mem
@@ -15,6 +14,7 @@ import smsparser2.subsurface as subsurface
 import smsparser2 as parser
 import smsparser2.smsclass as smsclass
 import smsparser2.rain as rain
+import smsparser2.extensometer as extenso
 import pandas as pd
 
 def logger_response(sms,log_type,log='False'):
@@ -433,8 +433,12 @@ def parse_all_messages(args,allmsgs=[]):
         if args.table == 'loggers':
             # start of sms parsing
 
-            if re.search("^[A-Z]{3}X[A-Z]{1}\*L\*",sms.msg):
-                is_msg_proc_success = uts.parse_extensometer_uts(sms)
+            if re.search("^[A-Z]{3}X[A-Z]{1}\*U\*",sms.msg):
+                df_data = extenso.uts(sms)
+                if df_data:
+                    dynadb.df_write(df_data)
+                else:
+                    is_msg_proc_success = True
             elif re.search("\*FF",sms.msg) or re.search("PZ\*",sms.msg):
                 is_msg_proc_success = process_piezometer(sms)
             # elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*\d+T?$",sms.msg):
