@@ -313,7 +313,7 @@ def log_csq(gsm, gsm_id):
     return csq_val 
 
         
-def run_server(gsm_info,table='loggers'):
+def run_server(gsm_mod, gsm_info, table='loggers'):
     """
     - The process of running the gsm server to read the recieved message and to try to 
       send message from outbox.It checks gsm info **(name, network, id)** to read messages 
@@ -332,59 +332,46 @@ def run_server(gsm_info,table='loggers'):
     logruntimeflag = True
     checkIfActive = True
 
-    sc = mem.server_config()
-
-    if gsm_info['name'] == 'simulate':
-        simulate_gsm(gsm_info['network'])
-        sys.exit()
-
-    try:
-        gsm = modem.GsmModem(gsm_info['port'], sc["serial"]["baudrate"], 
-            gsm_info["pwr_on_pin"], gsm_info["ring_pin"])
-        gsm.set_defaults()       
-    except serial.SerialException:
-        print '**NO COM PORT FOUND**'
-        serverstate = 'serial'
-        raise ValueError(">> Error: no com port found")
+    gsm_mod.set_defaults() 
             
     log_runtime_status(gsm_info["name"],"startup")
     
     print '**' + gsm_info['name'] + ' GSM server active**'
     print time.asctime()
     network = gsm_info['name'].upper()
-    print "CSQ:", log_csq(gsm, gsm_info['id'])
+    print "CSQ:", log_csq(gsm_mod, gsm_info['id'])
 
     while True:
-        m = gsm.count_msg()
+        m = gsm_mod.count_msg()
         if m>0:
-            allmsgs = gsm.get_all_sms(network)
+            allmsgs = gsm_mod.get_all_sms(network)
 
             try:
                 smstables.write_inbox(allmsgs,gsm_info)
             except KeyboardInterrupt:
                 print ">> Error: May be an empty line.. skipping message storing"
             
-            gsm.delete_sms(gsm_info["module"])
+            gsm_mod.delete_sms(gsm_info["module"])
                 
             print dt.today().strftime("\n" + network 
                 + " Server active as of %A, %B %d, %Y, %X")
 
-            print "CSQ:", log_csq(gsm, gsm_info['id'])
+            print "CSQ:", log_csq(gsm_mod, gsm_info['id'])
 
             log_runtime_status(gsm_info["name"],"alive")
 
-            try_sending_messages(gsm, gsm_info)
+            try_sending_messages(gsm_mod, gsm_info)
             
         elif m == 0:
             
-            try_sending_messages(gsm, gsm_info)
+            try_sending_messages(gsm_mod, gsm_info)
             
             today = dt.today()
             if (today.minute % 10 == 0):
                 if checkIfActive:
                     print "\n", network, today.strftime("Server active as of "
                         "%A, %B %d, %Y, %X")
-                    print "CSQ:", log_csq(gsm, gsm_info['id'])
+                    print "CSQ:", log_csq(gsm_mod, gsm_info['id'])
                     log_runtime_status(gsm_info["name"],"alive")
                 checkIfActive = False
             else:
@@ -522,7 +509,30 @@ def main():
         sys.exit()
     
     print 'Running gsm server ...'
-    run_server(gsm_modules[args.gsm_id])
+
+    gsm_info = gsm_modules[args.gsm_id]
+
+    if gsm_info['name'] == 'simulate':
+        simulate_gsm(gsm_info['network'])
+        sys.exit()
+
+    sc = mem.server_config()
+    gsm = None
+
+    try:
+        gsm = modem.GsmModem(gsm_info['port'], sc["serial"]["baudrate"], 
+            gsm_info["pwr_on_pin"], gsm_info["ring_pin"])
+    except serial.SerialException:
+        print '**NO COM PORT FOUND**'
+        serverstate = 'serial'
+        raise ValueError(">> Error: no com port found")
+
+    try:
+        run_server(gsm, gsm_info)
+    except modem.ResetException:
+        print "> Resetting system because of GSM failure"
+        gsm.reset()
+    
     sys.exit()
 
 if __name__ == '__main__':
@@ -532,7 +542,3 @@ if __name__ == '__main__':
         except KeyboardInterrupt:
             print 'Bye'
             break
-        except modem.ResetException:
-            print "> Resetting system because of GSM failure"
-            modem.reset()
-            continue
