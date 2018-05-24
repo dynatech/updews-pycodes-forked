@@ -1,8 +1,67 @@
-import memory
-import dynadb.db as dbio
 from datetime import datetime as dt
+
+import memory
 import pandas.io.sql as psql
 import pandas as pd
+
+import dynadb.db as dbio
+
+
+class VariableInfo:
+    def __init__(self, info):   
+        self.name = str(info[0])
+        self.query = str(info[1])
+        self.type = str(info[2])
+        self.index_id = str(info[3])
+        
+        
+def dict_format(query_string, variable_info):
+    query_output = dbio.read(query_string)
+    if query_output:
+        dict_output = {a: b for a, b 
+        in query_output}
+        return dict_output
+    else:
+        return False
+
+
+def set_static_variable(name=""):
+    query = "Select name, query, data_type, "
+    query += "ts_updated from static_variables"
+    date = dt.now()
+    date = date.strftime('%Y-%m-%d %H:%M:%S')
+    if name != "":
+        query += " where name = '%s'" % (name)
+    
+    variables = dbio.read(
+      query=query,
+      identifier='Set static_variables')
+    
+    for data in variables:
+        variable_info = VariableInfo(data)
+        query_string = variable_info.query
+        
+        if variable_info.type == 'data_frame':
+            static_output = dbio.df_read(query_string)
+
+        elif variable_info.type == 'dict':
+            static_output = dict_format(
+              query_string, 
+              variable_info)
+        else:
+            static_output = dbio.read(query_string)
+            
+        if len(static_output) == 0 : 
+            warnings.warn('Query Error' + variable_info.name)
+        else:
+            memory.set(variable_info.name, static_output)
+            query_ts_update = "UPDATE static_variables SET "
+            query_ts_update += " ts_updated ='%s' " %(date)
+            query_ts_update += " WHERE name ='%s'" % (
+                variable_info.name)
+            dbio.write(query_ts_update)
+            print variable_info.name
+
 
 def get_db_dataframe(query):
     try:
@@ -18,27 +77,27 @@ def get_db_dataframe(query):
         print "Exception detected in accessing database"
         sys.exit()
     except psql.DatabaseError:
-    	print "Error getting query %s" % (query)
-    	return None
+        print "Error getting query %s" % (query)
+        return None
 
 def set_mysql_tables(mc):
-	tables = ['sites','tsm_sensors','loggers','accelerometers']
+    tables = ['sites','tsm_sensors','loggers','accelerometers']
 
-	print 'Setting dataframe tables to memory'
-	for key in tables:
-		print "%s," % (key),
-		df = get_db_dataframe("select * from %s;" % key)
+    print 'Setting dataframe tables to memory'
+    for key in tables:
+        print "%s," % (key),
+        df = get_db_dataframe("select * from %s;" % key)
 
-		if df is None:
-			continue
+        if df is None:
+            continue
 
-		mc.set('df_'+key,df)
+        mc.set('df_'+key,df)
 
-		# special configuration
-		if key == 'sites':
-			mc.set(key+'_dict',df.set_index('site_code').to_dict())
+        # special configuration
+        if key == 'sites':
+            mc.set(key+'_dict',df.set_index('site_code').to_dict())
 
-	print ' ... done'
+    print ' ... done'
 
 def get_mobiles(table, host = None, args = None):
     """
@@ -152,7 +211,7 @@ def get_surficial_parser_reply_messages():
 
 def main(args):
 
-    print dt.today().strftime('%Y-%m-%d %H:%M:%S')	
+    print dt.today().strftime('%Y-%m-%d %H:%M:%S')  
     mc = memory.get_handle()
     sc = memory.server_config()
 
@@ -162,9 +221,9 @@ def main(args):
 
     print "Set static tables to memory",
     try:
-    	set_mysql_tables(mc)
+        set_mysql_tables(mc)
     except KeyError:
-    	print ">> KeyError"
+        print ">> KeyError"
     print "done"
 
     print "Set mobile numbers to memory",
@@ -181,6 +240,6 @@ def main(args):
     df = get_surficial_parser_reply_messages()
     mc.set("surficial_parser_reply_messages", df)
     print "done"
-	
+    
 if __name__ == "__main__":
     main()

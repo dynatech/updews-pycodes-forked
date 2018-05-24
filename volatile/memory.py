@@ -8,6 +8,16 @@ def get_handle(print_out = False):
 		print "done"
 	return mc
 
+def get(name=""):
+	name = name.upper()
+	mc = get_handle()
+	return mc.get(name)
+
+def set(name="",data=""):
+	name = name.upper()
+	mc = get_handle()
+	return mc.set(name,data)
+
 def print_config(cfg = None):
 	mc = get_handle()
 
