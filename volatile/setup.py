@@ -24,6 +24,7 @@ def main():
     args = get_arguments()
     config.main()
     static.main(args)
-
+    static.set_static_variable()
+    
 if __name__ == "__main__":
     main()
