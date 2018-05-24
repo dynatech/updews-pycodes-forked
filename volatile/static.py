@@ -16,7 +16,7 @@ class VariableInfo:
         
         
 def dict_format(query_string, variable_info):
-    query_output = dynadb.read(query_string)
+    query_output = dbio.read(query_string)
     if query_output:
         dict_output = {a: b for a, b 
         in query_output}
@@ -33,7 +33,7 @@ def set_static_variable(name=""):
     if name != "":
         query += " where name = '%s'" % (name)
     
-    variables = dynadb.read(
+    variables = dbio.read(
       query=query,
       identifier='Set static_variables')
     
@@ -42,14 +42,14 @@ def set_static_variable(name=""):
         query_string = variable_info.query
         
         if variable_info.type == 'data_frame':
-            static_output = dynadb.df_read(query_string)
+            static_output = dbio.df_read(query_string)
 
         elif variable_info.type == 'dict':
             static_output = dict_format(
               query_string, 
               variable_info)
         else:
-            static_output = dynadb.read(query_string)
+            static_output = dbio.read(query_string)
             
         if len(static_output) == 0 : 
             warnings.warn('Query Error' + variable_info.name)
@@ -59,7 +59,7 @@ def set_static_variable(name=""):
             query_ts_update += " ts_updated ='%s' " %(date)
             query_ts_update += " WHERE name ='%s'" % (
                 variable_info.name)
-            dynadb.write(query_ts_update)
+            dbio.write(query_ts_update)
             print variable_info.name
 
 
