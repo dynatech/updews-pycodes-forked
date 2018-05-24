@@ -29,8 +29,8 @@ def uts(sms):
 
     MATCH_ITEMS = {
         "LA": {"name": "lag", "fxn": int},
-        "MX": {"name": "max_arg_val", "fxn": float},
-        "MI": {"name": "max_arg_index", "fxn": int},
+        "MX": {"name": "abs_max_val", "fxn": float},
+        "MI": {"name": "abs_max_index", "fxn": int},
         "TP": {"name": "temp_val", "fxn": float}
     }
 
