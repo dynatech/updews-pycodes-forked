@@ -28,7 +28,7 @@ def dict_format(query_string, variable_info):
 def set_static_variable(name=""):
     query = "Select name, query, data_type, "
     query += "ts_updated from static_variables"
-    date = datetime.now()
+    date = dt.now()
     date = date.strftime('%Y-%m-%d %H:%M:%S')
     if name != "":
         query += " where name = '%s'" % (name)
