@@ -7,6 +7,8 @@ import smsclass
 def uts(sms):
     values = {}
 
+    print sms.msg
+
     uts_name = re.search("^[A-Z]{5}(?=\*U\*)",sms.msg).group(0)
 
     mc = mem.get_handle()
@@ -62,6 +64,8 @@ def uts(sms):
     values["ts"] = ts
 
     df_ext_values = pd.DataFrame([values])
+
+    print df_ext_values
 
     return smsclass.DataTable(DATA_TABLE_NAME, df_ext_values)
 
