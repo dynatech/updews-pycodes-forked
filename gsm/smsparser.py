@@ -7,7 +7,6 @@ import lockscript as lock
 import alertmessaging as amsg
 import memcache
 import lockscript
-import utsparser as uts
 import dynadb.db as dynadb
 import smstables
 import volatile.memory as mem
