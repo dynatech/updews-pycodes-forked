@@ -141,7 +141,7 @@ def rain_arq(sms):
         return
 
     try:
-        if csq != 'NULL' or csq != 'N/A':
+        if csq != NULL and csq != 'N/A':
             df_data = [{'ts':txtdatetime,'rain':rain,'temperature':temp,
             'humidity':hum,'battery1':batv1,'battery2':batv2,'csq':csq}]
         else:
