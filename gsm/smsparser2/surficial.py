@@ -210,15 +210,12 @@ def get_time(text):
         err_val = SURFICIAL_PARSER_ERROR_VALUE["time_no_matches"]
       
     # sanity check
-    time_val = dt.strptime(time_str, TIME_FORMAT_STD).time()
-    # if time_val > dt.now().time():
-    #     print 'Time out of bounds. Time too soon' 
-    #     raise ValueError
-    # el
-    if (time_val > dt.strptime("18:00:00","%H:%M:%S").time() or time_val < 
-        dt.strptime("05:00:00","%H:%M:%S").time()):
-        print 'Time out of bounds. Unrealizable time to measure' 
-        err_val = SURFICIAL_PARSER_ERROR_VALUE["time_out_of_bounds"]
+    if not err_val:
+        time_val = dt.strptime(time_str, TIME_FORMAT_STD).time()
+        if (time_val > dt.strptime("18:00:00","%H:%M:%S").time() or time_val < 
+            dt.strptime("05:00:00","%H:%M:%S").time()):
+            print 'Time out of bounds. Unrealizable time to measure' 
+            err_val = SURFICIAL_PARSER_ERROR_VALUE["time_out_of_bounds"]
 
     return {"value": str(time_str), "match": str(match_time_str), 
             "err_val": err_val}
