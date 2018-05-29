@@ -85,7 +85,7 @@ def main():
     this_month = get_values("local_server_interface")
     next_month = get_values("local_server_interface_2")
 
-    query = ("insert into monshiftsched (timestamp, iompmt, iompct, oomps, "
+    query = ("insert into monshiftsched (ts, iompmt, iompct, oomps, "
         "oompmt,oompct) values ")
 
     for row in this_month:
@@ -105,7 +105,7 @@ def main():
         "oompmt = values(oompmt), oompct = values(iompct)")
 
     print(query)
-    db.write(query,"shiftsync",False,"dynaslope")
+    db.write(query, "shiftsync", False, "local")
 
 if __name__ == '__main__':
     main()
