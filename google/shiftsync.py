@@ -88,7 +88,7 @@ def main():
     query = ("insert into monshiftsched (ts, iompmt, iompct, oomps, "
         "oompmt,oompct) values ")
 
-    for row in this_month:
+    for row in this_month + next_month:
         query += "("
         for item in row:
             if item == '-':
