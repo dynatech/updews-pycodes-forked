@@ -3,6 +3,7 @@ from datetime import datetime as dt
 import memory
 import pandas.io.sql as psql
 import pandas as pd
+import warnings
 
 import dynadb.db as dbio
 
@@ -44,15 +45,29 @@ def set_static_variable(name=""):
         if variable_info.type == 'data_frame':
             static_output = dbio.df_read(query_string)
 
+            if (static_output is None) or (
+                len(static_output) == 0):
+                output_status = True
+            else:
+                output_status = False  
+
         elif variable_info.type == 'dict':
             static_output = dict_format(
               query_string, 
               variable_info)
+            if len(static_output) == 0:
+                output_status = True
+            else:
+                output_status = False
         else:
             static_output = dbio.read(query_string)
+            if len(static_output) == 0:
+                output_status = True
+            else:
+                output_status = False
             
-        if len(static_output) == 0 : 
-            warnings.warn('Query Error' + variable_info.name)
+        if output_status: 
+            warnings.warn('Query Error ' + variable_info.name)
         else:
             memory.set(variable_info.name, static_output)
             query_ts_update = "UPDATE static_variables SET "
