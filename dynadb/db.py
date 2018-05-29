@@ -37,7 +37,7 @@ class DbInstance:
     self.password = sc['db']['password']
       
 
-def connect(host = 'local', data_format = 'tuple'):   
+def connect(host = 'local', connetion =''):   
     """
     - Creating the ``MySQLdb.connect`` connetion for the database.
 
@@ -231,6 +231,6 @@ def df_read(query = ''):
         sys.exit()
     except psql.DatabaseError:
         print "Error getting query %s" % (query)
-        return None
+        return
 
 
