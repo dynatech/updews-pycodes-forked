@@ -231,6 +231,5 @@ def df_read(query = ''):
         sys.exit()
     except psql.DatabaseError:
         print "Error getting query %s" % (query)
-        return
 
 
