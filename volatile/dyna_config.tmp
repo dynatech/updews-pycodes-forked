@@ -14,9 +14,9 @@ mobile_nums_db = gsm2
 smsdb2 = dynaslope
 
 [Db]
-password = senslope
+password = NaCAhztBgYZ3HwTkvHwwGVtJn5sVMFgg
 name = senslopedb
-user = root
+user = pysys_local
 
 [Serial]
 baudrate = 57600
