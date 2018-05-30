@@ -230,6 +230,7 @@ def df_read(query = ''):
         print "Exception detected in accessing database"
         sys.exit()
     except psql.DatabaseError:
-        print "Error getting query %s" % (query)
+        # print "Error getting query %s" % (query)
+        return None
 
 
