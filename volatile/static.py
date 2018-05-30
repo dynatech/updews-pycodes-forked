@@ -2,6 +2,7 @@ from datetime import datetime as dt
 
 import ConfigParser
 import memory
+import os
 import pandas.io.sql as psql
 import pandas as pd
 import warnings
@@ -14,7 +15,40 @@ class VariableInfo:
         self.name = str(info[0])
         self.query = str(info[1])
         self.type = str(info[2])
-        self.index_id = str(info[3])        
+        self.index_id = str(info[3])
+
+
+def read_set_connection(file='',static_name=''):
+    cnffiletxt = 'resources.cnf'
+    cfile = os.path.dirname(os.path.realpath(__file__)) + '/' + cnffiletxt
+    cnf = ConfigParser.ConfigParser()
+    cnf.read(cfile)
+
+    config_dict = dict()
+    for section in cnf.sections():
+        options = dict()
+        data = dict()
+        for opt in cnf.options(section):
+            try:
+                options[opt] = cnf.getboolean(section, opt)
+                continue
+            except ValueError:
+                pass
+
+            try:
+                options[opt] = cnf.getint(section, opt)
+                continue
+            except ValueError:
+                pass
+
+            options[opt] = cnf.get(section, opt)
+
+        config_dict[section] = options
+
+    # print config_dict
+    memory.set(static_name, config_dict)
+
+
 def dict_format(query_string, variable_info):
     query_output = dbio.read(query_string)
     if query_output:
@@ -67,7 +101,7 @@ def set_static_variable(name=""):
             
         if output_status: 
             warnings.warn('Query Error ' + variable_info.name)
-            
+
         else:
             memory.set(variable_info.name, static_output)
             query_ts_update = "UPDATE static_variables SET "
@@ -95,6 +129,7 @@ def get_db_dataframe(query):
         print "Error getting query %s" % (query)
         return None
 
+
 def set_mysql_tables(mc):
     tables = ['sites','tsm_sensors','loggers','accelerometers']
 
@@ -113,6 +148,7 @@ def set_mysql_tables(mc):
             mc.set(key+'_dict',df.set_index('site_code').to_dict())
 
     print ' ... done'
+
 
 def get_mobiles(table, host = None, args = None):
     """
@@ -258,3 +294,5 @@ def main(args):
     
 if __name__ == "__main__":
     main()
+    # read_set_config()
+    # set_static_variable()
