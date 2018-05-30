@@ -18,8 +18,7 @@ class VariableInfo:
 def dict_format(query_string, variable_info):
     query_output = dbio.read(query_string)
     if query_output:
-        dict_output = {a: b for a, b 
-        in query_output}
+        dict_output = {a: b for a, b in query_output}
         return dict_output
     else:
         return False
@@ -44,39 +43,23 @@ def set_static_variable(name=""):
     for data in variables:
         variable_info = VariableInfo(data)
         query_string = variable_info.query
-        
+
         if variable_info.type == 'data_frame':
             static_output = dbio.df_read(query_string)
 
-            if (static_output is None) or (
-                len(static_output) == 0):
-                output_status = True
-            else:
-                output_status = False  
-
         elif variable_info.type == 'dict':
-            static_output = dict_format(
-              query_string, 
-              variable_info)
-            if len(static_output) == 0:
-                output_status = True
-            else:
-                output_status = False
+            static_output = dict_format(query_string, variable_info)
+
         else:
             static_output = dbio.read(query_string)
-            if len(static_output) == 0:
-                output_status = True
-            else:
-                output_status = False
             
-        if output_status: 
+        if static_output is None: 
             warnings.warn('Query Error ' + variable_info.name)
         else:
             memory.set(variable_info.name, static_output)
-            query_ts_update = "UPDATE static_variables SET "
-            query_ts_update += " ts_updated ='%s' " %(date)
-            query_ts_update += " WHERE name ='%s'" % (
-                variable_info.name)
+            query_ts_update = ("UPDATE static_variables SET "
+                " ts_updated ='%s' WHERE name ='%s'") % (date, 
+                    variable_info.name)
             dbio.write(query_ts_update)
             print variable_info.name
 
