@@ -49,7 +49,6 @@ def main():
 	
 	print 'Setting server configuration',
 	c = dewsl_server_config()
-	print c.config
 	mc.set("server_config",c.config)
 	print "... done"
 

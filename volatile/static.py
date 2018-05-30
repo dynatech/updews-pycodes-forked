@@ -1,14 +1,11 @@
 from datetime import datetime as dt
-
-import ConfigParser
+import MySQLdb
 import memory
-import os
 import pandas.io.sql as psql
 import pandas as pd
 import warnings
-
 import dynadb.db as dbio
-
+import sqlalchemy
 
 class VariableInfo:
     def __init__(self, info):   
@@ -16,39 +13,8 @@ class VariableInfo:
         self.query = str(info[1])
         self.type = str(info[2])
         self.index_id = str(info[3])
-
-
-def read_set_connection(file = '' ,static_name = ''):
-    cnffiletxt = 'resources.cnf'
-    cfile = os.path.dirname(os.path.realpath(__file__)) + '/' + cnffiletxt
-    cnf = ConfigParser.ConfigParser()
-    cnf.read(cfile)
-
-    config_dict = dict()
-    for section in cnf.sections():
-        options = dict()
-        data = dict()
-        for opt in cnf.options(section):
-            try:
-                options[opt] = cnf.getboolean(section, opt)
-                continue
-            except ValueError:
-                pass
-
-            try:
-                options[opt] = cnf.getint(section, opt)
-                continue
-            except ValueError:
-                pass
-
-            options[opt] = cnf.get(section, opt)
-
-        config_dict[section] = options
-
-    # print config_dict
-    memory.set(static_name, config_dict)
-
-
+        
+        
 def dict_format(query_string, variable_info):
     query_output = dbio.read(query_string)
     if query_output:
@@ -66,10 +32,14 @@ def set_static_variable(name=""):
     date = date.strftime('%Y-%m-%d %H:%M:%S')
     if name != "":
         query += " where name = '%s'" % (name)
+
+    try:
     
-    variables = dbio.read(
-      query=query,
-      identifier='Set static_variables')
+        variables = dbio.read(
+          query = query, identifier = 'Set static_variables')
+    except MySQLdb.ProgrammingError:
+        print ">> static_variables table does not exist on host"
+        return
     
     for data in variables:
         variable_info = VariableInfo(data)
@@ -101,7 +71,6 @@ def set_static_variable(name=""):
             
         if output_status: 
             warnings.warn('Query Error ' + variable_info.name)
-
         else:
             memory.set(variable_info.name, static_output)
             query_ts_update = "UPDATE static_variables SET "
@@ -129,7 +98,6 @@ def get_db_dataframe(query):
         print "Error getting query %s" % (query)
         return None
 
-
 def set_mysql_tables(mc):
     tables = ['sites','tsm_sensors','loggers','accelerometers']
 
@@ -148,7 +116,6 @@ def set_mysql_tables(mc):
             mc.set(key+'_dict',df.set_index('site_code').to_dict())
 
     print ' ... done'
-
 
 def get_mobiles(table, host = None, args = None):
     """
@@ -283,16 +250,17 @@ def main(args):
     get_mobiles("users", mobiles_host, args)
     print "done"
 
-    print "Set surficial_markers to memory", 
-    get_surficial_markers(from_memory = False)
-    print "done"
+    try:
+        print "Set surficial_markers to memory", 
+        get_surficial_markers(from_memory = False)
+        print "done"
 
-    print "Set surficial_parser_reply_messages",
-    df = get_surficial_parser_reply_messages()
-    mc.set("surficial_parser_reply_messages", df)
-    print "done"
+        print "Set surficial_parser_reply_messages",
+        df = get_surficial_parser_reply_messages()
+        mc.set("surficial_parser_reply_messages", df)
+        print "done"
+    except sqlalchemy.exc.ProgrammingError: 
+        print ">> Error on getting surficial information. Skipping load"
     
 if __name__ == "__main__":
     main()
-    # read_set_config()
-    # set_static_variable()
