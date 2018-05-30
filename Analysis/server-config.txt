@@ -1,8 +1,8 @@
 [DB I/O]
 #Hostdb = 192.168.150.129
 Hostdb = 127.0.0.1
-Userdb = root
-Passdb = senslope
+Userdb = pysys_local
+Passdb = NaCAhztBgYZ3HwTkvHwwGVtJn5sVMFgg
 Namedb = senslopedb
 NamedbPurged = senslopedb_purged
 Printtostdout = True
