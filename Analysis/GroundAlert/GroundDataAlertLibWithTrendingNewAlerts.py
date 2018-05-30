@@ -525,7 +525,7 @@ def check_trending(df,out_folder,plot = False):
         
         fig = plt.figure()
         fig.set_size_inches(15,8)
-        fig.suptitle('{} Crack {} {}'.format(str(df.site_id.values[0]).upper(),str(df.crack_id.values[0]).title(),pd.to_datetime(df.timestamp.values[-1]).strftime("%b %d, %Y %H:%M")))
+        fig.suptitle('{} Marker {} {}'.format(str(df.site_id.values[0]).upper(),str(df.crack_id.values[0]).title(),pd.to_datetime(df.timestamp.values[-1]).strftime("%b %d, %Y %H:%M")))
         ax1 = fig.add_subplot(121)
         ax1.get_xaxis().tick_bottom()    
         ax1.get_yaxis().tick_left()
@@ -887,7 +887,7 @@ def PlotTrendingAnalysis(site,marker,end):
     
     fig = plt.figure()
     fig.set_size_inches(15,8)
-    fig.suptitle('{} Crack {} {}'.format(str(df.site_id.values[0]).upper(),str(df.crack_id.values[0]).title(),pd.to_datetime(df.timestamp.values[-1]).strftime("%b %d, %Y %H:%M")))
+    fig.suptitle('{} Marker {} {}'.format(str(df.site_id.values[0]).upper(),str(df.crack_id.values[0]).title(),pd.to_datetime(df.timestamp.values[-1]).strftime("%b %d, %Y %H:%M")))
     ax1 = fig.add_subplot(121)
     ax1.get_xaxis().tick_bottom()    
     ax1.get_yaxis().tick_left()

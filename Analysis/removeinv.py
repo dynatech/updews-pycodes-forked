@@ -1,9 +1,25 @@
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import date, time, datetime, timedelta
 from sqlalchemy import create_engine
 
 import querySenslopeDb as q
 import filepath
+
+def round_data_time(date_time):
+    date_time = pd.to_datetime(date_time)
+    date_year = date_time.year
+    date_month = date_time.month
+    date_day = date_time.day
+    time_hour = date_time.hour
+    time_minute = date_time.minute
+    if time_minute < 30:
+        time_minute = 0
+    else:
+        time_minute = 30
+    date_time = datetime.combine(date(date_year, date_month, date_day),
+                           time(time_hour, time_minute,0))
+
+    return date_time
 
 def alertmsg(df):
     alert_msg = df['alertmsg'].values[0].split('\n')
@@ -68,9 +84,9 @@ def currentinv(withalert, df):
 
     return invdf
 
-def main_inv(ts=datetime.now()):
+def main_inv(ts):
     # sites with invalid alert
-    query = "SELECT * FROM smsalerts where ts_set >= '%s' and alertstat = 'invalid'" %(pd.to_datetime(ts) - timedelta(30))
+    query = "SELECT * FROM smsalerts where ts_set >= '%s' and alertstat = 'invalid'" %(pd.to_datetime(ts) - timedelta(300))
     df = q.GetDBDataFrame(query)
     
     # wrong format in db
@@ -109,7 +125,7 @@ def main_inv(ts=datetime.now()):
     finaldf.to_csv(file_path+'InvalidAlert.txt', sep=':', header=True, index=False, mode='w')
     return finaldf
 
-def main_l0t(ts=datetime.now()):
+def main_l0t(ts):
     query = "SELECT * FROM smsalerts where ts_ack >= '%s' and alertstat = 'valid' and alertmsg like '%s'" %(pd.to_datetime(ts) - timedelta(hours=4), '%l0t%')
     df = q.GetDBDataFrame(query)
 
@@ -133,8 +149,15 @@ def main_l0t(ts=datetime.now()):
                 except:
                     pass
 
-if __name__ == '__main__':
+def main():
     start = datetime.now()
-    main_l0t()
-    main_inv()
+    print start
+    
+    ts = round_data_time(start)
+    main_l0t(ts)
+    main_inv(ts)
+    
     print 'runtime =', str(datetime.now() - start)
+
+if __name__ == '__main__':
+    main()    

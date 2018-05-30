@@ -83,29 +83,28 @@ def subsurface(site, end, shift_datetime):
     
 def surficial(site, end, shift_datetime):
 
-    site_query = "( site_id = '%s' " %site
     if site == 'bto':
-        site_query += "or site_id = 'bat' )"
+        surficial_site = 'bat'
     elif site == 'mng':
-        site_query += "or site_id = 'man' )"
+        surficial_site = 'man'
     elif site == 'png':
-        site_query += "or site_id = 'pan' )"
+        surficial_site = 'pan'
     elif site == 'jor':
-        site_query += "or site_id = 'pob' )"
+        surficial_site = 'pob'
     elif site == 'tga':
-        site_query += "or site_id = 'tag' )"
+        surficial_site = 'tag'
     else:
-        site_query += ')'
+        surficial_site = site
 
     query =  "SELECT max(timestamp) AS ts FROM gndmeas "
-    query += "WHERE %s " %site_query
+    query += "WHERE site_id = '%s' " %surficial_site
     query += "AND timestamp >= '%s' " %shift_datetime
     query += "AND timestamp <= '%s' " %end
 
     ts = qdb.GetDBDataFrame(query)['ts'].values[0]
 
     if ts != None:
-        surf_plot.PlotForEvent(site,ts)
+        surf_plot.PlotForEvent(surficial_site,ts)
 
 def site_plot(public_alert, end, shift_datetime):
     

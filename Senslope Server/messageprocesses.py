@@ -540,7 +540,7 @@ def ProcessARQWeather(line,sender):
         # print str(r15m),str(r24h),batv1, batv2, current, boostv1, boostv2, charge, csq, temp, hum, flashp,txtdatetime 
 
         
-    except IndexError and AttributeError:
+    except IndexError, AttributeError:
         print '\n>> Error: Rain message format is not recognized'
         print line
         return
@@ -696,6 +696,12 @@ def CheckMessageSource(msg):
 
 def SpawnAlertGen(tsm_name, timestamp):
     # spawn alert alert_gens
+    c = cfg.config()
+
+    if not c.io.enable_alertgen:
+        print "Alertgen disabled in config"
+        return
+
     print "For alertgen.py", tsm_name, timestamp
     timestamp_dt = dt.strptime(timestamp,'%Y-%m-%d %H:%M:%S')+\
         td(minutes=10)
@@ -738,6 +744,10 @@ def invokeProcessInBgnd(exec_line):
 
 def syncTable(table):
     c = cfg.config()
+
+    if not c.io.enable_masync:
+        print "Masync disabled in config"
+        return
     invokeProcessInBgnd("%s %s %s > %s 2>&1" % (c.fileio.pythonpath, c.fileio.masyncscript, table, c.fileio.masynclogs))
 
 def ProcessAllMessages(allmsgs,network,instance):

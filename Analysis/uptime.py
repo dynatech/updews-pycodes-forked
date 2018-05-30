@@ -33,7 +33,7 @@ def alerts_df():
     return alerts
 
 def to_db(df):
-    
+    print df
     if not qdb.DoesTableExist('uptime'):
         create_uptime()
     
@@ -51,9 +51,12 @@ def to_db(df):
         qdb.PushDBDataFrame(df, 'uptime', index=False)
     elif pd.to_datetime(prev_uptime['ts_updated'].values[0]) < df['ts_updated'].values[0]:
         query =  "UPDATE uptime "
-        query += "SET updateTS = '%s' " %df['ts_updated'].values[0]
-        query += "WHERE timestamp = '%s'" %prev_uptime['ts'].values[0]
-        qdb.ExecuteQuery(query)
+        query += "SET ts_updated = '%s' " %pd.to_datetime(df['ts_updated'].values[0])
+        query += "WHERE uptime_id = %s" %prev_uptime['uptime_id'].values[0]
+	db, cur = qdb.SenslopeDBConnect(qdb.Namedb)
+	cur.execute(query)
+        db.commit()
+        db.close()
 
 def main():
     
@@ -61,7 +64,7 @@ def main():
     up_count = len(alerts[alerts.up == True])
     ts = pd.to_datetime(max(alerts['timestamp'].values))
     df = pd.DataFrame({'ts': [ts], 'site_count': [up_count], 'ts_updated': [ts]})
-    to_db(df) 
+    to_db(df)
 
 ###############################################################################
 
