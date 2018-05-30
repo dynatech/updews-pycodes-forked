@@ -13,6 +13,37 @@ class VariableInfo:
         self.query = str(info[1])
         self.type = str(info[2])
         self.index_id = str(info[3])
+    
+
+def read_set_connection(file = '' ,static_name = ''):
+    cnffiletxt = 'resources.cnf'
+    cfile = os.path.dirname(os.path.realpath(__file__)) + '/' + cnffiletxt
+    cnf = ConfigParser.ConfigParser()
+    cnf.read(cfile)
+
+    config_dict = dict()
+    for section in cnf.sections():
+        options = dict()
+        data = dict()
+        for opt in cnf.options(section):
+            try:
+                options[opt] = cnf.getboolean(section, opt)
+                continue
+            except ValueError:
+                pass
+
+            try:
+                options[opt] = cnf.getint(section, opt)
+                continue
+            except ValueError:
+                pass
+
+            options[opt] = cnf.get(section, opt)
+
+        config_dict[section] = options
+
+    # print config_dict
+    memory.set(static_name, config_dict)
         
         
 def dict_format(query_string, variable_info):
