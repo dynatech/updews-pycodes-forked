@@ -275,7 +275,7 @@ def formatReceivedGSMtext(timestamp, sender, message):
 #       success - for messages that were successfully sent by the GSM
 #       fail - for messages that that were NOT sent by the GSM
 # No filtering yet for special characters
-def formatAckGSMtext(acktype, ts_written, ts_sent, recipient):
+def formatAckGSMtext(acktype, ts_written, ts_sent, recipient, id):
     pid = os.getpid()
     py = psutil.Process(pid)
     memoryUse = py.memory_info()[0]/2.**30
@@ -286,7 +286,7 @@ def formatAckGSMtext(acktype, ts_written, ts_sent, recipient):
     else:
         type_msg = "invalid"
     
-    jsonText = """{"type":"%s","timestamp_written":"%s","timestamp_sent":"%s","recipients":"%s","cpu_usage":"%s","mem_usage":"%s"}""" % (type_msg, ts_written, ts_sent, recipient,psutil.cpu_percent(),memoryUse)
+    jsonText = """{"type":"%s","timestamp_written":"%s","timestamp_sent":"%s","recipients":"%s","cpu_usage":"%s","mem_usage":"%s","id":"%s"}""" % (type_msg, ts_written, ts_sent, recipient,psutil.cpu_percent(),memoryUse,id)
     
     return jsonText
 
