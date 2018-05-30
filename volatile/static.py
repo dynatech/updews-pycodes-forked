@@ -18,7 +18,7 @@ class VariableInfo:
         self.index_id = str(info[3])
 
 
-def read_set_connection(file='',static_name=''):
+def read_set_connection(file = '' ,static_name = ''):
     cnffiletxt = 'resources.cnf'
     cfile = os.path.dirname(os.path.realpath(__file__)) + '/' + cnffiletxt
     cnf = ConfigParser.ConfigParser()
