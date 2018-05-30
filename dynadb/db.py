@@ -12,62 +12,31 @@ mc = memcache.Client(['127.0.0.1:11211'],debug=0)
 
 #c = cfg.config()
 
-class DbInstance:
+# class DbInstance:
        
-  def __init__(self, host):
-    """
-    - The constructor for database instance.
+#   def __init__(self, host):
+#     """
+#     - The constructor for database instance.
 
-    :param host: Instance hostname.
-    :type host: str
+#     :param host: Instance hostname.
+#     :type host: str
     
 
-    Example Output::
+#     Example Output::
 
-        >>> x = DbInstance('local')
-        >>> x.name, x.host, x.user, x.password
-        ('senslopedb', '127.0.0.1', 'root', 'admin')
+#         >>> x = DbInstance('local')
+#         >>> x.name, x.host, x.user, x.password
+#         ('senslopedb', '127.0.0.1', 'root', 'admin')
 
 
-    """      
-    sc = mc.get('server_config')
-    self.name = sc['db']['name'] 
-    self.host = sc['hosts'][host] 
-    self.user = sc['db']['user'] 
-    self.password = sc['db']['password']
+#     """      
+#     sc = mc.get('server_config')
+#     self.name = sc['db']['name'] 
+#     self.host = sc['hosts'][host] 
+#     self.user = sc['db']['user'] 
+#     self.password = sc['db']['password']
       
-
-def connect(host = 'local', connetion =''):   
-    """
-    - Creating the ``MySQLdb.connect`` connetion for the database.
-
-    Args:
-        host (str): Hostname.
-
-    Returns:
-        Returns the ``MySQLdb.connect()`` as db and ``db.cursor()`` as cur 
-        connection to the host.
-
-    Raises:
-        MySQLdb.OperationalError: Error in database connection.
-
-    """ 
-    dbc = DbInstance(host)
-
-    while True:
-        try:
-            db = MySQLdb.connect(host = dbc.host, user = dbc.user, 
-                passwd = dbc.password, db = dbc.name)
-
-            cur = db.cursor()
-
-            return db, cur
-        except MySQLdb.OperationalError:
-        # except IndexError:
-            print '6.',
-            time.sleep(2)
-
-
+      
 def get_connection_dict(connection):
     dbc = mc.get('DICT_DB_CONNECTIONS')
     dbc = dbc[connection]
@@ -114,45 +83,40 @@ def connect(host = '', connection = '', resource = '' , set_host ='',
         MySQLdb.OperationalError: Error in database connection.
 
     """ 
+    #dbc = database connection
+
     if connection:
         dbc = get_connection_dict(connection)
-        host = dbc['host']
-        passwd = dbc['password']
-        user = dbc['user']
-        db = dbc['schema']
-
     elif resource:
         connection_name = get_resouce_dict(resource)
         if connection_name:
             dbc = get_connection_dict(connection_name)
-            host = dbc['host']
-            passwd = dbc['password']
-            user = dbc['user']
-            db = dbc['schema']
             db_connect = True
         else:
             db_connect = False
     else:
-        dbc = DbInstance(host)
-        host = dbc.host,
-        user = dbc.user, 
-        passwd = dbc.password, 
-        db = dbc.name
+        dbc = dict()
+        sc = mc.get('server_config')
+        dbc['host'] = sc['hosts'][host] 
+        dbc['user'] = sc['db']['user'] 
+        dbc['password'] = sc['db']['password']
+        dbc['schema'] = sc['db']['name'] 
         db_connect = True
 
     while db_connect:
         if set_host:
-            host = set_host
+            dbc['host'] = set_host
         elif set_user:
-            user = set_user
+            dbc['user'] = set_user
         elif set_password:
-            passwd = set_password
+            dbc['password'] = set_password
         elif set_schema:
-            db = set_schema 
+            dbc['schema'] = set_schema 
+
         if conn_type == 'connect':
             try:
-                db = MySQLdb.connect(host, user, 
-                    passwd, db)
+                db = MySQLdb.connect(dbc['host'], dbc['user'], 
+                    dbc['password'], dbc['schema'])
                 cur = db.cursor()
                 return db, cur
             except MySQLdb.OperationalError:
@@ -161,9 +125,9 @@ def connect(host = '', connection = '', resource = '' , set_host ='',
                 time.sleep(2)
         elif engine_type == 'create_engine' :
             try:
-                engine = create_engine('mysql+pymysql://' 
-                    + user + ':'+ password + '@' + host +
-                     ':3306/' + name)
+                engine = create_engine('mysql+pymysql://' + 
+                    dbc['user'] + ':'+ dbc['password'] + '@' + 
+                    dbc['host'] +':3306/' + dbc['schema'])
                 return engine
             except sqlalchemy.exc.OperationalError:
                 print ">> Error connetion"
