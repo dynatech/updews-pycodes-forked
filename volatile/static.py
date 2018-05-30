@@ -1,12 +1,11 @@
 from datetime import datetime as dt
-
+import MySQLdb
 import memory
 import pandas.io.sql as psql
 import pandas as pd
 import warnings
-
 import dynadb.db as dbio
-
+import sqlalchemy
 
 class VariableInfo:
     def __init__(self, info):   
@@ -33,10 +32,14 @@ def set_static_variable(name=""):
     date = date.strftime('%Y-%m-%d %H:%M:%S')
     if name != "":
         query += " where name = '%s'" % (name)
+
+    try:
     
-    variables = dbio.read(
-      query=query,
-      identifier='Set static_variables')
+        variables = dbio.read(
+          query = query, identifier = 'Set static_variables')
+    except MySQLdb.ProgrammingError:
+        print ">> static_variables table does not exist on host"
+        return
     
     for data in variables:
         variable_info = VariableInfo(data)
@@ -247,14 +250,17 @@ def main(args):
     get_mobiles("users", mobiles_host, args)
     print "done"
 
-    print "Set surficial_markers to memory", 
-    get_surficial_markers(from_memory = False)
-    print "done"
+    try:
+        print "Set surficial_markers to memory", 
+        get_surficial_markers(from_memory = False)
+        print "done"
 
-    print "Set surficial_parser_reply_messages",
-    df = get_surficial_parser_reply_messages()
-    mc.set("surficial_parser_reply_messages", df)
-    print "done"
+        print "Set surficial_parser_reply_messages",
+        df = get_surficial_parser_reply_messages()
+        mc.set("surficial_parser_reply_messages", df)
+        print "done"
+    except sqlalchemy.exc.ProgrammingError: 
+        print ">> Error on getting surficial information. Skipping load"
     
 if __name__ == "__main__":
     main()
