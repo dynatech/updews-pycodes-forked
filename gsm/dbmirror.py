@@ -77,24 +77,32 @@ def dyna_to_sandbox():
     print "Dumping tables from gsm host to sandbox dump file ...", 
 
     f_dump = "/home/dewsl/Documents/sqldumps/mirrordump.sql"
-    command = ("mysqldump -h %s --skip-add-drop-table --no-create-info "
-        "-u %s %s smsinbox --where='sms_id > %s' > %s -p%s") % (gsm_host, 
-            user, name, max_sms_id, f_dump, password)
-    p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, 
-        stderr=subprocess.STDOUT)
-    out, err = p.communicate()
-    if out or err:
-        print out, err
-    print 'done'
-
-    # write to local db
-    print "Dumping tables from gsm host to sandbox dump file ...", 
-    command = "mysql -h %s -u %s %s < %s -p%s" % (sb_host, user, name, f_dump,
-        password)
+    command = ("mysqldump -h %s --skip-add-drop-table --no-create-info --single-transaction "
+        "-u %s %s smsinbox --where='sms_id > %s' > %s ") % (gsm_host, 
+            user, name, max_sms_id, f_dump)
     print command
     p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, 
         stderr=subprocess.STDOUT)
     out, err = p.communicate()
+    if out or err:
+        print ">> Error on dyna mysql > dump"
+        print out, err
+    else:
+        print ">> No errors"
+    print 'done'
+
+    # write to local db
+    print "Dumping tables from gsm host to sandbox dump file ...", 
+    command = "mysql -h %s -u %s %s < %s -p%s" % (sb_host, user, name, f_dump, password)
+    print command
+    p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, 
+        stderr=subprocess.STDOUT)
+    out, err = p.communicate()
+    if out or err:
+        print ">> Error on sandbox mysql < dump"
+        print out, err
+    else:
+        print ">> No errors"
     print 'done'
 
     # delete dump file
