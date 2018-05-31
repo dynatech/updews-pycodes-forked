@@ -129,3 +129,7 @@ send_ack_to_ct_phone = True
 
 [print]
 print_stdout = True
+
+[wss_credentials]
+host = localhost
+port = 5050
