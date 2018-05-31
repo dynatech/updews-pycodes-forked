@@ -98,12 +98,14 @@ column_fix = bottom		;node to fix in column position plot (top or bottom)
 enable_analysis = True	;enable/disable spawing analysis scripts upon sms receipt
 
 [rainfall]
-
 data_dt=0.5				;time interval between data points, in hours
 rt_window_length=10.	;length of real-time monitoring window, in days
 roll_window_length=3.	;length of rolling/moving window operations in days
 print_plot = True
 print_summary_alert = True
+noah_url = http://weather.asti.dost.gov.ph/web-api/index.php/api/devices
+noah_user = phivolcs.ggrdd
+noah_password = PhiVolcs0117
 
 [surficial]
 ci_slope = 1.49905955613175				;confidence interval constants
