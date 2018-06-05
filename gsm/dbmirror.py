@@ -189,7 +189,7 @@ def import_sql_file_to_dyna(table, max_inbox_id, max_index_last_copied):
 
     # export files from the table and dump to a file
 
-    command = ("mysql -e \"%s\" -h%s senslopedb -uroot -p%s --xml >"
+    command = ("mysql -e \"%s\" -h%s senslopedb -upysys_local -p%s --xml >"
             " %s" % (copy_query, host_ip, password, f_dump))
     p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, 
         stderr=subprocess.STDOUT)
@@ -199,7 +199,7 @@ def import_sql_file_to_dyna(table, max_inbox_id, max_index_last_copied):
     # # print err
 
     import_query = ("LOAD XML LOCAL INFILE '%s' INTO TABLE smsinbox2" % (f_dump))
-    command = ("mysql -e \"%s\" -h%s senslopedb -uroot -p%s") % (import_query,
+    command = ("mysql -e \"%s\" -h%s senslopedb -upysys_local -p%s") % (import_query,
         host_ip2, password)
     p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, 
         stderr=subprocess.STDOUT)
