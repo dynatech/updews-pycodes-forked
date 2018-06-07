@@ -19,24 +19,7 @@ site_column = sys.argv[1]
 start_date = sys.argv[2]
 end_date = sys.argv[3]
 node_id = sys.argv[4]
-version = sys.argv[5]
-#accel_id = sys.argv[6]
-
-#site_column = "plab"
-#start_date = "2017-07-12"
-#end_date = "2017-07-13"
-#node_id = 1
-#version = 1
-
-# engine = create_engine('mysql+pymysql://updews:october50sites@127.0.0.1/senslopedb')
-# query = "SELECT timestamp,id,msgid,xvalue,yvalue,zvalue,batt,IF (msgid in (11,32),1,2) as 'accel' FROM senslopedb.%s where id = '%s'and msgid ='%s' and timestamp between '%s ' and '%s'" % (site,nid,ms,fdate,tdate)
-# df = pd.io.sql.read_sql(query,engine)
-# df.columns = ['ts','id','msgid','x','y','z','v','accel']
-# df['name'] = site
-# df_filt = filterSensorData.applyFilters(df, orthof=True, rangef=True, outlierf=True)
-# dfajson = df_filt.reset_index().to_json(orient='records',date_format='iso')
-# dfajson = dfajson.replace("T"," ").replace("Z","").replace(".000","")
-# print dfajson
+version = int(sys.argv[5])
 
 def queryFilteredAccel( query, engine, version ):
     df = pd.io.sql.read_sql(query, engine)  
@@ -49,8 +32,6 @@ def queryFilteredAccel( query, engine, version ):
     df['name'] = site_column
     df_filt = filterSensorData.applyFilters(df, orthof=True, rangef=True, outlierf=True)
     dfajson = df_filt.reset_index()
-    #dfajson = df_filt.reset_index().to_json(orient='records',date_format='iso')
-    #dfajson = dfajson.replace("T"," ").replace("Z","").replace(".000","")
     return dfajson;
 
 engine = create_engine('mysql+pymysql://updews:october50sites@127.0.0.1/senslopedb')
@@ -74,12 +55,3 @@ else:
         filtered_data[a_id] = [c]
     
 print filtered_data.to_json(orient='records',date_format='iso').replace("T"," ").replace("Z","").replace(".000","")
-    
-#query = "SELECT timestamp,id,msgid,xvalue,yvalue,zvalue,batt,IF (msgid in (11,32),1,2) as 'accel' FROM senslopedb.%s where id = '%s'and msgid ='%s' and timestamp between '%s ' and '%s'" % (site,nid,ms,fdate,tdate)
-#df = pd.io.sql.read_sql(query,engine)
-#df.columns = ['ts','id','msgid','x','y','z','v','accel']
-#df['name'] = site
-#df_filt = filterSensorData.applyFilters(df, orthof=True, rangef=True, outlierf=True)
-#dfajson = df_filt.reset_index().to_json(orient='records',date_format='iso')
-#dfajson = dfajson.replace("T"," ").replace("Z","").replace(".000","")
-#print dfajson
