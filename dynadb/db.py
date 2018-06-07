@@ -238,7 +238,7 @@ def write(query ='', identifier = '', last_insert=False,
 
 
 def read(query='', identifier='', instance='local', 
-    connection=  , resource='' ):
+    connection='', resource=''):
     """
     - The process of reading the output from the query statement.
 
