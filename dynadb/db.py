@@ -1,74 +1,128 @@
-import pandas as pd
-import MySQLdb, time 
-from sqlalchemy import create_engine
-import  sqlalchemy.exc
 import memcache
+import MySQLdb, time 
+import pandas as pd
+import pandas.io.sql as psql
+import  sqlalchemy.exc
+
 from sqlalchemy import MetaData
 from sqlalchemy import Table
-import pandas.io.sql as psql
-
-mc = memcache.Client(['127.0.0.1:11211'],debug=0)
+from sqlalchemy import create_engine
 
 
-#c = cfg.config()
+mc = memcache.Client(['127.0.0.1:11211'],debug=1)
 
-# class DbInstance:
-       
-#   def __init__(self, host):
-#     """
-#     - The constructor for database instance.
 
-#     :param host: Instance hostname.
-#     :type host: str
+def get_connector(dbc='',conn_type=''):
+    """
+    - Description.
+
+    Args:
+        Args (str): Args.
+
+    Returns:
+        Returns.
+
+    Raises:
+        MySQLdb.OperationalError: Error in database connection.
+
+    """ 
+
+    if type(dbc) is dict:
+        dbc = [dbc]
+
+    for list_dbc in dbc:
+        if conn_type == 1:
+           dbc_output = get_msqldb_connect(list_dbc)
+        elif conn_type == 0:
+           dbc_output = get_create_engine(list_dbc)
+
+        if dbc_output:
+            return dbc_output
+        else:
+            print 'Connection Fail'
+            continue
+    return False
     
 
-#     Example Output::
+def get_msqldb_connect(dbc):
+    """
+    - Description.
 
-#         >>> x = DbInstance('local')
-#         >>> x.name, x.host, x.user, x.password
-#         ('senslopedb', '127.0.0.1', 'root', 'admin')
+    Args:
+        Args (str): Args.
 
+    Returns:
+        Returns.
 
-#     """      
-#     sc = mc.get('server_config')
-#     self.name = sc['db']['name'] 
-#     self.host = sc['hosts'][host] 
-#     self.user = sc['db']['user'] 
-#     self.password = sc['db']['password']
-      
-      
-def get_connection_dict(connection):
-    dbc = mc.get('DICT_DB_CONNECTIONS')
-    dbc = dbc[connection]
-    return dbc
+    Raises:
+        MySQLdb.OperationalError: Error in database connection.
 
-
-def get_resouce_dict(resource):
-    resources_dict = mc.get('DICT_DB_RESOURCES')
-
-    resources_section = resources_dict.keys()
-
-    resource_list_exists = []
-    print resource
-    for section in resources_section:
-       resource_list = resources_dict[section]['resources']
-       if resource in resource_list:
-            resource_list_exists.append(section)
-    if len(resource_list_exists) == 1:
-         print resource_list_exists[0] 
-         return resource_list_exists[0]  
-    elif len(resource_list_exists) > 1:
-        print ">> List of connection for this resource"
-        print resource_list_exists
-        return
-    else:
-        print ">> Unknown resource"
-        return
+    """ 
+    try:
+        db = MySQLdb.connect(dbc['host'], dbc['user'], 
+            dbc['password'], dbc['schema'])
+        cur = db.cursor()
+        return db, cur
+    except TypeError:
+        print 'Error Connection Value'
+        return False
+    except MySQLdb.OperationalError:
+        print '6.',
+        time.sleep(2)
+        return False
+    except (MySQLdb.Error, MySQLdb.Warning) as e:
+        print(e)
+        return False
 
 
-def connect(host = '', connection = '', resource = '' , set_host ='',
-    set_user = '',set_password = '',set_schema = '', set_port = '', 
-    conn_type = 'connect'):   
+def get_create_engine(dbc):
+    """
+    - Description.
+
+    Args:
+        Args (str): Args.
+
+    Returns:
+        Returns.
+
+    Raises:
+        MySQLdb.OperationalError: Error in database connection.
+
+    """ 
+    try:
+        engine = create_engine('mysql+pymysql://' + 
+            dbc['user'] + ':'+ dbc['password'] + '@' + 
+            dbc['host'] +':3306/' + dbc['schema'])
+        return engine
+    except sqlalchemy.exc.OperationalError:
+        print ">> Error in connetion"
+        return False
+
+
+def get_connection_info(connection_name):
+    """
+    - Description.
+
+    Args:
+        Args (str): Args.
+
+    Returns:
+        Returns.
+
+    Raises:
+        MySQLdb.OperationalError: Error in database connection.
+
+    """ 
+    try:
+        conn_dict = mc.get('DICT_DB_CONNECTIONS')
+        dbc = conn_dict[connection_name]
+        return dbc
+    except TypeError:
+        print 'Unknown DICT_DB_CONNECTIONS '
+        return None
+
+
+def connect(host='', connection='', resource='' , conn_type=1):   
     """
     - Creating the ``MySQLdb.connect`` and ``create_engine``connetion for the database.
 
@@ -83,60 +137,46 @@ def connect(host = '', connection = '', resource = '' , set_host ='',
         MySQLdb.OperationalError: Error in database connection.
 
     """ 
-    #dbc = database connection
+    # dbc = database connection
+    #sc = server_config
+    
+    if host:
+        dbc = None 
+        try:
+            sc = mc.get('SERVER_CONFIG')
+            dbc = dict()
+            dbc['host'] = sc['hosts'][host] 
+            dbc['user'] = sc['db']['user'] 
+            dbc['password'] = sc['db']['password']
+            dbc['schema'] = sc['db']['name'] 
+        except KeyError:
+            print "Unknown Host " + host
 
-    if connection:
-        dbc = get_connection_dict(connection)
+    elif connection:
+
+        dbc = get_connection_info(connection) 
+
     elif resource:
-        connection_name = get_resouce_dict(resource)
-        if connection_name:
-            dbc = get_connection_dict(connection_name)
-            db_connect = True
-        else:
-            db_connect = False
-    else:
-        dbc = dict()
-        sc = mc.get('server_config')
-        dbc['host'] = sc['hosts'][host] 
-        dbc['user'] = sc['db']['user'] 
-        dbc['password'] = sc['db']['password']
-        dbc['schema'] = sc['db']['name'] 
-        db_connect = True
-
-    while db_connect:
-        if set_host:
-            dbc['host'] = set_host
-        elif set_user:
-            dbc['user'] = set_user
-        elif set_password:
-            dbc['password'] = set_password
-        elif set_schema:
-            dbc['schema'] = set_schema 
-
-        if conn_type == 'connect':
-            try:
-                db = MySQLdb.connect(dbc['host'], dbc['user'], 
-                    dbc['password'], dbc['schema'])
-                cur = db.cursor()
-                return db, cur
-            except MySQLdb.OperationalError:
-            # except IndexError:
-                print '6.',
-                time.sleep(2)
-        elif engine_type == 'create_engine' :
-            try:
-                engine = create_engine('mysql+pymysql://' + 
-                    dbc['user'] + ':'+ dbc['password'] + '@' + 
-                    dbc['host'] +':3306/' + dbc['schema'])
-                return engine
-            except sqlalchemy.exc.OperationalError:
-                print ">> Error connetion"
+        dbc = None 
+        try:
+            sc = mc.get('SERVER_CONFIG')
+            resource_dict = sc['resource_connection'][resource]
+            resource_dict = resource_dict.split(",")
+            dbc = []
+            for connection in resource_dict:
+                dbc.append(get_connection_info(connection))
+        except KeyError:
+            print 'Unknown Resource ' + resource
+    
+    if dbc:
+        return get_connector(dbc=dbc, conn_type=conn_type)
+    else:    
+        print 'Cannot Connect to Database Connection'
+        return False
 
 
-
-def write(query = '', identifier = '', last_insert = False, 
-    instance = 'local' , connection = '' , resource = '' , set_host ='',
-    set_user = '',set_password = '' ,set_schema = '', set_port = ''):
+def write(query ='', identifier = '', last_insert=False, 
+    host='local', connection='', resource=''):
     """
     - The process of writing to the database by a query statement.
 
@@ -152,13 +192,15 @@ def write(query = '', identifier = '', last_insert = False,
         MySQLdb.IntegrityError: If duplicate entry detected.
 
     """ 
-    db, cur = connect(instance, connection, resource, set_host,
-        set_user, set_password, set_schema, set_port)
+
+    connection = connect(host=host, connection=connection, 
+        resource=resource)
 
     b=''
     try:
         retry = 0
-        while True:
+        while connection:
+            db, cur = connection
             try:
                 a = cur.execute(query)
 
@@ -184,17 +226,19 @@ def write(query = '', identifier = '', last_insert = False,
                 else:
                     retry += 1
                     time.sleep(2)
+            except (MySQLdb.Error, MySQLdb.Warning) as e:
+                print(e)
+                return None
+            b.close()
     except KeyError:
         print '>> Error: Writing to database', identifier
     except MySQLdb.IntegrityError:
         print '>> Warning: Duplicate entry detected', identifier
-    db.close()
     return b
 
 
-def read(query = '', identifier = '', instance = 'local', 
-    connection = '' , resource = '' , set_host ='', set_user = '', 
-    set_password = '' ,set_schema = '', set_port = ''):
+def read(query='', identifier='', instance='local', 
+    connection=  , resource='' ):
     """
     - The process of reading the output from the query statement.
 
@@ -220,68 +264,31 @@ def read(query = '', identifier = '', instance = 'local',
 
     """ 
 
-    db, cur = connect(instance, connection, resource, set_host,
-        set_user, set_password, set_schema, set_port)
+    connection = connect(host=instance, connection=connection, 
+        resource=resource)
 
     a = ''
-    
-    try:
-        a = cur.execute(query)
-        a = None
+    while connection:
+        db, cur = connection
         try:
-            a = cur.fetchall()
-            return a
-        except ValueError:
+            a = cur.execute(query)
+            a = None
+            try:
+                a = cur.fetchall()
+                return a
+            except ValueError:
+                return None
+        except MySQLdb.OperationalError:
+            a =  None
+        except (MySQLdb.Error, MySQLdb.Warning) as e:
+            print(e)
             return None
-    except MySQLdb.OperationalError:
-        a =  None
-    except KeyError:
-        a = None
+        except KeyError:
+            a = None
 
 
-# def df_engine(host = 'local', connection = '' , resource = '', set_host ='',
-#     set_user = '',set_password = '' ,set_schema = '', set_port = ''):
-#     """
-#     - Creating the engine connection for the database.
-
-#     Args:
-#         host (str): Hostname. Defaults to local.
-
-#     Returns:
-#         Returns the ``create_engine()`` connection to the host.
-
-
-#     """ 
-#     if connection != "":
-#         dbc = get_connection_dict(connection)
-#         host = dbc['host']
-#         passwd = dbc['password']
-#         user = dbc['user']
-#         db = dbc['schema']
-
-#     elif resource != "":
-#         connection = get_resouce_dict(resource)
-#         dbc = get_connection_dict(connection)
-#         host = dbc['host']
-#         passwd = dbc['password']
-#         user = dbc['user']
-#         db = dbc['schema']
-#     else:
-#         dbc = DbInstance(host)
-#         host = dbc.host,
-#         user = dbc.user, 
-#         passwd = dbc.password, 
-#         db = dbc.name
-    
-
-#     engine = create_engine('mysql+pymysql://' + user + ':'
-#         + password + '@' + host + ':3306/' + name)
-#     # return engine
-
-
-def df_write(data_table, host = 'local', last_insert = False , 
-    connection = '' , resource = '', set_host ='', set_user = '', 
-    set_password = '' ,set_schema = '', set_port = ''):
+def df_write(data_table, host='local', last_insert=False , 
+    connection='' , resource=''):
     """
     - The process of writing data frame data to a database.
 
@@ -296,51 +303,62 @@ def df_write(data_table, host = 'local', last_insert = False ,
 
 
     """
-    engine = connect(host, connection, resource, set_host,
-        set_user, set_password, set_schema, set_port, 
-        conn_type='create_engine')
-
     df = data_table.data
-    df = df.drop_duplicates(subset = None, keep = 'first', inplace = False)
+    df = df.drop_duplicates(subset=None, keep='first', inplace=False)
     value_list = str(df.values.tolist())[:-1][1:]
     value_list = value_list.replace("]",")").replace("[","(")
     column_name_str = str(list(df))[:-1][1:].replace("\'","")
     duplicate_value_str = ", ".join(["%s = VALUES(%s)" % (name, name) 
         for name in list(df)]) 
-    query = "insert into %s (%s) values %s" % (data_table.name,
+    query = 'insert into %s (%s) values %s' % (data_table.name,
         column_name_str, value_list)
-    query += " on DUPLICATE key update  %s " % (duplicate_value_str)
+    query += ' on DUPLICATE key update  %s ' % (duplicate_value_str)
     try:
-        last_insert_id = write(query = query, 
-            identifier = 'Insert dataFrame values', 
-            last_insert = last_insert,
-            instance = host)
+        last_insert_id = write(query=query, 
+            identifier='Insert dataFrame values', 
+            last_insert=last_insert,
+            instance=host,
+            connection=connection, 
+            resource=resource)
+
         return last_insert_id
+
     except IndexError:
-        print "\n\n>> Error: Possible data type error"
+        print '\n\n>> Error: Possible data type error'
     except ValueError:
-        print ">> Value error detected"   
+        print '>> Value error detected'   
     except AttributeError:
         print ">> Value error in data pass"       
 
 
-def df_read(query = '', host = 'local', connection = '', resource = '', set_host ='',
-    set_user = '', set_password = '' ,set_schema = '', set_port = '', 
-    conn_type='create_engine'):
+def df_read(query='', host='local', connection='', resource=''):
+    """
+    - Description.
 
-    db, cur = connect(host, connection, resource, set_host,
-        set_user, set_password, set_schema, set_port,conn_type)
+    Args:
+        Args (str): Args.
+
+    Returns:
+        Returns.
+
+    Raises:
+        MySQLdb.OperationalError: Error in database connection.
+
+    """ 
+    connection = connect(host=host, connection=connection, 
+        resource=resource, conn_type=0)
+
     ret_val = None
-    try:
-        df = psql.read_sql(query, db)
-        ret_val = df
-    except KeyboardInterrupt:
-        print "Exception detected in accessing database"
-        sys.exit()
-    except psql.DatabaseError:
-        print "Error getting query %s" % (query)
-        ret_val = None
-    finally:
-        return ret_val
-
-
+    while connection:
+        db = connection 
+        try:
+            df = psql.read_sql(query, db)
+            ret_val = df
+        except KeyboardInterrupt:
+            print 'Exception detected in accessing database'
+            sys.exit()
+        except psql.DatabaseError:
+            print 'Error getting query %s' % (query)
+            ret_val = None
+        finally:
+            return ret_val

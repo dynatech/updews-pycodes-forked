@@ -1,24 +1,103 @@
 import memcache
 
+
 def get_handle(print_out = False):
+	"""
+	- Description.
+
+	Args:
+	    Args (str): Args.
+
+	Returns:
+	    Returns.
+
+	Raises:
+	    Raise.
+
+	"""
+
 	if print_out:
 		print "Connecting to memcache client ...",
-	mc = memcache.Client(['127.0.0.1:11211'],debug=0)
+	mc = memcache.Client(['127.0.0.1:11211'],debug=1)
 	if print_out:
 		print "done"
 	return mc
 
+
 def get(name=""):
+	"""
+	- Description.
+
+	Args:
+	    Args (str): Args.
+
+	Returns:
+	    Returns.
+
+	Raises:
+	    Raise.
+
+	"""  
 	name = name.upper()
 	mc = get_handle()
 	return mc.get(name)
 
-def set(name="",data=""):
+
+def set(name="", data=""):
+	"""
+	- Description.
+
+	Args:
+	    Args (str): Args.
+
+	Returns:
+	    Returns.
+
+	Raises:
+	    Raise.
+
+	"""  
+
 	name = name.upper()
 	mc = get_handle()
 	return mc.set(name,data)
 
+
+def delete(name=""):
+	"""
+	- Description.
+
+	Args:
+	    Args (str): Args.
+
+	Returns:
+	    Returns.
+
+	Raises:
+	    Raise.
+
+	"""  
+    
+	name = name.upper()
+	mc = get_handle()
+	mc.delete(name)
+	print "Delete successfully " + name
+
+
 def print_config(cfg = None):
+	"""
+	- Description.
+
+	Args:
+	    Args (str): Args.
+
+	Returns:
+	    Returns.
+
+	Raises:
+	    Raise.
+
+	"""  
 	mc = get_handle()
 
 	sc = mc.get('server_config')
@@ -29,6 +108,21 @@ def print_config(cfg = None):
 	else:
 		print cfg, sc[cfg]
 
+
 def server_config():
+	"""
+	- Description.
+
+	Args:
+	    Args (str): Args.
+
+	Returns:
+	    Returns.
+
+	Raises:
+	    Raise.
+
+	"""  
 	mc = get_handle()
 	return mc.get("server_config")
+
