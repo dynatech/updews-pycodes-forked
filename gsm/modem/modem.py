@@ -125,7 +125,11 @@ class GsmModem:
                 # log_error("wrong construction\n"+msg[0])
                 continue
 
-            smsdata = smsdeliver(pdu).data
+            try:
+                smsdata = smsdeliver(pdu).data
+            except ValueError:
+                print ">> Error: conversion to pdu (cannot decode odd-length)"
+                continue
 
             smsdata = self.manage_multi_messages(smsdata)
             if smsdata == "":
