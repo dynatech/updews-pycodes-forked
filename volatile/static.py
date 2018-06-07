@@ -122,7 +122,7 @@ def get_db_dataframe(query):
 
     """ 
     try:
-        db, cur = dbio.connect()
+        db, cur = dbio.connect(host='local')
         df = psql.read_sql(query, db)
         # df.columns = ['ts','id','x','y','z','m']
         # change ts column to datetime
@@ -282,7 +282,7 @@ def get_surficial_markers(host = None, from_memory = True):
         "inner join markers as m4 "
         "on m2.marker_id = m4.marker_id ")
 
-    engine = dbio.df_engine(host)
+    engine = dbio.connect(host=host,conn_type=0)
     surficial_markers = pd.read_sql(query, engine)
     mc.set("surficial_markers", surficial_markers)
 
