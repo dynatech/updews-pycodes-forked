@@ -1,12 +1,10 @@
 import dynadb.db as dbio
-
 import MySQLdb
 import memory
 import pandas.io.sql as psql
 import pandas as pd
 import sqlalchemy
 import warnings
-
 from datetime import datetime as dt
 
 
@@ -83,18 +81,18 @@ def set_static_variable(name=""):
     
     for data in variables:
         variable_info = VariableInfo(data)
-        query_string = variable_info.query
 
         if variable_info.type == 'data_frame':
             static_output = dbio.df_read(
-                query=query_string)
+                query=variable_info.query)
 
         elif variable_info.type == 'dict':
-            static_output = dict_format(query_string, variable_info)
+            static_output = dict_format(variable_info.query, 
+                variable_info)
 
         else:
             static_output = dbio.read(
-                query=query_string)
+                query=variable_info.query)
             
         if static_output is None: 
             warnings.warn('Query Error ' + variable_info.name)
@@ -209,7 +207,7 @@ def get_mobiles(table, host = None, args = None):
             "AND t1.mobile_id < t2.mobile_id)) "
             "WHERE t2.sim_num IS NULL and t1.sim_num is not null")
 
-        nums = dbio.read(query=query, identifie='get_mobile_sim_nums', 
+        nums = dbio.read(query=query, identifier='get_mobile_sim_nums', 
             host=host)
 
         logger_mobile_sim_nums = {sim_num: mobile_id for (mobile_id, sim_num, 
@@ -230,7 +228,7 @@ def get_mobiles(table, host = None, args = None):
         
         query = "select mobile_id, sim_num, gsm_id from user_mobile"
 
-        nums = dbio.read(query=query, identifie='get_mobile_sim_nums', 
+        nums = dbio.read(query=query, identifier='get_mobile_sim_nums', 
             host=host)
 
         user_mobile_sim_nums = {sim_num: mobile_id for (mobile_id, sim_num, 

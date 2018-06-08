@@ -43,7 +43,7 @@ def get(name=""):
 	return mc.get(name)
 
 
-def set(name="", data=""):
+def set(name="", value=""):
 	"""
 	- Description.
 

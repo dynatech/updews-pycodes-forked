@@ -9,7 +9,7 @@ from sqlalchemy import Table
 from sqlalchemy import create_engine
 
 
-mc = memcache.Client(['127.0.0.1:11211'],debug=1)
+mc = memcache.Client(['127.0.0.1:11211'],debug=0)
 
 
 def get_connector(dbc='',conn_type=''):
@@ -122,7 +122,7 @@ def get_connection_info(connection_name):
         return None
 
 
-def connect(host='', connection='', resource='' , conn_type=1):   
+def connect(host='local', connection='', resource='' , conn_type=1):   
     """
     - Creating the ``MySQLdb.connect`` and ``create_engine``connetion for the database.
 
@@ -237,7 +237,7 @@ def write(query ='', identifier = '', last_insert=False,
     return b
 
 
-def read(query='', identifier='', instance='local', 
+def read(query='', identifier='', host='local', 
     connection='', resource=''):
     """
     - The process of reading the output from the query statement.
@@ -264,7 +264,7 @@ def read(query='', identifier='', instance='local',
 
     """ 
 
-    connection = connect(host=instance, connection=connection, 
+    connection = connect(host=host, connection=connection, 
         resource=resource)
 
     a = ''
@@ -317,7 +317,7 @@ def df_write(data_table, host='local', last_insert=False ,
         last_insert_id = write(query=query, 
             identifier='Insert dataFrame values', 
             last_insert=last_insert,
-            instance=host,
+            host=host,
             connection=connection, 
             resource=resource)
 
