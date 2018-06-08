@@ -5,8 +5,8 @@ if not path in sys.path:
    sys.path.insert(1, path)
 del path
 
-import AllRainfall
+import AllRainfallForWebsite
 
-data = AllRainfall.main(site='', Print=False)
+data = AllRainfallForWebsite.main(site='', Print=False)
 
 print data
