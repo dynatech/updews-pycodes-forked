@@ -201,7 +201,14 @@ class GsmModem:
         print ">> Resetting GSM Module ...",
 
         try:
-            self.at_cmd("AT+CPOWD=1", "NORMAL POWER DOWN")
+            try:
+                self.at_cmd("AT+CPOWD=1", "NORMAL POWER DOWN")
+            except ResetException:
+                print (">> Error: unable to send powerdown signal. "
+                    "Will continue with hard reset")
+                GPIO.output(self.pow_pin, 0)
+                time.sleep(self.RESET_ASSERT_DELAY)
+
             GPIO.output(self.pow_pin, 1)
             time.sleep(self.RESET_DEASSERT_DELAY)
             GPIO.output(self.pow_pin, 0)

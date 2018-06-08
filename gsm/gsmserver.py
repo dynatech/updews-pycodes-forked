@@ -533,8 +533,6 @@ def main():
         print "> Resetting system because of GSM failure"
         gsm.reset()
     
-    sys.exit()
-
 if __name__ == '__main__':
     while True:
         try:
