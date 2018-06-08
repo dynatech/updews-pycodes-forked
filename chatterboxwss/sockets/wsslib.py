@@ -2,9 +2,8 @@ import socket
 import time
 from websocket import create_connection
 
-def fortmat_send_status_request(outbox_id, send_status, gsm_id):
-	json_text = """{"type":"smssent","outbox_id":"%s","send_status":"%s",\
-                "gsm_id":"%s"}""" % (outbox_id, send_status, gsm_id)
+def format_send_status_request(stat_id):
+	json_text = """{"type":"smssent","stat_id":"%s"}""" % (stat_id)
 	send_wss(json_text);
 
 def send_wss(msg = ""):
