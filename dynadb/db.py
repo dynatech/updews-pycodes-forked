@@ -3,7 +3,6 @@ import MySQLdb, time
 import pandas as pd
 import pandas.io.sql as psql
 import  sqlalchemy.exc
-
 from sqlalchemy import MetaData
 from sqlalchemy import Table
 from sqlalchemy import create_engine
@@ -122,7 +121,7 @@ def get_connection_info(connection_name):
         return None
 
 
-def connect(host='local', connection='', resource='' , conn_type=1):   
+def connect(host='', connection='', resource='' , conn_type=1):   
     """
     - Creating the ``MySQLdb.connect`` and ``create_engine``connetion for the database.
 
@@ -193,51 +192,34 @@ def write(query ='', identifier = '', last_insert=False,
 
     """ 
 
-    connection = connect(host=host, connection=connection, 
+    db, cur = connect(host=host, connection=connection, 
         resource=resource)
 
-    b=''
     try:
-        retry = 0
-        while connection:
-            db, cur = connection
-            try:
-                a = cur.execute(query)
+        a = cur.execute(query)
+        if last_insert:
+            b = cur.execute('select last_insert_id()')
+            b = cur.fetchall()
+            return b
+        if a:
+            db.commit()
+            return None
+        else:
 
-                b = ''
-                if last_insert:
-                    b = cur.execute('select last_insert_id()')
-                    b = cur.fetchall()
+            db.commit()
+            time.sleep(0.1)
+            return None
 
-                if a:
-                    db.commit()
-                    break
-                else:
-
-                    db.commit()
-                    time.sleep(0.1)
-                    break
-
-            except IndexError:
-                print '5.',
-
-                if retry > 10:
-                    break
-                else:
-                    retry += 1
-                    time.sleep(2)
-            except (MySQLdb.Error, MySQLdb.Warning) as e:
-                print(e)
-                return None
-            b.close()
-    except KeyError:
-        print '>> Error: Writing to database', identifier
-    except MySQLdb.IntegrityError:
-        print '>> Warning: Duplicate entry detected', identifier
-    return b
+    except IndexError:
+        print IndexError
+        return None
+    except (MySQLdb.Error, MySQLdb.Warning) as e:
+        print(e)
+        return None
 
 
-def read(query='', identifier='', host='local', 
+
+def read(query='', identifier='', instance='local', 
     connection='', resource=''):
     """
     - The process of reading the output from the query statement.
@@ -264,27 +246,23 @@ def read(query='', identifier='', host='local',
 
     """ 
 
-    connection = connect(host=host, connection=connection, 
+    db, cur = connect(host=instance, connection=connection, 
         resource=resource)
-
-    a = ''
-    while connection:
-        db, cur = connection
+    try:
+        a = cur.execute(query)
+        a = None
         try:
-            a = cur.execute(query)
-            a = None
-            try:
-                a = cur.fetchall()
-                return a
-            except ValueError:
-                return None
-        except MySQLdb.OperationalError:
-            a =  None
-        except (MySQLdb.Error, MySQLdb.Warning) as e:
-            print(e)
+            a = cur.fetchall()
+            return a
+        except ValueError:
             return None
-        except KeyError:
-            a = None
+    except MySQLdb.OperationalError:
+        a =  None
+    except (MySQLdb.Error, MySQLdb.Warning) as e:
+        print(e)
+        return None
+    except KeyError:
+        a = None
 
 
 def df_write(data_table, host='local', last_insert=False , 
@@ -317,7 +295,7 @@ def df_write(data_table, host='local', last_insert=False ,
         last_insert_id = write(query=query, 
             identifier='Insert dataFrame values', 
             last_insert=last_insert,
-            host=host,
+            instance=host,
             connection=connection, 
             resource=resource)
 
@@ -345,20 +323,17 @@ def df_read(query='', host='local', connection='', resource=''):
         MySQLdb.OperationalError: Error in database connection.
 
     """ 
-    connection = connect(host=host, connection=connection, 
+    db = connect(host=host, connection=connection, 
         resource=resource, conn_type=0)
 
-    ret_val = None
-    while connection:
-        db = connection 
-        try:
-            df = psql.read_sql(query, db)
-            ret_val = df
-        except KeyboardInterrupt:
-            print 'Exception detected in accessing database'
-            sys.exit()
-        except psql.DatabaseError:
-            print 'Error getting query %s' % (query)
-            ret_val = None
-        finally:
-            return ret_val
+    try:
+        df = psql.read_sql(query, db)
+        ret_val = df
+    except KeyboardInterrupt:
+        print 'Exception detected in accessing database'
+        sys.exit()
+    except psql.DatabaseError:
+        print 'Error getting query %s' % (query)
+        ret_val = None
+    finally:
+        return ret_val
