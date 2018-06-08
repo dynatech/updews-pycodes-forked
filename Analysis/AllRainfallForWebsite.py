@@ -4,10 +4,10 @@ import numpy as np
 import pandas as pd
 
 import filepath
-import querySenslopeDb as q
+import querySenslopeDbForWebsite as q
 import rainconfig as cfg
-import RainfallAlert as RA
-import RainfallPlot as RP
+import RainfallAlertForWebsite as RA
+import RainfallPlotForWebsite as RP
 
 ############################################################
 ##      TIME FUNCTIONS                                    ##    
