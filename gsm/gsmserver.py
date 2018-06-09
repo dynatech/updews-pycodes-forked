@@ -532,6 +532,9 @@ def main():
     except modem.ResetException:
         print "> Resetting system because of GSM failure"
         gsm.reset()
+        print ">> Delay before proceeding",
+        time.sleep(5)
+        print "done"
     
 if __name__ == '__main__':
     while True:
