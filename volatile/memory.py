@@ -60,7 +60,7 @@ def set(name="", value=""):
 
 	name = name.upper()
 	mc = get_handle()
-	return mc.set(name,data)
+	return mc.set(name,value)
 
 
 def delete(name=""):
