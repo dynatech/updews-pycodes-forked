@@ -183,7 +183,7 @@ def write(query ='', identifier = '', last_insert=False,
         query (str): Query statement.
         identifier (str): Identifier statement for the query.
         Last_insert (str): Select the last insert. Defaults to False.
-        instance (str): Hostname. Defaults to local.
+        host (str): Hostname. Defaults to local.
     
     Raises:
         IndexError: Error in retry index.
@@ -219,7 +219,7 @@ def write(query ='', identifier = '', last_insert=False,
 
 
 
-def read(query='', identifier='', instance='local', 
+def read(query='', identifier='', host='local', 
     connection='', resource=''):
     """
     - The process of reading the output from the query statement.
@@ -227,7 +227,7 @@ def read(query='', identifier='', instance='local',
     Args:
         query (str): Query statement.
         identifier (str): Identifier statement for the query.
-        instance (str): Hostname. Defaults to local.
+        host (str): Hostname. Defaults to local.
 
     Returns:
       tuple: Returns the query output and fetch by a ``cur.fetchall()``.
@@ -246,7 +246,7 @@ def read(query='', identifier='', instance='local',
 
     """ 
 
-    db, cur = connect(host=instance, connection=connection, 
+    db, cur = connect(host=host, connection=connection, 
         resource=resource)
     try:
         a = cur.execute(query)
@@ -295,7 +295,7 @@ def df_write(data_table, host='local', last_insert=False ,
         last_insert_id = write(query=query, 
             identifier='Insert dataFrame values', 
             last_insert=last_insert,
-            instance=host,
+            host=host,
             connection=connection, 
             resource=resource)
 
