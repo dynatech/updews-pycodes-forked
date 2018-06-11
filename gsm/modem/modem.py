@@ -288,6 +288,9 @@ class GsmModem:
                 print b
                 print '>> Retryring message reading'
                 return -2
+            except TypeError:
+                print ">> TypeError"
+                return -2
 
     def send_msg(self, msg, number, simulate=False):
         """

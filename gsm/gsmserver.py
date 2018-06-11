@@ -533,7 +533,7 @@ def main():
         print "> Resetting system because of GSM failure"
         gsm.reset()
         print ">> Delay before proceeding",
-        time.sleep(5)
+        time.sleep(10)
         print "done"
     
 if __name__ == '__main__':
