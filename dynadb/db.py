@@ -325,7 +325,7 @@ def df_read(query='', host='local', connection='', resource=''):
     """ 
     db = connect(host=host, connection=connection, 
         resource=resource, conn_type=0)
-
+    ret_val = None
     try:
         df = psql.read_sql(query, db)
         ret_val = df
