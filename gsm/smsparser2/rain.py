@@ -122,11 +122,14 @@ def rain_arq(sms):
             print ">> None type"
             return
 
-            
-        rain = int(linesplit[1])*0.5
-        batv1 = linesplit[3]
-        batv2 = linesplit[4]
-        csq = linesplit[9]
+        try:
+            rain = int(linesplit[1])*0.5
+            batv1 = linesplit[3]
+            batv2 = linesplit[4]
+            csq = linesplit[9]
+        except IndexError:
+            print ">> Incomplete data"
+            return
         
         if csq=='':
             csq = 'NULL'
