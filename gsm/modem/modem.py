@@ -92,9 +92,9 @@ class GsmModem:
 
         
     def set_defaults(self):
-        for i in range(0,1):
+        for i in range(0,4):
             self.gsm.write('AT\r\n')
-            time.sleep(1)
+            time.sleep(0.5)
 
         try:
             print "Switching to no-echo mode",
