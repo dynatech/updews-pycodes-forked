@@ -160,7 +160,7 @@ def rain_arq(sms):
 
 
 
-def v3 (sms): 
+def v3(sms): 
     """
     - The process of parsing data of v3 message of rain.
 
@@ -217,7 +217,7 @@ def v3 (sms):
         csq = line.split(",")[8]
 
 
-    except IndexError, AttributeError:
+    except (IndexError, AttributeError) as e:
         print '\n>> Error: Rain message format is not recognized'
         print line
         return False
