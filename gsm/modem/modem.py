@@ -38,7 +38,7 @@ class GsmModem:
 
         GPIO.setmode(GPIO.BOARD)
         GPIO.setup(pow_pin, GPIO.OUT)
-        GPIO.output(pow_pin, 1)
+        GPIO.output(pow_pin, 0)
         GPIO.setup(ring_pin, GPIO.IN)
         self.pow_pin = pow_pin
         self.ring_pin = ring_pin
@@ -97,7 +97,7 @@ class GsmModem:
             time.sleep(0.5)
 
         try:
-            GPIO.output(self.pow_pin, 1)
+            GPIO.output(self.pow_pin, 0)
             print "Switching to no-echo mode",
             print self.at_cmd('ATE0').strip('\r\n')
             print "Switching to PDU mode" 
@@ -201,7 +201,7 @@ class GsmModem:
 
         try:
             # make sure that power is ON
-            GPIO.output(self.pow_pin, 1)
+            GPIO.output(self.pow_pin, 0)
             time.sleep(self.RESET_DEASSERT_DELAY)
 
             # try to send power down cmd via serial
@@ -212,11 +212,11 @@ class GsmModem:
                     "Will continue with hard reset")
                 
             # cut off power to module
-            GPIO.output(self.pow_pin, 0)
+            GPIO.output(self.pow_pin, 1)
             time.sleep(self.RESET_ASSERT_DELAY)
 
             # bring it back up
-            GPIO.output(self.pow_pin, 1)
+            GPIO.output(self.pow_pin, 0)
 
             print 'done'
         except ImportError:
