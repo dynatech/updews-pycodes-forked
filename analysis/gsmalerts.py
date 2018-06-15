@@ -95,6 +95,7 @@ def main():
     if not qdb.does_table_exist('alert_status'):
         qdb.create_alert_status()
 
+    curr_trig = curr_trig.rename(columns = {"ts_updated": "ts_last_retrigger"})
     site_curr_trig = curr_trig.groupby('site_id', as_index=False)
     site_curr_trig.apply(site_alerts, ts=ts, release_data_ts=release_data_ts)
 
