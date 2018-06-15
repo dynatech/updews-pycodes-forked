@@ -28,7 +28,7 @@ class GsmModem:
     SEND_INITIATE_REPLY_TIMEOUT = 20
     SENDING_REPLY_TIMEOUT = 60
     RESET_DEASSERT_DELAY = 1
-    RESET_ASSERT_DELAY = 3
+    RESET_ASSERT_DELAY = 10     # delay when module power is off
     WAIT_FOR_BYTES_DELAY = 0.5
 
     def __init__(self, ser_port, ser_baud, pow_pin, ring_pin):
@@ -97,6 +97,7 @@ class GsmModem:
             time.sleep(0.5)
 
         try:
+            GPIO.output(self.pow_pin, 1)
             print "Switching to no-echo mode",
             print self.at_cmd('ATE0').strip('\r\n')
             print "Switching to PDU mode" 
@@ -201,18 +202,22 @@ class GsmModem:
         print ">> Resetting GSM Module ...",
 
         try:
+            # make sure that power is ON
+            GPIO.output(self.pow_pin, 1)
+            time.sleep(self.RESET_DEASSERT_DELAY)
+
+            # try to send power down cmd via serial
             try:
                 self.at_cmd("AT+CPOWD=1", "NORMAL POWER DOWN")
             except ResetException:
                 print (">> Error: unable to send powerdown signal. "
                     "Will continue with hard reset")
-                GPIO.output(self.pow_pin, 0)
-                time.sleep(self.RESET_ASSERT_DELAY)
-
-            GPIO.output(self.pow_pin, 1)
-            time.sleep(self.RESET_DEASSERT_DELAY)
+                
+            # cut off power to module
             GPIO.output(self.pow_pin, 0)
             time.sleep(self.RESET_ASSERT_DELAY)
+
+            # bring it back up
             GPIO.output(self.pow_pin, 1)
 
             print 'done'
@@ -283,11 +288,11 @@ class GsmModem:
                     return -1
                     
                 ##if GSM sent blank data maybe GSM is inactive
-            except ValueError:
+            except (ValueError, AttributeError):
                 print '>> ValueError:'
                 print b
                 print '>> Retryring message reading'
-                return -2
+                # return -2
             except TypeError:
                 print ">> TypeError"
                 return -2
