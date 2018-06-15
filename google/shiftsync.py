@@ -106,6 +106,8 @@ def main():
 
     print(query)
     db.write(query, "shiftsync", False, "local")
+    query2 = query.replace("ts,", "timestamp,")
+    db.write(query2, "shiftsync", False, "dynaslope")
 
 if __name__ == '__main__':
     main()
