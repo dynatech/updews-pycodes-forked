@@ -28,7 +28,7 @@ class GsmModem:
     SEND_INITIATE_REPLY_TIMEOUT = 20
     SENDING_REPLY_TIMEOUT = 60
     RESET_DEASSERT_DELAY = 1
-    RESET_ASSERT_DELAY = 10     # delay when module power is off
+    RESET_ASSERT_DELAY = 5     # delay when module power is off
     WAIT_FOR_BYTES_DELAY = 0.5
 
     def __init__(self, ser_port, ser_baud, pow_pin, ring_pin):
@@ -193,10 +193,8 @@ class GsmModem:
         try:
             csq_val = int(re.search("(?<=: )\d{1,2}(?=,)",csq_reply).group(0))
             return csq_val
-        except (ValueError, AttributeError) as e:
-            return 0
-        except TypeError:
-            return 0
+        except (ValueError, AttributeError, TypeError) as e:
+            raise ResetException
 
     def reset(self):
         print ">> Resetting GSM Module ...",
