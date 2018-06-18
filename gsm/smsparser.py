@@ -579,7 +579,7 @@ def get_router_ids():
         obj: list of keys and values from model_id table;
      
     """
-    db, cur = dynadb.connect()
+    db, cur = dynadb.connect(resource="sensor_data")
 
     query = ("SELECT `logger_id`,`logger_name` from `loggers` where `model_id`"
         " in (SELECT `model_id` FROM `logger_models` where "
