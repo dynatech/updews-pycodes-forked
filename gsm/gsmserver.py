@@ -308,7 +308,7 @@ def log_csq(gsm, gsm_id):
         "values ('%s', %d, %d)") % (ts_today, gsm_id, csq_val)
 
     db.write(query = query, identifier = "", last_insert = False, 
-        instance = "local")
+        host = "local")
 
     return csq_val 
 
