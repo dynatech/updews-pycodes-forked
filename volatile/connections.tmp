@@ -1,0 +1,37 @@
+[sb_local]
+host = 127.0.0.1
+port = 3306
+user = pysys_local
+password = NaCAhztBgYZ3HwTkvHwwGVtJn5sVMFgg
+schema = senslopedb
+
+
+[sb_remote]
+host = 192.168.150.128
+port = 3306
+user = pysys_remote
+password = W5sCbjTFqLqZKKNgNM7K2Jyh7YtgpePS
+schema = senslopedb
+
+
+[sb_rack_local_1]
+host = 127.0.0.1
+port = 3306
+user = pysys_local
+password = nwG6LQ8bHzHy35k6EqtHyxvEyyrU5ABa
+schema = dewsldb
+
+
+[sb_rack_remote_1]
+host = 192.168.150.71
+port = 3306
+user = pysys_remote
+password = gGPhkCqXsc2nf4ewTSujGZRuKdk2Sbxp
+schema = dewsldb
+
+[staff1]
+host = 127.0.0.1
+port = 3306
+user = dyna_staff
+password = accelerometer
+schema = senslopedb

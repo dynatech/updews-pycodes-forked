@@ -1,5 +1,0 @@
-[resources]
-resources1 = sb_local,sb_rack_remote_1
-resources2 = sb_rack_local_1,sb_local,sb_remote
-resources3 = sb_rack_local_1,sb_remote,sb_rack_remote_1
-resources4 = sb_remote,sb_rack_remote_1,sb_local
