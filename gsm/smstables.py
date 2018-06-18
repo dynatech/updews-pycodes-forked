@@ -196,15 +196,13 @@ def write_inbox(msglist,gsm_info):
     query_users = query_users[:-1]
 
     sc = mem.server_config()
-    sms_instance = sc["resource"]["smsdb"]
+    sms_host = sc["resource"]["smsdb"]
 
     if len(sms_id_ok)>0:
         if loggers_count > 0:
-            dbio.write(query_loggers,'write_raw_sms_to_db',
-                instance = sms_instance)
+            dbio.write(query_loggers,'write_raw_sms_to_db',host=sms_host)
         if users_count > 0:
-            dbio.write(query_users,'write_raw_sms_to_db',
-                instance = sms_instance)
+            dbio.write(query_users,'write_raw_sms_to_db',host=sms_host)
         
 def write_outbox(message = None, recipients = None, gsm_id = None, table = None):
     """
@@ -254,8 +252,8 @@ def write_outbox(message = None, recipients = None, gsm_id = None, table = None)
     query = ("insert into smsoutbox_%s (ts_written,sms_msg,source) VALUES "
         "('%s','%s','central')") % (table_name,tsw,message)
         
-    outbox_id = dbio.write(query = query, identifier = "womtdb", 
-        last_insert = True, instance = host)[0][0]
+    outbox_id = dbio.write(query=query, identifier="womtdb", 
+        last_insert=True,host=host)[0][0]
 
     query = ("INSERT INTO smsoutbox_%s_status (outbox_id,mobile_id,gsm_id)"
             " VALUES ") % (table_name[:-1])
@@ -275,5 +273,4 @@ def write_outbox(message = None, recipients = None, gsm_id = None, table = None)
             continue
     query = query[:-1]
 
-    dbio.write(query = query, identifier = "womtdb", 
-        last_insert = False, instance = host)
+    dbio.write(query=query, identifier="womtdb", last_insert=False, host=host)
