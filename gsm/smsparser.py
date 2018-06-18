@@ -35,7 +35,7 @@ def logger_response(sms,log_type,log='False'):
           " date_activated desc limit 1),'%s','%s')" 
          % (sms.sim_num,sms.inbox_id,log_type))
                     
-        dynadb.write(query, 'insert new log for logger response',instance='sandbox')
+        dynadb.write(query, 'insert new log for logger response',host='sandbox')
         print '>> Log response'
     else:
         return False
