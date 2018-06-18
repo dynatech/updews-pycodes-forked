@@ -6,6 +6,7 @@ gsm = 192.168.150.127
 gsm2 = 192.168.150.131
 sandbox = 192.168.150.128
 
+
 [Resource]
 smsdb = gsm2
 datadb = sandbox
