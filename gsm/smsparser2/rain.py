@@ -23,9 +23,7 @@ def check_number_in_users(num):
     """   
     query = "select user_id from user_mobile" 
     query += "where sim_num = '%s'" % (num)
-    query = dynadb.read(query=query, 
-        identifier='check if number user exists', 
-        instance='local')
+    query = dynadb.read(query=query, identifier='checkifexists', host='local')
     if len(query) != 0:
         return query[0][0]
     else:

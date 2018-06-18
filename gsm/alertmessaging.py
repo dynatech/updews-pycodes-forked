@@ -11,7 +11,7 @@ def get_alert_staff_numbers():
     query = ("select t1.user_id,t2.sim_num from user_alert_info t1 inner join"
         " user_mobile t2 on t1.user_id = t2.user_id where t1.send_alert = 1;")
 
-    contacts = dbio.read(query=query,identifier='checkalert',instance="gsm2")
+    contacts = dbio.read(query=query,identifier='checkalert',host="gsm2")
     return contacts
 
 def monitoring_start(site_id, ts_last_retrigger):
