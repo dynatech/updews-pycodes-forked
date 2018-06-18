@@ -1,14 +1,28 @@
-from datetime import datetime as dt
+import dynadb.db as dbio
 import MySQLdb
 import memory
 import pandas.io.sql as psql
 import pandas as pd
-import warnings
-import dynadb.db as dbio
 import sqlalchemy
+import warnings
+from datetime import datetime as dt
+
 
 class VariableInfo:
-    def __init__(self, info):   
+    def __init__(self, info):
+        """
+        - Description.
+
+        Args:
+            Args (str): Args.
+
+        Returns:
+            Returns.
+
+        Raises:
+            MySQLdb.OperationalError: Error in database connection.
+
+        """    
         self.name = str(info[0])
         self.query = str(info[1])
         self.type = str(info[2])
@@ -16,6 +30,19 @@ class VariableInfo:
         
         
 def dict_format(query_string, variable_info):
+    """
+    - Description.
+
+    Args:
+        Args (str): Args.
+
+    Returns:
+        Returns.
+
+    Raises:
+        MySQLdb.OperationalError: Error in database connection.
+
+    """ 
     query_output = dbio.read(query_string)
     if query_output:
         dict_output = {a: b for a, b in query_output}
@@ -25,6 +52,19 @@ def dict_format(query_string, variable_info):
 
 
 def set_static_variable(name=""):
+    """
+    - Description.
+
+    Args:
+        Args (str): Args.
+
+    Returns:
+        Returns.
+
+    Raises:
+        MySQLdb.OperationalError: Error in database connection.
+
+    """ 
     query = "Select name, query, data_type, "
     query += "ts_updated from static_variables"
     date = dt.now()
@@ -33,7 +73,6 @@ def set_static_variable(name=""):
         query += " where name = '%s'" % (name)
 
     try:
-    
         variables = dbio.read(
           query = query, identifier = 'Set static_variables')
     except MySQLdb.ProgrammingError:
@@ -42,16 +81,18 @@ def set_static_variable(name=""):
     
     for data in variables:
         variable_info = VariableInfo(data)
-        query_string = variable_info.query
 
         if variable_info.type == 'data_frame':
-            static_output = dbio.df_read(query_string)
+            static_output = dbio.df_read(
+                query=variable_info.query)
 
         elif variable_info.type == 'dict':
-            static_output = dict_format(query_string, variable_info)
+            static_output = dict_format(variable_info.query, 
+                variable_info)
 
         else:
-            static_output = dbio.read(query_string)
+            static_output = dbio.read(
+                query=variable_info.query)
             
         if static_output is None: 
             warnings.warn('Query Error ' + variable_info.name)
@@ -60,13 +101,26 @@ def set_static_variable(name=""):
             query_ts_update = ("UPDATE static_variables SET "
                 " ts_updated ='%s' WHERE name ='%s'") % (date, 
                     variable_info.name)
-            dbio.write(query_ts_update)
+            dbio.write(query=query_ts_update)
             print variable_info.name
 
 
 def get_db_dataframe(query):
+    """
+    - Description.
+
+    Args:
+        Args (str): Args.
+
+    Returns:
+        Returns.
+
+    Raises:
+        MySQLdb.OperationalError: Error in database connection.
+
+    """ 
     try:
-        db, cur = dbio.connect()
+        db, cur = dbio.connect(host='local')
         df = psql.read_sql(query, db)
         # df.columns = ['ts','id','x','y','z','m']
         # change ts column to datetime
@@ -81,7 +135,21 @@ def get_db_dataframe(query):
         print "Error getting query %s" % (query)
         return None
 
+
 def set_mysql_tables(mc):
+    """
+    - Description.
+
+    Args:
+        Args (str): Args.
+
+    Returns:
+        Returns.
+
+    Raises:
+        MySQLdb.OperationalError: Error in database connection.
+
+    """ 
     tables = ['sites','tsm_sensors','loggers','accelerometers']
 
     print 'Setting dataframe tables to memory'
@@ -99,6 +167,7 @@ def set_mysql_tables(mc):
             mc.set(key+'_dict',df.set_index('site_code').to_dict())
 
     print ' ... done'
+
 
 def get_mobiles(table, host = None, args = None):
     """
@@ -138,7 +207,8 @@ def get_mobiles(table, host = None, args = None):
             "AND t1.mobile_id < t2.mobile_id)) "
             "WHERE t2.sim_num IS NULL and t1.sim_num is not null")
 
-        nums = dbio.read(query, 'get_mobile_sim_nums', host)
+        nums = dbio.read(query=query, identifier='get_mobile_sim_nums', 
+            host=host)
 
         logger_mobile_sim_nums = {sim_num: mobile_id for (mobile_id, sim_num, 
             gsm_id) in nums}
@@ -158,7 +228,8 @@ def get_mobiles(table, host = None, args = None):
         
         query = "select mobile_id, sim_num, gsm_id from user_mobile"
 
-        nums = dbio.read(query, 'get_mobile_sim_nums', host)
+        nums = dbio.read(query=query, identifier='get_mobile_sim_nums', 
+            host=host)
 
         user_mobile_sim_nums = {sim_num: mobile_id for (mobile_id, sim_num, 
             gsm_id) in nums}
@@ -174,7 +245,21 @@ def get_mobiles(table, host = None, args = None):
 
     return nums
 
+
 def get_surficial_markers(host = None, from_memory = True):
+    """
+    - Description.
+
+    Args:
+        Args (str): Args.
+
+    Returns:
+        Returns.
+
+    Raises:
+        MySQLdb.OperationalError: Error in database connection.
+
+    """ 
     mc = memory.get_handle()
     sc = memory.server_config()
 
@@ -195,13 +280,27 @@ def get_surficial_markers(host = None, from_memory = True):
         "inner join markers as m4 "
         "on m2.marker_id = m4.marker_id ")
 
-    engine = dbio.df_engine(host)
+    engine = dbio.connect(host=host,conn_type=0)
     surficial_markers = pd.read_sql(query, engine)
     mc.set("surficial_markers", surficial_markers)
 
     return surficial_markers
 
+
 def get_surficial_parser_reply_messages():
+    """
+    - Description.
+
+    Args:
+        Args (str): Args.
+
+    Returns:
+        Returns.
+
+    Raises:
+        MySQLdb.OperationalError: Error in database connection.
+
+    """ 
     query = "select * from surficial_parser_reply_messages"
     
     df = get_db_dataframe(query)
@@ -211,6 +310,19 @@ def get_surficial_parser_reply_messages():
 
 
 def main(args):
+    """
+    - Description.
+
+    Args:
+        Args (str): Args.
+
+    Returns:
+        Returns.
+
+    Raises:
+        MySQLdb.OperationalError: Error in database connection.
+
+    """ 
 
     print dt.today().strftime('%Y-%m-%d %H:%M:%S')  
     mc = memory.get_handle()
@@ -244,6 +356,3 @@ def main(args):
         print "done"
     except sqlalchemy.exc.ProgrammingError: 
         print ">> Error on getting surficial information. Skipping load"
-    
-if __name__ == "__main__":
-    main()

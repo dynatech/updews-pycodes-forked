@@ -1,45 +1,129 @@
-import pandas as pd
-import MySQLdb, time 
-from sqlalchemy import create_engine
-import  sqlalchemy.exc
 import memcache
+import MySQLdb, time 
+import pandas as pd
+import pandas.io.sql as psql
+import  sqlalchemy.exc
 from sqlalchemy import MetaData
 from sqlalchemy import Table
-import pandas.io.sql as psql
+from sqlalchemy import create_engine
+
 
 mc = memcache.Client(['127.0.0.1:11211'],debug=0)
 
 
-#c = cfg.config()
-
-class DbInstance:
-       
-  def __init__(self, host):
+def get_connector(dbc='',conn_type=''):
     """
-    - The constructor for database instance.
+    - Description.
 
-    :param host: Instance hostname.
-    :type host: str
+    Args:
+        Args (str): Args.
+
+    Returns:
+        Returns.
+
+    Raises:
+        MySQLdb.OperationalError: Error in database connection.
+
+    """ 
+
+    if type(dbc) is dict:
+        dbc = [dbc]
+
+    for list_dbc in dbc:
+        if conn_type == 1:
+           dbc_output = get_msqldb_connect(list_dbc)
+        elif conn_type == 0:
+           dbc_output = get_create_engine(list_dbc)
+
+        if dbc_output:
+            return dbc_output
+        else:
+            print 'Connection Fail'
+            continue
+    return False
     
 
-    Example Output::
-
-        >>> x = DbInstance('local')
-        >>> x.name, x.host, x.user, x.password
-        ('senslopedb', '127.0.0.1', 'root', 'admin')
-
-
-    """      
-    sc = mc.get('server_config')
-    self.name = sc['db']['name'] 
-    self.host = sc['hosts'][host] 
-    self.user = sc['db']['user'] 
-    self.password = sc['db']['password']
-      
-
-def connect(host = 'local', connetion =''):   
+def get_msqldb_connect(dbc):
     """
-    - Creating the ``MySQLdb.connect`` connetion for the database.
+    - Description.
+
+    Args:
+        Args (str): Args.
+
+    Returns:
+        Returns.
+
+    Raises:
+        MySQLdb.OperationalError: Error in database connection.
+
+    """ 
+    try:
+        db = MySQLdb.connect(dbc['host'], dbc['user'], 
+            dbc['password'], dbc['schema'])
+        cur = db.cursor()
+        return db, cur
+    except TypeError:
+        print 'Error Connection Value'
+        return False
+    except MySQLdb.OperationalError:
+        print '6.',
+        time.sleep(2)
+        return False
+    except (MySQLdb.Error, MySQLdb.Warning) as e:
+        print(e)
+        return False
+
+
+def get_create_engine(dbc):
+    """
+    - Description.
+
+    Args:
+        Args (str): Args.
+
+    Returns:
+        Returns.
+
+    Raises:
+        MySQLdb.OperationalError: Error in database connection.
+
+    """ 
+    try:
+        engine = create_engine('mysql+pymysql://' + 
+            dbc['user'] + ':'+ dbc['password'] + '@' + 
+            dbc['host'] +':3306/' + dbc['schema'])
+        return engine
+    except sqlalchemy.exc.OperationalError:
+        print ">> Error in connetion"
+        return False
+
+
+def get_connection_info(connection_name):
+    """
+    - Description.
+
+    Args:
+        Args (str): Args.
+
+    Returns:
+        Returns.
+
+    Raises:
+        MySQLdb.OperationalError: Error in database connection.
+
+    """ 
+    try:
+        conn_dict = mc.get('DICT_DB_CONNECTIONS')
+        dbc = conn_dict[connection_name]
+        return dbc
+    except TypeError:
+        print 'Unknown DICT_DB_CONNECTIONS '
+        return None
+
+
+def connect(host='', connection='', resource='' , conn_type=1):   
+    """
+    - Creating the ``MySQLdb.connect`` and ``create_engine``connetion for the database.
 
     Args:
         host (str): Hostname.
@@ -52,23 +136,46 @@ def connect(host = 'local', connetion =''):
         MySQLdb.OperationalError: Error in database connection.
 
     """ 
-    dbc = DbInstance(host)
-
-    while True:
+    # dbc = database connection
+    #sc = server_config
+    
+    if host:
+        dbc = None 
         try:
-            db = MySQLdb.connect(host = dbc.host, user = dbc.user, 
-                passwd = dbc.password, db = dbc.name)
+            sc = mc.get('SERVER_CONFIG')
+            dbc = dict()
+            dbc['host'] = sc['hosts'][host] 
+            dbc['user'] = sc['db']['user'] 
+            dbc['password'] = sc['db']['password']
+            dbc['schema'] = sc['db']['name'] 
+        except KeyError:
+            print "Unknown Host " + host
 
-            cur = db.cursor()
+    elif connection:
 
-            return db, cur
-        except MySQLdb.OperationalError:
-        # except IndexError:
-            print '6.',
-            time.sleep(2)
+        dbc = get_connection_info(connection) 
+
+    elif resource:
+        dbc = None 
+        try:
+            sc = mc.get('SERVER_CONFIG')
+            resource_dict = sc['resource_connection'][resource]
+            resource_dict = resource_dict.split(",")
+            dbc = []
+            for connection in resource_dict:
+                dbc.append(get_connection_info(connection))
+        except KeyError:
+            print 'Unknown Resource ' + resource
+    
+    if dbc:
+        return get_connector(dbc=dbc, conn_type=conn_type)
+    else:    
+        print 'Cannot Connect to Database Connection'
+        return False
 
 
-def write(query = '', identifier = '', last_insert = False, instance = 'local'):
+def write(query ='', identifier = '', last_insert=False, 
+    host='local', connection='', resource=''):
     """
     - The process of writing to the database by a query statement.
 
@@ -76,7 +183,7 @@ def write(query = '', identifier = '', last_insert = False, instance = 'local'):
         query (str): Query statement.
         identifier (str): Identifier statement for the query.
         Last_insert (str): Select the last insert. Defaults to False.
-        instance (str): Hostname. Defaults to local.
+        host (str): Hostname. Defaults to local.
     
     Raises:
         IndexError: Error in retry index.
@@ -84,52 +191,43 @@ def write(query = '', identifier = '', last_insert = False, instance = 'local'):
         MySQLdb.IntegrityError: If duplicate entry detected.
 
     """ 
-    db, cur = connect(instance)
 
-    b=''
+    db, cur = connect(host=host, connection=connection, 
+        resource=resource)
+
     try:
-        retry = 0
-        while True:
-            try:
-                a = cur.execute(query)
+        a = cur.execute(query)
+        if last_insert:
+            b = cur.execute('select last_insert_id()')
+            b = cur.fetchall()
+            return b
+        if a:
+            db.commit()
+            return None
+        else:
 
-                b = ''
-                if last_insert:
-                    b = cur.execute('select last_insert_id()')
-                    b = cur.fetchall()
+            db.commit()
+            time.sleep(0.1)
+            return None
 
-                if a:
-                    db.commit()
-                    break
-                else:
+    except IndexError:
+        print IndexError
+        return None
+    except (MySQLdb.Error, MySQLdb.Warning) as e:
+        print(e)
+        return None
 
-                    db.commit()
-                    time.sleep(0.1)
-                    break
 
-            except IndexError:
-                print '5.',
 
-                if retry > 10:
-                    break
-                else:
-                    retry += 1
-                    time.sleep(2)
-    except KeyError:
-        print '>> Error: Writing to database', identifier
-    except MySQLdb.IntegrityError:
-        print '>> Warning: Duplicate entry detected', identifier
-    db.close()
-    return b
-
-def read(query = '', identifier = '', instance = 'local'):
+def read(query='', identifier='', host='local', 
+    connection='', resource=''):
     """
     - The process of reading the output from the query statement.
 
     Args:
         query (str): Query statement.
         identifier (str): Identifier statement for the query.
-        instance (str): Hostname. Defaults to local.
+        host (str): Hostname. Defaults to local.
 
     Returns:
       tuple: Returns the query output and fetch by a ``cur.fetchall()``.
@@ -148,9 +246,8 @@ def read(query = '', identifier = '', instance = 'local'):
 
     """ 
 
-    db, cur = connect(instance)
-    a = ''
-    
+    db, cur = connect(host=host, connection=connection, 
+        resource=resource)
     try:
         a = cur.execute(query)
         a = None
@@ -161,27 +258,15 @@ def read(query = '', identifier = '', instance = 'local'):
             return None
     except MySQLdb.OperationalError:
         a =  None
+    except (MySQLdb.Error, MySQLdb.Warning) as e:
+        print(e)
+        return None
     except KeyError:
         a = None
 
-def df_engine(host = 'local'):
-    """
-    - Creating the engine connection for the database.
 
-    Args:
-        host (str): Hostname. Defaults to local.
-
-    Returns:
-        Returns the ``create_engine()`` connection to the host.
-
-
-    """ 
-    dbc = DbInstance(host)
-    engine = create_engine('mysql+pymysql://' + dbc.user + ':'
-        + dbc.password + '@' + dbc.host + ':3306/' + dbc.name)
-    return engine
-
-def df_write(data_table, host = 'local', last_insert = False):
+def df_write(data_table, host='local', last_insert=False , 
+    connection='' , resource=''):
     """
     - The process of writing data frame data to a database.
 
@@ -196,43 +281,59 @@ def df_write(data_table, host = 'local', last_insert = False):
 
 
     """
-    engine = df_engine(host)
     df = data_table.data
-    df = df.drop_duplicates(subset = None, keep = 'first', inplace = False)
+    df = df.drop_duplicates(subset=None, keep='first', inplace=False)
     value_list = str(df.values.tolist())[:-1][1:]
     value_list = value_list.replace("]",")").replace("[","(")
     column_name_str = str(list(df))[:-1][1:].replace("\'","")
     duplicate_value_str = ", ".join(["%s = VALUES(%s)" % (name, name) 
         for name in list(df)]) 
-    query = "insert into %s (%s) values %s" % (data_table.name,
+    query = 'insert into %s (%s) values %s' % (data_table.name,
         column_name_str, value_list)
-    query += " on DUPLICATE key update  %s " % (duplicate_value_str)
+    query += ' on DUPLICATE key update  %s ' % (duplicate_value_str)
     try:
-        last_insert_id = write(query = query, 
-            identifier = 'Insert dataFrame values', 
-            last_insert = last_insert,
-            instance = host)
+        last_insert_id = write(query=query, 
+            identifier='Insert dataFrame values', 
+            last_insert=last_insert,
+            host=host,
+            connection=connection, 
+            resource=resource)
+
         return last_insert_id
+
     except IndexError:
-        print "\n\n>> Error: Possible data type error"
+        print '\n\n>> Error: Possible data type error'
     except ValueError:
-        print ">> Value error detected"   
+        print '>> Value error detected'   
     except AttributeError:
         print ">> Value error in data pass"       
 
-def df_read(query = ''):
-    db, cur = connect()
+
+def df_read(query='', host='local', connection='', resource=''):
+    """
+    - Description.
+
+    Args:
+        Args (str): Args.
+
+    Returns:
+        Returns.
+
+    Raises:
+        MySQLdb.OperationalError: Error in database connection.
+
+    """ 
+    db = connect(host=host, connection=connection, 
+        resource=resource, conn_type=0)
     ret_val = None
     try:
         df = psql.read_sql(query, db)
         ret_val = df
     except KeyboardInterrupt:
-        print "Exception detected in accessing database"
+        print 'Exception detected in accessing database'
         sys.exit()
     except psql.DatabaseError:
-        print "Error getting query %s" % (query)
+        print 'Error getting query %s' % (query)
         ret_val = None
     finally:
         return ret_val
-
-
