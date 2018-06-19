@@ -131,6 +131,9 @@ class GsmModem:
             except ValueError:
                 print ">> Error: conversion to pdu (cannot decode odd-length)"
                 continue
+            except IndexError:
+                print ">> Error: convertion to pdu (pop from empty array)"
+                continue
 
             smsdata = self.manage_multi_messages(smsdata)
             if smsdata == "":
