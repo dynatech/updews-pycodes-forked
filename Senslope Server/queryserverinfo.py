@@ -159,7 +159,11 @@ def sendEventMonitoringReminder():
 		reminder_message += "for %s." % (report_dt.strftime("%B %d, %I:%M%p"))
 		# print reminder_message
 
-	 	server.WriteOutboxMessageToDb(reminder_message,numbers_dict[key])
+		try:
+			server.WriteOutboxMessageToDb(reminder_message,numbers_dict[key])
+		except KeyError:
+			print "No known contact for %s" %  (key)
+			continue
 
 def introduce():
 	query = """select nickname,numbers from dewslcontacts
