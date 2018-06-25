@@ -30,6 +30,7 @@ class GsmModem:
     RESET_DEASSERT_DELAY = 1
     RESET_ASSERT_DELAY = 5     # delay when module power is off
     WAIT_FOR_BYTES_DELAY = 0.5
+    POWER_ON_DELAY = 10
 
     def __init__(self, ser_port, ser_baud, pow_pin, ring_pin):
         self.ser_port = ser_port
@@ -98,6 +99,7 @@ class GsmModem:
 
         try:
             GPIO.output(self.pow_pin, 0)
+            time.sleep(self.POWER_ON_DELAY)
             print "Switching to no-echo mode",
             print self.at_cmd('ATE0').strip('\r\n')
             print "Switching to PDU mode" 
@@ -220,6 +222,9 @@ class GsmModem:
 
             # bring it back up
             GPIO.output(self.pow_pin, 0)
+            time.sleep(self.RESET_DEASSERT_DELAY)
+
+            GPIO.cleanup()
 
             print 'done'
         except ImportError:
