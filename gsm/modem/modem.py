@@ -93,13 +93,13 @@ class GsmModem:
 
         
     def set_defaults(self):
-        for i in range(0,4):
-            self.gsm.write('AT\r\n')
-            time.sleep(0.5)
-
+        GPIO.output(self.pow_pin, 0)
+        time.sleep(self.POWER_ON_DELAY)
+        
         try:
-            GPIO.output(self.pow_pin, 0)
-            time.sleep(self.POWER_ON_DELAY)
+            for i in range(0,4):
+                self.gsm.write('AT\r\n')
+                time.sleep(0.5)
             print "Switching to no-echo mode",
             print self.at_cmd('ATE0').strip('\r\n')
             print "Switching to PDU mode" 
