@@ -4,6 +4,7 @@ import pandas.io.sql as psql
 import pandas as pd
 import platform
 from sqlalchemy import create_engine
+import volatile.memory as mem
 
 curOS = platform.system()
 
@@ -631,6 +632,5 @@ def alert_to_db(df, table_name):
             execute_query(query)
 
 def memcached():
-    mc = memcache.Client(['127.0.0.1:11211'],debug=0)
-    sc = mc.get("server_config")
-    return sc
+    # mc = memcache.Client(['127.0.0.1:11211'],debug=0)
+    return mem.server_config()
