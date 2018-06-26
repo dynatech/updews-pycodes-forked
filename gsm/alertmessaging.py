@@ -236,18 +236,13 @@ def check_alerts():
     return alert_msgs
 
 def get_name_of_staff(number):
-    query =  ("select t1.user_id, t2.nickname from user_mobile t1 inner join users t2 on "
-        "t1.user_id = t2.user_id where t1.sim_num = '%s';") % (number)
+    query =  ("select t1.user_id, t2.nickname, t1.gsm_id from user_mobile t1 "
+        "inner join users t2 on t1.user_id = t2.user_id where "
+        "t1.sim_num = '%s';") % (number)
 
-    # print query
-
-    name = dbio.read(query,'customquery')[0]
-
-    return name
+    return dbio.read(query=query,host='gsm2')[0]
 
 def process_ack_to_alert(sms):
-
-
     try:
         stat_id = re.search("(?<=K )\d+(?= )", sms.msg,re.IGNORECASE).group(0)
     except IndexError:
@@ -255,7 +250,7 @@ def process_ack_to_alert(sms):
         # smstables.write_outbox(errmsg,sms.sim_num)
         return False
 
-    user_id, nickname = get_name_of_staff(sms.sim_num)
+    user_id, nickname, def_gsm_id = get_name_of_staff(sms.sim_num)
     print user_id, nickname, sms.msg
     if re.search("server",nickname.lower()):
         try:
@@ -271,7 +266,7 @@ def process_ack_to_alert(sms):
     except AttributeError:
         errmsg = "Please put in your remarks."
         smstables.write_outbox(message = errmsg, recipients = sms.sim_num,
-            gsm_id=4,table='users')
+            gsm_id=def_gsm_id,table='users')
         # write_outbox_dyna(errmsg, sms.sim_num)
         return True
 
@@ -283,7 +278,7 @@ def process_ack_to_alert(sms):
         errmsg = ("Please put in the alert status validity."
             " i.e (VALID, INVALID, VALIDATING)")
         smstables.write_outbox(message = errmsg, recipients = sms.sim_num,
-            gsm_id=4, table='users')
+            gsm_id=def_gsm_id,table='users')
         # write_outbox_dyna(errmsg, sms.sim_num)
         return True
 
@@ -306,8 +301,6 @@ def process_ack_to_alert(sms):
     recipents_list = recipients_list[:-1]
     smstables.write_outbox(message = message, recipients = recipients_list,
         gsm_id=gsm_id, table='users')
-    # write_outbox_dyna(message,sim_num)
-    # print message, sim_num
 
     return True
 
