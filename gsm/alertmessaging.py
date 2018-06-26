@@ -301,11 +301,11 @@ def process_ack_to_alert(sms):
     
     tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
     recipients_list = ""
-    for mobile_id, sim_num in contacts:
+    for mobile_id, sim_num, gsm_id in contacts:
         recipients_list += "%s," % (sim_num)
     recipents_list = recipients_list[:-1]
     smstables.write_outbox(message = message, recipients = recipients_list,
-        gsm_id=4, table='users')
+        gsm_id=gsm_id, table='users')
     # write_outbox_dyna(message,sim_num)
     # print message, sim_num
 
