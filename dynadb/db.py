@@ -198,6 +198,7 @@ def write(query ='', identifier = '', last_insert=False,
     try:
         a = cur.execute(query)
         if last_insert:
+            db.commit()
             b = cur.execute('select last_insert_id()')
             b = cur.fetchall()
             return b
