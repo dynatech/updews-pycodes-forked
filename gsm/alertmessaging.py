@@ -8,10 +8,10 @@ import pandas as pd
 #---------------------------------------------------------------------------------------------------------------------------
 
 def get_alert_staff_numbers():
-    query = ("select t1.user_id,t2.sim_num from user_alert_info t1 inner join"
+    query = ("select t1.user_id,t2.sim_num,t2.gsm_id from user_alert_info t1 inner join"
         " user_mobile t2 on t1.user_id = t2.user_id where t1.send_alert = 1;")
 
-    contacts = dbio.read(query=query,identifier='checkalert',resource="sms_data")
+    contacts = dbio.read(query=query,identifier='checkalert',host="gsm2")
     return contacts
 
 def monitoring_start(site_id, ts_last_retrigger):
@@ -165,11 +165,14 @@ def send_alert_message():
     # alertmsg = dbio.read(query,'send_alert_message')
     alert_msgs = check_alerts()
 
+    contacts = get_alert_staff_numbers()
+
     if len(alert_msgs) == 0:
         print 'No alertmsg set for sending'
         return
 
-    for stat_id, site_id, site_code, trigger_source, alert_symbol, ts_last_retrigger in alert_msgs:
+    for (stat_id, site_id, site_code, trigger_source, alert_symbol, 
+        ts_last_retrigger) in alert_msgs:
         tlr_str = ts_last_retrigger.strftime("%Y-%m-%d %H:%M:%S")
         message = ("SANDBOX:\n"
             "As of %s\n"
@@ -181,16 +184,13 @@ def send_alert_message():
             
         message += "\n\nText\nSandbox ACK <alert_id> <validity> <remarks>"
 
-        print message
-    
-        # send to alert staff
-        contacts = get_alert_staff_numbers()
+        # send to alert staff        
         recipients_list = ""
-        for mobile_id, sim_num in contacts:
+        for mobile_id, sim_num, gsm_id in contacts:
             recipients_list += "%s," % (sim_num)
         recipients_list = recipients_list[:-1]
         smstables.write_outbox(message=message, recipients=recipients_list,
-            gsm_id=4, table='users')
+            gsm_id=gsm_id, table='users')
         
         # # set alert to 15 mins later
         ts_due = dt.now() + td(seconds=60*15)
