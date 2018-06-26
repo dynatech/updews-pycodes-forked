@@ -259,7 +259,7 @@ def process_surficial_observation(sms):
     mc = mem.get_handle()
     surf_mark = mc.get("surficial_markers")
     reply_msgs = mc.get("surficial_parser_reply_messages")
-    sc = mc.get("server_config")
+    sc = mem.server_config()
     data_host = sc["resource"]["datadb"]
     ct_sim_num = str(sc["surficial"]["ct_sim_num"])
     enable_analysis = sc["surficial"]["enable_analysis"]
