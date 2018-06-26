@@ -31,5 +31,5 @@ def set_cnf(file='', static_name=''):
      
 
         config_dict[section.lower()]= options
-    print config_dict
+    # print config_dict
     memory.set(static_name, config_dict)

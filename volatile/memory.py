@@ -123,6 +123,5 @@ def server_config():
 	    Raise.
 
 	"""  
-	mc = get_handle()
-	return mc.get("server_config")
+	return get("server_config")
 
