@@ -78,8 +78,12 @@ def v1(sms):
         timestamp = sms.ts
         print "date & time adjusted " + timestamp
     else:
-        timestamp = dt.strptime(timestamp,
-            '%y%m%d%H%M').strftime('%Y-%m-%d %H:%M:00')
+        try:
+            timestamp = dt.strptime(timestamp,
+                '%y%m%d%H%M').strftime('%Y-%m-%d %H:%M:00')
+        except ValueError:
+            print ">> Error: date time conversion"
+            return False
         print 'date & time no change'
         
     dlen = len(msgdata) #checks if data length is divisible by 15
