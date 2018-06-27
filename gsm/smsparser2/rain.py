@@ -131,9 +131,14 @@ def rain_arq(sms):
         
         if csq=='':
             csq = 'NULL'
-        temp = linesplit[10]
-        hum = linesplit[11]
-        flashp = linesplit[12]
+
+        try:
+            temp = linesplit[10]
+            hum = linesplit[11]
+            flashp = linesplit[12]
+        except IndexError:
+            print ">> Error: possible incomplete message"
+            return False
         txtdatetime = dt.strptime(linesplit[13],
             '%y%m%d/%H%M%S').strftime('%Y-%m-%d %H:%M:%S')
 
