@@ -12,6 +12,16 @@ import pandas as pd
 import rainfallalert as ra
 
 def stitch_intervals(ranges):
+    """Stiches overlapping timestamp ranges without data.
+    
+    Args:
+        ranges (list): Timestamp ranges without data.
+
+    Returns:
+        list: List of tuples containing ranges of timestamp without data.
+    
+    """
+
     result = []
     cur_start = -1
     cur_stop = -1
@@ -25,23 +35,44 @@ def stitch_intervals(ranges):
     return result
 
 def plot_shade(df, ax):
+    """Shades timestamp range without data.
+    
+    Args:
+        df (dataframe): Dataframe containing timestamp ranges without data.
+        ax (matplotlib.axes._subplots.AxesSubplot): Subplot used in plotting.
     
     """
-    timestamp 
-    """    
-    
+
     ax.axvspan(pd.to_datetime(df['shaded_range'].values[0][0]),
                pd.to_datetime(df['shaded_range'].values[0][1]),
                alpha = 0.5, color='#afeeee')
 
 def rain_subplot(rain_gauge_props, offsetstart, start, end, threshold,
                  insax, cumax, fig, site_code):
+    """Plots instantaneous, 1-day cumulative and 3-day cumulative rainfall.
+    
+    Args:
+        rain_gauge_props (dataframe): Contains name and ID of rain gauge.
+        offsetstart (datetime): Start of data used to compute for 
+                                cumulative rainfall.
+        start (datetime): Start timestamp of plot.
+        end (datetime): End timestamp of plot.
+        threshold (dataframe): Contains threshold for 1-day and 3-day
+                               cumulative rainfall
+        insax (matplotlib.axes._subplots.AxesSubplot): For instantaneous rainfall.
+        cumax (matplotlib.axes._subplots.AxesSubplot): For cumulative rainfall.
+        fig (matplotlib.figure.Figure): Figure used in plotting.
+        site_code (str): Three-letter code per site.
+
+    """
+
+    gauge_name = rain_gauge_props['gauge_name'].values[0]
     # resampled data
-    data = ra.get_resampled_data(rain_gauge_props['rainfall_gauges'].values[0],
-                                     offsetstart, start, end, check_nd=False)
+    data = ra.get_resampled_data(gauge_name, offsetstart, start, end,
+                                 check_nd=False)
     if len(data) == 0:
         data = pd.DataFrame(columns=['ts', 'rain']).set_index('ts')
-        
+    
     # 1-day cumulative rainfall
     rainfall2 = data.rolling(min_periods=1, window=48).sum()
     rainfall2 = np.round(rainfall2,4)
@@ -61,7 +92,6 @@ def rain_subplot(rain_gauge_props, offsetstart, start, end, threshold,
     plot4 = threshold['half of 2yr max rainfall']
     plot5 = threshold['2yr max rainfall']
     
-    
     RG_num = rain_gauge_props.index[0]
     inscurax = insax[RG_num]
     cumcurax = cumax[RG_num]
@@ -78,7 +108,6 @@ def rain_subplot(rain_gauge_props, offsetstart, start, end, threshold,
     except:
         pass
 
-    
     try:
         # instantaneous, 1-day & 3-day cumulative rainfall
         inscurax.bar(plot1.index,plot1,width=0.01,color='r')
@@ -94,16 +123,10 @@ def rain_subplot(rain_gauge_props, offsetstart, start, end, threshold,
             t = 500
         cumcurax.set_ylim([b, t + 25])
         
-        # rotate x-axis label (timestamp)
-        for tick in inscurax.xaxis.get_major_ticks():
-            tick.label.set_rotation('vertical')
-        for tick in cumcurax.xaxis.get_major_ticks():
-            tick.label.set_rotation('vertical')
-
     except:
         pass
     
-    ylabel = rain_gauge_props['rainfall_gauges'].values[0]
+    ylabel = gauge_name
     ylabel += ' (' + str(rain_gauge_props['distance'].values[0]) + 'km)'
     ylabel = ylabel.replace('rain_noah_', 'NOAH').replace('rain_', '')
     ylabel = ylabel.replace(' (km)', '')
@@ -116,7 +139,23 @@ def rain_subplot(rain_gauge_props, offsetstart, start, end, threshold,
     
 def rain_stack_plot(site_code, gauges, offsetstart, start, end, tsn, threshold,
                     sc, output_path):
+    """Plots instantaneous, 1-day cumulative and 3-day cumulative rainfall.
     
+    Args:
+        site_code (str): Three-letter code per site.
+        gauges (dataframe): Contains nearest rain gauges per site.
+        offsetstart (datetime): Start of data used to compute for 
+                                cumulative rainfall.
+        start (datetime): Start timestamp of plot.
+        end (datetime): End timestamp of plot.
+        tsn (str): Timestamp format used in naming plots to be saved.
+        threshold (dataframe): Contains threshold for 1-day and 3-day
+                               cumulative rainfall
+        sc (str): Configurations of server.
+        output_path (str): File path to save plots.
+
+    """
+
     # assigning axis name per subplot
     plt.xticks(rotation=70, size=5)       
     fig=plt.figure(figsize = (15,20))
@@ -136,7 +175,7 @@ def rain_stack_plot(site_code, gauges, offsetstart, start, end, tsn, threshold,
     insax = [ins1, ins2, ins3, ins4]
     cumax = [cum1, cum2, cum3, cum4]
 
-    rain_gauge_props = gauges.groupby('rainfall_gauges')
+    rain_gauge_props = gauges.groupby('rain_id')
     
     # plotting per rain gauge
     rain_gauge_props.apply(rain_subplot, offsetstart=offsetstart, start=start, 
@@ -156,6 +195,11 @@ def rain_stack_plot(site_code, gauges, offsetstart, start, end, tsn, threshold,
     lgd = plt.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize='medium')
 #    file_path = filepath.output_file_path(name, 'rainfall', monitoring_end=monitoring_end, 
 #        trigger=trigger, end=end)
+
+    for ax in fig.axes:
+        plt.sca(ax)
+        plt.xticks(rotation=90)
+
     plt.savefig(output_path+sc['fileio']['rainfall_path'] + 'rainfall_' +
                 tsn + '_' + site_code, dpi=100, facecolor='w',
                 edgecolor='w',orientation='landscape',mode='w',
@@ -169,15 +213,24 @@ def rain_stack_plot(site_code, gauges, offsetstart, start, end, tsn, threshold,
 
 ################################     MAIN     ################################
 
-def main(props, offsetstart, start, end, tsn, sc, output_path):
+def main(gauges, offsetstart, start, end, tsn, sc, output_path):
+    """Plots instantaneous, 1-day cumulative and 3-day cumulative rainfall.
+    
+    Args:
+        gauges (dataframe): Contains nearest rain gauges per site.
+        offsetstart (datetime): Start of data used to compute for 
+                                cumulative rainfall.
+        start (datetime): Start timestamp of plot.
+        end (datetime): End timestamp of plot.
+        tsn (str): Timestamp format used in naming plots to be saved.
+        sc (str): Configurations of server.
+        output_path (str): File path to save plots.
 
-    """
-    plot
     """
 
     #rainfall properties from siterainprops
-    site_code = props['site_code'].values[0]
-    twoyrmax = props['threshold_value'].values[0]
+    site_code = gauges['site_code'].values[0]
+    twoyrmax = gauges['threshold_value'].values[0]
     halfmax=twoyrmax/2
 
     index = [start, end]
@@ -186,11 +239,7 @@ def main(props, offsetstart, start, end, tsn, sc, output_path):
     threshold['half of 2yr max rainfall'] = halfmax  
     threshold['2yr max rainfall'] = twoyrmax
 
-    gauges = pd.DataFrame({'rainfall_gauges': props['rainfall_gauges'].values[0],
-                           'rain_id': props['rain_id'].values[0],
-                           'distance': props['distance'].values[0]})
     gauges.index = range(len(gauges))
     
-#    trigger = summary[summary.site_code == site_code]['alert'].values[0] > 0
     rain_stack_plot(site_code, gauges, offsetstart, start, end, tsn, threshold,
                     sc, output_path)

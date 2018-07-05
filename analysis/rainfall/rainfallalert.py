@@ -1,90 +1,36 @@
-from datetime import timedelta, time
+from datetime import timedelta
 import math
 import numpy as np
-import os
 import pandas as pd
-import sys
 
-#include the path of "Analysis" folder for the python scripts searching
-path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-if not path in sys.path:
-    sys.path.insert(1,path)
-del path   
-
-import querydb as qdb
-import publicalerts as pub
-
-def create_rainfall_alerts():
-    query = "CREATE TABLE `rainfall_alerts` ("
-    query += "  `ra_id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,"
-    query += "  `ts` TIMESTAMP NULL,"
-    query += "  `site_id` TINYINT(3) UNSIGNED NOT NULL,"
-    query += "  `rain_id` SMALLINT(5) UNSIGNED NOT NULL,"
-    query += "  `rain_alert` CHAR(1) NOT NULL,"
-    query += "  `cumulative` DECIMAL(5,2) UNSIGNED NULL,"
-    query += "  `threshold` DECIMAL(5,2) UNSIGNED NULL,"
-    query += "  PRIMARY KEY (`ra_id`),"
-    query += "  INDEX `fk_sites1_idx` (`site_id` ASC),"
-    query += "  INDEX `fk_rainfall_gauges1_idx` (`rain_id` ASC),"
-    query += "  UNIQUE INDEX `uq_rainfall_alerts` (`ts` ASC, `site_id` ASC, `rain_alert` ASC),"
-    query += "  CONSTRAINT `fk_sites1`"
-    query += "    FOREIGN KEY (`site_id`)"
-    query += "    REFERENCES `sites` (`site_id`)"
-    query += "    ON DELETE CASCADE"
-    query += "    ON UPDATE CASCADE,"
-    query += "  CONSTRAINT `fk_rainfall_gauges1`"
-    query += "    FOREIGN KEY (`rain_id`)"
-    query += "    REFERENCES `rainfall_gauges` (`rain_id`)"
-    query += "    ON DELETE CASCADE"
-    query += "    ON UPDATE CASCADE)"
-    
-    qdb.execute_query(query)
-
-def get_raw_rain_data(gauge_name, fromTime="", toTime=""):
-    
-    try:
-        
-        query = "SELECT ts, rain from %s " %gauge_name
-                        
-        if not fromTime:
-            fromTime = "2010-01-01"
-            
-        query = query + " where ts > '%s'" % fromTime
-        
-        if toTime:
-            query = query + " and ts < '%s'" % toTime
-    
-        query = query + " order by ts"
-    
-        df =  qdb.get_db_dataframe(query)
-        
-        # change ts column to datetime
-        df.ts = pd.to_datetime(df.ts)
-        
-        return df
-        
-    except UnboundLocalError:
-        qdb.print_out('No ' + gauge_name + ' table in SQL')
-
-    return
+import analysis.publicalerts as pub
+import analysis.querydb as qdb
+import dynadb.db as db
+import gsm.smsparser2.smsclass as sms
 
 def get_resampled_data(gauge_name, offsetstart, start, end, check_nd=True):
+    """Resample retrieved data of gauge_name from offsetstart to end.
     
-    ##INPUT:
-    ##r; str; site
-    ##start; datetime; start of rainfall data
-    ##end; datetime; end of rainfall data
-    
-    ##OUTPUT:
-    ##rainfall; dataframe containing start to end of rainfall data resampled to 30min
-    
-    #raw data from senslope rain gauge
-    rainfall = get_raw_rain_data(gauge_name, fromTime=offsetstart, toTime=end)
-    rainfall = rainfall.set_index('ts')
-    rainfall = rainfall.loc[rainfall['rain']>=0]
+    Args:
+        gauge_name (str): Rain gauge to retrieve data from.
+        offsetstart (datetime): Start timestamp of data to be retrieved.
+        start (datetime): Start timestamp of data to be analyzed.
+        end (datetime): End timestamp of data to be retrieved.
+        check_nd (bool): To check if data retrieved is empty. For empty data
+                         retrieved: if set to True, returns empty dataframe; 
+                         else, will return NaN containing dataframe.
 
-    try:    
-        time_checker = rainfall.index[-1] <= end-timedelta(1)
+    Returns:
+        dataframe: Rainfall data of gauge_name from offsetstart to end.
+    
+    """
+
+    rainfall = qdb.get_raw_rain_data(gauge_name, from_time=offsetstart)
+    rainfall = rainfall[rainfall.rain >= 0 ]
+    
+    try:
+        latest_ts = pd.to_datetime(rainfall['ts'].values[-1])
+        time_checker = latest_ts <= end-timedelta(1)
     except:
         time_checker = True
 
@@ -92,71 +38,98 @@ def get_resampled_data(gauge_name, offsetstart, start, end, check_nd=True):
     if check_nd and time_checker:
         return pd.DataFrame()
 
+    nan_replace = len(rainfall) == 0
     #add data to start and end of monitoring
     blankdf = pd.DataFrame({'ts': [end, offsetstart], 'rain': [np.nan, np.nan]})
-    blankdf = blankdf.set_index('ts')
     rainfall = rainfall.append(blankdf)
-    rainfall = rainfall.sort_index()
+    rainfall = rainfall.sort_values('ts')
     
     #data resampled to 30mins
+    rainfall = rainfall.set_index('ts')
     rainfall = rainfall.resample('30min').sum()
     rainfall = rainfall[(rainfall.index >= offsetstart)]
     rainfall = rainfall[(rainfall.index <= end)]    
     
+    if nan_replace:
+        rainfall['rain'] = rainfall.rain.replace(0, np.nan)
+    
     return rainfall
         
 def get_unempty_rg_data(rain_props, offsetstart, start, end):
+    """Retrieve data of nearest rain gauge with data within 24 hours.
     
-    ##INPUT:
-    ##r; str; site
-    ##offsetstart; datetime; starting point of interval with offset to account for moving window operations
-    
-    ##OUTPUT:
-    ##df; dataframe; rainfall from noah rain gauge    
-    
-    #gets data from nearest noah/senslope rain gauge
-    #moves to next nearest until data is updated
-    
-    RG_num = len(rain_props['rainfall_gauges'].values[0])
-    
-    for n in range(RG_num):            
-        gauge_name = rain_props['rainfall_gauges'].values[0][n]
-        rain_id = rain_props['rain_id'].values[0][n]
-        RGdata = get_resampled_data(gauge_name, offsetstart, start, end)
-        if len(RGdata) != 0:
-            latest_ts = pd.to_datetime(RGdata.index.values[-1])
-            if latest_ts > end - timedelta(1):
-                return RGdata, gauge_name, rain_id
-    return pd.DataFrame()
+    Args:
+        rain_props (dataframe): Rain gauge available per site.
+        offsetstart (datetime): Start timestamp of data to be retrieved.
+        start (datetime): Start timestamp of data to be analyzed.
+        end (datetime): End timestamp of data to be retrieved.
+
+    Returns:
+        tuple: data, gauge_name, rain_id
+            data (dataframe): Rainfall data of nearest rain gauge with data.
+            gauge_name (str): Nearest rain gauge with data.
+            rain_id (int): ID of gauge_name.
+            
+    """
+
+    for i in list(rain_props.index) + ['']:
+        if i != '':
+            gauge_name = rain_props[rain_props.index == i]['gauge_name'].values[0]
+            rain_id = rain_props[rain_props.index == i]['rain_id'].values[0]
+            data = get_resampled_data(gauge_name, offsetstart, start, end)
+            if len(data) != 0:
+                break
+        else:
+            data = pd.DataFrame({'ts': [end], 'rain': [np.nan]})
+            data = data.set_index('ts')
+            gauge_name = "No Alert! No ASTI/SENSLOPE Data"
+            rain_id = "No Alert! No ASTI/SENSLOPE Data"
+
+    return data, gauge_name, rain_id
 
 def one_three_val_writer(rainfall, end):
+    """Computes 1-day and 3-day cumulative rainfall at end.
+    
+    Args:
+        rainfall (str): Data to compute cumulative rainfall from.
+        end (datetime): End timestamp of alert to be computed.
 
-    ##INPUT:
-    ##one; dataframe; one-day cumulative rainfall
-    ##three; dataframe; three-day cumulative rainfall
-
-    ##OUTPUT:
-    ##one, three; float; cumulative sum for one day and three days
+    Returns:
+        tuple: one, three
+            one (float): 1-day cumulative rainfall.
+            three (float): 3-day cumulative rainfall.
+    
+    """
 
     if len(rainfall.dropna()) == 0:
         return np.nan, np.nan
     
-    #getting the rolling sum for the last24 hours
-    one = rainfall[(rainfall.index > end - timedelta(1)) & (rainfall.index <= end)]['rain'].sum()
-    three = rainfall[(rainfall.index > end - timedelta(3)) & (rainfall.index <= end)]['rain'].sum()
+    one = rainfall[rainfall.index > end - timedelta(1)]['rain'].sum()
+    three = rainfall[rainfall.index > end - timedelta(3)]['rain'].sum()
     
     return one,three
         
-def summary_writer(site_id,site_code,gauge_name,rain_id,twoyrmax,halfmax,rainfall,end,write_alert):
+def summary_writer(site_id, site_code, gauge_name, rain_id, twoyrmax, halfmax,
+                   rainfall, end, write_alert):
+    """Summary of cumulative rainfall, threshold, alert and rain gauge used in
+    analysis of rainfall.
+    
+    Args:
+        site_id (int): ID per site.
+        site_code (str): Three-letter code per site.
+        gauge_name (str): Rain gauge used in rainfall analysis.
+        rain_id (int): ID of gauge_name.
+        twoyrmax (float): Threshold for 3-day cumulative rainfall per site.
+        halfmax (float): Threshold for 1-day cumulative rainfall per site.
+        rainfall (str): Data to compute cumulative rainfall from.
+        end (datetime): End timestamp of alert to be computed.
+        write_alert (bool): To write alert in database.
 
-    ##DESCRIPTION:
-    ##inserts data to summary
-
-    ##INPUT:
-    ##twoyrmax; float; 2-yr max rainfall, threshold for three day cumulative rainfall
-    ##halfmax; float; half of 2-yr max rainfall, threshold for one day cumulative rainfall
-    ##one; dataframe; one-day cumulative rainfall
-    ##three; dataframe; three-day cumulative rainfall        
+    Returns:
+        dataframe: Summary of cumulative rainfall, threshold, alert and 
+                   rain gauge used in analysis of rainfall.
+    
+    """
 
     one,three = one_three_val_writer(rainfall, end)
 
@@ -176,29 +149,25 @@ def summary_writer(site_id,site_code,gauge_name,rain_id,twoyrmax,halfmax,rainfal
     if write_alert or ralert == 1:
         if qdb.does_table_exist('rainfall_alerts') == False:
             #Create a site_alerts table if it doesn't exist yet
-            create_rainfall_alerts()
+            qdb.create_rainfall_alerts()
 
         if ralert == 0:
-            if one >= halfmax*0.75 or three >= twoyrmax*0.75:
-                query = "SELECT EXISTS(SELECT * FROM rainfall_alerts"
-                query += " WHERE ts = '%s' AND site_id = %s AND rain_alert = 'x')" %(end, site_id)
-                if qdb.get_db_dataframe(query).values[0][0] == 0:
-                    df = pd.DataFrame({'ts': [end], 'site_id': [site_id], 'rain_id': [rain_id], 'rain_alert': ['x'], 'cumulative': [np.nan], 'threshold': [np.nan]})
-                    qdb.push_db_dataframe(df, 'rainfall_alerts', index = False)
-
+            if one >= halfmax * 0.75 or three >= twoyrmax * 0.75:
+                alert = ['x']
         else:
+            alert = []
             if one >= halfmax:
-                query = "SELECT EXISTS(SELECT * FROM rainfall_alerts"
-                query += " WHERE ts = '%s' AND site_id = %s AND rain_alert = 'a')" %(end, site_id)
-                if qdb.get_db_dataframe(query).values[0][0] == 0:
-                    df = pd.DataFrame({'ts': [end], 'site_id': [site_id], 'rain_id': [rain_id], 'rain_alert': ['a'], 'cumulative': [one], 'threshold': [round(halfmax,2)]})
-                    qdb.push_db_dataframe(df, 'rainfall_alerts', index = False)
-            if three>=twoyrmax:
-                query = "SELECT EXISTS(SELECT * FROM rainfall_alerts"
-                query += " WHERE ts = '%s' AND site_id = %s AND rain_alert = 'b')" %(end, site_id)
-                if qdb.get_db_dataframe(query).values[0][0] == 0:
-                    df = pd.DataFrame({'ts': [end], 'site_id': [site_id], 'rain_id': [rain_id], 'rain_alert': ['b'], 'cumulative': [three], 'threshold': [round(twoyrmax,2)]})
-                    qdb.push_db_dataframe(df, 'rainfall_alerts', index = False)
+                alert += ['a']
+            if three >= twoyrmax:
+                alert += ['b']
+                    
+        if qdb.does_alert_exists(site_id, end, alert).values[0][0] == 0:
+            df = pd.DataFrame({'ts': [end], 'site_id': [site_id],
+                               'rain_id': [rain_id], 'rain_alert': [alert],
+                               'cumulative': [np.nan], 'threshold': [np.nan]})
+            data_table = sms.DataTable('rainfall_alerts', df)
+            db.df_write(data_table)
+
 
     summary = pd.DataFrame({'site_id': [site_id], 'site_code': [site_code],
                         '1D cml': [one], 'half of 2yr max': [round(halfmax,2)],
@@ -209,42 +178,39 @@ def summary_writer(site_id,site_code,gauge_name,rain_id,twoyrmax,halfmax,rainfal
     return summary
 
 def main(rain_props, end, sc, trigger_symbol):
+    """Computes rainfall alert.
+    
+    Args:
+        rain_props (dataframe): Contains rain gauges that can be used in 
+                                rainfall analysis.
+        end (datetime): Timestamp of alert to be computed.
+        sc (dict): Server configuration.
+        trigger_symbol: Alert symbol per alert level.
 
-    ##INPUT:
-    ##rainprops; DataFrameGroupBy; contains rain noah ids of noah rain gauge near the site, one and three-day rainfall threshold
+    Returns:
+        dataframe: Summary of cumulative rainfall, threshold, alert and 
+                   rain gauge used in analysis of rainfall.
     
-    ##OUTPUT:
-    ##evaluates rainfall alert
-    
+    """
+
     #rainfall properties
     site_id = rain_props['site_id'].values[0]
     site_code = rain_props['site_code'].values[0]
     twoyrmax = rain_props['threshold_value'].values[0]
-    halfmax=twoyrmax/2
+    halfmax = twoyrmax/2
     
     start = end - timedelta(float(sc['rainfall']['roll_window_length']))
     offsetstart = start - timedelta(hours=0.5)
 
     try:
-        
-        query =  "SELECT alert_level FROM "
-        query += "  (SELECT * FROM public_alerts "
-        query += "  WHERE site_id = %s " %site_id
-        query += "  AND ts <= '%s' " %end
-        query += "  AND ts_updated >= '%s' " %(end - timedelta(hours=0.5))
-        query += "  ) AS a "
-        query += "INNER JOIN "
-        query += "  (SELECT pub_sym_id, alert_level FROM public_alert_symbols "
-        query += "  ) AS s "
-        query += "ON a.pub_sym_id = s.pub_sym_id"
 
-        if qdb.get_db_dataframe(query)['alert_level'].values[0] > 0:
+        if qdb.get_alert_level(site_id, end)['alert_level'].values[0] > 0:
             
             start_monitor = pub.event_start(site_id, end)
             op_trig = pub.get_operational_trigger(site_id, start_monitor, end)
             op_trig = op_trig[op_trig.alert_level > 0]
             validity = max(op_trig['ts_updated'].values)
-            validity = qdb.release_time(pd.to_datetime(validity)) \
+            validity = pub.release_time(pd.to_datetime(validity)) \
                                      + timedelta(1)
             if 3 in op_trig['alert_level'].values:
                 validity += timedelta(1)
@@ -260,21 +226,11 @@ def main(rain_props, end, sc, trigger_symbol):
     except:
         write_alert = False
 
-    try:
-        #data is gathered from nearest rain gauge
-        rainfall, gauge_name, rain_id = get_unempty_rg_data(rain_props,
-                                                            offsetstart, start,
-                                                            end)
-        summary = summary_writer(site_id, site_code, gauge_name, rain_id,
-                                 twoyrmax, halfmax, rainfall, end, write_alert)
-    except:
-        #if no data for all rain gauge
-        rainfall = pd.DataFrame({'ts': [end], 'rain': [np.nan]})
-        rainfall = rainfall.set_index('ts')
-        gauge_name="No Alert! No ASTI/SENSLOPE Data"
-        rain_id="No Alert! No ASTI/SENSLOPE Data"
-        summary = summary_writer(site_id, site_code, gauge_name, rain_id,
-                                 twoyrmax, halfmax, rainfall, end, write_alert)
+    #data is gathered from nearest rain gauge
+    rainfall, gauge_name, rain_id = get_unempty_rg_data(rain_props, offsetstart,
+                                                        start, end)
+    summary = summary_writer(site_id, site_code, gauge_name, rain_id, twoyrmax,
+                             halfmax, rainfall, end, write_alert)
 
     operational_trigger = summary[['site_id', 'alert']]
     operational_trigger['alert'] = operational_trigger['alert'].map({-1:trigger_symbol[trigger_symbol.alert_level == -1]['trigger_sym_id'].values[0], 0:trigger_symbol[trigger_symbol.alert_level == 0]['trigger_sym_id'].values[0], 1:trigger_symbol[trigger_symbol.alert_level == 1]['trigger_sym_id'].values[0]})

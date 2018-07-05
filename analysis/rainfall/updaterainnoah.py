@@ -1,159 +1,150 @@
 from datetime import datetime, timedelta
-import os
 import pandas as pd
 import requests
-import sys
 
-import rainfall as rain
+import analysis.querydb as qdb
+import dynadb.db as db
+import gsm.smsparser2.smsclass as sms
+import volatile.memory as mem
 
-#include the path of "Analysis" folder for the python scripts searching
-path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-if not path in sys.path:
-    sys.path.insert(1,path)
-del path   
 
-import querydb as qdb
-    
-#download the NOAH Rainfall data directly from ASTI
 def download_rainfall_noah(noah_id, fdate, tdate):   
-    #Reduce latestTS by 1 day as a work around for NOAH's API of returning data
-    #   that starts from 8am
-    #Reduce by another 1 day due to the "rolling_sum" function
-    fdateMinus = (pd.to_datetime(fdate) - timedelta(1)).strftime("%Y-%m-%d")
+    """Downloads rainfall data of noah_id from fdate to tdate.
     
-    url = "http://weather.asti.dost.gov.ph/web-api/index.php/api/data/%s/from/%s/to/%s" % (noah_id,fdateMinus,tdate)
+    Args:
+        noah_id (int): Device id of noah data.
+        fdate (timestamp): Timestamp start of data to be downloaded.
+        tdate (timestamp): Timestamp end of data to be downloaded.
+
+    Returns:
+        dataframe: Rainfall data of noah_id from fdate to tdate if with data
+                    else empty dataframe.
+    
+    """
+
+    #Reduce latest_ts by 1 day as a work around for GMT to local conversion
+    offset_date = (pd.to_datetime(fdate) - timedelta(1)).strftime("%Y-%m-%d")
+    
+    sc = mem.server_config()
+    url = sc['rainfall']['noah_data'] % (noah_id, offset_date, tdate)
     try:
-        req = requests.get(url, auth=('phivolcs.ggrdd', 'PhiVolcs0117'))
+        req = requests.get(url, auth=(sc['rainfall']['noah_user'],
+                                      sc['rainfall']['noah_password']))
     except:
-        qdb.print_out("    Can not get request. Please check if your internet connection is stable")
+        qdb.print_out("Can't get request. Please check internet connection")
         return pd.DataFrame()
 
     try:
         df = pd.DataFrame(req.json()["data"])
     except:
-        qdb.print_out("    error: %s" % noah_id)
+        qdb.print_out("error: %s" % noah_id)
         return pd.DataFrame()
 
     try:
-        #rename "dateTimeRead" into "ts" and "rain_value" into "rain"
+        #rename dateTimeRead into ts and rain_value into rain
         df = df.rename(columns = {'rain_value': 'rain', 'dateTimeRead': 'ts'})
         
         df = df.drop_duplicates('ts')
         df['ts'] = df['ts'].apply(lambda x: pd.to_datetime(str(x)[0:19]))
-        df = df.set_index(['ts'])
-        df = df.sort_index()
+        df['rain'] = df['rain'].apply(lambda x: float(x))
+        df = df.sort_values('ts')
         
         #remove the entries that are less than fdate
-        df = df[df.index > fdate]            
+        df = df[df.ts > fdate]            
         
-        return df[['rain']]
+        return df[['ts', 'rain']]
         
     except:
         return pd.DataFrame()
         
 #insert the newly downloaded data to the database
 def update_table_data(noah_id, gauge_name, fdate, tdate, noah_gauges):
-    noahData = download_rainfall_noah(noah_id, fdate, tdate)
-    curTS = datetime.now()
+    """Updates data of table gauge_name from fdate to tdate.
     
-    if noahData.empty: 
+    Args:
+        noah_id (int): Device id of noah data.
+        gauge_name (str): Name of table containing rainfall data of noah_id.
+        fdate (timestamp): Timestamp start of data to be downloaded.
+        tdate (timestamp): Timestamp end of data to be downloaded.
+        noah_gauges (dataframe): Rain gauge properties- id, name, data source.
+
+    """
+
+
+    noah_data = download_rainfall_noah(noah_id, fdate, tdate)
+    cur_ts = datetime.now()
+    
+    if noah_data.empty: 
         qdb.print_out("    no data...")
         
-        #The table is already up to date
-        if pd.to_datetime(tdate) > curTS:
-            return 
-        else:
-            #Insert an entry with values: [timestamp,-1] as a marker
-            #   for the next time it is used
-            #   note: values with -1 should not be included in values used for computation
-            placeHolderData = pd.DataFrame({"ts": tdate+" 00:00:00","rain":-1}, index=[0])
-            placeHolderData = placeHolderData.set_index('ts')
-            qdb.push_db_dataframe(placeHolderData, gauge_name) 
+        #Insert an entry with values: [timestamp, -1] as a marker
+        #-1 values should not be included in computation of cml rainfall
+        if pd.to_datetime(tdate) <= cur_ts:
+            place_holder_data = pd.DataFrame({"ts": [tdate], "rain": [-1.0]})
+            data_table = sms.DataTable(gauge_name, place_holder_data)
+            db.df_write(data_table)
             
-            #call this function again until the maximum recent timestamp is hit        
-            update_single_table(noah_gauges)
-
     else:        
         #Insert the new data on the noahid table
-        noahData = noahData.reset_index()
-        noahData = noahData.drop_duplicates('ts')
-        noahData = noahData.set_index('ts')
-        qdb.push_db_dataframe(noahData, gauge_name)
+        data_table = sms.DataTable(gauge_name, noah_data)
+        db.df_write(data_table)
         
-        #The table is already up to date
-        if pd.to_datetime(tdate) > curTS:
-            return         
-        else:
-            #call this function again until the maximum recent timestamp is hit        
-            update_single_table(noah_gauges)
+    #The table is already up to date
+    if pd.to_datetime(tdate) > cur_ts:
+        return         
+    else:
+        #call this function again until the maximum recent timestamp is hit        
+        update_single_table(noah_gauges)
     
-#Create NOAH Table
-def createNOAHTable(gauge_name):
-    #Create table for noahid before proceeding with the download
-    query = "CREATE TABLE `%s` (" %gauge_name
-    query += "  `data_id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,"
-    query += "  `ts` TIMESTAMP NOT NULL,"
-    query += "  `rain` DECIMAL(4,1) NOT NULL,"
-    query += "  `temperature` DECIMAL(3,1) NULL DEFAULT NULL,"
-    query += "  `humidity` DECIMAL(3,1) NULL DEFAULT NULL,"
-    query += "  `battery1` DECIMAL(4,3) NULL DEFAULT NULL,"
-    query += "  `battery2` DECIMAL(4,3) NULL DEFAULT NULL,"
-    query += "  `csq` TINYINT(3) NULL DEFAULT NULL,"
-    query += "  PRIMARY KEY (`data_id`),"
-    query += "  UNIQUE INDEX `ts_UNIQUE` (`ts` ASC))"
-    query += " ENGINE = InnoDB"
-    query += " DEFAULT CHARACTER SET = utf8;"
-
-    qdb.print_out("Creating table: %s..." % gauge_name)
-
-    #Create new table
-    qdb.execute_query(query)
-
-def GetLatestTimestamp(table_name):
-    try:
-        a = qdb.get_db_dataframe("SELECT max(ts) FROM %s" %(table_name))
-        return pd.to_datetime(a.values[0][0])
-    except:
-        qdb.print_out("Error in getting maximum timestamp")
-        return ''
-
 def update_single_table(noah_gauges):
-    noah_id = noah_gauges['dev_id'].values[0]
-    gauge_name = noah_gauges['gauge_name'].values[0]
-    #check if table "rain_noah_" + "noah_id" exists already
+    """Updates data of table gauge_name.
+    
+    Args:
+        noah_gauges (dataframe): Rain gauge properties- id, name, data source.
+    
+    """
+
+    noah_id = noah_gauges['gauge_name'].values[0]
+    gauge_name = 'rain_noah_%s' %noah_id
+    
+    #check if table gauge_name exists
     if qdb.does_table_exist(gauge_name) == False:
         #Create a NOAH table if it doesn't exist yet
-        createNOAHTable(gauge_name)
+        qdb.create_NOAH_table(gauge_name)
     else:
         qdb.print_out('%s exists' %gauge_name)
     
-    #Find the latest timestamp for noahid (which is also the start date)
-    latestTS = GetLatestTimestamp(gauge_name)   
+    #Find the latest timestamp for noah_id (which is also the start date)
+    latest_ts = qdb.get_latest_ts(gauge_name)   
 
-    if (latestTS == '') or (latestTS == None):
+    if (latest_ts == '') or (latest_ts == None):
         #assign a starting date if table is currently empty
-        latestTS = '2017-04-01'
+        latest_ts = datetime.now() - timedelta(3)
     else:
-        latestTS = latestTS.strftime("%Y-%m-%d %H:%M:%S")
+        latest_ts = latest_ts.strftime("%Y-%m-%d %H:%M:%S")
     
-    qdb.print_out("    Start timestamp: %s" % latestTS)
+    qdb.print_out("    Start timestamp: %s" % latest_ts)
     
     #Generate end time    
-    endTS = (pd.to_datetime(latestTS) + timedelta(1)).strftime("%Y-%m-%d")
-    qdb.print_out("    End timestamp: %s" %endTS)
+    end_ts = (pd.to_datetime(latest_ts) + timedelta(1)).strftime("%Y-%m-%d")
+    qdb.print_out("    End timestamp: %s" %end_ts)
     
-    #Download data for noahid
-    update_table_data(noah_id, gauge_name, latestTS, endTS, noah_gauges)
+    #Download data for noah_id
+    update_table_data(noah_id, gauge_name, latest_ts, end_ts, noah_gauges)
 
 def main():
+    """Updates data of NOAH rain gauges.
+        
+    """
+    
     start_time = datetime.now()
     qdb.print_out(start_time)
     
     #get the list of rainfall NOAH rain gauge IDs
-    gauges = rain.rainfall_gauges()
-    gauges = gauges[gauges.gauge_name.str.contains('noah')].drop_duplicates('gauge_name')
-    gauges['dev_id'] = ','.join(gauges.gauge_name).replace('rain_noah_', '').split(',')
-    noah_gauges = gauges.groupby('gauge_name')    
+    gauges = mem.get('df_rain_props')
+        
+    gauges = gauges[gauges.data_source == 'noah'].drop_duplicates('rain_id')
+    noah_gauges = gauges.groupby('rain_id')    
     noah_gauges.apply(update_single_table)
     
     qdb.print_out('runtime = %s' %(datetime.now() - start_time))

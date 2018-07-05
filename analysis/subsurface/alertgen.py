@@ -85,6 +85,10 @@ def main(tsm_name='', end='', end_mon=False):
     tilt = data.tilt[window.start:window.end]
     lgd = data.lgd
     tilt = tilt.reset_index().sort_values('ts',ascending=True)
+    
+    if lgd == None:
+        qdb.print_out('%s: no data' %tsm_name)
+        return
 
     nodal_tilt = tilt.groupby('node_id', as_index=False)     
     alert = nodal_tilt.apply(lib.node_alert, colname=tsm_props.tsm_name, num_nodes=tsm_props.nos, disp=float(sc['subsurface']['disp']), vel2=float(sc['subsurface']['vel2']), vel3=float(sc['subsurface']['vel3']), k_ac_ax=float(sc['subsurface']['k_ac_ax']), lastgooddata=lgd, window=window, sc=sc).reset_index(drop=True)

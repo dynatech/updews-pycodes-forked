@@ -1,25 +1,28 @@
 from datetime import datetime, timedelta, date, time
 import numpy as np
 import os
-import sys
 
+import analysis.querydb as qdb
 import rainfallalert as ra
 import rainfallplot as rp
-
-#include the path of "Analysis" folder for the python scripts searching
-path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-if not path in sys.path:
-    sys.path.insert(1,path)
-del path   
-
-import querydb as qdb
+import volatile.memory as mem
 
 ############################################################
 ##      TIME FUNCTIONS                                    ##    
 ############################################################
 
 def get_rt_window(rt_window_length, roll_window_length, end=datetime.now()):
-    
+    """Rounds time to 4/8/12 AM/PM.
+
+    Args:
+        date_time (datetime): Timestamp to be rounded off. 04:00 to 07:30 is
+        rounded off to 8:00, 08:00 to 11:30 to 12:00, etc.
+
+    Returns:
+        datetime: Timestamp with time rounded off to 4/8/12 AM/PM.
+
+    """
+
     ##INPUT:
     ##rt_window_length; float; length of real-time monitoring window in days
     
@@ -47,65 +50,55 @@ def get_rt_window(rt_window_length, roll_window_length, end=datetime.now()):
     
     return end, start, offsetstart
 
-def rainfall_priorities(df):
-    priorities = df.sort_values('distance')
-    priorities = priorities[0:4]
-    priorities['priority_id'] = range(1,5)
-    return priorities
+
 
 def rainfall_gauges(end=datetime.now()):
+    """Check top 4 rain gauges to be used in rainfall analysis.
     
-    query =  "SELECT priority_id, rt.site_id, site_code, rain_id, "
-    query += " gauge_name, data_source, distance, threshold_value FROM ( "
-    query += "  SELECT priority_id, site_id, site_code, rg.rain_id, "
-    query += "  gauge_name, data_source, distance FROM ( "
-    query += "    SELECT priority_id, s.site_id, site_code, "
-    query += "    rain_id, distance FROM "
-    query += "      rainfall_priorities AS rp "
-    query += "    INNER JOIN "
-    query += "	     (SELECT * FROM sites "
-    query += "        WHERE active = 1 "
-    query += "        ) AS s "
-    query += "	     ON rp.site_id = s.site_id "
-    query += "	     ) AS sub "
-    query += "  INNER JOIN "
-    query += "    (SELECT * FROM rainfall_gauges "
-    query += "    where date_activated <= '%s' " %datetime.now()
-    query += "    and (date_deactivated >= '%s' " %datetime.now()
-    query += "    or date_deactivated is null) "
-    query += "    ) as rg "
-    query += "  on rg.rain_id = sub.rain_id) AS sub2 "
-    query += "INNER JOIN"
-    query += "  (SELECT * FROM rainfall_thresholds "
-    query += "  WHERE threshold_name = '%s' " %'two_year_max'
-    query += "  ) AS rt "
-    query += "ON rt.site_id = sub2.site_id"
+    Args:
+        end (datetime): Timestamp of alert and plot to be computed. Optional.
+                        Defaults to current timestamp.
+
+    Returns:
+        dataframe: Top 4 rain gauges per site.
     
-    gauges = qdb.get_db_dataframe(query)
+    """
+
+    gauges = mem.get('df_rain_props')
+
     gauges['gauge_name'] = np.array(','.join(gauges.data_source).replace('noah',
                                  'rain_noah_').replace('senslope',
                                  'rain_').split(','))+gauges.gauge_name
-    site_gauges = gauges.groupby('site_id')
-    priorities = site_gauges.apply(rainfall_priorities)
-    priorities = priorities.reset_index(drop=True)
-    priorities = priorities.drop(['priority_id', 'data_source'], axis=1)
+    gauges = gauges.sort_values('distance')
+    gauges = gauges.groupby('site_id').head(4)
+    gauges = gauges.sort_values(['site_id', 'distance'])
 
-    return priorities
-
-def gauge_props(threshold, gauges):
-    threshold['rainfall_gauges'] = [gauges[gauges.site_id == threshold['site_id'].values[0]]['gauge_name'].values]
-    threshold['rain_id'] = [gauges[gauges.site_id == threshold['site_id'].values[0]]['rain_id'].values]
-    threshold['distance'] = [gauges[gauges.site_id == threshold['site_id'].values[0]]['distance'].values]
-    return threshold
+    return gauges
 
 def main(site_code='', Print=True, end=datetime.now()):
+    """Computes alert and plots rainfall data.
+    
+    Args:
+        site_code (list): Site codes to compute rainfall analysis for. Optional.
+                          Defaults to empty string which will compute alert
+                          and plot for all sites.
+        Print (bool): To print plot and summary of alerts. Optional. Defaults to
+                      True.
+        end (datetime): Timestamp of alert and plot to be computed. Optional.
+                        Defaults to current timestamp.
+
+    Returns:
+        str: Json format of cumulative rainfall and alert per site.
+    
+    """
+
     start_time = datetime.now()
     qdb.print_out(start_time)
 
     output_path = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                                                    '../../..'))
     
-    sc = qdb.memcached()
+    sc = mem.server_config()
 
     #creates directory if it doesn't exist
     if (sc['rainfall']['print_plot'] or sc['rainfall']['print_summary_alert']) and Print:
@@ -122,28 +115,19 @@ def main(site_code='', Print=True, end=datetime.now()):
 
     if site_code != '':
         gauges = gauges[gauges.site_code.isin(site_code)]
-        
-    threshold = gauges[['site_id', 'site_code', 'threshold_value']]
-    threshold = threshold.drop_duplicates()
-    site_threshold = threshold.groupby('site_id', as_index=False)
-    props = site_threshold.apply(gauge_props, gauges=gauges)
     
-    query =  "SELECT * FROM "
-    query += "  operational_trigger_symbols AS op "
-    query += "INNER JOIN "
-    query += "  (SELECT * FROM trigger_hierarchies "
-    query += "  WHERE trigger_source = 'rainfall' "
-    query += "  ) AS trig "
-    query += "ON op.source_id = trig.source_id"
-    trigger_symbol = qdb.get_db_dataframe(query)
-
-    site_props = props.groupby('site_id')
+    gauges['site_id'] = gauges['site_id'].apply(lambda x: float(x))
+    
+    trigger_symbol = mem.get('df_trigger_symbols')
+    trigger_symbol = trigger_symbol[trigger_symbol.trigger_source == 'rainfall']
+    trigger_symbol['trigger_sym_id'] = trigger_symbol['trigger_sym_id'].apply(lambda x: float(x))
+    site_props = gauges.groupby('site_id')
     summary = site_props.apply(ra.main, end=end, sc=sc,
                                 trigger_symbol=trigger_symbol)
     summary = summary.reset_index(drop=True).set_index('site_id')[['site_code',
                     '1D cml', 'half of 2yr max', '3D cml', '2yr max',
                     'DataSource', 'alert', 'advisory']]
-
+                    
     if Print == True:
         if sc['rainfall']['print_summary_alert']:
             summary.to_csv(output_path+sc['fileio']['rainfall_path'] +

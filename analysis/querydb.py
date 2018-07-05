@@ -4,7 +4,6 @@ import pandas.io.sql as psql
 import pandas as pd
 import platform
 from sqlalchemy import create_engine
-import volatile.memory as mem
 
 curOS = platform.system()
 
@@ -13,120 +12,231 @@ if curOS == "Windows":
 elif curOS == "Linux":
     import pymysql as mysqlDriver
 
-# Scripts for connecting to local database
+import dynadb.db as db
+import gsm.smsparser2.smsclass as sms
+import volatile.memory as mem
 
-class LoggerArray:
-    def __init__(self, site_id, tsm_id, tsm_name, number_of_segments, segment_length):
-        self.site_id = site_id
-        self.tsm_id = tsm_id
-        self.tsm_name = tsm_name
-        self.nos = number_of_segments
-        self.seglen = segment_length
-        
-class CoordsArray:
-    def __init__(self, name, lat, lon, barangay):
-        self.name = name
-        self.lat = lat
-        self.lon = lon
-        self.bgy = barangay
-
-
-def senslopedb_connect(hostdb='local'):
-    sc = memcached()
-    Hostdb = sc['hosts'][hostdb]
-    Userdb = sc['db']['user']
-    Passdb = sc['db']['password']
-    Namedb = sc['db']['name']
-    while True:
-        try:
-            db = mysqlDriver.connect(host = Hostdb, user = Userdb, passwd = Passdb, db=Namedb)
-            cur = db.cursor()
-            cur.execute("use "+ Namedb)
-            return db, cur
-        except mysqlDriver.OperationalError:
-            print_out('.')
 
 def print_out(line):
-    sc = memcached()
+    """Prints line.
+    
+    """
+    
+    sc = mem.server_config()
     if sc['print']['print_stdout']:
         print line
 
-#Check if table exists
-#   Returns true if table exists
-def does_table_exist(table_name, hostdb='local'):
-    db, cur = senslopedb_connect(hostdb)
-    cur.execute("SHOW TABLES LIKE '%s'" %table_name)
 
-    if cur.rowcount > 0:
-        db.close()
+def does_table_exist(table_name, hostdb='local'):
+    """Checks if table exists in database.
+    
+    Args:
+        table_name (str): Name of table to be checked.
+        hostdb (str): Host of database to be checked. Defaults to local.
+
+    Returns:
+        bool: True if table exists otherwise, False.
+    
+    """
+
+    query = "SHOW TABLES LIKE '%s'" %table_name
+    df = db.df_read(query)
+
+    if len(df) > 0:
         return True
     else:
-        db.close()
         return False
 
-#execute_query(query): executes a mysql like code "query" without expecting a return
-#    Parameters:
-#        query: str
-#             mysql like query code
-def execute_query(query, hostdb='local'):
-    db, cur = senslopedb_connect(hostdb)
-    cur.execute(query)
-    db.commit()
-    db.close()
 
-#get_db_dataframe(query): queries a specific data table and returns it as
-#    a python dataframe format
-#    Parameters:
-#        query: str
-#            mysql like query code
-#    Returns:
-#        df: dataframe object
-#            dataframe object of the result set
-def get_db_dataframe(query, hostdb='local'):
+def get_latest_ts(table_name):
     try:
-        db, cur = senslopedb_connect(hostdb)
-        df = psql.read_sql(query, db)
-        db.close()
-        return df
-    except KeyboardInterrupt:
-        print_out("Exception detected in accessing database")
+        query = "SELECT max(ts) FROM %s" %table_name
+        ts = db.df_read(query).values[0][0]
+        return pd.to_datetime(ts)
+    except:
+        print_out("Error in getting maximum timestamp")
+        return ''
         
-#Push a dataframe object into a table
-def push_db_dataframe(df,table_name,index=True, hostdb='local'):
-    sc = memcached()
-    Hostdb = sc['hosts'][hostdb]
-    Userdb = sc['db']['user']
-    Passdb = sc['db']['password']
-    Namedb = sc['db']['name']
-    engine = create_engine('mysql://'+Userdb+':'+Passdb+'@'+Hostdb+':3306/'+Namedb)
-    df.to_sql(name = table_name, con = engine, if_exists = 'append', schema = Namedb, index=index)
 
-#update memcache if ever there is changes 
-#in accelerometers and tsm_sensors tables in senslopedb
-def update_memcache():
-    #memcached
-    memc = memcache.Client(['127.0.0.1:11211'], debug=1)
+def get_alert_level(site_id, end):
+    """Retrieves alert level.
     
-    query_tsm=("SELECT tsm_id, tsm_name, date_deactivated,"
-               " number_of_segments, version"
-               " FROM senslopedb.tsm_sensors")
-    query_accel=("SELECT accel_id, voltage_min, voltage_max"
-                 " FROM senslopedb.accelerometers")
-    
-    memc.set('tsm', get_db_dataframe(query_tsm))
-    memc.set('accel', get_db_dataframe(query_accel))
-    
-    print_out("Updated memcached with MySQL data")
+    Args:
+        tsm_id (int): ID of site to retrieve alert level from.
+        end (bool): Timestamp of alert level to be retrieved.
 
-#Get raw accel data
-#    if batt is True, it will return batt voltage of each accel
-#    if analysis is True, it will return the accel in use 
-#       and it will drop columns 'in_use' and 'accel_number'
-#    if voltf is True, it will apply voltage filter
-#    if return_db is True, it will return dataframe, else it will return query
+    Returns:
+        dataframe: Dataframe containing alert_level.
+    
+    """
+
+    query =  "SELECT alert_level FROM "
+    query += "  (SELECT * FROM public_alerts "
+    query += "  WHERE site_id = %s " %site_id
+    query += "  AND ts <= '%s' " %end
+    query += "  AND ts_updated >= '%s' " %(end - timedelta(hours=0.5))
+    query += "  ) AS a "
+    query += "INNER JOIN "
+    query += "  (SELECT pub_sym_id, alert_level FROM public_alert_symbols "
+    query += "  ) AS s "
+    query += "USING(pub_sym_id)"
+
+    df = db.df_read(query)
+    
+    return df
+
+########################### RAINFALL-RELATED QUERIES ###########################
+
+def create_rainfall_gauges():    
+    """Creates rainfall_gauges table; record of available rain gauges for
+    rainfall alert analysis.
+
+    """
+    
+    query = "CREATE TABLE `rainfall_gauges` ("
+    query += "  `rain_id` SMALLINT(5) UNSIGNED NOT NULL AUTO_INCREMENT,"
+    query += "  `gauge_name` VARCHAR(5) NOT NULL,"
+    query += "  `data_source` VARCHAR(8) NOT NULL,"
+    query += "  `latitude` DECIMAL(9,6) UNSIGNED NOT NULL,"
+    query += "  `longitude` DECIMAL(9,6) UNSIGNED NOT NULL,"
+    query += "  `date_activated` DATE NOT NULL,"
+    query += "  `date_deactivated` DATE NULL,"
+    query += "  PRIMARY KEY (`rain_id`),"
+    query += "  UNIQUE INDEX `gauge_name_UNIQUE` (`gauge_name` ASC))"
+
+    db.write(query)
+
+
+def create_rainfall_priorities():
+    """Creates rainfall_priorities table; record of distance of nearby 
+    rain gauges to sites for rainfall alert analysis.
+
+    """
+
+    query = "CREATE TABLE `rainfall_priorities` ("
+    query += "  `priority_id` SMALLINT(5) UNSIGNED NOT NULL AUTO_INCREMENT,"
+    query += "  `rain_id` SMALLINT(5) UNSIGNED NOT NULL,"
+    query += "  `site_id` TINYINT(3) UNSIGNED NOT NULL,"
+    query += "  `distance` DECIMAL(5,2) UNSIGNED NOT NULL,"
+    query += "  PRIMARY KEY (`priority_id`),"
+    query += "  INDEX `fk_rainfall_priorities_sites1_idx` (`site_id` ASC),"
+    query += "  INDEX `fk_rainfall_priorities_rain_gauges1_idx` (`rain_id` ASC),"
+    query += "  UNIQUE INDEX `uq_rainfall_priorities` (`site_id` ASC, `rain_id` ASC),"
+    query += "  CONSTRAINT `fk_rainfall_priorities_sites1`"
+    query += "    FOREIGN KEY (`site_id`)"
+    query += "    REFERENCES `sites` (`site_id`)"
+    query += "    ON DELETE CASCADE"
+    query += "    ON UPDATE CASCADE,"
+    query += "  CONSTRAINT `fk_rainfall_priorities_rain_gauges1`"
+    query += "    FOREIGN KEY (`rain_id`)"
+    query += "    REFERENCES `rainfall_gauges` (`rain_id`)"
+    query += "    ON DELETE CASCADE"
+    query += "    ON UPDATE CASCADE)"
+    
+    db.write(query)
+
+
+def create_NOAH_table(gauge_name):
+    """Create table for gauge_name.
+    
+    """
+    
+    query = "CREATE TABLE `%s` (" %gauge_name
+    query += "  `data_id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,"
+    query += "  `ts` TIMESTAMP NOT NULL,"
+    query += "  `rain` DECIMAL(4,1) NOT NULL,"
+    query += "  `temperature` DECIMAL(3,1) NULL DEFAULT NULL,"
+    query += "  `humidity` DECIMAL(3,1) NULL DEFAULT NULL,"
+    query += "  `battery1` DECIMAL(4,3) NULL DEFAULT NULL,"
+    query += "  `battery2` DECIMAL(4,3) NULL DEFAULT NULL,"
+    query += "  `csq` TINYINT(3) NULL DEFAULT NULL,"
+    query += "  PRIMARY KEY (`data_id`),"
+    query += "  UNIQUE INDEX `ts_UNIQUE` (`ts` ASC))"
+    query += " ENGINE = InnoDB"
+    query += " DEFAULT CHARACTER SET = utf8;"
+
+    print_out("Creating table: %s..." % gauge_name)
+
+    db.write(query)
+
+
+def get_raw_rain_data(gauge_name, from_time='2010-01-01', to_time=""):
+    """Retrieves rain gauge data from the database.
+    
+    Args:
+        gauge_name (str): Name of rain gauge to collect data from.
+        from_time (str): Start of data to be collected.
+        to_time (str): End of data to be collected. Optional.
+
+    Returns:
+        dataframe: Rainfall data of gauge_name from from_time [to to_time].
+    
+    """
+
+    query = "SELECT ts, rain FROM %s " %gauge_name
+    query += "WHERE ts > '%s'" %from_time
+    
+    if to_time:
+        query += "AND ts < '%s'" %to_time
+
+    query += "ORDER BY ts"
+
+    df = db.df_read(query)
+    df['ts'] = pd.to_datetime(df['ts'])
+    
+    return df
+
+
+def does_alert_exists(site_id, end, alert):
+    """Retrieves alert level.
+    
+    Args:
+        tsm_id (int): ID of site to retrieve alert level from.
+        end (bool): Timestamp of alert level to be retrieved.
+
+    Returns:
+        dataframe: Dataframe containing alert_level.
+    
+    """
+
+    query = "SELECT EXISTS(SELECT * FROM rainfall_alerts"
+    query += " WHERE ts = '%s' AND site_id = %s" %(end, site_id)
+    query += " AND rain_alert = '%s')" %alert
+
+    df = db.df_read(query)
+    
+    return df
+
+########################## SUBSURFACE-RELATED QUERIES ##########################
+
 def get_raw_accel_data(tsm_id='',tsm_name = "", from_time = "", to_time = "", 
                        accel_number = "", node_id ="", batt=False, 
                        analysis=False, voltf=False, return_db=True):
+    """Retrieves accel data.
+    
+    Args:
+        tsm_id (int): ID of tsm sensor to retrieve data from. 
+                      Optional if with tsm_name.
+        tsm_name (str): name of tsm sensor to retrieve data from. 
+                        Optional if with tsm_id.
+        from_time (datetime): Start timestamp of data to be retrieved. Optional.
+        to_time (datetime): End timestamp of data to be retrieved. Optional.
+        accel_number (int): ID of accel to be retrieved. Optional.
+        node_id (int): ID of node to be retrieved. Optional.
+        batt (bool): Whether to include batt voltage of each accel. 
+                     Defaults to False.
+        analysis (bool): Whether to include accel in use and drop columns 
+                         'in_use' and 'accel_number'. Defaults to False.
+        voltf (bool): Whether to apply voltage filter. Defaults to False.
+        return_db (bool): Whether to return dataframe (True) or query (False). 
+                          Defaults to True.
+
+    Returns:
+        dataframe/str: Dataframe containing accel data / 
+                       query used in retrieving data.
+    
+    """
+
     #memcached
     memc = memcache.Client(['127.0.0.1:11211'], debug=1)
     
@@ -210,7 +320,7 @@ def get_raw_accel_data(tsm_id='',tsm_name = "", from_time = "", to_time = "",
               " and times.accel_number=nodes.accel_number")
 
     if return_db:
-        df =  get_db_dataframe(query)
+        df =  db.df_read(query)
         df.columns = ['ts','tsm_name','node_id','x','y','z'
                       ,'batt','accel_number','accel_id','in_use']
         df.ts = pd.to_datetime(df.ts)
@@ -234,6 +344,102 @@ def get_raw_accel_data(tsm_id='',tsm_name = "", from_time = "", to_time = "",
         
     else:
         return query
+
+
+
+################################################################################
+
+
+class LoggerArray:
+    def __init__(self, site_id, tsm_id, tsm_name, number_of_segments, segment_length):
+        self.site_id = site_id
+        self.tsm_id = tsm_id
+        self.tsm_name = tsm_name
+        self.nos = number_of_segments
+        self.seglen = segment_length
+        
+class CoordsArray:
+    def __init__(self, name, lat, lon, barangay):
+        self.name = name
+        self.lat = lat
+        self.lon = lon
+        self.bgy = barangay
+
+
+def senslopedb_connect(hostdb='local'):
+    sc = mem.server_config()
+    Hostdb = sc['hosts'][hostdb]
+    Userdb = sc['db']['user']
+    Passdb = sc['db']['password']
+    Namedb = sc['db']['name']
+    while True:
+        try:
+            db = mysqlDriver.connect(host = Hostdb, user = Userdb, passwd = Passdb, db=Namedb)
+            cur = db.cursor()
+            cur.execute("use "+ Namedb)
+            return db, cur
+        except mysqlDriver.OperationalError:
+            print_out('.')
+
+
+#Check if table exists
+#   Returns true if table exists
+
+
+#execute_query(query): executes a mysql like code "query" without expecting a return
+#    Parameters:
+#        query: str
+#             mysql like query code
+def execute_query(query, hostdb='local'):
+    db, cur = senslopedb_connect(hostdb)
+    cur.execute(query)
+    db.commit()
+    db.close()
+
+#get_db_dataframe(query): queries a specific data table and returns it as
+#    a python dataframe format
+#    Parameters:
+#        query: str
+#            mysql like query code
+#    Returns:
+#        df: dataframe object
+#            dataframe object of the result set
+def get_db_dataframe(query, hostdb='local'):
+    try:
+        db, cur = senslopedb_connect(hostdb)
+        df = psql.read_sql(query, db)
+        db.close()
+        return df
+    except KeyboardInterrupt:
+        print_out("Exception detected in accessing database")
+        
+#Push a dataframe object into a table
+def push_db_dataframe(df,table_name,index=True, hostdb='local'):
+    sc = memcached()
+    Hostdb = sc['hosts'][hostdb]
+    Userdb = sc['db']['user']
+    Passdb = sc['db']['password']
+    Namedb = sc['db']['name']
+    engine = create_engine('mysql://'+Userdb+':'+Passdb+'@'+Hostdb+':3306/'+Namedb)
+    df.to_sql(name = table_name, con = engine, if_exists = 'append', schema = Namedb, index=index)
+
+#update memcache if ever there is changes 
+#in accelerometers and tsm_sensors tables in senslopedb
+def update_memcache():
+    #memcached
+    memc = memcache.Client(['127.0.0.1:11211'], debug=1)
+    
+    query_tsm=("SELECT tsm_id, tsm_name, date_deactivated,"
+               " number_of_segments, version"
+               " FROM senslopedb.tsm_sensors")
+    query_accel=("SELECT accel_id, voltage_min, voltage_max"
+                 " FROM senslopedb.accelerometers")
+    
+    memc.set('tsm', db.df_read(query_tsm))
+    memc.set('accel', db.df_read(query_accel))
+    
+    print_out("Updated memcached with MySQL data")
+
     
 def get_soms_raw(tsm_name = "", from_time = "", to_time = "", type_num="", node_id = ""):
 
@@ -241,7 +447,7 @@ def get_soms_raw(tsm_name = "", from_time = "", to_time = "", type_num="", node_
         raise ValueError('invalid tsm_name')
     
     query_accel = "SELECT version FROM senslopedb.tsm_sensors where tsm_name = '%s'" %tsm_name  
-    df_accel =  get_db_dataframe(query_accel) 
+    df_accel =  db.df_read(query_accel) 
     query = "select * from senslopedb.soms_%s" %tsm_name
     
     if not from_time:
@@ -260,7 +466,7 @@ def get_soms_raw(tsm_name = "", from_time = "", to_time = "", type_num="", node_
     if type_num:
         query += " and msid = '%s'" %type_num
         
-    df =  get_db_dataframe(query)
+    df =  db.df_read(query)
     
     
     df.ts = pd.to_datetime(df.ts)
@@ -313,7 +519,7 @@ def get_tsm_list(tsm_name='', end=datetime.now()):
         try:
             query = "SELECT site_id, logger_id, tsm_id, tsm_name, number_of_segments, segment_length, date_activated"
             query += " FROM senslopedb.tsm_sensors WHERE (date_deactivated > '%s' OR date_deactivated IS NULL)" %end
-            df = get_db_dataframe(query)
+            df = db.df_read(query)
             df = df.sort_values(['logger_id', 'date_activated'], ascending=[True, False])
             df = df.drop_duplicates('logger_id')
             
@@ -328,7 +534,7 @@ def get_tsm_list(tsm_name='', end=datetime.now()):
             query = "SELECT site_id, logger_id, tsm_id, tsm_name, number_of_segments, segment_length, date_activated"
             query += " FROM senslopedb.tsm_sensors WHERE (date_deactivated > '%s' OR date_deactivated IS NULL)" %end
             query += " AND tsm_name = '%s'" %tsm_name
-            df = get_db_dataframe(query)
+            df = db.df_read(query)
             df = df.sort_values(['logger_id', 'date_activated'], ascending=[True, False])
             df = df.drop_duplicates('logger_id')
             
@@ -352,7 +558,7 @@ def get_node_status(tsm_id, status=4):
         query += " where tsm_id = %s" %tsm_id
         query += " and status = %s" %status
         query += " ) AS sub"
-        df = get_db_dataframe(query)
+        df = db.df_read(query)
         return df['node_id'].values
     except:
         raise ValueError('Could not get node status from database')
@@ -404,7 +610,7 @@ def create_alert_status():
     query += "    (`ts_last_retrigger` ASC, `trigger_id` ASC))"
 
     
-    execute_query(query)
+    db.write(query)
 
 #create_tsm_alerts
 #    creates table named 'tsm_alerts' which contains alerts for all tsm
@@ -424,7 +630,7 @@ def create_tsm_alerts():
     query += "    ON DELETE NO ACTION"
     query += "    ON UPDATE CASCADE)"
     
-    execute_query(query)
+    db.write(query)
 
 #create_operational_triggers
 #    creates table named 'operational_triggers' which contains alerts for all operational triggers
@@ -450,7 +656,7 @@ def create_operational_triggers():
     query += "    ON DELETE NO ACTION"
     query += "    ON UPDATE CASCADE)"
     
-    execute_query(query)
+    db.write(query)
 
 #create_public_alerts
 #    creates table named 'public_alerts' which contains alerts for all public alerts
@@ -476,7 +682,7 @@ def create_public_alerts():
     query += "    ON DELETE NO ACTION"
     query += "    ON UPDATE CASCADE)"
     
-    execute_query(query)
+    db.write(query)
 
 #alert_to_db
 #    writes to alert tables
@@ -484,6 +690,15 @@ def create_public_alerts():
 #        df- dataframe to be written in table_name
 #        table_name- str; name of table in database ('tsm_alerts' or 'operational_triggers')
 def alert_to_db(df, table_name):
+    """Summary of cumulative rainfall, threshold, alert and rain gauge used in
+    analysis of rainfall.
+    
+    Args:
+        df (dataframe): Dataframe to be written to database.
+        table_name (str): Name of table df to be written to.
+    
+    """
+
     if does_table_exist(table_name) == False:
         #Create a tsm_alerts table if it doesn't exist yet
         if table_name == 'tsm_alerts':
@@ -505,7 +720,7 @@ def alert_to_db(df, table_name):
         query += "INNER JOIN "
         query += "  trigger_hierarchies AS trig "
         query += "ON op.source_id = trig.source_id "
-        all_trig = get_db_dataframe(query)
+        all_trig = db.df_read(query)
         trigger_source = all_trig[all_trig.trigger_sym_id == \
                     df['trigger_sym_id'].values[0]]['trigger_source'].values[0]
 
@@ -534,10 +749,11 @@ def alert_to_db(df, table_name):
             query += "  AND ts = '%s' " %df['ts'].values[0]
             query += "  ) AS trig "
             query += "ON trig.trigger_sym_id = sym.trigger_sym_id"
-            surficial = get_db_dataframe(query)
+            surficial = db.df_read(query)
 
             if len(surficial) == 0:
-                push_db_dataframe(df, table_name, index=False)
+                data_table = sms.DataTable(table_name, df)
+                db.df_write(data_table)
             else:
                 trigger_id = surficial['trigger_id'].values[0]
                 trigger_sym_id = df['trigger_sym_id'].values[0]
@@ -545,7 +761,7 @@ def alert_to_db(df, table_name):
                     query =  "UPDATE %s " %table_name
                     query += "SET trigger_sym_id = '%s' " %trigger_sym_id
                     query += "WHERE trigger_id = %s" %trigger_id
-                    execute_query(query)
+                    db.write(query)
             
             return
                 
@@ -587,7 +803,7 @@ def alert_to_db(df, table_name):
 
     query += "ORDER BY ts DESC LIMIT 1"
 
-    df2 = get_db_dataframe(query)
+    df2 = db.df_read(query)
 
     if table_name == 'public_alerts':
         query =  "SELECT * FROM %s " %table_name
@@ -595,11 +811,12 @@ def alert_to_db(df, table_name):
         query += "AND ts = '%s' " %df['ts'].values[0]
         query += "AND pub_sym_id = %s" %df['pub_sym_id'].values[0]
 
-        df2 = df2.append(get_db_dataframe(query))
+        df2 = df2.append(db.df_read(query))
 
     # writes alert if no alerts within the past 30mins
     if len(df2) == 0:
-        push_db_dataframe(df, table_name, index=False)
+        data_table = sms.DataTable(table_name, df)
+        db.df_write(data_table)
     # does not update ts_updated if ts in written ts to ts_updated range
     elif pd.to_datetime(df2['ts_updated'].values[0]) >= \
                   pd.to_datetime(df['ts_updated'].values[0]):
@@ -624,12 +841,17 @@ def alert_to_db(df, table_name):
             pass
         
         if not same_alert:
-            push_db_dataframe(df, table_name, index=False)
+            data_table = sms.DataTable(table_name, df)
+            db.df_write(data_table)
         else:
             query =  "UPDATE %s " %table_name
             query += "SET ts_updated = '%s' " %df['ts_updated'].values[0]
             query += "WHERE %s = %s" %(pk_id, df2[pk_id].values[0])
-            execute_query(query)
+            db.write(query)
+
+#        data_table = sms.DataTable('rainfall_gauges', deactivated_gauges)
+#        db.df_write(data_table)
+
 
 def memcached():
     # mc = memcache.Client(['127.0.0.1:11211'],debug=0)
