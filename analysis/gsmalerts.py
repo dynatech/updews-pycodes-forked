@@ -53,7 +53,7 @@ def site_alerts(curr_trig, ts, release_data_ts):
         site_curr_trig = site_curr_trig[site_curr_trig.alert_level >
                 max(sent_alert.alert_level)]
         
-    alert_status = site_curr_trig[['ts_updated', 'trigger_id']]                
+    alert_status = site_curr_trig[['ts_last_retrigger', 'trigger_id']]                
     alert_status = alert_status.rename(columns = {'ts': 
             'ts_last_retrigger'})
     alert_status['ts_set'] = datetime.now()
