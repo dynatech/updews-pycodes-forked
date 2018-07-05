@@ -29,14 +29,15 @@ def to_mysql(df):
         its distance from the site.
 
     """
-
     written_df = mem.get('df_rain_priorities')
     combined = written_df.append(df, ignore_index=True)
     combined = combined.append(written_df, ignore_index=True)
     combined = combined.drop_duplicates(['site_id', 'rain_id'], keep=False)
-    
-    data_table = sms.DataTable('rainfall_priorities', combined)
-    db.df_write(data_table)
+
+    if len(combined) > 0:
+        data_table = sms.DataTable('rainfall_priorities', combined)
+        db.df_write(data_table)
+
     
 def get_distance(site_coord, rg_coord):
     """Computes for distance of nearby rain gauges from the site.
