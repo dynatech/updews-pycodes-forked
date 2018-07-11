@@ -169,7 +169,7 @@ def set_mysql_tables(mc):
     print ' ... done'
 
 
-def get_mobiles(table, host = None, args = None):
+def get_mobiles(table,host=None,reset_variables=False):
     """
         **Description:**
           -The get mobile sim nums is a function that get the number of the loggers or users in the database.
@@ -185,11 +185,8 @@ def get_mobiles(table, host = None, args = None):
     if host is None:
         raise ValueError("No host value given for mobile number")
 
-    if args:
-        is_reset_variables = args.reset_variables
-    else:
-        is_reset_variables = False
-
+    is_reset_variables = reset_variables
+    
     if table == 'loggers':
 
         logger_mobile_sim_nums = mc.get('logger_mobile_sim_nums')
@@ -309,7 +306,7 @@ def get_surficial_parser_reply_messages():
     return df
 
 
-def main(args):
+def set_variables_old(reset_variables):
     """
     - Description.
 
@@ -341,8 +338,8 @@ def main(args):
 
     print "Set mobile numbers to memory",
     mobiles_host = sc["resource"]["mobile_nums_db"]
-    get_mobiles("loggers", mobiles_host, args)
-    get_mobiles("users", mobiles_host, args)
+    get_mobiles("loggers", mobiles_host, reset_variables)
+    get_mobiles("users", mobiles_host, reset_variables)
     print "done"
 
     try:

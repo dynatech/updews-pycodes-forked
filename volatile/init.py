@@ -24,7 +24,11 @@ def main():
     args = get_arguments()
     config.set_cnf("dyna_config.cnf","server_config")
     config.set_cnf("connections.cnf", "DICT_DB_CONNECTIONS")
-    static.main(args)
+
+    # reverse default of reset_variables 
+    if args.reset_variables:
+        args.reset_variables = False
+    static.set_variables_old(args.reset_variables)
     static.set_static_variable()
 
     
