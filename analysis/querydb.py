@@ -203,7 +203,7 @@ def does_alert_exists(site_id, end, alert):
     query += " WHERE ts = '%s' AND site_id = %s" %(end, site_id)
     query += " AND rain_alert = '%s')" %alert
 
-    df = db.read(query)
+    df = db.df_read(query)
     
     return df
 

@@ -160,8 +160,8 @@ def summary_writer(site_id, site_code, gauge_name, rain_id, twoyrmax, halfmax,
                 alert += ['a']
             if three >= twoyrmax:
                 alert += ['b']
-                    
-        if qdb.does_alert_exists(site_id, end, alert).values[0][0] == 0:
+
+        if qdb.does_alert_exists(site_id, end, alert[0]).values[0][0] == 0:
             df = pd.DataFrame({'ts': [end], 'site_id': [site_id],
                                'rain_id': [rain_id], 'rain_alert': [alert],
                                'cumulative': [np.nan], 'threshold': [np.nan]})
