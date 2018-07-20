@@ -54,6 +54,7 @@ def dyna_to_sandbox():
     sb_host = sc["hosts"]["sandbox"]
     dyna_host = sc["hosts"]["dynaslope"]
     gsm_host = sc["hosts"]["gsm"]
+    sqldumpsdir = sc["fileio"]["sqldumpsdir"]
 
     
     print "Checking max sms_id in sandbox smsinbox "
@@ -76,7 +77,7 @@ def dyna_to_sandbox():
     # dump table entries
     print "Dumping tables from gsm host to sandbox dump file ...", 
 
-    f_dump = "/home/dewsl/Documents/sqldumps/mirrordump.sql"
+    f_dump = sqldumpsdir + "mirrordump.sql"
     command = ("mysqldump -h %s --skip-add-drop-table --no-create-info --single-transaction "
         "-u %s %s smsinbox --where='sms_id > %s' > %s ") % (gsm_host, 
             user, name, max_sms_id, f_dump)
@@ -146,7 +147,10 @@ def get_last_copied_index(table_name):
     Returns: 
         int: Outputs index id that stored from the user_inbox_index.tmp.
     """
-    f_index = open("/home/dyna/logs/%s_inbox_index.tmp" % table_name, 'r')
+    sc = mem.server_config()
+    logsdir = sc["fileio"]["logsdir"]
+    tmpfile = logsdir + ("%s_inbox_index.tmp" % table_name)
+    f_index = open(tmpfile, 'r')
     max_index_last_copied = int(f_index.readline())
     f_index.close()
     return max_index_last_copied
@@ -177,6 +181,8 @@ def import_sql_file_to_dyna(table, max_inbox_id, max_index_last_copied):
     user = sc["db"]["user"]
     password = sc["db"]["password"]
     name = sc["db"]["name"]
+    logsdir = sc["fileio"]["logsdir"]
+    sqldumpsdir = sc["fileio"]["sqldumpsdir"]
 
     copy_query = ("SELECT t1.ts_sms as 'timestamp', t2.sim_num, t1.sms_msg, "
         "'UNREAD' as read_status, 'W' AS web_flag FROM smsinbox_%s t1 "
@@ -185,7 +191,7 @@ def import_sql_file_to_dyna(table, max_inbox_id, max_index_last_copied):
         "and t1.inbox_id < %d and t1.inbox_id > %d") % (table, table[:-1], 
             max_inbox_id, max_index_last_copied)
 
-    f_dump = "/home/dyna/logs/sandbox_%s_dump.sql" % (table)
+    f_dump = logsdir + ("sandbox_%s_dump.sql" % (table))
 
     # export files from the table and dump to a file
 
@@ -207,7 +213,8 @@ def import_sql_file_to_dyna(table, max_inbox_id, max_index_last_copied):
     print command
 
     # write new value in max_index_last_copied
-    f_index = open("/home/dyna/logs/%s_inbox_index.tmp" % table, "wb")
+    tmpfile = logsdir + ("%s_inbox_index.tmp" % table)
+    f_index = open(tmpfile, "wb")
     f_index.write(str(max_inbox_id))
     f_index.close()
 
