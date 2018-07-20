@@ -169,7 +169,7 @@ def set_mysql_tables(mc):
     print ' ... done'
 
 
-def get_mobiles(table,host=None,reset_variables=False):
+def get_mobiles(table=None,host=None,reset_variables=False,resource=None):
     """
         **Description:**
           -The get mobile sim nums is a function that get the number of the loggers or users in the database.
@@ -184,6 +184,9 @@ def get_mobiles(table,host=None,reset_variables=False):
 
     if host is None:
         raise ValueError("No host value given for mobile number")
+
+    if not table:
+        raise ValueError("No table definition")
 
     is_reset_variables = reset_variables
     

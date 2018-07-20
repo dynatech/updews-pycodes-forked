@@ -7,7 +7,7 @@ import lockscript as lock
 import alertmessaging as amsg
 import memcache
 import lockscript
-import dynadb.db as dynadb
+import dynadb.db as dbio
 import smstables
 import volatile.memory as mem
 import smsparser2.subsurface as subsurface
@@ -35,7 +35,7 @@ def logger_response(sms,log_type,log='False'):
           " date_activated desc limit 1),'%s','%s')" 
          % (sms.sim_num,sms.inbox_id,log_type))
                     
-        dynadb.write(query, resource="sensor_data")
+        dbio.write(query, resource="sensor_data")
         print '>> Log response'
     else:
         return False
@@ -154,7 +154,7 @@ def process_piezometer(sms):
    
     
     try:
-        dynadb.write(query, resource="sensor_data")
+        dbio.write(query, resource="sensor_data")
     except MySQLdb.ProgrammingError:
         print '>> Unexpected programing error'
         return False
@@ -166,7 +166,7 @@ def check_logger_model(logger_name):
     query = ("SELECT model_id FROM senslopedb.loggers where "
         "logger_name = '%s'") % logger_name
 
-    return dynadb.read(query, resource="sensor_data")[0][0]
+    return dbio.read(query, resource="sensor_data")[0][0]
     
 def spawn_alert_gen(tsm_name, timestamp):
     """
@@ -293,7 +293,7 @@ def process_surficial_observation(sms):
 
     df_obv = pd.DataFrame(obv["obv"], index = [0])
 
-    mo_id = dynadb.df_write(data_table=smsclass.DataTable("marker_observations", 
+    mo_id = dbio.df_write(data_table=smsclass.DataTable("marker_observations", 
         df_obv), resource=resource, last_insert=True)
 
     try:
@@ -311,7 +311,7 @@ def process_surficial_observation(sms):
             "WHERE ts = '{}' and site_id = '{}'".format(obv["obv"]['ts'],
             obv["obv"]['site_id'])
             )    
-        mo_id = dynadb.read(query, resource=resource)[0][0]
+        mo_id = dbio.read(query, resource=resource)[0][0]
 
     markers_ok = markers[markers["marker_id"] > 0]
     markers_ok = markers_ok[markers_ok["measurement"] > 0]
@@ -321,7 +321,7 @@ def process_surficial_observation(sms):
 
     markers_ok.columns = ["%s" % (str(col)) for col in markers_ok.columns]
 
-    dynadb.df_write(data_table = smsclass.DataTable("marker_data", 
+    dbio.df_write(data_table = smsclass.DataTable("marker_data", 
         markers_ok), resource=resource)
 
     # send success messages
@@ -400,7 +400,7 @@ def parse_all_messages(args,allmsgs=[]):
             if re.search("^[A-Z]{3}X[A-Z]{1}\*U\*",sms.msg):
                 df_data = extenso.uts(sms)
                 if df_data:
-                    dynadb.df_write(df_data, resource=resource)
+                    dbio.df_write(df_data, resource=resource)
                 else:
                     is_msg_proc_success = True
             elif re.search("\*FF",sms.msg) or re.search("PZ\*",sms.msg):
@@ -410,8 +410,8 @@ def parse_all_messages(args,allmsgs=[]):
                 df_data = subsurface.v1(sms)
                 if df_data:
                     print df_data[0].data ,  df_data[1].data
-                    dynadb.df_write(df_data[0], resource=resource)
-                    dynadb.df_write(df_data[1], resource=resource)
+                    dbio.df_write(df_data[0], resource=resource)
+                    dbio.df_write(df_data[1], resource=resource)
                     tsm_name = df_data[0].name.split("_")
                     tsm_name = str(tsm_name[1])
                     timestamp = df_data[0].data.reset_index()
@@ -427,7 +427,7 @@ def parse_all_messages(args,allmsgs=[]):
                     df_data = subsurface.v2(sms)
                     if df_data:
                         print df_data.data
-                        dynadb.df_write(df_data, resource=resource)
+                        dbio.df_write(df_data, resource=resource)
                         tsm_name = df_data.name.split("_")
                         tsm_name = str(tsm_name[1])
                         timestamp = df_data.data.reset_index()
@@ -452,8 +452,8 @@ def parse_all_messages(args,allmsgs=[]):
                 df_data =subsurface.v1(sms)
                 if df_data:
                     print df_data[0].data ,  df_data[1].data
-                    dynadb.df_write(df_data[0], resource=resource)
-                    dynadb.df_write(df_data[1], resource=resource)
+                    dbio.df_write(df_data[0], resource=resource)
+                    dbio.df_write(df_data[1], resource=resource)
                     tsm_name = df_data[0].name.split("_")
                     tsm_name = str(tsm_name[1])
                     timestamp = df_data[0].data.reset_index()
@@ -467,14 +467,14 @@ def parse_all_messages(args,allmsgs=[]):
                 df_data = rain.v3(sms)
                 if df_data:
                     print df_data.data
-                    dynadb.df_write(df_data, resource=resource)
+                    dbio.df_write(df_data, resource=resource)
                 else:
                     print '>> Value Error'
             elif re.search("ARQ\+[0-9\.\+/\- ]+$",sms.msg):
                 df_data = rain.rain_arq(sms)
                 if df_data:
                     print df_data.data
-                    dynadb.df_write(df_data, resource=resource)
+                    dbio.df_write(df_data, resource=resource)
                 else:
                     print '>> Value Error'
 
@@ -495,7 +495,7 @@ def parse_all_messages(args,allmsgs=[]):
             if re.search("EQINFO",sms.msg.upper()):
                 data_table = parser.eq(sms)
                 if data_table:
-                    dynadb.df_write(data_table, resource=resource)
+                    dbio.df_write(data_table, resource=resource)
                 else:
                     is_msg_proc_success = False
             elif re.search("^SANDBOX ACK \d+ .+",sms.msg.upper()):
@@ -529,9 +529,9 @@ def parse_all_messages(args,allmsgs=[]):
             read_success_list = []
             read_fail_list = []
 
-    smstables.set_read_status(read_success_list, read_status = 1,
+    smstables.set_read_status(sms_id_list=read_success_list, read_status = 1,
         table = args.table, host = args.dbhost)
-    smstables.set_read_status(read_fail_list, read_status = -1,
+    smstables.set_read_status(sms_id_list=read_fail_list, read_status = -1,
         table = args.table, host = args.dbhost)
         
 def get_router_ids():
@@ -547,7 +547,7 @@ def get_router_ids():
         " in (SELECT `model_id` FROM `logger_models` where "
         "`logger_type`='router') and `logger_name` is not null")
 
-    nums = dynadb.read(query, resource="sensor_data")
+    nums = dbio.read(query, resource="sensor_data")
     nums = {key: value for (value, key) in nums}
 
     return nums
@@ -604,7 +604,7 @@ def process_gateway_msg(sms):
             
             if count != 0:
                 print 'count', count
-                dynadb.write(query, resource="sensor_data")
+                dbio.write(query, resource="sensor_data")
             else:
                 print '>> no data to commit'
             return True
@@ -648,8 +648,12 @@ def get_arguments():
     """
     parser = argparse.ArgumentParser(description = ("Run SMS parser\n "
         "smsparser [-options]"))
-    parser.add_argument("-db", "--dbhost", 
-        help="host name (check senslope-server-config.txt")
+    parser.add_argument("-o", "--dbhost", 
+        help="host name (check server config file")
+    parser.add_argument("-c", "--sms_data_resource", 
+        help="sms data resource name (check server config file")
+    parser.add_argument("-e", "--sensor_data_resource", 
+        help="sensor data resource name (check server config file")
     parser.add_argument("-t", "--table", help="smsinbox table")
     parser.add_argument("-m", "--mode", help="mode to run")
     parser.add_argument("-g", "--gsm", help="gsm name")
@@ -666,12 +670,21 @@ def get_arguments():
     try:
         args = parser.parse_args()
 
-        if args.status == None:
-            args.status = 0
-        if args.messagelimit == None:
-            args.messagelimit = 200
         if args.dbhost == None:
             args.dbhost = 'local'
+        print "Host: %s" % args.dbhost
+        
+        print "Table: %s" % args.table
+
+        if args.status == None:
+            args.status = 0
+        print "Staus to read: %s" % args.status
+
+
+        if args.messagelimit == None:
+            args.messagelimit = 200
+        print "Message limit: %s" % args.messagelimit
+
         return args        
     except IndexError:
         print '>> Error in parsing arguments'
@@ -708,18 +721,12 @@ def main():
 
     .. note:: To run in terminal **python smsparser.py ** with arguments (** -db,-ns,-b,-r,-l,-s,-g,-m,-t**).
     """
-
+    print 'SMS Parser'
     args = get_arguments()
 
     if not args.bypasslock:
         lockscript.get_lock('smsparser %s' % args.table)
 
-    # dbio.create_table("runtimelog","runtime")
-    # logRuntimeStatus("procfromdb","startup")
-
-    print 'SMS Parser'
-
-    print args.dbhost, args.table, args.status, args.messagelimit
     allmsgs = smstables.get_inbox(host=args.dbhost, table=args.table,
         read_status=args.status, limit=args.messagelimit)
     

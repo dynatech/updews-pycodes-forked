@@ -26,14 +26,15 @@ def check_number_in_table(num):
     return None
 
 
-def set_read_status(sms_id_list, read_status=0, table='', host='local'):
+def set_read_status(sms_id_list='',read_status=0,table='',host='local',
+    resource="sms_data"):
     
     if table == '':
-        print "Error: Empty table"
-        return
+        raise ValueError("No table definition")
 
     if type(sms_id_list) is list:
         if len(sms_id_list) == 0:
+            print ">> Nothing to do here"
             return
         else:
             where_clause = ("where inbox_id "
@@ -41,20 +42,27 @@ def set_read_status(sms_id_list, read_status=0, table='', host='local'):
     elif type(sms_id_list) is long:
         where_clause = "where inbox_id = %d" % (sms_id_list)
     else:
-        print ">> Unknown type"        
+        raise ValueError("Unknown sms_id_list type")        
     query = "update smsinbox_%s set read_status = %d %s" % (table, read_status, 
         where_clause)
     
     # print query
-    dbio.write(query, "set_read_status", False, host)
+    dbio.write(query=query, host=host, resource=resource)
 
-def set_send_status(table, status_list, host):
+def set_send_status(table='',status_list='',host='local',resource="sms_data"):
     # print status_list
-    query = ("insert into smsoutbox_%s_status (stat_id,send_status,ts_sent,outbox_id,gsm_id,mobile_id) "
-        "values ") % (table[:-1])
+    if not table:
+        raise ValueError("No table definition")
+
+    if not status_list:
+        raise ValueError("No status list definition")
+
+    query = ("insert into smsoutbox_%s_status (stat_id,send_status,ts_sent,"
+        "outbox_id,gsm_id,mobile_id) values ") % (table[:-1])
 
     for stat_id,send_status,ts_sent,outbox_id,gsm_id,mobile_id in status_list:
-        query += "(%d,%d,'%s',%d,%d,%d)," % (stat_id,send_status,ts_sent,outbox_id,gsm_id,mobile_id)
+        query += "(%d,%d,'%s',%d,%d,%d)," % (stat_id, send_status, ts_sent,
+            outbox_id, gsm_id, mobile_id)
 
     query = query[:-1]
     query += (" on duplicate key update stat_id=values(stat_id), "
@@ -62,16 +70,16 @@ def set_send_status(table, status_list, host):
 
     # print query
     
-    dbio.write(query, "set_send_status", False, host)
+    dbio.write(query=query, last_inser=False, host=host, resource=resource)
 
-def get_inbox(host='local', read_status=0, table='loggers', limit=200):
-    db, cur = dbio.connect(host)
+def get_inbox(host='local',read_status=0,table='loggers',limit=200,
+    resource="sms_data"):
+    db, cur = dbio.connect(host=host, resource=resource)
 
     if table in ['loggers','users']:
         tbl_contacts = '%s_mobile' % table[:-1]
     else:
-        print 'Error: unknown table', table
-        return
+        raise ValueError('Error: unknown table', table)
     
     while True:
         try:
@@ -93,7 +101,8 @@ def get_inbox(host='local', read_status=0, table='loggers', limit=200):
             print '9.',
             time.sleep(20)
 
-def get_all_outbox_sms_from_db(table='users',send_status=5,gsm_id=5,limit=10):
+def get_all_outbox_sms_from_db(table='',send_status=5,gsm_id=5,limit=10,
+    resource="sms_data"):
     """
         **Description:**
           -The function that get all outbox message that are not yet send.
@@ -108,13 +117,17 @@ def get_all_outbox_sms_from_db(table='users',send_status=5,gsm_id=5,limit=10):
         :type limit: int
         :returns: List of message
     """
+    if not table:
+        raise ValueError("No table definition")
+
     sc = mem.server_config()
     host = sc['resource']['smsdb']
 
     while True:
         try:
-            db, cur = dbio.connect(host)
-            query = ("select t1.stat_id,t1.mobile_id,t1.gsm_id,t1.outbox_id,t2.sms_msg from "
+            db, cur = dbio.connect(host=host, resource=resource)
+            query = ("select t1.stat_id,t1.mobile_id,t1.gsm_id,t1.outbox_id,"
+                "t2.sms_msg from "
                 "smsoutbox_%s_status as t1 "
                 "inner join (select * from smsoutbox_%s) as t2 "
                 "on t1.outbox_id = t2.outbox_id "
@@ -134,7 +147,7 @@ def get_all_outbox_sms_from_db(table='users',send_status=5,gsm_id=5,limit=10):
             print '10.',
             time.sleep(20)
 
-def write_inbox(msglist,gsm_info):
+def write_inbox(msglist='',gsm_info='',resource="sms_data"):
     """
         **Description:**
           -The write raw sms to database function that write raw  message in database.
@@ -145,11 +158,19 @@ def write_inbox(msglist,gsm_info):
         :type gsm_info: obj
         :returns: N/A
     """
+    if not msglist:
+        raise ValueError("No msglist definition")
+
+    if not gsm_info:
+        raise ValueError("No gsm_info definition")
+
     sc = mem.server_config()
     mobile_nums_db = sc["resource"]["mobile_nums_db"]
 
-    logger_mobile_sim_nums = static.get_mobiles('loggers', mobile_nums_db)
-    user_mobile_sim_nums = static.get_mobiles('users', mobile_nums_db)
+    logger_mobile_sim_nums = static.get_mobiles(table='loggers', 
+        host=mobile_nums_db, resource="sms_data")
+    user_mobile_sim_nums = static.get_mobiles(table='users',
+        host=mobile_nums_db, resource="sms_data")
 
     # gsm_ids = get_gsm_modules()
 
@@ -200,11 +221,12 @@ def write_inbox(msglist,gsm_info):
 
     if len(sms_id_ok)>0:
         if loggers_count > 0:
-            dbio.write(query_loggers,'write_raw_sms_to_db',host=sms_host)
+            dbio.write(query=query_loggers, host=sms_host, resource=resource)
         if users_count > 0:
-            dbio.write(query_users,'write_raw_sms_to_db',host=sms_host)
+            dbio.write(query=query_users, host=sms_host, resource=resource)
         
-def write_outbox(message = None, recipients = None, gsm_id = None, table = None):
+def write_outbox(message=None,recipients=None,gsm_id=None,table=None,
+    resource="sms_data"):
     """
         **Description:**
           -The write outbox message to database is a function that insert message to smsoutbox with 
@@ -253,7 +275,7 @@ def write_outbox(message = None, recipients = None, gsm_id = None, table = None)
         "('%s','%s','central')") % (table_name,tsw,message)
         
     outbox_id = dbio.write(query=query, identifier="womtdb", 
-        last_insert=True,host=host)[0][0]
+        last_insert=True, host=host, resource=resource)[0][0]
 
     query = ("INSERT INTO smsoutbox_%s_status (outbox_id,mobile_id,gsm_id)"
             " VALUES ") % (table_name[:-1])
@@ -273,4 +295,5 @@ def write_outbox(message = None, recipients = None, gsm_id = None, table = None)
             continue
     query = query[:-1]
 
-    dbio.write(query=query, identifier="womtdb", last_insert=False, host=host)
+    dbio.write(query=query, identifier="womtdb", last_insert=False, host=host,
+        resource=resource)
