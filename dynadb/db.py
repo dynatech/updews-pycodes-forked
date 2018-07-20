@@ -6,7 +6,7 @@ import  sqlalchemy.exc
 from sqlalchemy import MetaData
 from sqlalchemy import Table
 from sqlalchemy import create_engine
-
+import inspect
 
 mc = memcache.Client(['127.0.0.1:11211'],debug=0)
 
@@ -191,33 +191,28 @@ def write(query ='', identifier = '', last_insert=False,
         MySQLdb.IntegrityError: If duplicate entry detected.
 
     """ 
-
+    ret_val = None
+    caller_func = str(inspect.stack()[1][3])
     db, cur = connect(host=host, connection=connection, 
         resource=resource)
 
     try:
         a = cur.execute(query)
+        db.commit()
         if last_insert:
-            db.commit()
             b = cur.execute('select last_insert_id()')
             b = cur.fetchall()
-            return b
-        if a:
-            db.commit()
-            return None
-        else:
-
-            db.commit()
-            time.sleep(0.1)
-            return None
+            ret_val = b
 
     except IndexError:
-        print IndexError
-        return None
+        print "IndexError on ",
+        print inspect.stack()[1][3]
     except (MySQLdb.Error, MySQLdb.Warning) as e:
         print(e)
-        return None
-
+        print caller_func
+    finally:
+        db.close()
+        return ret_val
 
 
 def read(query='', identifier='', host='local', 
@@ -246,24 +241,29 @@ def read(query='', identifier='', host='local',
         (3, 2, 'bakg', datetime.date(2016, 8, 9), None, Decimal('16.789631'), Decimal('120.660903'), 31))
 
     """ 
-
+    ret_val = None
+    caller_func = str(inspect.stack()[1][3])
     db, cur = connect(host=host, connection=connection, 
         resource=resource)
     try:
         a = cur.execute(query)
-        a = None
         try:
             a = cur.fetchall()
-            return a
+            ret_val = a
         except ValueError:
-            return None
+            ret_val = None
     except MySQLdb.OperationalError:
-        a =  None
+        print "MySQLdb.OperationalError on ",
+        print caller_func
     except (MySQLdb.Error, MySQLdb.Warning) as e:
         print(e)
-        return None
+        print caller_func
     except KeyError:
-        a = None
+        print "KeyError on ",
+        print caller_func
+    finally:
+        db.close()
+        return ret_val
 
 
 def df_write(data_table, host='local', last_insert=False , 
