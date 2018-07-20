@@ -138,7 +138,7 @@ def connect(host='', connection='', resource='' , conn_type=1):
     """ 
     # dbc = database connection
     #sc = server_config
-    
+    dbc = None
     if connection:
         dbc = get_connection_info(connection)
     elif resource:
