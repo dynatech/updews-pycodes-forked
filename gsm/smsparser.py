@@ -35,7 +35,7 @@ def logger_response(sms,log_type,log='False'):
           " date_activated desc limit 1),'%s','%s')" 
          % (sms.sim_num,sms.inbox_id,log_type))
                     
-        dynadb.write(query, 'insert new log for logger response',host='sandbox')
+        dynadb.write(query, resource="sensor_data")
         print '>> Log response'
     else:
         return False
@@ -77,30 +77,6 @@ def common_logger_sms(sms):
             logger_response(sms,value,True)
             return value
     return False
-
-def update_last_msg_received_table(txtdatetime,name,sim_num,msg):
-    """
-    - Update recieved message from the last_msg_recived table.
-
-    :param txtdatetime: list data info of sms message .
-    :param name: list data info of sms message .
-    :param sim_num: list data info of sms message .
-    :param msg: list data info of sms message .
-    :type txtdatetime: date
-    :type name: str
-    :type sim_num: str
-    :type msg: str    
-
-    """
-    query = ("insert into senslopedb.last_msg_received"
-        "(timestamp,name,sim_num,last_msg) values ('%s','%s','%s','%s')"
-        "on DUPLICATE key update timestamp = '%s', sim_num = '%s',"
-        "last_msg = '%s'" % (txtdatetime, name, sim_num, msg, txtdatetime,
-        sim_num,msg)
-        )
-                
-    dynadb.write(query, 'update_last_msg_received_table')
-    
 
 def process_piezometer(sms):
     """
@@ -178,7 +154,7 @@ def process_piezometer(sms):
    
     
     try:
-        dynadb.write(query, 'process_piezometer')
+        dynadb.write(query, resource="sensor_data")
     except MySQLdb.ProgrammingError:
         print '>> Unexpected programing error'
         return False
@@ -190,7 +166,7 @@ def check_logger_model(logger_name):
     query = ("SELECT model_id FROM senslopedb.loggers where "
         "logger_name = '%s'") % logger_name
 
-    return dynadb.read(query,'check_logger_model')[0][0]
+    return dynadb.read(query, resource="sensor_data")[0][0]
     
 def spawn_alert_gen(tsm_name, timestamp):
     """
@@ -265,6 +241,8 @@ def process_surficial_observation(sms):
     enable_analysis = sc["surficial"]["enable_analysis"]
     SEND_REPLY_TO_COMMUNITY = sc["surficial"]["send_reply_to_community"]
     SEND_ACK_TO_CT_PHONE = sc["surficial"]["send_ack_to_ct_phone"]
+
+    resource = "sensor_data"
     
     obv = []
     try:
@@ -315,8 +293,8 @@ def process_surficial_observation(sms):
 
     df_obv = pd.DataFrame(obv["obv"], index = [0])
 
-    mo_id = dynadb.df_write(data_table = smsclass.DataTable("marker_observations", 
-        df_obv), host = data_host, last_insert = True)
+    mo_id = dynadb.df_write(data_table=smsclass.DataTable("marker_observations", 
+        df_obv), resource=resource, last_insert=True)
 
     try:
         mo_id = int(mo_id[0][0])
@@ -333,7 +311,7 @@ def process_surficial_observation(sms):
             "WHERE ts = '{}' and site_id = '{}'".format(obv["obv"]['ts'],
             obv["obv"]['site_id'])
             )    
-        mo_id = dynadb.read(query,'uso')[0][0]
+        mo_id = dynadb.read(query, resource=resource)[0][0]
 
     markers_ok = markers[markers["marker_id"] > 0]
     markers_ok = markers_ok[markers_ok["measurement"] > 0]
@@ -344,7 +322,7 @@ def process_surficial_observation(sms):
     markers_ok.columns = ["%s" % (str(col)) for col in markers_ok.columns]
 
     dynadb.df_write(data_table = smsclass.DataTable("marker_data", 
-        markers_ok), host = data_host)
+        markers_ok), resource=resource)
 
     # send success messages
     markers_ok_for_report = markers_ok_for_report.set_index(["marker_name"])
@@ -375,21 +353,6 @@ def process_surficial_observation(sms):
             stderr=subprocess.STDOUT)
 
     return True
-
-
-def check_number_in_users(num):
-   
-
-    query = "select user_id from user_mobile where sim_num = '%s'" % (num)
-
-    sc = mem.server_config()
-
-    user_id = dynadb.read(query, 'cnin', sc["resource"]["smsdb"])
-
-    print user_id
-
-    return user_id
-
 
 def parse_all_messages(args,allmsgs=[]):
     """
@@ -422,6 +385,7 @@ def parse_all_messages(args,allmsgs=[]):
     sc = mem.server_config()
     mc = mem.get_handle()
     table_sim_nums = mc.get('%s_mobile_sim_nums' % args.table[:-1])
+    resource = "sensor_data"
 
     while allmsgs:
         is_msg_proc_success = True
@@ -436,7 +400,7 @@ def parse_all_messages(args,allmsgs=[]):
             if re.search("^[A-Z]{3}X[A-Z]{1}\*U\*",sms.msg):
                 df_data = extenso.uts(sms)
                 if df_data:
-                    dynadb.df_write(df_data)
+                    dynadb.df_write(df_data, resource=resource)
                 else:
                     is_msg_proc_success = True
             elif re.search("\*FF",sms.msg) or re.search("PZ\*",sms.msg):
@@ -446,8 +410,8 @@ def parse_all_messages(args,allmsgs=[]):
                 df_data = subsurface.v1(sms)
                 if df_data:
                     print df_data[0].data ,  df_data[1].data
-                    dynadb.df_write(df_data[0])
-                    dynadb.df_write(df_data[1])
+                    dynadb.df_write(df_data[0], resource=resource)
+                    dynadb.df_write(df_data[1], resource=resource)
                     tsm_name = df_data[0].name.split("_")
                     tsm_name = str(tsm_name[1])
                     timestamp = df_data[0].data.reset_index()
@@ -463,7 +427,7 @@ def parse_all_messages(args,allmsgs=[]):
                     df_data = subsurface.v2(sms)
                     if df_data:
                         print df_data.data
-                        dynadb.df_write(df_data)
+                        dynadb.df_write(df_data, resource=resource)
                         tsm_name = df_data.name.split("_")
                         tsm_name = str(tsm_name[1])
                         timestamp = df_data.data.reset_index()
@@ -488,8 +452,8 @@ def parse_all_messages(args,allmsgs=[]):
                 df_data =subsurface.v1(sms)
                 if df_data:
                     print df_data[0].data ,  df_data[1].data
-                    dynadb.df_write(df_data[0])
-                    dynadb.df_write(df_data[1])
+                    dynadb.df_write(df_data[0], resource=resource)
+                    dynadb.df_write(df_data[1], resource=resource)
                     tsm_name = df_data[0].name.split("_")
                     tsm_name = str(tsm_name[1])
                     timestamp = df_data[0].data.reset_index()
@@ -503,14 +467,14 @@ def parse_all_messages(args,allmsgs=[]):
                 df_data = rain.v3(sms)
                 if df_data:
                     print df_data.data
-                    dynadb.df_write(df_data)
+                    dynadb.df_write(df_data, resource=resource)
                 else:
                     print '>> Value Error'
             elif re.search("ARQ\+[0-9\.\+/\- ]+$",sms.msg):
                 df_data = rain.rain_arq(sms)
                 if df_data:
                     print df_data.data
-                    dynadb.df_write(df_data)
+                    dynadb.df_write(df_data, resource=resource)
                 else:
                     print '>> Value Error'
 
@@ -531,7 +495,7 @@ def parse_all_messages(args,allmsgs=[]):
             if re.search("EQINFO",sms.msg.upper()):
                 data_table = parser.eq(sms)
                 if data_table:
-                    dynadb.df_write(data_table)
+                    dynadb.df_write(data_table, resource=resource)
                 else:
                     is_msg_proc_success = False
             elif re.search("^SANDBOX ACK \d+ .+",sms.msg.upper()):
@@ -579,13 +543,11 @@ def get_router_ids():
         obj: list of keys and values from model_id table;
      
     """
-    db, cur = dynadb.connect(resource="sensor_data")
-
     query = ("SELECT `logger_id`,`logger_name` from `loggers` where `model_id`"
         " in (SELECT `model_id` FROM `logger_models` where "
         "`logger_type`='router') and `logger_name` is not null")
 
-    nums = dynadb.read(query,'get_router_ids')
+    nums = dynadb.read(query, resource="sensor_data")
     nums = {key: value for (value, key) in nums}
 
     return nums
@@ -642,7 +604,7 @@ def process_gateway_msg(sms):
             
             if count != 0:
                 print 'count', count
-                dynadb.write(query, 'process_gateway_msg')
+                dynadb.write(query, resource="sensor_data")
             else:
                 print '>> no data to commit'
             return True
