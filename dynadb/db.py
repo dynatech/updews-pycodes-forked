@@ -139,22 +139,8 @@ def connect(host='', connection='', resource='' , conn_type=1):
     # dbc = database connection
     #sc = server_config
     
-    if host:
-        dbc = None 
-        try:
-            sc = mc.get('SERVER_CONFIG')
-            dbc = dict()
-            dbc['host'] = sc['hosts'][host] 
-            dbc['user'] = sc['db']['user'] 
-            dbc['password'] = sc['db']['password']
-            dbc['schema'] = sc['db']['name'] 
-        except KeyError:
-            print "Unknown Host " + host
-
-    elif connection:
-
-        dbc = get_connection_info(connection) 
-
+    if connection:
+        dbc = get_connection_info(connection)
     elif resource:
         dbc = None 
         try:
@@ -166,6 +152,17 @@ def connect(host='', connection='', resource='' , conn_type=1):
                 dbc.append(get_connection_info(connection))
         except KeyError:
             print 'Unknown Resource ' + resource
+    elif host:
+        dbc = None 
+        try:
+            sc = mc.get('SERVER_CONFIG')
+            dbc = dict()
+            dbc['host'] = sc['hosts'][host] 
+            dbc['user'] = sc['db']['user'] 
+            dbc['password'] = sc['db']['password']
+            dbc['schema'] = sc['db']['name'] 
+        except KeyError:
+            print "Unknown Host " + host
     
     if dbc:
         return get_connector(dbc=dbc, conn_type=conn_type)
