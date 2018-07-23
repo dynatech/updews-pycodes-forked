@@ -182,8 +182,8 @@ def get_mobiles(table=None,host=None,reset_variables=False,resource=None):
     """
     mc = memory.get_handle()
 
-    if host is None:
-        raise ValueError("No host value given for mobile number")
+    # if host is None:
+    #     raise ValueError("No host value given for mobile number")
 
     if not table:
         raise ValueError("No table definition")
@@ -208,7 +208,7 @@ def get_mobiles(table=None,host=None,reset_variables=False,resource=None):
             "WHERE t2.sim_num IS NULL and t1.sim_num is not null")
 
         nums = dbio.read(query=query, identifier='get_mobile_sim_nums', 
-            host=host)
+            host=host, resource=resource)
 
         logger_mobile_sim_nums = {sim_num: mobile_id for (mobile_id, sim_num, 
             gsm_id) in nums}
@@ -229,7 +229,7 @@ def get_mobiles(table=None,host=None,reset_variables=False,resource=None):
         query = "select mobile_id, sim_num, gsm_id from user_mobile"
 
         nums = dbio.read(query=query, identifier='get_mobile_sim_nums', 
-            host=host)
+            host=host, resource=resource)
 
         user_mobile_sim_nums = {sim_num: mobile_id for (mobile_id, sim_num, 
             gsm_id) in nums}
@@ -341,8 +341,8 @@ def set_variables_old(reset_variables):
 
     print "Set mobile numbers to memory",
     mobiles_host = sc["resource"]["mobile_nums_db"]
-    get_mobiles("loggers", mobiles_host, reset_variables)
-    get_mobiles("users", mobiles_host, reset_variables)
+    get_mobiles("loggers", mobiles_host, reset_variables, "sms_data")
+    get_mobiles("users", mobiles_host, reset_variables, "sms_data")
     print "done"
 
     try:
