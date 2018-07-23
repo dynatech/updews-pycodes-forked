@@ -70,7 +70,7 @@ def set_send_status(table='',status_list='',host='local',resource="sms_data"):
 
     # print query
     
-    dbio.write(query=query, last_inser=False, host=host, resource=resource)
+    dbio.write(query=query, last_insert=False, host=host, resource=resource)
 
 def get_inbox(host='local',read_status=0,table='loggers',limit=200,
     resource="sms_data"):
