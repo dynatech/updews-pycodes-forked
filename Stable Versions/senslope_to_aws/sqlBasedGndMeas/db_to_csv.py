@@ -243,16 +243,25 @@ def extract_db():
         db, cur = SenslopeDBConnect()
         print '>> Connected to database'
 
-        query = 'SELECT DISTINCT LEFT(name, 3) as site_code FROM site_column ORDER BY site_code ASC'
+        #query = 'SELECT DISTINCT LEFT(name, 3) as site_code FROM site_column ORDER BY site_code ASC'
+        query = 'SELECT name as site_code FROM site ORDER BY site_code ASC'
         try:
             cur.execute(query)
         except:
             print '>> Error parsing database'
         
         data = cur.fetchall()
-
+        oldnames = {
+            "bto": "bat",
+            "jor": "pob",
+            "mng": "man",
+            "png": "pan",
+            "tga": "tag"
+        }
+        
         for table in data:
-            extractDBToSQL(table[0])
+            old = oldnames.get(table[0], table[0])
+            extractDBToSQL(old)
             
             #set table existence to one after first run (Ugly Quick Fix)
             #doesTableExist = 1
