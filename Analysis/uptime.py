@@ -1,38 +1,72 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Dec 06 09:19:03 2017
+
+@author: Meryll
+"""
+
+from datetime import timedelta
 import pandas as pd
-from datetime import datetime
-import querySenslopeDb as q
-import numpy as np
 
-def uptime(upts, df):
-    up_index = upts.index[0]
-    updf = df[(df.timestamp <= upts['ts'].values[0])&(df.updateTS >= upts['ts'].values[0])]
-    if len(updf) <= 25:
-        upts.loc[upts.index == up_index, ['status']] = 'down'
-    else:
-        upts.loc[upts.index == up_index, ['status']] = 'up'
-    return upts
+import filepath
+import querySenslopeDb as qdb
 
-def main(start, end):
+def create_uptime():
+
+    query =  "CREATE TABLE `uptime` ( "
+    query += "  `ts` TIMESTAMP, "
+    query += "  `site_count` TINYINT(2) UNSIGNED NOT NULL, "
+    query += "  `ts_updated` TIMESTAMP NULL, "
+    query += "  PRIMARY KEY (`ts`))"
+                                     
+    qdb.ExecuteQuery(query)
     
-    query = "SELECT * FROM %s.site_level_alert where source = 'internal' and alert not like '%s' and \
-        ((timestamp <= '%s' and updateTS >= '%s') or (timestamp >= '%s' and timestamp <= '%s') \
-        or (updateTS >= '%s' and updateTS <= '%s'))" %(q.Namedb, 'ND%', start, end, start, end, start, end)
-    df = q.GetDBDataFrame(query)
-
-    rangeTS = pd.date_range(start='2017-01-01', end = '2017-04-01', freq='30min')
-    rangeTS = rangeTS[0:-1]
-    pub_uptime = pd.DataFrame({'ts':rangeTS, 'status':['-']*len(rangeTS)})
-    pub_uptimeTS = pub_uptime.groupby('ts')
-    pub_uptime = pub_uptimeTS.apply(uptime, df=df)
+def alerts_df():
     
-    percent_up = 100 - (100. * len(pub_uptime[pub_uptime.status == 'down'])/len(pub_uptime))
+    file_path = filepath.output_file_path('all', 'public')['monitoring_output']
+    df = pd.read_json(file_path + 'PublicAlert.json')
+    alerts = pd.DataFrame(df['alerts'].values[0])
+    alerts['internal_alert'] = alerts['internal_alert'].apply(lambda x: x.lower().replace('a0', ''))
+    alerts['up'] =  ~(alerts['internal_alert'].str.contains('nd')|alerts['internal_alert'].str.contains('0'))
+    alerts = alerts[['timestamp', 'site', 'internal_alert', 'up']]
     
-    return percent_up, pub_uptime, df
+    return alerts
 
-if __name__ == '__main__':
-    start = datetime.now()
-    percent_up, pub_uptime, df = main(start = '2017-01-01', end='2017-04-01')
-    print '\n\n'
-    print 'alert uptime = ' + str(np.round(percent_up, 2)) + '%'
-    print '\n\n'
-    print 'runtime =', str(datetime.now() - start)
+def to_db(df):
+    print df
+    if not qdb.DoesTableExist('uptime'):
+        create_uptime()
+    
+    ts = pd.to_datetime(df['ts'].values[0])
+    
+    query =  "SELECT * FROM uptime "
+    query += "WHERE (ts <= '%s' " %ts
+    query += "  AND ts_updated >= '%s') " %ts
+    query += "OR (ts_updated >= '%s' " %(ts - timedelta(hours=0.5))
+    query += "  AND ts_updated <= '%s') " %ts
+    query += "ORDER BY ts DESC LIMIT 1"
+    prev_uptime = qdb.GetDBDataFrame(query)
+
+    if len(prev_uptime) == 0 or prev_uptime['site_count'].values[0] != df['site_count'].values[0]:
+        qdb.PushDBDataFrame(df, 'uptime', index=False)
+    elif pd.to_datetime(prev_uptime['ts_updated'].values[0]) < df['ts_updated'].values[0]:
+        query =  "UPDATE uptime "
+        query += "SET ts_updated = '%s' " %pd.to_datetime(df['ts_updated'].values[0])
+        query += "WHERE uptime_id = %s" %prev_uptime['uptime_id'].values[0]
+	db, cur = qdb.SenslopeDBConnect(qdb.Namedb)
+	cur.execute(query)
+        db.commit()
+        db.close()
+
+def main():
+    
+    alerts = alerts_df()
+    up_count = len(alerts[alerts.up == True])
+    ts = pd.to_datetime(max(alerts['timestamp'].values))
+    df = pd.DataFrame({'ts': [ts], 'site_count': [up_count], 'ts_updated': [ts]})
+    to_db(df)
+
+###############################################################################
+
+if __name__ == "__main__":
+    main()

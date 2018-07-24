@@ -222,7 +222,7 @@ def getSensorNumbers():
 
     # print querys
 
-    nums = dbio.querydatabase(querys,'getSensorNumbers','LOCAL')
+    nums = dbio.querydatabase(querys,'getSensorNumbers','GSM')
 
     return nums
 

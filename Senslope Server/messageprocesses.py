@@ -488,7 +488,8 @@ def ProcessEarthquake(msg):
     dbio.commitToDb(query, 'earthquake')
 
     # subprocess.Popen(["python",cfg.config().fileio.eqprocfile])
-    exec_line = "~/anaconda2/bin/python %s > ~/scriptlogs/earthquakescript.txt 2>&1" % (cfg.config().fileio.eqprocfile)
+    c = cfg.config()
+    exec_line = "%s %s > ~/logs/earthquakescript.txt 2>&1" % (c.fileio.pythonpath, c.fileio.eqprocfile)
     p = subprocess.Popen(exec_line, stdout=subprocess.PIPE, shell=True, stderr=subprocess.STDOUT)
 
     return True
@@ -539,7 +540,7 @@ def ProcessARQWeather(line,sender):
         # print str(r15m),str(r24h),batv1, batv2, current, boostv1, boostv2, charge, csq, temp, hum, flashp,txtdatetime 
 
         
-    except IndexError and AttributeError:
+    except IndexError, AttributeError:
         print '\n>> Error: Rain message format is not recognized'
         print line
         return
@@ -695,6 +696,12 @@ def CheckMessageSource(msg):
 
 def SpawnAlertGen(tsm_name, timestamp):
     # spawn alert alert_gens
+    c = cfg.config()
+
+    if not c.io.enable_alertgen:
+        print "Alertgen disabled in config"
+        return
+
     print "For alertgen.py", tsm_name, timestamp
     timestamp_dt = dt.strptime(timestamp,'%Y-%m-%d %H:%M:%S')+\
         td(minutes=10)
@@ -737,9 +744,13 @@ def invokeProcessInBgnd(exec_line):
 
 def syncTable(table):
     c = cfg.config()
-    invokeProcessInBgnd("~/anaconda2/bin/python %s %s > %s 2>&1" % (c.fileio.masyncscript, table, c.fileio.masynclogs))
 
-def ProcessAllMessages(allmsgs,network):
+    if not c.io.enable_masync:
+        print "Masync disabled in config"
+        return
+    invokeProcessInBgnd("%s %s %s > %s 2>&1" % (c.fileio.pythonpath, c.fileio.masyncscript, table, c.fileio.masynclogs))
+
+def ProcessAllMessages(allmsgs,network,instance):
     c = cfg.config()
     read_success_list = []
     read_fail_list = []
@@ -775,7 +786,7 @@ def ProcessAllMessages(allmsgs,network):
                 try:
                     gm = gndmeas.getGndMeas(msg.data)
                     RecordGroundMeasurements(gm)
-                    syncTable(gndmeas)
+                    syncTable("gndmeas")
                     # server.WriteOutboxMessageToDb("READ-SUCCESS: \n" + msg.data,c.smsalert.communitynum)
                     server.WriteOutboxMessageToDb(c.reply.successen, msg.simnum)
                 except ValueError as e:
@@ -836,7 +847,7 @@ def ProcessAllMessages(allmsgs,network):
         # print all the traceback routine so that the error can be traced
         print (traceback.format_exc())
         print ">> Setting message read_status to fatal error"
-        dbio.setReadStatus("FATAL ERROR",cur_num)
+        dbio.setReadStatus("FATAL ERROR",cur_num,instance)
         
     return read_success_list, read_fail_list
     

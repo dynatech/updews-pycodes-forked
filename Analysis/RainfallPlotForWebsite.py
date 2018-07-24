@@ -10,7 +10,7 @@ import pandas as pd
 import numpy as np
 
 import filepath
-import querySenslopeDb as q
+import querySenslopeDbForWebsite as q
 
 def stitch_intervals(ranges):
     result = []

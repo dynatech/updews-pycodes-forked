@@ -10,6 +10,7 @@ import queryserverinfo as qsi
 import argparse
 #---------------------------------------------------------------------------------------------------------------------------
 
+# not used anymore
 def checkAlertMessage():
     c = cfg.config()    
     dbio.createTable("runtimelog","runtime")

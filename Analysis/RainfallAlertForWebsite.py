@@ -4,7 +4,7 @@ import numpy as np
 import math
 from sqlalchemy import create_engine
 
-import querySenslopeDb as q
+import querySenslopeDbForWebsite as q
 
 def GetResampledData(r, offsetstart, start, end):
     

@@ -16,6 +16,7 @@ import pandas as pd
 import datetime
 from datetime import datetime
 import queryPiDb as qpi
+import psutil
 
 #Simple Python WebSocket
 from websocket import create_connection
@@ -274,7 +275,10 @@ def formatReceivedGSMtext(timestamp, sender, message):
 #       success - for messages that were successfully sent by the GSM
 #       fail - for messages that that were NOT sent by the GSM
 # No filtering yet for special characters
-def formatAckGSMtext(acktype, ts_written, ts_sent, recipient):
+def formatAckGSMtext(acktype, ts_written, ts_sent, recipient, id):
+    pid = os.getpid()
+    py = psutil.Process(pid)
+    memoryUse = py.memory_info()[0]/2.**30
     if acktype == "success":
         type_msg = "ackgsm"
     elif acktype == "fail":
@@ -282,7 +286,7 @@ def formatAckGSMtext(acktype, ts_written, ts_sent, recipient):
     else:
         type_msg = "invalid"
     
-    jsonText = """{"type":"%s","timestamp_written":"%s","timestamp_sent":"%s","recipients":"%s"}""" % (type_msg, ts_written, ts_sent, recipient)
+    jsonText = """{"type":"%s","timestamp_written":"%s","timestamp_sent":"%s","recipients":"%s","cpu_usage":"%s","mem_usage":"%s","id":"%s"}""" % (type_msg, ts_written, ts_sent, recipient,psutil.cpu_percent(),memoryUse,id)
     
     return jsonText
 
@@ -500,6 +504,9 @@ def connRecvReconn(host, port):
 
 def parseRecvMsg(payload):
     msg = format(payload.decode('utf8'))
+    pid = os.getpid()
+    py = psutil.Process(pid)
+    memoryUse = py.memory_info()[0]/2.**30
     print("Text message received: %s" % msg)
 
     #The local ubuntu server is expected to receive a JSON message
@@ -521,11 +528,11 @@ def parseRecvMsg(payload):
             #   write status to raspi database
             if writeStatus < 0:
                 # if write unsuccessful
-                ack_json = """{"type":"ackrpi","timestamp_written":"%s","recipients":"%s","send_status":"FAIL"}""" % (timestamp, recipients)
+                ack_json = """{"type":"ackrpi","timestamp_written":"%s","recipients":"%s","send_status":"FAIL","cpu_usage":"%s","mem_usage":"%s"}""" % (timestamp, recipients,psutil.cpu_percent(),memoryUse)
                 pass
             else:
                 # if write SUCCESSFUL
-                ack_json = """{"type":"ackrpi","timestamp_written":"%s","recipients":"%s","send_status":"SENT-PI"}""" % (timestamp, recipients)
+                ack_json = """{"type":"ackrpi","timestamp_written":"%s","recipients":"%s","send_status":"SENT-PI","cpu_usage":"%s","mem_usage":"%s"}""" % (timestamp, recipients,psutil.cpu_percent(),memoryUse)
                 pass
 
             sendDataToDEWS(ack_json)

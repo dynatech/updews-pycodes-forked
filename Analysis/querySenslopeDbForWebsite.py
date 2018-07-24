@@ -574,7 +574,7 @@ def GetRainList():
         db, cur = SenslopeDBConnect(Namedb)
         cur.execute("use "+ Namedb)
         
-        query = 'SELECT name, max_rain_2year, rain_senslope, rain_arq FROM rain_props'
+        query = 'SELECT name, max_rain_2year, rain_senslope, rain_arq FROM rain_props_old'
         
         df = psql.read_sql(query, db)
         
@@ -595,7 +595,7 @@ def GetRainNOAHList():
         db, cur = SenslopeDBConnect(Namedb)
         cur.execute("use "+ Namedb)
         
-        query = 'SELECT * FROM rain_props'
+        query = 'SELECT * FROM rain_props_old'
         
         df = GetDBDataFrame(query)
 

@@ -4,10 +4,10 @@ import numpy as np
 import pandas as pd
 
 import filepath
-import querySenslopeDb as q
+import querySenslopeDbForWebsite as q
 import rainconfig as cfg
-import RainfallAlert as RA
-import RainfallPlot as RP
+import RainfallAlertForWebsite as RA
+import RainfallPlotForWebsite as RP
 
 ############################################################
 ##      TIME FUNCTIONS                                    ##    
@@ -61,7 +61,7 @@ def main(site='', end=datetime.now(), Print=False, alert_eval=True,
     tsn=end.strftime("%Y-%m-%d_%H-%M-%S")
     
     #rainprops containing noah id and threshold
-    rainprops = q.GetRainProps('rain_props')  
+    rainprops = q.GetRainProps('rain_props_old')  
     if site == '':
         pass
     else:
