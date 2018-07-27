@@ -4,13 +4,12 @@ Created on Thu Apr 07 09:29:47 2016
 
 @author: SENSLOPEY
 """
-import numpy as np
-import ConvertSomsRaw as CSR
+
 import pandas as pd
-import datetime
-import os
+import querydb as qDb
+
 #import matplotlib.pyplot as plt
-import querySenslopeDb as qDb
+
 
 v2=['NAGSA', 'BAYSB', 'AGBSB', 'MCASB', 'CARSB', 'PEPSB','BLCSA']
 #'absolute' minimum and maximum values for SOMS v2 and v3
@@ -18,16 +17,8 @@ m=[['RAW v2', 'RAW v3'],['CAL v2', 'CAL v3']]   #format for smin and smax
 
 
 
-#plt.style.use('ggplot')
 
-v2=['NAGSA', 'BAYSB', 'AGBSB', 'MCASB', 'CARSB', 'PEPSB','BLCSA']
-
-#'absolute' minimum and maximum values for SOMS v2 and v3
-m=[['RAW v2', 'RAW v3'],['CAL v2', 'CAL v3']]   #format for smin and smax
-
-
-
-def seek_outlier(df,column, node, mode):
+def seek_outlier(df,column, mode):
     smin=[[2000,500],[0,0]]                         #format: [[v2raw_min, v3raw_min], [v2calib_min,v3calib_min]]
     smax=[[7800,1600],[1700,1500]]
     outlier = []
@@ -41,7 +32,7 @@ def seek_outlier(df,column, node, mode):
     return outlier
 
 
-def f_outlier(df,column,node,mode): 
+def f_outlier(df,column,mode): 
     smin=[[2000,500],[0,0]]                         #format: [[v2raw_min, v3raw_min], [v2calib_min,v3calib_min]]
     smax=[[7800,1600],[1700,1500]]
 
@@ -50,22 +41,23 @@ def f_outlier(df,column,node,mode):
     else:
         ver = 1
             
-    df= df[(df>smin[mode][ver])&(df<smax[mode][ver])]
+    df= df[(df.mval1>smin[mode][ver])&(df.mval1<smax[mode][ver])]
     try:   
+        df = df.set_index('ts')
         df= df.resample('30Min',base=0)
     except:
         return df
     
     return df
     
-def seek_undervoltage(df,column,node,mode):
+def seek_undervoltage(df,column,node):
     
     if column in v2:
-        v_a1= qDb.GetRawAccelData(siteid=column,targetnode=node, msgid=32, batt=1)
-        v_a2= qDb.GetRawAccelData(siteid=column,targetnode=node, msgid=33, batt=1)
+        v_a1= qDb.get_raw_accel_data(tsm_name = column,node_id = node, accel_number = 1, batt=True,return_db=True)
+        v_a2= qDb.get_raw_accel_data(tsm_name = column,node_id = node, accel_number = 2, batt=True,return_db=True)
     else:
-        v_a1= qDb.GetRawAccelData(siteid=column,targetnode=node, msgid=11, batt=1)
-        v_a2= qDb.GetRawAccelData(siteid=column,targetnode=node, msgid=12, batt=1)
+        v_a1= qDb.get_raw_accel_data(tsm_name = column,node_id = node, accel_number = 1, batt=True,return_db=True)
+        v_a2= qDb.get_raw_accel_data(tsm_name = column,node_id = node, accel_number = 2, batt=True,return_db=True) 
         
     v_a1.index = v_a1.ts
     v_a1.rename(columns={'v':'v1'}, inplace=True)
@@ -76,34 +68,36 @@ def seek_undervoltage(df,column,node,mode):
     v_a2=v_a2.resample('30Min',base=0)
     
     x=pd.concat([df,v_a1.v1,v_a2.v2],axis=1)   
-    x=x.resample('30Min',base=0)
     undervoltage =  (x.v1<3.26) | (x.v1>3.40) | (x.v2<3.26) | (x.v2>3.40)
     
     return undervoltage
     
-def f_undervoltage(df,column,node,mode):
+def f_undervoltage(df,column,node):
     '''for v3 only'''
 #    seek_undervoltage(df,column,node,mode)
+    df = df.set_index('ts')
+    df = df.resample('30Min',base=0).first()
+    df = df.drop(['data_id', 'node_id', 'type_num'], axis=1)
+    
     if column in v2:
-        v_a1= qDb.GetRawAccelData(siteid=column,targetnode=node, msgid=32, batt=1)
-        v_a2= qDb.GetRawAccelData(siteid=column,targetnode=node, msgid=33, batt=1)
+        v_a1= qDb.get_raw_accel_data(tsm_name = column,node_id = node, accel_number = 1, batt=True,return_db=True)
+        v_a2= qDb.get_raw_accel_data(tsm_name = column,node_id = node, accel_number = 2, batt=True,return_db=True)
     else:
-        v_a1= qDb.GetRawAccelData(siteid=column,targetnode=node, msgid=11, batt=1)
-        v_a2= qDb.GetRawAccelData(siteid=column,targetnode=node, msgid=12, batt=1)        
+        v_a1= qDb.get_raw_accel_data(tsm_name = column,node_id = node, accel_number = 1, batt=True,return_db=True)
+        v_a2= qDb.get_raw_accel_data(tsm_name = column,node_id = node, accel_number = 2, batt=True,return_db=True)       
         
     v_a1.index = v_a1.ts
-    v_a1.rename(columns={'v':'v1'}, inplace=True)
-    v_a1=v_a1.resample('30Min',base=0)
+    v_a1.rename(columns={'batt':'v1'}, inplace=True)
+    v_a1=v_a1.resample('30Min',base=0).first()
 
     v_a2.index = v_a2.ts
-    v_a2.rename(columns={'v':'v2'}, inplace=True)
-    v_a2=v_a2.resample('30Min',base=0)
+    v_a2.rename(columns={'batt':'v2'}, inplace=True)
+    v_a2=v_a2.resample('30Min',base=0).first()
     
     x=pd.concat([df,v_a1.v1,v_a2.v2],axis=1,ignore_index=True)
     x.columns=['mval1','v1','v2']
-    x=x.resample('30Min',base=0)
     df=x.mval1[((x.v1>3.2) & (x.v1<3.4) & (x.v2>3.2) & (x.v2<3.4)) | (x.v1.isnull() & x.v2.isnull())]
-    df = df.resample('30Min',base=0)
+    df = df.reset_index()
     return df
     
 #column = 'gaasb'
