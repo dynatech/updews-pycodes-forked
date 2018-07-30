@@ -1,29 +1,17 @@
-import os
 import sys
-import time
-from datetime import datetime
-import pandas as pd
-
-# path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../updews-pycodes/Analysis/'))
-# if not path in sys.path:
-#    sys.path.insert(1, path)
-# del path
-
-import analysis.subsurface.vcdgen as vcd
-# import querySenslopeDb as qs
+from analysis.subsurface import vcdgen as vcd
     
 def getDF():
     
     site_column = sys.argv[1]
-    tdate = sys.argv[2].replace("n",'').replace("T"," ").replace("%20"," ")
-    fdate = sys.argv[3].replace("n",'').replace("T"," ").replace("%20"," ")
+    end_ts = sys.argv[2].replace("n",'').replace("T"," ").replace("%20"," ")
+    start_ts = sys.argv[3].replace("n",'').replace("T"," ").replace("%20"," ")
 
-    # site_column = "agbta"
-    # tdate = "2017-11-11 06:00:00"
-    # fdate = "2017-11-08 06:00:00"
+#    site_column = "agbta"
+#    end_ts = "2017-11-11 06:00:00"
+#    start_ts = "2017-11-08 06:00:00"
     
-    df= vcd.vcdgen(site_column, tdate, fdate)
-    
+    df = vcd.vcdgen(site_column, end_ts, start_ts) 
     print df
 
-getDF();
+getDF()
