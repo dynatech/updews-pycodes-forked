@@ -8,7 +8,7 @@ import analysis.querydb as qdb
 import dynadb.db as db
 import gsm.smsparser2.smsclass as sms
 
-def get_resampled_data(gauge_name, offsetstart, start, end, check_nd=True):
+def get_resampled_data(gauge_name, offsetstart, start, end, check_nd=True, is_realtime=True):
     """Resample retrieved data of gauge_name from offsetstart to end.
     
     Args:
@@ -24,8 +24,12 @@ def get_resampled_data(gauge_name, offsetstart, start, end, check_nd=True):
         dataframe: Rainfall data of gauge_name from offsetstart to end.
     
     """
-
-    rainfall = qdb.get_raw_rain_data(gauge_name, from_time=offsetstart)
+    
+    if is_realtime:
+        rainfall = qdb.get_raw_rain_data(gauge_name, from_time=offsetstart)
+    else:
+        rainfall = qdb.get_raw_rain_data(gauge_name, from_time=offsetstart, to_time=end)
+        
     rainfall = rainfall[rainfall.rain >= 0 ]
     
     try:
