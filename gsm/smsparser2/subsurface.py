@@ -62,7 +62,11 @@ def v1(sms):
     tsm_name = line[0:4]
     print 'SITE: ' + tsm_name
     ##msgdata = line[5:len(line)-11] #data is 6th char, last 10 char are date
-    msgdata = (line.split('*'))[1]
+    try:
+        msgdata = (line.split('*'))[1]
+    except IndexError:
+        raise ValueError("Wrong message construction")
+        
     print 'raw data: ' + msgdata
     #getting date and time
     #msgdatetime = line[-10:]
