@@ -52,20 +52,20 @@ def f_outlier(df,column,mode):
     
 def seek_undervoltage(df,column,node):
     
-    if column in v2:
-        v_a1= qDb.get_raw_accel_data(tsm_name = column,node_id = node, accel_number = 1, batt=True,return_db=True)
-        v_a2= qDb.get_raw_accel_data(tsm_name = column,node_id = node, accel_number = 2, batt=True,return_db=True)
-    else:
-        v_a1= qDb.get_raw_accel_data(tsm_name = column,node_id = node, accel_number = 1, batt=True,return_db=True)
-        v_a2= qDb.get_raw_accel_data(tsm_name = column,node_id = node, accel_number = 2, batt=True,return_db=True) 
+    df = df.set_index('ts')
+    df = df.resample('30Min',base=0).first()
+    df = df.drop(['data_id', 'node_id', 'type_num'], axis=1)
+    
+    v_a1= qDb.get_raw_accel_data(tsm_name = column,node_id = node, accel_number = 1, batt=True,return_db=True)
+    v_a2= qDb.get_raw_accel_data(tsm_name = column,node_id = node, accel_number = 2, batt=True,return_db=True) 
         
     v_a1.index = v_a1.ts
-    v_a1.rename(columns={'v':'v1'}, inplace=True)
-    v_a1=v_a1.resample('30Min',base=0)
+    v_a1.rename(columns={'batt':'v1'}, inplace=True)
+    v_a1=v_a1.resample('30Min',base=0).first()
     
     v_a2.index = v_a2.ts
-    v_a2.rename(columns={'v':'v2'}, inplace=True)
-    v_a2=v_a2.resample('30Min',base=0)
+    v_a2.rename(columns={'batt':'v2'}, inplace=True)
+    v_a2=v_a2.resample('30Min',base=0).first()
     
     x=pd.concat([df,v_a1.v1,v_a2.v2],axis=1)   
     undervoltage =  (x.v1<3.26) | (x.v1>3.40) | (x.v2<3.26) | (x.v2>3.40)
@@ -79,12 +79,8 @@ def f_undervoltage(df,column,node):
     df = df.resample('30Min',base=0).first()
     df = df.drop(['data_id', 'node_id', 'type_num'], axis=1)
     
-    if column in v2:
-        v_a1= qDb.get_raw_accel_data(tsm_name = column,node_id = node, accel_number = 1, batt=True,return_db=True)
-        v_a2= qDb.get_raw_accel_data(tsm_name = column,node_id = node, accel_number = 2, batt=True,return_db=True)
-    else:
-        v_a1= qDb.get_raw_accel_data(tsm_name = column,node_id = node, accel_number = 1, batt=True,return_db=True)
-        v_a2= qDb.get_raw_accel_data(tsm_name = column,node_id = node, accel_number = 2, batt=True,return_db=True)       
+    v_a1= qDb.get_raw_accel_data(tsm_name = column,node_id = node, accel_number = 1, batt=True,return_db=True)
+    v_a2= qDb.get_raw_accel_data(tsm_name = column,node_id = node, accel_number = 2, batt=True,return_db=True)       
         
     v_a1.index = v_a1.ts
     v_a1.rename(columns={'batt':'v1'}, inplace=True)
