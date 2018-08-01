@@ -115,7 +115,34 @@ class TestModule(unittest.TestCase):
         self.sms.msg = "ARQ+0+0+4.158+4.204+0.1268+5.088+0.121+1000+22+31.5+84.1+233+180801/083159"
         self.sms.sim_num = "639175015138"
         status = smsparser2.rain.rain_arq(self.sms)
-        self.assertIsNotNone(status)   
+        self.assertIsNotNone(status)
+
+    def test_rain_arq_use_unregistered_number_arq_data_exp_raise_exception(self):
+        self.sms.msg = "ARQ+0+0+4.158+4.204+0.1268+5.088+0.121+1000+22+31.5+84.1+233+180801/083159"
+        self.sms.sim_num = "639171234567"
+
+        with self.assertRaises(ValueError) as err_val:
+            smsparser2.rain.rain_arq(self.sms)
+
+        print err_val.exception
+
+        self.assertTrue("Number not registered" in err_val.exception)
+
+    def test_rain_arq_use_incomplete_arq_data_exp_raise_exception(self):
+        self.sms.msg = "ARQ+22+31.5+84.1+233+180801/083159"
+        self.sms.sim_num = "639175015138"
+        
+        with self.assertRaises(ValueError) as err_val:
+            smsparser2.rain.rain_arq(self.sms)
+
+        print err_val.exception
+
+        self.assertTrue("Incomplete data" in err_val.exception)
+
+    def test_v3_use_valid_gateway_rain_data_exp_success(self):
+        self.sms.msg = "IMUW,07/27/18,12:15:04,0,000,000,0.00,13.03,11"
+        status = smsparser2.rain.v3(self.sms)
+        self.assertIsNotNone(status)
 
 
 def main():
