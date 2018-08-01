@@ -98,7 +98,20 @@ class TestModule(unittest.TestCase):
 
         self.assertTrue(err_val>0)
 
-        
+    def test_uts_use_valid_uts_extenso_data_exp_success(self):
+        self.sms.msg = "INAXA*U*LA:11891*MX:330*MI:3392*TP:23.31*180709213054"
+        status = smsparser2.extensometer.uts(self.sms)
+        self.assertIsNotNone(status)        
+
+    def test_uts_use_invalid_timestamp_data_exp_raise_exception(self):
+        self.sms.msg = "INAXA*U*LA:11891*MX:330*MI:3392*TP:23.31*1807092"
+        status = smsparser2.extensometer.uts(self.sms)
+        self.assertIsNotNone(status)
+
+        with self.assertRaises(ValueError) as err_val:
+            smsparser2.surficial.observation(self.sms.msg)
+
+        self.assertTrue("timestamp" in err_val.exception)
 
 
 def main():
