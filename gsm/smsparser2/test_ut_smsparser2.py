@@ -105,13 +105,11 @@ class TestModule(unittest.TestCase):
 
     def test_uts_use_invalid_timestamp_data_exp_raise_exception(self):
         self.sms.msg = "INAXA*U*LA:11891*MX:330*MI:3392*TP:23.31*1807092"
-        status = smsparser2.extensometer.uts(self.sms)
-        self.assertIsNotNone(status)
 
         with self.assertRaises(ValueError) as err_val:
-            smsparser2.surficial.observation(self.sms.msg)
+            smsparser2.extensometer.uts(self.sms)
 
-        self.assertTrue("timestamp" in err_val.exception)
+        self.assertTrue("No valid timestamp recognized" in err_val.exception)
 
 
 def main():
