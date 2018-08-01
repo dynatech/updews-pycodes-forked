@@ -117,8 +117,7 @@ def rain_arq(sms):
             print ">> Number registered as", msgname
             msgname_contact = msgname
         else:
-            print ">> None type"
-            return
+            raise ValueError("Number not registered")
 
         try:
             rain = int(linesplit[1])*0.5
@@ -126,8 +125,7 @@ def rain_arq(sms):
             batv2 = linesplit[4]
             csq = linesplit[9]
         except IndexError:
-            print ">> Incomplete data"
-            return
+            raise ValueError("Incomplete data")
         
         if csq=='':
             csq = 'NULL'
@@ -137,14 +135,12 @@ def rain_arq(sms):
             hum = linesplit[11]
             flashp = linesplit[12]
         except IndexError:
-            print ">> Error: possible incomplete message"
-            return False
+            raise ValueError("Incomplete data")
         txtdatetime = dt.strptime(linesplit[13],
             '%y%m%d/%H%M%S').strftime('%Y-%m-%d %H:%M:%S')
 
     except ValueError:    
-        print '>> Error: Possible conversion mismatch ' + line
-        return
+        raise ValueError('>> Error: Possible conversion mismatch ' + line)
 
     try:
         if csq != 'NULL' and csq != 'N/A':
@@ -159,7 +155,7 @@ def rain_arq(sms):
         return df_data
     except ValueError:
         print '>> Error writing query string.', 
-        return
+        return None
 
 
 

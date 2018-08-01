@@ -111,6 +111,12 @@ class TestModule(unittest.TestCase):
 
         self.assertTrue("No valid timestamp recognized" in err_val.exception)
 
+    def test_rain_arq_use_valid_arq_data_exp_success(self):
+        self.sms.msg = "ARQ+0+0+4.158+4.204+0.1268+5.088+0.121+1000+22+31.5+84.1+233+180801/083159"
+        self.sms.sim_num = "639175015138"
+        status = smsparser2.rain.rain_arq(self.sms)
+        self.assertIsNotNone(status)   
+
 
 def main():
     suite = unittest.TestLoader().loadTestsFromTestCase(TestModule)
