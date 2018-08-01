@@ -107,40 +107,37 @@ def rain_arq(sms):
 
     line = re.sub("(?<=\+) (?=\+)","NULL",line)
 
+    #table name
+    linesplit = line.split('+')
+   
+    msgname = check_name_of_number(sender)
+    if msgname:
+        msgname = msgname.lower()
+        print ">> Number registered as", msgname
+        msgname_contact = msgname
+    else:
+        raise ValueError("Number not registered")
+
     try:
-        #table name
-        linesplit = line.split('+')
-       
-        msgname = check_name_of_number(sender)
-        if msgname:
-            msgname = msgname.lower()
-            print ">> Number registered as", msgname
-            msgname_contact = msgname
-        else:
-            raise ValueError("Number not registered")
+        rain = int(linesplit[1])*0.5
+        batv1 = linesplit[3]
+        batv2 = linesplit[4]
+        csq = linesplit[9]
+    except IndexError:
+        raise ValueError("Incomplete data")
+    
+    if csq=='':
+        csq = 'NULL'
 
-        try:
-            rain = int(linesplit[1])*0.5
-            batv1 = linesplit[3]
-            batv2 = linesplit[4]
-            csq = linesplit[9]
-        except IndexError:
-            raise ValueError("Incomplete data")
-        
-        if csq=='':
-            csq = 'NULL'
+    try:
+        temp = linesplit[10]
+        hum = linesplit[11]
+        flashp = linesplit[12]
+    except IndexError:
+        raise ValueError("Incomplete data")
+    txtdatetime = dt.strptime(linesplit[13],
+        '%y%m%d/%H%M%S').strftime('%Y-%m-%d %H:%M:%S')
 
-        try:
-            temp = linesplit[10]
-            hum = linesplit[11]
-            flashp = linesplit[12]
-        except IndexError:
-            raise ValueError("Incomplete data")
-        txtdatetime = dt.strptime(linesplit[13],
-            '%y%m%d/%H%M%S').strftime('%Y-%m-%d %H:%M:%S')
-
-    except ValueError:    
-        raise ValueError('>> Error: Possible conversion mismatch ' + line)
 
     try:
         if csq != 'NULL' and csq != 'N/A':
