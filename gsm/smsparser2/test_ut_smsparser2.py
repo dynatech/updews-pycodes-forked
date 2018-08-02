@@ -144,6 +144,34 @@ class TestModule(unittest.TestCase):
         status = smsparser2.rain.v3(self.sms)
         self.assertIsNotNone(status)
 
+    def test_v3_use_invalid_timestamp_rain_data_exp_fail(self):
+        self.sms.msg = "IMUW,17/27/18,12:15:04,0,000,000,0.00,13.03,11"
+        status = smsparser2.rain.v3(self.sms)
+        self.assertTrue(not status)
+
+    def test_v3_use_inincomple_rain_data_exp_fail(self):
+        self.sms.msg = "IMUW,07/27/18,12:15:04,0"
+        status = smsparser2.rain.v3(self.sms)
+        self.assertTrue(not status)
+
+    def test_eq_use_valid_earthquake_sms_exp_success(self):
+        self.sms.msg = ("EQInfo1: 20Mar2018 04:05AM Ms=2.5 D=046km 08.26N, 126."
+            "02E - 011km N20E of Bunawan (Agusan Del Sur) <RAP>")
+        status = smsparser2.earthquake.eq(self.sms)
+        self.assertTrue(status)
+
+    def test_eq_use_invalid_timestamp_earthquake_sms_exp_fail(self):
+        self.sms.msg = ("EQInfo1: 20XXX2018 04:05AM Ms=2.5 D=046km 08.26N, 126."
+            "02E - 011km N20E of Bunawan (Agusan Del Sur) <RAP>")
+        status = smsparser2.earthquake.eq(self.sms)
+        self.assertTrue(not status)
+
+    def test_eq_use_no_magnitude_earthquake_sms_exp_fail(self):
+        self.sms.msg = ("EQInfo1: 20Mar2018 04:05AM D=046km 08.26N, 126."
+            "02E - 011km N20E of Bunawan (Agusan Del Sur) <RAP>")
+        status = smsparser2.earthquake.eq(self.sms)
+        self.assertTrue(not status)
+
 
 def main():
     suite = unittest.TestLoader().loadTestsFromTestCase(TestModule)
