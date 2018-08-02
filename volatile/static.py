@@ -73,7 +73,7 @@ def set_static_variable(name=""):
         query += " where name = '%s'" % (name)
 
     try:
-        variables = dbio.read(query=query,resource=sms_data)
+        variables = dbio.read(query=query,resource=sensor_data)
     except MySQLdb.ProgrammingError:
         print ">> static_variables table does not exist on host"
         return
