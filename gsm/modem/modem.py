@@ -6,11 +6,12 @@ from messaging.sms import SmsSubmit as smssubmit
 import volatile.memory as mem
 from datetime import datetime as dt
 from datetime import timedelta as td
+import warnings
 
 try:
     import RPi.GPIO as GPIO
 except ImportError:
-    print "Warning: RPi.GPIO module Skipping import"
+    warnings.warn("Warning: RPi.GPIO module Skipping import")
 
 class ResetException(Exception):
     pass
