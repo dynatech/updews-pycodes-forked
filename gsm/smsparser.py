@@ -447,6 +447,33 @@ def parse_all_messages(args,allmsgs=[]):
                 except MySQLdb.ProgrammingError:
                     print ">> Error writing data to DB"
                     is_msg_proc_success = False
+
+            elif re.search("^[A-Z]{5}\*[A-Za-z0-9/+]{2}\*[A-Za-z0-9/+]+\*[0-9]{12}$",
+                sms.msg):
+                try:
+                    df_data = subsurface.b64Parser(sms)
+                    if df_data:
+                        print df_data.data
+                        dbio.df_write(df_data, resource=resource)
+                        tsm_name = df_data.name.split("_")
+                        tsm_name = str(tsm_name[1])
+                        timestamp = df_data.data.reset_index()
+                        timestamp = str(timestamp['ts'][0])
+                        spawn_alert_gen(tsm_name,timestamp)
+                    else:
+                        print '>>b64 Value Error'
+                        is_msg_proc_success = False
+
+                except IndexError:
+                    print "\n\n>> Error: Possible data type error"
+                    print sms.msg
+                    is_msg_proc_success = False
+                except ValueError:
+                    print ">> Value error detected"
+                    is_msg_proc_success = False
+                except MySQLdb.ProgrammingError:
+                    print ">> Error writing data to DB"
+                    is_msg_proc_success = False
                     
             elif re.search("[A-Z]{4}\*[A-F0-9]+\*[0-9]+$",sms.msg):
                 df_data =subsurface.v1(sms)
