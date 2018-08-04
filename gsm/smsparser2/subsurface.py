@@ -531,25 +531,26 @@ def b64Parser(sms):
     msg = sms.msg
     if len(msg.split("*")) == 4:
         msgsplit = msg.split('*')
+		
         tsm_name = msgsplit[0]
         if len(tsm_name) != 5:
-            return ValueError("length of tsm_name != 5")
+            raise ValueError("length of tsm_name != 5")
 
         dtype = msgsplit[1]
         print dtype
         if len(dtype) == 2:
             dtype = b64_to_dec(dtype)
         else:
-            return ValueError("length of dtype != 2")
+            raise ValueError("length of dtype != 2")
         
         datastr = msgsplit[2]
         if len(datastr) == 0:
-            return ValueError("length of data == 0")
+            raise ValueError("length of data == 0")
         ts = msgsplit[3]
         ts_patterns = ['%y%m%d%H%M%S', '%Y-%m-%d %H:%M:%S']
         timestamp = ''        
         if len(ts) not in [6,12]:
-            return ValueError("length of ts != 6 or 12")
+            raise ValueError("length of ts != 6 or 12")
         elif len(ts) == 6:
             ts = b64ts(ts)
 
@@ -591,6 +592,8 @@ def b64Parser(sms):
                     print ">> b64 Value Error detected.", piece,
                     print "Piece of data to be ignored"
                     return
+		else 
+			raise valueError("dtype not recognized")
 
     else:
         raise ValueError("msg was not split into 3")
