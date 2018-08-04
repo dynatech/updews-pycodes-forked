@@ -529,6 +529,7 @@ def soms_parser(msgline,mode,div,err):
 
 def b64Parser(sms):
     msg = sms.msg
+	print msg
     if len(msg.split("*")) == 4:
         msgsplit = msg.split('*')
 		
@@ -537,7 +538,7 @@ def b64Parser(sms):
             raise ValueError("length of tsm_name != 5")
 
         dtype = msgsplit[1]
-        print dtype
+        #print dtype
         if len(dtype) == 2:
             dtype = b64_to_dec(dtype)
         else:
@@ -592,7 +593,7 @@ def b64Parser(sms):
                     print ">> b64 Value Error detected.", piece,
                     print "Piece of data to be ignored"
                     return
-		else 
+		else:
 			raise valueError("dtype not recognized")
 
     else:
