@@ -529,7 +529,7 @@ def soms_parser(msgline,mode,div,err):
 
 def b64Parser(sms):
     msg = sms.msg
-	print msg
+    print msg
     if len(msg.split("*")) == 4:
         msgsplit = msg.split('*')
 		
@@ -552,10 +552,13 @@ def b64Parser(sms):
         timestamp = ''        
         if len(ts) not in [6,12]:
             raise ValueError("length of ts != 6 or 12")
-        elif len(ts) == 6:
-            ts = b64ts(ts)
-
-        timestamp = dt.strptime(ts,ts_patterns[0]).strftime('%Y-%m-%d %H:%M:00')
+            
+        for pattern in ts_patterns:
+            try:
+                timestamp = dt.strptime(ts,pattern).strftime('%Y-%m-%d %H:%M:00')
+                break
+            except ValueError:
+                print "Error: wrong timestamp format", ts, "for pattern", pattern
 
         outl = []
         if dtype in [11,12,32,33]:
@@ -577,7 +580,7 @@ def b64Parser(sms):
                     print ">> b64 Value Error detected.", piece,
                     print "Piece of data to be ignored"
                     return
-        elif dtype in [110,111,112,113,21,26]:
+        elif dtype in [110,111,112,113,21,26,10,13]: # wala pang support for v2 bradcast soms
             name_df = 'soms_'+tsm_name.lower() 
             n = 3
             sd = [datastr[i:i+n] for i in range(0,len(datastr),n)]
@@ -593,8 +596,8 @@ def b64Parser(sms):
                     print ">> b64 Value Error detected.", piece,
                     print "Piece of data to be ignored"
                     return
-		else:
-			raise valueError("dtype not recognized")
+        else:
+            raise ValueError("dtype not recognized")
 
     else:
         raise ValueError("msg was not split into 3")
