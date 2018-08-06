@@ -580,7 +580,7 @@ def b64Parser(sms):
                     print ">> b64 Value Error detected.", piece,
                     print "Piece of data to be ignored"
                     return
-        elif dtype in [110,111,112,113,21,26]:
+        elif dtype in [110,111,112,113,21,26,10,13]: # wala pang support for v2 bradcast soms
             name_df = 'soms_'+tsm_name.lower() 
             n = 3
             sd = [datastr[i:i+n] for i in range(0,len(datastr),n)]
