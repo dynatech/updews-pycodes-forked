@@ -129,7 +129,7 @@ def get_max_index_from_table(table_name):
     smsdb_host = sc["hosts"][sc["resource"]["smsdb"]]
     user = sc["db"]["user"]
     password = sc["db"]["password"]
-    name = sc["db"]["name"]
+    name = sc["db"]["smsdb_name"]
 
     command = ("mysql -u %s -h %s -e 'select max(inbox_id) from %s.smsinbox_%s "
         "where gsm_id!=1' -p%s") % (user, smsdb_host, name, table_name, 
@@ -180,6 +180,7 @@ def import_sql_file_to_dyna(table, max_inbox_id, max_index_last_copied):
     host_ip2 = sc["hosts"][smsdb2_host]
     user = sc["db"]["user"]
     password = sc["db"]["password"]
+    smsdb_name = sc["db"]["smsdb_name"]
     name = sc["db"]["name"]
     logsdir = sc["fileio"]["logsdir"]
     sqldumpsdir = sc["fileio"]["sqldumpsdir"]
@@ -195,8 +196,8 @@ def import_sql_file_to_dyna(table, max_inbox_id, max_index_last_copied):
 
     # export files from the table and dump to a file
 
-    command = ("mysql -e \"%s\" -h%s senslopedb -upysys_local -p%s --xml >"
-            " %s" % (copy_query, host_ip, password, f_dump))
+    command = ("mysql -e \"%s\" -h%s %s -upysys_local -p%s --xml >"
+            " %s" % (copy_query, host_ip, smsdb_name, password, f_dump))
     p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, 
         stderr=subprocess.STDOUT)
     out, err = p.communicate()
