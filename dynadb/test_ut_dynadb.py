@@ -4,7 +4,7 @@ from dynadb import db as dbio
 
 class TestDb(unittest.TestCase):
 
-    def test_connect(self):
+    def test_connect_use_resource_sms_data_exp_success(self):
         # args = {
         #   "resource": "sms_data",
         #   "host": "local"
@@ -13,22 +13,22 @@ class TestDb(unittest.TestCase):
         status = dbio.connect(resource="sms_data")
         self.assertIsNotNone(status)
 
-    def test_connect_2(self):
+    def test_connect_use_host_local_exp_success(self):
 
         status = dbio.connect(host="local")
         self.assertIsNotNone(status)
 
-    def test_connect_3(self):
+    def test_connect_use_host_local_exp_success(self):
 
         status = dbio.connect(connection="sb_local")
         self.assertIsNotNone(status)
 
-    def test_read(self):
+    def test_read_use_query_valid_exp_success(self):
 
         status = dbio.read(query="select * from sites", resource="sensor_data")
         self.assertIsNotNone(status)
 
-    def test_read_2(self):
+    def test_read_use_query_invalid_exp_return_none(self):
 
         status = dbio.read(query="select * from sites_null", resource="sensor_data")
         self.assertIsNone(status)
