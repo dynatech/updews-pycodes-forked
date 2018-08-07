@@ -7,6 +7,6 @@ site_codes = [site_code]
 
 gauges = rf.rainfall_gauges()
 gauges = gauges[gauges.site_code.isin(site_codes)]
-gauges = gauges[["gauge_name", "data_source", "threshold_value"]]
+gauges = gauges[["gauge_name", "data_source", "threshold_value", "distance"]]
 
-print gauges.to_json(orient = "records")
+print "web_plots=" + gauges.to_json(orient = "records")
