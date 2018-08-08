@@ -8,10 +8,9 @@ import sys
 import requests
     
 def getDF():
-
-   rsite = sys.argv[1]
-   fdate = sys.argv[2].replace("%20"," ")
-   tdate = sys.argv[3].replace("%20"," ")
+    rsite = sys.argv[1]
+    fdate = sys.argv[2].replace("%20"," ")
+    tdate = sys.argv[3].replace("%20"," ")
     # rsite = "agbtaw"
     # fdate = "2017-11-11 00:00:00"
     # tdate = "2017-11-11 08:00:00"
