@@ -589,7 +589,7 @@ def b64Parser(sms):
                 try:
                     ID = b64_to_dec(piece[0])
                     msgID = dtype
-                    soms = b64_twos_comp(b64_to_dec(piece[1:4]))
+                    soms = b64_to_dec(piece[1:4])
                     line = {"ts":timestamp, "node_id":ID, "type_num":msgID,
                     "mval1":soms, "mval2":0}
                     outl.append(line)
