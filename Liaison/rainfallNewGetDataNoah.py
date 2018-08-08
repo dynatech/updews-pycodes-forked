@@ -18,7 +18,7 @@ def getDF():
     # tdate = "2017-04-25"
     engine = create_engine('mysql+pymysql://updews:october50sites@127.0.0.1/senslopedb')
     query = "select timestamp, rval from senslopedb.rain_noah_%s " %rsite
-    query += "where timestamp between '%s' and '%s'" %(pd.to_datetime(fdate)-td(3), tdate)
+    query += "where timestamp >= '%s' and timestamp < '%s'" %(pd.to_datetime(fdate)-td(3), tdate)
     df = pd.io.sql.read_sql(query,engine)
     df.columns = ['ts','rain']
     df = df[df.rain >= 0]
