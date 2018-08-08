@@ -580,15 +580,16 @@ def b64Parser(sms):
                     print ">> b64 Value Error detected.", piece,
                     print "Piece of data to be ignored"
                     return
-        elif dtype in [110,111,112,113,21,26,10,13]: # wala pang support for v2 bradcast soms
+        #elif dtype in [110,111,112,113,21,26,10,13]: # wala pang support for v2 bradcast soms
+        elif dtype in [110,113,10,13]: # wala pang support for v2 bradcast soms
             name_df = 'soms_'+tsm_name.lower() 
-            n = 3
+            n = 4
             sd = [datastr[i:i+n] for i in range(0,len(datastr),n)]
             for piece in sd:
                 try:
                     ID = b64_to_dec(piece[0])
                     msgID = dtype
-                    soms = b64_twos_comp(b64_to_dec(piece[1:3]))
+                    soms = b64_twos_comp(b64_to_dec(piece[1:4]))
                     line = {"ts":timestamp, "node_id":ID, "type_num":msgID,
                     "mval1":soms, "mval2":0}
                     outl.append(line)
