@@ -12,9 +12,10 @@ def getDF():
     fdate = sys.argv[2].replace("%20"," ")
     tdate = sys.argv[3].replace("%20"," ")
     # set arbitrarily for now
-#    fdate = "2015-04-05"
-#    tdate = "2016-03-29"
-#    rsite = 'agbtaw '
+    # rsite = "agbtaw"
+    # fdate = "2017-12-06 00:00:00"
+    # tdate = "2017-12-06 08:00:00"
+    end = pd.to_datetime(tdate)-td(minutes=30)
     engine = create_engine('mysql+pymysql://updews:october50sites@127.0.0.1/senslopedb')
     query = "select timestamp, r15m from senslopedb.%s " %rsite
     query += "where timestamp >= '%s' and timestamp < '%s'" %(pd.to_datetime(fdate)-td(3), tdate)
@@ -26,8 +27,8 @@ def getDF():
     
     df_inst = df.resample('30Min').sum()
     
-    if max(df_inst.index) < pd.to_datetime(tdate):
-        new_data = pd.DataFrame({'ts': [pd.to_datetime(tdate)], 'rain': [0]})
+    if max(df_inst.index) < end:
+        new_data = pd.DataFrame({'ts': [end], 'rain': [0]})
         new_data = new_data.set_index(['ts'])
         df = df.append(new_data)
         df = df.resample('30Min').sum()
@@ -39,7 +40,7 @@ def getDF():
     df['hrs24'] = df1
     df['hrs72'] = df3
     
-    df = df[(df.index >= fdate)&(df.index <= tdate)]
+    df = df[(df.index >= fdate)&(df.index <= end)]
        
     dfajson = df.reset_index().to_json(orient="records",date_format='iso')
     dfajson = dfajson.replace("T"," ").replace("Z","").replace(".000","")
