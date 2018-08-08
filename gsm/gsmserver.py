@@ -282,7 +282,7 @@ def simulate_gsm(network='simulate'):
         sms_id_unk = str(sms_id_unk).replace("L","")[1:-1]
         query = ("update smsinbox set web_flag = '-1' "
             "where sms_id in (%s);") % (sms_id_unk)
-        db.write(query=query, resource="sms_data")
+        db.write(query=query, resource="sensor_data")
 
     sys.exit()
 
