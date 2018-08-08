@@ -213,10 +213,10 @@ def simulate_gsm(network='simulate'):
     
     smsinbox_sms = []
 
-    query = """select sms_id, timestamp, sim_num, sms_msg from smsinbox
-        where web_flag not in ('0','-1') limit 1000"""
+    query = ("select sms_id, timestamp, sim_num, sms_msg from smsinbox"
+        "where web_flag not in ('0','-1') limit 1000")
 
-    smsinbox_sms = db.read(query, "simulate", "sandbox")
+    smsinbox_sms = db.read(query=query, resource="sensor_data")
 
     logger_mobile_sim_nums = static.get_mobiles('loggers', mobile_nums_db)
     user_mobile_sim_nums = static.get_mobiles('users', mobile_nums_db)
@@ -267,23 +267,23 @@ def simulate_gsm(network='simulate'):
     if len(sms_id_ok)>0:
 
         if loggers_count > 0:
-            db.write(query_loggers, 'simulate_gsm', False, smsdb_host)
+            db.write(query=query_loggers, resource="sms_data")
 
         if users_count > 0:
-            db.write(query_users, 'simulate_gsm', False, smsdb_host)
+            db.write(query=query_users, resource="sms_data")
         
         sms_id_ok = str(sms_id_ok).replace("L","")[1:-1]
         query = ("update smsinbox set web_flag = '0' "
             "where sms_id in (%s);") % (sms_id_ok)
-        db.write(query, 'simulate_gsm', False, sms_mirror_host)
+        db.write(query=query, resource="sensor_data")
 
     if len(sms_id_unk)>0:
         # print sms_id_unk
         sms_id_unk = str(sms_id_unk).replace("L","")[1:-1]
         query = ("update smsinbox set web_flag = '-1' "
             "where sms_id in (%s);") % (sms_id_unk)
-        db.write(query, 'simulate_gsm', False, sms_mirror_host)
-    
+        db.write(query=query, resource="sms_data")
+
     sys.exit()
 
 def log_csq(gsm, gsm_id):
@@ -461,7 +461,8 @@ def get_gsm_modules(reset_val = False):
         print "Getting gsm modules information..."
         query = ("select gsm_id, gsm_name, gsm_sim_num, network_type, ser_port, "
             "pwr_on_pin, ring_pin, module_type from gsm_modules")
-        result_set = db.read(query,'get_gsm_ids', gsm_modules_host)
+
+        result_set = db.read(query=query, resource="sms_data")
 
         gsm_modules = dict()
         for gsm_id, name, num, net, port, pwr_on_pin, ring_pin, module in result_set:
