@@ -213,7 +213,7 @@ def simulate_gsm(network='simulate'):
     
     smsinbox_sms = []
 
-    query = ("select sms_id, timestamp, sim_num, sms_msg from smsinbox"
+    query = ("select sms_id, timestamp, sim_num, sms_msg from smsinbox "
         "where web_flag not in ('0','-1') limit 1000")
 
     smsinbox_sms = db.read(query=query, resource="sensor_data")
