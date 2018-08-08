@@ -15,8 +15,8 @@ def main(mc):
 
 	ongoing = []
 
-	sc = mc.get('server_config')
-	
+	sc = mem.server_config()
+
  	proc_limit = sc["io"]["proc_limit"]
 	
 	while True:
@@ -67,5 +67,5 @@ if __name__ == "__main__":
 		main(mc)
 	except KeyboardInterrupt:
 		print 'Unexpected Error'
+	mc.set('alertgenexec', False)
 	    	
-mc.set('alertgenexec', False)
