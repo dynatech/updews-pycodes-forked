@@ -107,8 +107,10 @@ class GsmModem:
             print self.at_cmd('AT+CMGF=0').rstrip('\r\n')
             print "Disabling unsolicited CMTI",
             print self.at_cmd('AT+CNMI=2,0,0,0,0').rstrip('\r\n')
+            return True
         except AttributeError:
             print ""
+            return None
 
     def get_all_sms(self, network):
         allmsgs = 'd' + self.at_cmd('AT+CMGL=4')
