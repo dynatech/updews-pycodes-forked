@@ -72,7 +72,8 @@ def dyna_to_sandbox():
         print out, err
         sys.exit()
     # max_sms_id = 4104000
-    print "Max sms_id from sandbox smsinbox:", max_sms_id, "done"
+    print "Max sms_id from sandbox smsinbox:", max_sms_id
+    print  "done\n"
 
     # dump table entries
     print "Dumping tables from gsm host to sandbox dump file ...", 
@@ -90,11 +91,11 @@ def dyna_to_sandbox():
         print out, err
     else:
         print ">> No errors"
-    print 'done'
+    print 'done\n'
 
     # write to local db
     print "Dumping tables from gsm host to sandbox dump file ...", 
-    command = "mysql -h %s -u %s %s < %s -p%s" % (sb_host, user, name, f_dump, password)
+    command = "mysql -h %s -u %s %s < %s" % (sb_host, user, name, f_dump)
     print command
     p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, 
         stderr=subprocess.STDOUT)
@@ -104,15 +105,15 @@ def dyna_to_sandbox():
         print out, err
     else:
         print ">> No errors"
-    print 'done'
+    print 'done\n'
 
     # delete dump file
-    print "Deleting dump file ...", 
+    print "Deleting dump file ..."
     command = "rm %s" % (f_dump)
     p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, 
         stderr=subprocess.STDOUT)
     out, err = p.communicate()
-    print 'done'
+    print 'done\n'
 
 def get_max_index_from_table(table_name):
     """
