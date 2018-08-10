@@ -28,6 +28,8 @@ def main():
     # reverse default of reset_variables 
     if args.reset_variables:
         args.reset_variables = False
+    else:
+        args.reset_variables = True
     static.set_variables_old(args.reset_variables)
     static.set_static_variable()
 
