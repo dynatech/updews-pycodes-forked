@@ -1,0 +1,44 @@
+[sb_local]
+host = 127.0.0.1
+port = 3306
+user = pysys_local
+password = NaCAhztBgYZ3HwTkvHwwGVtJn5sVMFgg
+schema = senslopedb
+
+
+[sb_remote]
+host = 192.168.150.128
+port = 3306
+user = pysys_local
+password = NaCAhztBgYZ3HwTkvHwwGVtJn5sVMFgg
+schema = senslopedb
+
+
+[gsm_pi]
+host = 192.168.150.75
+port = 3306
+user = pysys_local
+password = NaCAhztBgYZ3HwTkvHwwGVtJn5sVMFgg
+schema = comms_db
+
+
+[ubuntu75_pysys_local]
+host = 192.168.150.75
+port = 3306
+user = pysys_local
+password = NaCAhztBgYZ3HwTkvHwwGVtJn5sVMFgg
+schema = senslopedb
+
+[staff1]
+host = 127.0.0.1
+port = 3306
+user = dyna_staff
+password = accelerometer
+schema = senslopedb
+
+[smsdb_remote]
+host = 192.168.150.90
+port = 3306
+user = pysys_local
+password = NaCAhztBgYZ3HwTkvHwwGVtJn5sVMFgg
+schema = senslopedb
