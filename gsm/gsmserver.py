@@ -122,7 +122,7 @@ def send_messages_from_db(gsm = None, table = 'users', send_status = 0,
     
     print ">> Sending messagess from db"
 
-    table_mobile = static.get_mobiles(table, host)
+    table_mobile = static.get_mobiles(table=table, resource="sms_data")
     inv_table_mobile = {v: k for k, v in table_mobile.iteritems()}
     # print inv_table_mobile
         
