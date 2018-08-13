@@ -127,9 +127,27 @@ def send_messages_from_db(gsm = None, table = 'users', send_status = 0,
     # print inv_table_mobile
         
     msglist = []
+    error_stat_list = []
+    today = dt.today().strftime("%Y-%m-%d %H:%M:%S")
     for stat_id, mobile_id, outbox_id, gsm_id, sms_msg in allmsgs:
-        smsItem = modem.GsmSms(stat_id, inv_table_mobile[mobile_id], sms_msg,'')
-        msglist.append([smsItem, gsm_id, outbox_id, mobile_id])
+        try:
+            smsItem = modem.GsmSms(stat_id, inv_table_mobile[mobile_id], sms_msg,'')
+            msglist.append([smsItem, gsm_id, outbox_id, mobile_id])
+
+        except KeyError:
+            print ">> Unknown mobile_id:", mobile_id
+            error_stat_list.append((stat_id,-1,today,gsm_id,outbox_id,mobile_id))
+        
+            continue
+
+    if len(error_stat_list) > 0:
+        print ">> Ignoring invalid messages...",
+        smstables.set_send_status(table, error_stat_list)
+        print "done"
+
+    if len(msglist) == 0:
+        print ">> No valid message to send"
+        return
         
     allmsgs = msglist
 
