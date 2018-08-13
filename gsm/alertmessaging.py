@@ -30,7 +30,7 @@ def monitoring_start(site_id, ts_last_retrigger):
     query += "ORDER BY ts DESC LIMIT 3"
 
     # previous positive alert
-    prev_pub_alerts = pd.DataFrame(list(dbio.read(query)),
+    prev_pub_alerts = pd.DataFrame(list(dbio.read(query=query,resource="sensor_data")),
                                       columns=['ts', 'ts_updated'])
 
     if len(prev_pub_alerts) == 1:
@@ -73,7 +73,7 @@ def rainfall_details(site_id, start_monitor, ts_last_retrigger):
     query += "INNER JOIN "
     query += "  rainfall_gauges "
     query += "USING (rain_id) "
-    data_source_df = pd.DataFrame(list(dbio.read(query)),
+    data_source_df = pd.DataFrame(list(dbio.read(query=query,resource="sensor_data")),
                                   columns=['gauge_name'])
     data_source = ':' + ','.join(set(data_source_df['gauge_name']))
     return data_source
@@ -89,7 +89,7 @@ def subsurface_details(site_id, start_monitor, ts_last_retrigger):
     query += "  WHERE site_id = '%s' " %site_id
     query += "  ) AS sensors "
     query += "USING (tsm_id)"
-    data_source_df = pd.DataFrame(list(dbio.read(query)),
+    data_source_df = pd.DataFrame(list(dbio.read(query=query,resource="sensor_data")),
                                   columns=['node', 'tsm_name'])
     data_source_df = data_source_df.drop_duplicates(['node', 'tsm_name'])
     tsm_source_df = data_source_df.groupby('tsm_name', as_index=False)
@@ -133,7 +133,7 @@ def surficial_details(site_id, start_monitor, ts_last_retrigger):
     query += "  USING(history_id) "
     query += "  ) AS names "
     query += "USING (marker_id) "
-    data_source_df = pd.DataFrame(list(dbio.read(query)),
+    data_source_df = pd.DataFrame(list(dbio.read(query=query,resource="sensor_data")),
                                   columns=['marker_name'])
     data_source = ':' + ','.join(set(data_source_df['marker_name']))
     
@@ -229,7 +229,7 @@ def check_alerts():
             "sites "
             "USING (site_id)") % (ts_now)
 
-    alert_msgs = dbio.read(query,'check_alerts')
+    alert_msgs = dbio.read(query=query,resource="sensor_data")
 
     print "alert messages:", alert_msgs
 
@@ -240,7 +240,7 @@ def get_name_of_staff(number):
         "inner join users t2 on t1.user_id = t2.user_id where "
         "t1.sim_num = '%s';") % (number)
 
-    return dbio.read(query=query,host='gsm2')[0]
+    return dbio.read(query=query,resource="sms_data")[0]
 
 def process_ack_to_alert(sms):
     try:
