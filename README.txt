@@ -1,33 +1,34 @@
 README.txt
+Created by: Supervising SRS - Prado Bognot
 
-*test svn commit using an added user (orutra)
+/*****************************************************************************/
 
-/*****************************************************************/
-Feb 7, 2014
+QUICK SETUP:
 
-We separate our codes into 2 folders (Experimental & Stable).	
+For a quick setup of requirements, run the shell script 'setup.sh' using the 
+command below:
 
-/*****************************************************************/
-Feb 7, 2014
+sh setup.sh
 
-Commit instructions
+- setup.sh will install the following:
+a. Required anaconda libraries
+b. Required linux packages
+c. Required pip packages
 
-Use the following symbols for a visual guide on what changes we did
-to our project:
+/*****************************************************************************/
 
-"+" -> Added a file or files
-"-" -> Modified a file
-"X" -> Deleted a file or files
-"*" -> Bug Fixed
 
-Ex:
-	+ Added a new python script named "XXX.py" for uploading images on
-		the UP DEWS Website
-	- Added a function to the "XXX.py" script. The new function adds a
-		new filtering mechanism for data interpretation
-	X Deleted old python script "too-old.py"
-	* Fixed bug that causes a crash on the uploading proces of "XXX.py"
+ADDITIONAL ESSENTIAL LIBRARY:
 
-/*****************************************************************/
+a. Anaconda library
+- If your code uses an essential anaconda library that isn't part of the 
+"requirements_conda.txt" file then, do the following:
 
-test commit -> for Ahkotest commit -> prado and prado
+	i. Go to your "updews-pycodes" directory
+	ii. Export your list of anaconda libraries
+
+		conda list --export > requirements_conda.txt
+
+	iii. Verify if the new anaconda library is present in the file
+	iv. If verified that library name is part of "requirements_conda.txt" then,
+		don't forget to git commit and push your changes to the file.
