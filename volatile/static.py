@@ -72,12 +72,20 @@ def set_static_variable(name=""):
     if name != "":
         query += " where name = '%s'" % (name)
 
+    mc = memory.get_handle()
+    sc = mc.get('SERVER_CONFIG')
+    print sc["resource_connection"]["sensor_data"]
+
+
     try:
-        variables = dbio.read(
-          query = query, identifier = 'Set static_variables')
+        variables = dbio.read(query=query,resource='sensor_data')
     except MySQLdb.ProgrammingError:
         print ">> static_variables table does not exist on host"
         return
+
+    if not variables:
+        print "Error getting static variable information"
+        return False
     
     for data in variables:
         variable_info = VariableInfo(data)
@@ -226,7 +234,7 @@ def get_mobiles(table=None,host=None,reset_variables=False,resource=None):
 
         print "Force reset user mobiles in memory"
         
-        query = "select mobile_id, sim_num, gsm_id from user_mobile"
+        query = "select mobile_id, sim_num, gsm_id from user_mobile group by sim_num"
 
         nums = dbio.read(query=query, identifier='get_mobile_sim_nums', 
             host=host, resource=resource)
@@ -341,8 +349,8 @@ def set_variables_old(reset_variables):
 
     print "Set mobile numbers to memory",
     mobiles_host = sc["resource"]["mobile_nums_db"]
-    get_mobiles("loggers", mobiles_host, reset_variables, "sms_data")
-    get_mobiles("users", mobiles_host, reset_variables, "sms_data")
+    get_mobiles(table="loggers", reset_variables=reset_variables, resource="sms_data")
+    get_mobiles(table="users", reset_variables=reset_variables, resource="sms_data")
     print "done"
 
     try:

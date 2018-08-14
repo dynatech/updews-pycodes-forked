@@ -7,6 +7,10 @@ import ConfigParser
 def set_cnf(file='', static_name=''):
     cnffiletxt = file
     cfile = os.path.dirname(os.path.realpath(__file__)) + '/' + cnffiletxt
+
+    if not os.path.isfile(cfile):
+        raise ValueError("File does not exist: %s" % (cfile))
+
     cnf = ConfigParser.ConfigParser()
     cnf.read(cfile)
 
@@ -33,3 +37,5 @@ def set_cnf(file='', static_name=''):
         config_dict[section.lower()]= options
     # print config_dict
     memory.set(static_name, config_dict)
+
+    return True

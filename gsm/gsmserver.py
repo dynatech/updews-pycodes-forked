@@ -122,14 +122,32 @@ def send_messages_from_db(gsm = None, table = 'users', send_status = 0,
     
     print ">> Sending messagess from db"
 
-    table_mobile = static.get_mobiles(table, host)
+    table_mobile = static.get_mobiles(table=table, resource="sms_data")
     inv_table_mobile = {v: k for k, v in table_mobile.iteritems()}
     # print inv_table_mobile
         
     msglist = []
+    error_stat_list = []
+    today = dt.today().strftime("%Y-%m-%d %H:%M:%S")
     for stat_id, mobile_id, outbox_id, gsm_id, sms_msg in allmsgs:
-        smsItem = modem.GsmSms(stat_id, inv_table_mobile[mobile_id], sms_msg,'')
-        msglist.append([smsItem, gsm_id, outbox_id, mobile_id])
+        try:
+            smsItem = modem.GsmSms(stat_id, inv_table_mobile[mobile_id], sms_msg,'')
+            msglist.append([smsItem, gsm_id, outbox_id, mobile_id])
+
+        except KeyError:
+            print ">> Unknown mobile_id:", mobile_id
+            error_stat_list.append((stat_id,-1,today,gsm_id,outbox_id,mobile_id))
+        
+            continue
+
+    if len(error_stat_list) > 0:
+        print ">> Ignoring invalid messages...",
+        smstables.set_send_status(table, error_stat_list)
+        print "done"
+
+    if len(msglist) == 0:
+        print ">> No valid message to send"
+        return
         
     allmsgs = msglist
 
@@ -213,10 +231,10 @@ def simulate_gsm(network='simulate'):
     
     smsinbox_sms = []
 
-    query = """select sms_id, timestamp, sim_num, sms_msg from smsinbox
-        where web_flag not in ('0','-1') limit 1000"""
+    query = ("select sms_id, timestamp, sim_num, sms_msg from smsinbox "
+        "where web_flag not in ('0','-1') limit 1000")
 
-    smsinbox_sms = db.read(query, "simulate", "sandbox")
+    smsinbox_sms = db.read(query=query, resource="sensor_data")
 
     logger_mobile_sim_nums = static.get_mobiles('loggers', mobile_nums_db)
     user_mobile_sim_nums = static.get_mobiles('users', mobile_nums_db)
@@ -267,23 +285,23 @@ def simulate_gsm(network='simulate'):
     if len(sms_id_ok)>0:
 
         if loggers_count > 0:
-            db.write(query_loggers, 'simulate_gsm', False, smsdb_host)
+            db.write(query=query_loggers, resource="sms_data")
 
         if users_count > 0:
-            db.write(query_users, 'simulate_gsm', False, smsdb_host)
+            db.write(query=query_users, resource="sms_data")
         
         sms_id_ok = str(sms_id_ok).replace("L","")[1:-1]
         query = ("update smsinbox set web_flag = '0' "
             "where sms_id in (%s);") % (sms_id_ok)
-        db.write(query, 'simulate_gsm', False, sms_mirror_host)
+        db.write(query=query, resource="sensor_data")
 
     if len(sms_id_unk)>0:
         # print sms_id_unk
         sms_id_unk = str(sms_id_unk).replace("L","")[1:-1]
         query = ("update smsinbox set web_flag = '-1' "
             "where sms_id in (%s);") % (sms_id_unk)
-        db.write(query, 'simulate_gsm', False, sms_mirror_host)
-    
+        db.write(query=query, resource="sensor_data")
+
     sys.exit()
 
 def log_csq(gsm, gsm_id):
@@ -461,7 +479,8 @@ def get_gsm_modules(reset_val = False):
         print "Getting gsm modules information..."
         query = ("select gsm_id, gsm_name, gsm_sim_num, network_type, ser_port, "
             "pwr_on_pin, ring_pin, module_type from gsm_modules")
-        result_set = db.read(query,'get_gsm_ids', gsm_modules_host)
+
+        result_set = db.read(query=query, resource="sms_data")
 
         gsm_modules = dict()
         for gsm_id, name, num, net, port, pwr_on_pin, ring_pin, module in result_set:
