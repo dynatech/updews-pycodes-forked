@@ -16,6 +16,7 @@ import pandas as pd
 import numpy as np
 import sys
 from datetime import datetime, time, timedelta
+import time as mytime
 from scipy.interpolate import UnivariateSpline
 from scipy.signal import gaussian
 from scipy.ndimage import filters
@@ -587,7 +588,7 @@ def plot_trending_analysis(marker_id,date_time,time,displacement,time_array,disp
     #### Save fig
     plt.savefig(plot_path+filename,facecolor='w', edgecolor='w',orientation='landscape',mode='w',bbox_inches = 'tight')
 
-def evaluate_trending_filter(marker_data_df,to_plot):
+def evaluate_trending_filter(marker_data_df,to_plot,to_json=False):
     """
     Function used to evaluate the Onset of Acceleration (OOA) Filter
     
@@ -620,15 +621,19 @@ def evaluate_trending_filter(marker_data_df,to_plot):
     spline_acceleration = spline.derivative(n=2)
     
     #### Resample time for plotting and confidence interval evaluation
-    time_array = np.linspace(time[-1],time[0],1000)
+    sample_num = 1000
+    if to_json == True:
+        sample_num = 20
+    
+    time_array = np.linspace(time[-1],time[0],sample_num)
 
     #### Compute for the interpolated displacement, velocity, and acceleration for data points using the computed spline
-    disp_int = spline(time_array)    
+    disp_int = spline(time_array)
     velocity = spline_velocity(time_array)
     acceleration = spline_acceleration(time_array)
     velocity_data = np.abs(spline_velocity(time))
     acceleration_data = np.abs(spline_acceleration(time))
-        
+
     #### Compute for critical, upper and lower bounds of acceleration for the current data point
     crit_acceleration, acceleration_upper_threshold, acceleration_lower_threshold = compute_critical_acceleration(np.abs(velocity[-1]))
     
@@ -643,7 +648,29 @@ def evaluate_trending_filter(marker_data_df,to_plot):
     if to_plot:        
         plot_trending_analysis(marker_data_df.marker_id.iloc[0],marker_data_df.ts.iloc[0],time,displacement,time_array,disp_int,velocity,acceleration,velocity_data,acceleration_data)
     
-    return trend_alert
+    if to_json:
+        ts_list = pd.to_datetime(marker_data_df.ts.values)
+        time_arr = pd.to_datetime(ts_list[-1]) + np.array(map(lambda x: timedelta(days = x), time_array))
+        
+        velocity_data = list(reversed(velocity_data))
+        acceleration_data = list(reversed(acceleration_data))
+        velocity_to_plot = np.linspace(min(velocity_data),max(velocity_data),20)
+        acceleration_to_plot, acceleration_upper_bound, acceleration_lower_bound = compute_critical_acceleration(velocity_to_plot)
+        
+        velocity_data = np.log(velocity_data)
+        acceleration_data = np.log(acceleration_data)
+        velocity_to_plot = np.log(velocity_to_plot)
+        acceleration_to_plot = np.log(acceleration_to_plot)
+        acceleration_upper_bound = np.log(acceleration_upper_bound)
+        acceleration_lower_bound = np.log(acceleration_lower_bound)
+        
+        ts_list = map(lambda x: mytime.mktime(x.timetuple())*1000, ts_list)
+        time_arr = map(lambda x: mytime.mktime(x.timetuple())*1000, time_arr)
+        
+        return_json = {'av':{'v':list(velocity_data),'a':list(acceleration_data),'v_threshold':list(velocity_to_plot),'a_threshold_line':list(acceleration_to_plot),'a_threshold_up':list(acceleration_upper_bound),'a_threshold_down':list(acceleration_lower_bound)},'dvt':{'gnd':{'ts':list(ts_list),'surfdisp':list(displacement)},'interp':{'ts':list(time_arr),'surfdisp':list(disp_int)}},'vat':{'v_n':list(velocity),'a_n':list(acceleration),'ts_n':list(time_arr)}}
+        return return_json
+    else:
+        return trend_alert
 
 def evaluate_marker_alerts(marker_data_df,ts):
     """
@@ -842,7 +869,6 @@ def generate_surficial_alert(site_id = None,ts = None):
         ### Plot the surficial data
         plot_site_meas(surficial_data_to_plot,site_id,ts)
     
-    print marker_alerts
     return surficial_data_df
 
 #Call the generate_surficial_alert() function

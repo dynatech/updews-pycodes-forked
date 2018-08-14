@@ -15,6 +15,13 @@ temprawlist=[]
 buff=[]
 SOMS=[]
 
+conversion = ['A','B','C','D','E','F','G','H','I'
+,'J','K','L','M','N','O','P','Q','R','S','T','U'
+,'V','W','X','Y','Z','a','b','c','d','e','f','g'
+,'h','i','j','k','l','m','n','o','p','q','r','s'
+,'t','u','v','w','x','y','z','0','1','2','3','4'
+,'5','6','7','8','9','+','/']
+
 def v1(sms):
     """
     - The process of parsing version 1 subsurface data.
@@ -62,7 +69,11 @@ def v1(sms):
     tsm_name = line[0:4]
     print 'SITE: ' + tsm_name
     ##msgdata = line[5:len(line)-11] #data is 6th char, last 10 char are date
-    msgdata = (line.split('*'))[1]
+    try:
+        msgdata = (line.split('*'))[1]
+    except IndexError:
+        raise ValueError("Wrong message construction")
+        
     print 'raw data: ' + msgdata
     #getting date and time
     #msgdatetime = line[-10:]
@@ -515,3 +526,95 @@ def soms_parser(msgline,mode,div,err):
             
 
     return rawlist
+
+def b64Parser(sms):
+    msg = sms.msg
+    print msg
+    if len(msg.split("*")) == 4:
+        msgsplit = msg.split('*')
+		
+        tsm_name = msgsplit[0]
+        if len(tsm_name) != 5:
+            raise ValueError("length of tsm_name != 5")
+
+        dtype = msgsplit[1]
+        #print dtype
+        if len(dtype) == 2:
+            dtype = b64_to_dec(dtype)
+        else:
+            raise ValueError("length of dtype != 2")
+        
+        datastr = msgsplit[2]
+        if len(datastr) == 0:
+            raise ValueError("length of data == 0")
+        ts = msgsplit[3]
+        ts_patterns = ['%y%m%d%H%M%S', '%Y-%m-%d %H:%M:%S']
+        timestamp = ''        
+        if len(ts) not in [6,12]:
+            raise ValueError("length of ts != 6 or 12")
+            
+        for pattern in ts_patterns:
+            try:
+                timestamp = dt.strptime(ts,pattern).strftime('%Y-%m-%d %H:%M:00')
+                break
+            except ValueError:
+                print "Error: wrong timestamp format", ts, "for pattern", pattern
+
+        outl = []
+        if dtype in [11,12,32,33]:
+            name_df = 'tilt_'+tsm_name.lower()
+            n = 9 # 9 chars per node
+            sd = [datastr[i:i+n] for i in range(0,len(datastr),n)]
+            for piece in sd:
+                try:
+                    ID = b64_to_dec(piece[0])
+                    msgID = dtype
+                    xd = b64_twos_comp(b64_to_dec(piece[1:3]))
+                    yd = b64_twos_comp(b64_to_dec(piece[3:5]))
+                    zd = b64_twos_comp(b64_to_dec(piece[5:7]))
+                    bd = b64_twos_comp(b64_to_dec(piece[7:9]))
+                    line = {"ts":timestamp, "node_id":ID, "type_num":msgID,
+                    "xval":xd, "yval":yd, "zval":zd, "batt":bd}
+                    outl.append(line)
+                except ValueError:
+                    print ">> b64 Value Error detected.", piece,
+                    print "Piece of data to be ignored"
+                    return
+        #elif dtype in [110,111,112,113,21,26,10,13]: # wala pang support for v2 bradcast soms
+        elif dtype in [110,113,10,13]: # wala pang support for v2 bradcast soms
+            name_df = 'soms_'+tsm_name.lower() 
+            n = 4
+            sd = [datastr[i:i+n] for i in range(0,len(datastr),n)]
+            for piece in sd:
+                try:
+                    ID = b64_to_dec(piece[0])
+                    msgID = dtype
+                    soms = b64_to_dec(piece[1:4])
+                    line = {"ts":timestamp, "node_id":ID, "type_num":msgID,
+                    "mval1":soms, "mval2":0}
+                    outl.append(line)
+                except ValueError:
+                    print ">> b64 Value Error detected.", piece,
+                    print "Piece of data to be ignored"
+                    return
+        else:
+            raise ValueError("dtype not recognized")
+
+    else:
+        raise ValueError("msg was not split into 3")
+    df = pd.DataFrame(outl)
+    data = smsclass.DataTable(name_df,df)
+    return data
+
+def b64_to_dec(b64):
+    dec = 0
+    for i in range (0,len(b64)):
+        dec = dec + ((64**i)*int(conversion.index(b64[len(b64)-(i+1)])))
+    return dec
+            
+def b64_twos_comp(num):
+    sub = 4096
+    if num > 2048:  
+        return num - sub
+    else:
+        return num

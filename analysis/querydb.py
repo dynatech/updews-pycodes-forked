@@ -464,7 +464,7 @@ def get_soms_raw(tsm_name = "", from_time = "", to_time = "", type_num="", node_
         query += " and node_id = '%s'" %node_id
     
     if type_num:
-        query += " and msid = '%s'" %type_num
+        query += " and type_num = '%s'" %type_num
         
     df =  db.df_read(query)
     

@@ -6,11 +6,12 @@ import re
 import volatile.memory as mem
 from datetime import datetime as dt
 from datetime import timedelta as td
+import warnings
 
 try:
     import RPi.GPIO as GPIO
 except ImportError:
-    print "Warning: RPi.GPIO module Skipping import"
+    warnings.warn("Warning: RPi.GPIO module Skipping import")
 
 class ResetException(Exception):
     pass
@@ -106,8 +107,10 @@ class GsmModem:
             print self.at_cmd('AT+CMGF=0').rstrip('\r\n')
             print "Disabling unsolicited CMTI",
             print self.at_cmd('AT+CNMI=2,0,0,0,0').rstrip('\r\n')
+            return True
         except AttributeError:
             print ""
+            return None
 
     def get_all_sms(self, network):
         allmsgs = 'd' + self.at_cmd('AT+CMGL=4')

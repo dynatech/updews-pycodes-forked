@@ -72,7 +72,8 @@ def dyna_to_sandbox():
         print out, err
         sys.exit()
     # max_sms_id = 4104000
-    print "Max sms_id from sandbox smsinbox:", max_sms_id, "done"
+    print "Max sms_id from sandbox smsinbox:", max_sms_id
+    print  "done\n"
 
     # dump table entries
     print "Dumping tables from gsm host to sandbox dump file ...", 
@@ -90,11 +91,11 @@ def dyna_to_sandbox():
         print out, err
     else:
         print ">> No errors"
-    print 'done'
+    print 'done\n'
 
     # write to local db
     print "Dumping tables from gsm host to sandbox dump file ...", 
-    command = "mysql -h %s -u %s %s < %s -p%s" % (sb_host, user, name, f_dump, password)
+    command = "mysql -h %s -u %s %s < %s" % (sb_host, user, name, f_dump)
     print command
     p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, 
         stderr=subprocess.STDOUT)
@@ -104,15 +105,15 @@ def dyna_to_sandbox():
         print out, err
     else:
         print ">> No errors"
-    print 'done'
+    print 'done\n'
 
     # delete dump file
-    print "Deleting dump file ...", 
+    print "Deleting dump file ..."
     command = "rm %s" % (f_dump)
     p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, 
         stderr=subprocess.STDOUT)
     out, err = p.communicate()
-    print 'done'
+    print 'done\n'
 
 def get_max_index_from_table(table_name):
     """
@@ -129,7 +130,7 @@ def get_max_index_from_table(table_name):
     smsdb_host = sc["hosts"][sc["resource"]["smsdb"]]
     user = sc["db"]["user"]
     password = sc["db"]["password"]
-    name = sc["db"]["name"]
+    name = sc["db"]["smsdb_name"]
 
     command = ("mysql -u %s -h %s -e 'select max(inbox_id) from %s.smsinbox_%s "
         "where gsm_id!=1' -p%s") % (user, smsdb_host, name, table_name, 
@@ -180,6 +181,7 @@ def import_sql_file_to_dyna(table, max_inbox_id, max_index_last_copied):
     host_ip2 = sc["hosts"][smsdb2_host]
     user = sc["db"]["user"]
     password = sc["db"]["password"]
+    smsdb_name = sc["db"]["smsdb_name"]
     name = sc["db"]["name"]
     logsdir = sc["fileio"]["logsdir"]
     sqldumpsdir = sc["fileio"]["sqldumpsdir"]
@@ -195,8 +197,8 @@ def import_sql_file_to_dyna(table, max_inbox_id, max_index_last_copied):
 
     # export files from the table and dump to a file
 
-    command = ("mysql -e \"%s\" -h%s senslopedb -upysys_local -p%s --xml >"
-            " %s" % (copy_query, host_ip, password, f_dump))
+    command = ("mysql -e \"%s\" -h%s %s -upysys_local -p%s --xml >"
+            " %s" % (copy_query, host_ip, smsdb_name, password, f_dump))
     p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, 
         stderr=subprocess.STDOUT)
     out, err = p.communicate()

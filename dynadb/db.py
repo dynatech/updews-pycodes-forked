@@ -253,7 +253,8 @@ def read(query='', identifier='', host='local',
         print "MySQLdb.OperationalError on ",
         print caller_func
     except (MySQLdb.Error, MySQLdb.Warning) as e:
-        print(e)
+        print ">> MySQL Error or warning: ", 
+        print e, "from", 
         print caller_func
     except KeyError:
         print "KeyError on ",

@@ -151,6 +151,7 @@ def summary_writer(site_id, site_code, gauge_name, rain_id, twoyrmax, halfmax,
         advisory='---'
 
     if write_alert or ralert == 1:
+        alert = ['E']
         if qdb.does_table_exist('rainfall_alerts') == False:
             #Create a site_alerts table if it doesn't exist yet
             qdb.create_rainfall_alerts()
@@ -159,7 +160,6 @@ def summary_writer(site_id, site_code, gauge_name, rain_id, twoyrmax, halfmax,
             if one >= halfmax * 0.75 or three >= twoyrmax * 0.75:
                 alert = ['x']
         else:
-            alert = []
             if one >= halfmax:
                 alert += ['a']
             if three >= twoyrmax:

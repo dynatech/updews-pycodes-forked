@@ -57,10 +57,14 @@ def uts(sms):
 
     if conversion_count == 0:
         print ">> Error: no successful conversion"
-        return False
+        raise ValueError("No successful conversion of values")
 
-    ts = re.search("(?<=\*)[0-9]{12}(?=$)",sms.msg).group(0)
-    ts = dt.strptime(ts,"%y%m%d%H%M%S").strftime("%Y-%m-%d %H:%M:%S")
+    try:
+        ts = re.search("(?<=\*)[0-9]{12}(?=$)",sms.msg).group(0)
+        ts = dt.strptime(ts,"%y%m%d%H%M%S").strftime("%Y-%m-%d %H:%M:%S")
+    except AttributeError:
+        raise ValueError("No valid timestamp recognized")
+
     values["ts"] = ts
 
     df_ext_values = pd.DataFrame([values])
