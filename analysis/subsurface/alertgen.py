@@ -81,12 +81,11 @@ def main(tsm_name='', end='', end_mon=False):
 
     tsm_props = qdb.get_tsm_list(tsm_name)[0]
     data = proc.proc_data(tsm_props, window, sc)
-        
     tilt = data.tilt[window.start:window.end]
     lgd = data.lgd
     tilt = tilt.reset_index().sort_values('ts',ascending=True)
     
-    if lgd == None:
+    if lgd.empty:
         qdb.print_out('%s: no data' %tsm_name)
         return
 
