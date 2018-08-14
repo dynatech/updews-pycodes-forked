@@ -13,10 +13,13 @@ site_id = int(sys.argv[1])
 marker_id = int(sys.argv[2])
 ts = sys.argv[3].replace("n",'').replace("T"," ").replace("%20"," ")
 
-num_pts = sc['surficial']['surficial_num_pts']
+def get_marker_trending_analysis_json(site_id, marker_id, ts):
+    num_pts = sc['surficial']['surficial_num_pts']
+    
+    surficial_data_df = ma.get_surficial_data(site_id,ts,num_pts)
+    marker_data_df = surficial_data_df[surficial_data_df.marker_id==marker_id]
+    return_json = ma.evaluate_trending_filter(marker_data_df,to_plot=False,to_json=True)
+    
+    print "web_plots=" + json.dumps(return_json)
 
-surficial_data_df = ma.get_surficial_data(site_id,ts,num_pts)
-marker_data_df = surficial_data_df[surficial_data_df.marker_id==marker_id]
-return_json = ma.evaluate_trending_filter(marker_data_df,to_plot=False,to_json=True)
-
-print json.dumps(return_json)
+get_marker_trending_analysis_json(site_id, marker_id, ts)
