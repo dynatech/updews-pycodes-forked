@@ -4,9 +4,9 @@ import analysis.querydb as query
 from analysis.subsurface import filterdata as fd
 
 site_column = sys.argv[1]
-start_date = sys.argv[2]
-end_date = sys.argv[3]
-node_id = sys.argv[4]
+start_date = sys.argv[2].replace("n",'').replace("T"," ").replace("%20"," ")
+end_date = sys.argv[3].replace("n",'').replace("T"," ").replace("%20"," ")
+node_id = int(sys.argv[4])
 version = int(sys.argv[5])
 
 #site_column = "agbta"
@@ -24,10 +24,10 @@ version = int(sys.argv[5])
 accel_id = [1]
 if version == 2:
     accel_id.append(2)
-
-return_data = pd.DataFrame()
     
 def getDF():
+    return_data = pd.DataFrame()
+    
     for a_id in accel_id:
         raw_data = query.get_raw_accel_data(
                 tsm_name = site_column, from_time = start_date,
@@ -36,14 +36,14 @@ def getDF():
         
         filtered_data = fd.apply_filters(raw_data)
         
-        combined_data = pd.DataFrame({"raw":[raw_data],"filtered":[filtered_data]});
+        combined_data = pd.DataFrame({"data": [raw_data, filtered_data], "type": ["raw", "filtered"]})
         
         if len(accel_id) == 1:
             return_data["v1"] = [combined_data]
         else:
             return_data[a_id] = [combined_data]
         
-    print return_data.to_json(orient = "records", date_format = "iso") \
+    print "web_plots=" + return_data.to_json(orient = "records", date_format = "iso") \
                             .replace("T", " ").replace("Z", "") \
                             .replace(".000", "")
         
