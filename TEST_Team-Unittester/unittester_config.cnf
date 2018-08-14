@@ -1,0 +1,90 @@
+[get_raw_accel_data]
+test_1 ={"tsm_name":"labb", "from_time":"2018-07-25 12:00", "to_time":"2018-07-26 12:00"}>output\\get_raw_accel_data\\trial_1.p>df
+test_2 ={"tsm_id":"15"}>output\\get_raw_accel_data\\trial_2.p>df
+test_3 ={"tsm_id":"1", "to_time":"2010-04-23 12:00"}>output\\get_raw_accel_data\\trial_3.p>df
+test_4 ={"tsm_id":"15", "from_time":"2015-09-08", "analysis":"True"}>output\\get_raw_accel_data\\trial_4.p>df
+test_5 ={"tsm_id":"15", "from_time":"2015-09-08", "to_time":"2015-09-09" ,"return_db":"False"}>output\\get_raw_accel_data\\trial_5.p>str
+test_6 ={"tsm_id":"1500"}>IndexError: single positional indexer is out-of-bounds>asserttrue
+test_7 ={"tsm_name":"ivyta"}> KeyError: 'tsm_id'>asserttrue
+test_8 ={"tsm_id":"1", "from_time":"birthday ko", "to_time":"2018-07-30"}>Empty Dataframe>str
+test_9 ={"tsm_name":"nurtb", "from_time":"2018-08-05", "accel_number":"3", "to_time":"2018-08-06"}>ValueError: Error accel_number>asserttrue
+test_10 ={"tsm_name":"nurtb", "node_id":"101"}>KeyError: 'tsm_id'>asserttrue
+
+
+[get_soms_raw]
+test_1 ={"tsm_name":"laysa", "from_time":"2015-01-01", "to_time":"2015-12-31", "type_num":"110", "node_id":"10"}>output\\get_soms_raw\\test_1.p>df
+test_2 ={"tsm_name":"laysa", "from_time":"2015-01-01", "to_time":"2015-12-31", "type_num":"113", "node_id":"10"}>output\\get_soms_raw\\test_2.p>df
+test_3 ={"tsm_name":"hinsa", "from_time":"2016-01-01", "to_time":"2016-03-31", "type_num": "110", "node_id":"10"}>output\\get_soms_raw\\test_3.p>df
+test_4 ={"tsm_name":"hinsa", "from_time":"2016-01-01", "to_time":"2016-03-31", "type_num": "113", "node_id":"10"}>output\\get_soms_raw\\test_4.p>df
+test_5 ={"tsm_name":"hinsa", "from_time":"2018-01-01", "to_time":"2018-08-05", "type_num": "110", "node_id":"10"}>output\\get_soms_raw\\test_5.p>df
+test_6 ={"tsm_name":"mcasb", "from_time":"2015-01-01", "to_time":"2015-12-31", "type_num": "110", "node_id":"10"}>Empty Dataframe>str
+test_7 = {"tsm_name":"", "from_time":"2015-01-01", "to_time":"2015-12-31", "type_num": "110", "node_id":"10"}>ValueError: invalid tsm_name>asserttrue
+test_8 = {"tsm_name":"laysa", "from_time":"2015-01-01", "to_time":"2015-12-31", "type_num": "110", "node_id":"40"}>Empty Dataframe>str
+test_9 = {"tsm_name":"laysa", "from_time":"2015-01-01", "to_time":"2015-12-31", "type_num": "111", "node_id":"10"}>Empty Dataframe>str
+
+
+
+[f_outlier]
+test_1={"df":"input\\SOMS_FILTER_INPUT\\SOMSdf_laysa0.p","column":"laysa","mode":"0"}>output\\f_outlier\\test_1.p>df
+test_2={"df":"input\\SOMS_FILTER_INPUT\\SOMSdf_laysa1.p","column":"laysa","mode":"1"}>output\\f_outlier\\test_2.p>df
+test_3={"df":"input\\SOMS_FILTER_INPUT\\SOMSdf_laysa0.p","column":"laysa","mode":"10"}>output\\f_outlier\\test_3.p>IndexError: list index out of range>asserttrue
+test_4={"df":"input\\SOMS_FILTER_INPUT\\SOMSdf_laysa0.p","mode":"1"}>TypeError: f_outlier() takes exactly 3 arguments (2 given)>asserttrue
+
+
+[f_undervoltage]
+test_1={"df":"input\\SOMS_FILTER_INPUT\\SOMSdf_laysa0.p","column":"laysa","node":"10"}>output\\f_undervoltage\\test_1.p>df
+test_2={"df":"input\\SOMS_FILTER_INPUT\\SOMSdf_laysa1.p","column":"laysa","node":"10"}>output\\f_undervoltage\\test_2.p>df
+
+
+[apply_filters]
+test_1 ={"dfl":"input\\filterdata\\in_test_1.p"}>output\\apply_filters\\out_test_1.p>df
+test_2 ={"dfl":"input\\filterdata\\in_test_2.p"}>output\\apply_filters\\out_test_2.p>df
+test_3 ={"dfl":"input\\filterdata\\in_test_3.p"}>output\\apply_filters\\out_test_3.p>df
+test_4 ={"dfl":"input\\filterdata\\in_test_4.p"}>output\\apply_filters\\out_test_4.p>df
+test_5 ={"dfl":"input\\filterdata\\in_test_5.p"}>output\\apply_filters\\out_test_5.p>df
+
+[orthogonal_filter]
+test_1 ={"df":"input\\filterdata\\in_test_1.p"}>output\\orthogonal_filter\\out_test_1.p>df
+test_2 ={"df":"input\\filterdata\\in_test_2.p"}>output\\orthogonal_filter\\out_test_2.p>df
+test_3 ={"df":"input\\filterdata\\in_test_3.p"}>output\\orthogonal_filter\\out_test_3.p>df
+test_4 ={"df":"input\\filterdata\\in_test_4.p"}>output\\orthogonal_filter\\out_test_4.p>df
+test_5 ={"df":"input\\filterdata\\in_test_5.p"}>output\\orthogonal_filter\\out_test_5.p>df
+
+[outlier_filter]
+test_1 ={"dff":"input\\filterdata\\in_test_1.p"}>output\\outlier_filter\\out_test_1.p>df
+test_2 ={"dff":"input\\filterdata\\in_test_2.p"}>output\\outlier_filter\\out_test_2.p>df
+test_3 ={"dff":"input\\filterdata\\in_test_3.p"}>output\\outlier_filter\\out_test_3.p>df
+test_4 ={"dff":"input\\filterdata\\in_test_4.p"}>output\\outlier_filter\\out_test_4.p>df
+test_5 ={"dff":"input\\filterdata\\in_test_5.p"}>output\\outlier_filter\\out_test_5.p>df
+
+[range_filter_accel]
+test_1 ={"df":"input\\filterdata\\in_test_1.p"}>output\\range_filter_accel\\out_test_1.p>df
+test_2 ={"df":"input\\filterdata\\in_test_2.p"}>output\\range_filter_accel\\out_test_2.p>df
+test_3 ={"df":"input\\filterdata\\in_test_3.p"}>output\\range_filter_accel\\out_test_3.p>df
+test_4 ={"df":"input\\filterdata\\in_test_4.p"}>output\\range_filter_accel\\out_test_4.p>df
+test_5 ={"df":"input\\filterdata\\in_test_5.p"}>output\\range_filter_accel\\out_test_5.p>df
+
+[resample_df]
+test_1 ={"df":"input\\filterdata\\in_test_1.p"}>output\\resample_df\\out_test_1.p>df
+test_2 ={"df":"input\\filterdata\\in_test_2.p"}>output\\resample_df\\out_test_2.p>df
+test_3 ={"df":"input\\filterdata\\in_test_3.p"}>output\\resample_df\\out_test_3.p>df
+test_4 ={"df":"input\\filterdata\\in_test_4.p"}>output\\resample_df\\out_test_4.p>df
+test_5 ={"df":"input\\filterdata\\in_test_5.p"}>output\\resample_df\\out_test_5.p>df
+
+
+[ref_get_soms_raw]
+test_1 = {"tsm_name":"laysa", "from_time":"2015-01-01", "to_time":"2015-12-31", "type_num": "110", "node_id":"10"}>output\\get_soms_raw\\test_1.p>df
+test_2 = {"tsm_name":"laysa", "from_time":"2015-01-01", "to_time":"2015-12-31", "type_num": "113", "node_id":"10"}>output\\get_soms_raw\\test_2.p>df
+test_3 = {"tsm_name":"hinsa", "from_time":"2016-01-01", "to_time":"2016-03-31", "type_num": "110", "node_id":"10"}>output\\get_soms_raw\\test_3.p>df
+test_4 = {"tsm_name":"hinsa", "from_time":"2016-01-01", "to_time":"2016-03-31", "type_num": "113", "node_id":"10"}>output\\get_soms_raw\\test_4.p>df
+test_5 = {"tsm_name":"hinsa", "from_time":"2018-01-01", "type_num": "110", "node_id":"10"}>output\\get_soms_raw\\test_5.p>df
+test_6 = {"tsm_name":"mcasb", "from_time":"2015-01-01", "to_time":"2015-12-31", "type_num": "110", "node_id":"10"}>Error value: DatabaseError: Execution failed on sql 'select * from senslopedb.soms_mcasa where ts > '2010-01-01' and node_id = '10' and type_num = '110'': (1146, "Table 'senslopedb.soms_mcasa' doesn't exist")>asserttrue
+test_7 = {"tsm_name":"", "from_time":"2015-01-01", "to_time":"2015-12-31", "type_num": "110", "node_id":"10"}>ValueError: invalid tsm_name>
+test_8 = {"tsm_name":"laysa", "from_time":"2015-01-01", "to_time":"2015-12-31", "type_num": "110", "node_id":"40">ValueError: Invalid node id. Exceeded number of nodes>asserttrue
+test_9 = {"tsm_name":"laysa", "from_time":"2015-01-01", "to_time":"2015-12-31", "type_num": "111", "node_id":"10"}>ValueError: Invalid msgid for version 3 soms sensor. Valid values are 110,113,10,13>asserttrue
+Test_10 = {"tsm_name":"laysa", "from_time":"2015-01-01", "to_time":"2015-12-31", "type_num": "116", "node_id":"40"}>ValueError: Invalid node id. Exceeded number of nodes>asserttrue
+
+
+
+
+
