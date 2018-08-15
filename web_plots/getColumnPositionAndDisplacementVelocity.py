@@ -3,8 +3,8 @@ from analysis.subsurface import vcdgen as vcd
 import pandas as pd
     
 def get_vcd_data_json(site_column, end_ts, start_ts):
-    df = vcd.vcdgen(site_column, end_ts, start_ts) 
-    print "web_plots=" + df
+    json = vcd.vcdgen(site_column, end_ts, start_ts) 
+    return "web_plots=" + json
 
 if __name__ == "__main__":
 #    site_column = "agbta"
@@ -15,4 +15,5 @@ if __name__ == "__main__":
     end_ts = sys.argv[2].replace("n",'').replace("T"," ").replace("%20"," ")
     start_ts = sys.argv[3].replace("n",'').replace("T"," ").replace("%20"," ")
     
-    get_vcd_data_json(site_column, end_ts, start_ts)
+    json = get_vcd_data_json(site_column, end_ts, start_ts)
+    print json
