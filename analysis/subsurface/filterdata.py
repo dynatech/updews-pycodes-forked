@@ -185,7 +185,7 @@ def apply_filters(dfl, orthof=True, rangef=True, outlierf=True):
         dfl = dfl.groupby(['node_id'])
         dfl = dfl.apply(range_filter_accel)  
         dfl = dfl.reset_index(drop=True)
-        dfl = dfl.reset_index(level=['ts'])
+        #dfl = dfl.reset_index(level=['ts'])
         if dfl.empty:
             return dfl[['ts','tsm_name','node_id','x','y','z']]
 
