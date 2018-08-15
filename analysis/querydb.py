@@ -5,7 +5,7 @@ import pandas as pd
 import platform
 import volatile.memory as memory 
 from sqlalchemy import create_engine
-
+import re
 curOS = platform.system()
 
 if curOS == "Windows":
@@ -224,20 +224,23 @@ def get_tsm_id_to_date(tsm_details="",tsm_id="",tsm_name="",to_time=""):
         
     return tsm_id
 
-def filter_raw_accel(df,tsm_name,option):
+
+def filter_raw_accel(accel_info,query,df):
      accelerometers = memory.get('DF_ACCELEROMETERS')  
           
-     if option.search("analysis"):
+     if re.search("analysis", accel_info['output_type']):
          df = df[df.in_use==1]
          df = df.drop(['accel_number','in_use'],axis=1)
-     elif option.search("query"):
-         return df
+     elif re.search("query", accel_info['output_type']):
+         return query
          
-     if option.search("voltf"):
-         if len(tsm_name)==5:
+     if re.search("voltf", accel_info['output_type']):
+         if len(accel_info['tsm_name'])==5:
              df = df.merge(accelerometers,how='inner', on='accel_id')
              df = df[(df.batt>=df.voltage_min) & (df.batt<=df.voltage_max)]
              df = df.drop(['voltage_min','voltage_max'],axis=1)
+             
+     return df
 
     
 def get_raw_accel_data_2(tsm_id='',tsm_name = "", from_time = "", to_time = "", 
@@ -245,9 +248,8 @@ def get_raw_accel_data_2(tsm_id='',tsm_name = "", from_time = "", to_time = "",
     
 
     tsm_details = memory.get('DF_TSM_SENSORS')
-          
-    
     tsm_details.date_deactivated=pd.to_datetime(tsm_details.date_deactivated)
+
 
     if tsm_id != '':
         tsm_name = tsm_details.tsm_name[tsm_details.tsm_id==tsm_id].iloc[0]
@@ -264,7 +266,6 @@ def get_raw_accel_data_2(tsm_id='',tsm_name = "", from_time = "", to_time = "",
     query += " AND ts <= '%s'" %to_time
     
     if node_id != '':
-        #check node_id
         if ((node_id>tsm_details.number_of_segments
              [tsm_details.tsm_id==tsm_id].iloc[0]) or (node_id<1)):
             raise ValueError('Error node_id')
@@ -272,12 +273,9 @@ def get_raw_accel_data_2(tsm_id='',tsm_name = "", from_time = "", to_time = "",
             query += ' AND node_id = %d' %node_id
         
     query += " ) times"
-    
     node_id_query = " inner join (SELECT * FROM senslopedb.accelerometers"
-
     node_id_query += " where tsm_id=%d" %tsm_id
-    
-    #check accel_number
+
     if accel_number in (1,2):
         if len(tsm_name)==5:
             node_id_query += " and accel_number = %d" %accel_number
@@ -290,18 +288,21 @@ def get_raw_accel_data_2(tsm_id='',tsm_name = "", from_time = "", to_time = "",
             
     query += (" on times.node_id = nodes.node_id"
               " and times.accel_number=nodes.accel_number")
-
-    if output_type == "":
-        df =  db.df_read(query)
-        df.columns = ['ts','tsm_name','node_id','x','y','z'
+    df =  db.df_read(query)
+    df.columns = ['ts','tsm_name','node_id','x','y','z'
                       ,'batt','accel_number','accel_id','in_use']
-        df.ts = pd.to_datetime(df.ts)
+    df.ts = pd.to_datetime(df.ts)
+    
+    if output_type == "":
+        return df
     else:
-         df = filter_raw_accel(df,tsm_name, output_type="")      
+        accel_info = {"tsm_id":tsm_id, "tsm_name":tsm_name, 
+                      "from_time":from_time, "to_time":to_time, 
+                      "accel_number":accel_number, "node_id":node_id, 
+                      "output_type":output_type}
+        return filter_raw_accel(accel_info,query,df)      
 
-    return df
-
-
+    
 def get_raw_accel_data(tsm_id='',tsm_name = "", from_time = "", to_time = "", 
                        accel_number = "", node_id ="", batt=False, 
                        analysis=False, voltf=False, return_db=True):
