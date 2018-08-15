@@ -3,6 +3,7 @@ import memcache
 import pandas.io.sql as psql
 import pandas as pd
 import platform
+import volatile.memory as memory 
 from sqlalchemy import create_engine
 
 curOS = platform.system()
@@ -208,6 +209,98 @@ def does_alert_exists(site_id, end, alert):
     return df
 
 ########################## SUBSURFACE-RELATED QUERIES ##########################
+
+
+def get_tsm_id_to_date(tsm_details="",tsm_id="",tsm_name="",to_time=""):
+
+    if tsm_details.tsm_id[tsm_details.tsm_name==tsm_name].count()>1:
+        
+        tsm_id = (tsm_details.tsm_id[(tsm_details.tsm_name==tsm_name) & 
+                                     ((tsm_details.date_deactivated>=to_time) 
+                                     | (tsm_details.date_deactivated.isnull()))
+                                    ].iloc[0])
+    else:
+        tsm_id = tsm_details.tsm_id[tsm_details.tsm_name==tsm_name].iloc[0]
+        
+    return tsm_id
+
+def filter_raw_accel(df,tsm_name,option):
+     accelerometers = memory.get('DF_ACCELEROMETERS')  
+          
+     if option.search("analysis"):
+         df = df[df.in_use==1]
+         df = df.drop(['accel_number','in_use'],axis=1)
+     elif option.search("query"):
+         return df
+         
+     if option.search("voltf"):
+         if len(tsm_name)==5:
+             df = df.merge(accelerometers,how='inner', on='accel_id')
+             df = df[(df.batt>=df.voltage_min) & (df.batt<=df.voltage_max)]
+             df = df.drop(['voltage_min','voltage_max'],axis=1)
+
+    
+def get_raw_accel_data_2(tsm_id='',tsm_name = "", from_time = "", to_time = "", 
+                       accel_number = "", node_id ="", output_type=""):
+    
+
+    tsm_details = memory.get('DF_TSM_SENSORS')
+          
+    
+    tsm_details.date_deactivated=pd.to_datetime(tsm_details.date_deactivated)
+
+    if tsm_id != '':
+        tsm_name = tsm_details.tsm_name[tsm_details.tsm_id==tsm_id].iloc[0]
+    else:
+        tsm_id = get_tsm_id_to_date(tsm_details,tsm_id,tsm_name,to_time)
+        
+        
+    query = ("SELECT ts,'%s' as 'tsm_name',times.node_id,xval,yval,zval,batt,"
+             " times.accel_number,accel_id, in_use from (select *, if(type_num"
+             " in (32,11) or type_num is NULL, 1,if(type_num in (33,12),2,0)) "
+             " as 'accel_number' from tilt_%s" %(tsm_name,tsm_name))
+
+    query += " WHERE ts >= '%s'" %from_time
+    query += " AND ts <= '%s'" %to_time
+    
+    if node_id != '':
+        #check node_id
+        if ((node_id>tsm_details.number_of_segments
+             [tsm_details.tsm_id==tsm_id].iloc[0]) or (node_id<1)):
+            raise ValueError('Error node_id')
+        else:
+            query += ' AND node_id = %d' %node_id
+        
+    query += " ) times"
+    
+    node_id_query = " inner join (SELECT * FROM senslopedb.accelerometers"
+
+    node_id_query += " where tsm_id=%d" %tsm_id
+    
+    #check accel_number
+    if accel_number in (1,2):
+        if len(tsm_name)==5:
+            node_id_query += " and accel_number = %d" %accel_number
+    elif accel_number == '':
+        pass
+    else:
+        raise ValueError('Error accel_number')
+
+    query += node_id_query + ") nodes"
+            
+    query += (" on times.node_id = nodes.node_id"
+              " and times.accel_number=nodes.accel_number")
+
+    if output_type == "":
+        df =  db.df_read(query)
+        df.columns = ['ts','tsm_name','node_id','x','y','z'
+                      ,'batt','accel_number','accel_id','in_use']
+        df.ts = pd.to_datetime(df.ts)
+    else:
+         df = filter_raw_accel(df,tsm_name, output_type="")      
+
+    return df
+
 
 def get_raw_accel_data(tsm_id='',tsm_name = "", from_time = "", to_time = "", 
                        accel_number = "", node_id ="", batt=False, 
