@@ -38,7 +38,7 @@ def main():
     try:
         server_id = mem.get("server_config")["gsmio"]["server_id"]
     except KeyError:
-        raise(">> Unable to deteremin server_id from memory")
+        raise ValueError(">> Unable to deteremine server_id from memory")
 
     DF_GSM_MODULES = mem.get("df_gsm_modules")
 
