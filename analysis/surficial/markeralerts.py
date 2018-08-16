@@ -588,6 +588,13 @@ def plot_trending_analysis(marker_id,date_time,time,displacement,time_array,disp
     #### Save fig
     plt.savefig(plot_path+filename,facecolor='w', edgecolor='w',orientation='landscape',mode='w',bbox_inches = 'tight')
 
+
+def get_logspace_and_filter_nan(df):
+    df = np.log(df)
+    df = df[~np.logical_or(np.isnan(df),np.isinf(df))]
+    
+    return df
+
 def evaluate_trending_filter(marker_data_df,to_plot,to_json=False):
     """
     Function used to evaluate the Onset of Acceleration (OOA) Filter
@@ -657,12 +664,16 @@ def evaluate_trending_filter(marker_data_df,to_plot,to_json=False):
         velocity_to_plot = np.linspace(min(velocity_data),max(velocity_data),20)
         acceleration_to_plot, acceleration_upper_bound, acceleration_lower_bound = compute_critical_acceleration(velocity_to_plot)
         
-        velocity_data = np.log(velocity_data)
-        acceleration_data = np.log(acceleration_data)
-        velocity_to_plot = np.log(velocity_to_plot)
-        acceleration_to_plot = np.log(acceleration_to_plot)
-        acceleration_upper_bound = np.log(acceleration_upper_bound)
-        acceleration_lower_bound = np.log(acceleration_lower_bound)
+        disp_int = disp_int[~np.logical_or(np.isnan(disp_int),np.isinf(disp_int))]
+        velocity = velocity[~np.logical_or(np.isnan(velocity),np.isinf(velocity))]
+        acceleration = acceleration[~np.logical_or(np.isnan(acceleration),np.isinf(acceleration))]
+        
+        velocity_data = get_logspace_and_filter_nan(velocity_data)
+        acceleration_data = get_logspace_and_filter_nan(acceleration_data)
+        velocity_to_plot = get_logspace_and_filter_nan(velocity_to_plot)
+        acceleration_to_plot = get_logspace_and_filter_nan(acceleration_to_plot)
+        acceleration_upper_bound = get_logspace_and_filter_nan(acceleration_upper_bound)
+        acceleration_lower_bound = get_logspace_and_filter_nan(acceleration_lower_bound)
         
         ts_list = map(lambda x: mytime.mktime(x.timetuple())*1000, ts_list)
         time_arr = map(lambda x: mytime.mktime(x.timetuple())*1000, time_arr)
