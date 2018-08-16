@@ -326,7 +326,7 @@ def df_read(query='', host='local', connection='', resource=''):
         resource=resource, conn_type=0)
     ret_val = None
     try:
-        df = psql.read_sql(query, db)
+        df = psql.read_sql_query(query, db)
         ret_val = df
     except KeyboardInterrupt:
         print 'Exception detected in accessing database'
