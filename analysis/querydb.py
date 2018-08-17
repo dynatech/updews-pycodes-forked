@@ -262,7 +262,7 @@ def check_timestamp(from_time, to_time):
         except ValueError:
             raise ValueError("Input to_time error")
     
-    return from_time, to_time
+    return {'from_time':from_time, 'to_time':to_time}
     
 def get_raw_accel_data_2(tsm_id='',tsm_name = "", from_time = "", to_time = "", 
                        accel_number = "", node_id ="", output_type=""):
