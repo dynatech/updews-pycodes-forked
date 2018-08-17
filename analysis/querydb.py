@@ -218,11 +218,14 @@ def get_tsm_id_to_date(tsm_details="",tsm_id="",tsm_name="",to_time=""):
         tsm_id = (tsm_details.tsm_id[(tsm_details.tsm_name==tsm_name) & 
                                      ((tsm_details.date_deactivated>=to_time) 
                                      | (tsm_details.date_deactivated.isnull()))
-                                    ].iloc[0])
+                                    ])
     else:
-        tsm_id = tsm_details.tsm_id[tsm_details.tsm_name==tsm_name].iloc[0]
-        
-    return tsm_id
+        tsm_id = tsm_details.tsm_id[tsm_details.tsm_name==tsm_name]
+    
+    if tsm_id.empty:
+        raise ValueError("Input tsm_name error")
+    else:
+        return tsm_id.iloc[0]
 
 
 def filter_raw_accel(accel_info,query,df):
@@ -242,6 +245,24 @@ def filter_raw_accel(accel_info,query,df):
              
      return df
 
+def check_timestamp(from_time, to_time):
+    if from_time=="":
+        from_time= pd.to_datetime("2010-01-01")
+    else:
+        try:
+            from_time=pd.to_datetime(from_time)
+        except ValueError:
+            raise ValueError("Input from_time error")
+    
+    if to_time=="":
+        to_time= pd.to_datetime(datetime.now())
+    else:
+        try:
+            to_time=pd.to_datetime(to_time)
+        except ValueError:
+            raise ValueError("Input to_time error")
+    
+    return from_time, to_time
     
 def get_raw_accel_data_2(tsm_id='',tsm_name = "", from_time = "", to_time = "", 
                        accel_number = "", node_id ="", output_type=""):
@@ -252,11 +273,15 @@ def get_raw_accel_data_2(tsm_id='',tsm_name = "", from_time = "", to_time = "",
 
 
     if tsm_id != '':
-        tsm_name = tsm_details.tsm_name[tsm_details.tsm_id==tsm_id].iloc[0]
+        try:
+            tsm_name = tsm_details.tsm_name[tsm_details.tsm_id==tsm_id].iloc[0]
+        except IndexError:
+            raise ValueError("Input tsm_id error")
     else:
         tsm_id = get_tsm_id_to_date(tsm_details,tsm_id,tsm_name,to_time)
         
-        
+    from_time, to_time= check_timestamp(from_time,to_time)
+    
     query = ("SELECT ts,'%s' as 'tsm_name',times.node_id,xval,yval,zval,batt,"
              " times.accel_number,accel_id, in_use from (select *, if(type_num"
              " in (32,11) or type_num is NULL, 1,if(type_num in (33,12),2,0)) "
