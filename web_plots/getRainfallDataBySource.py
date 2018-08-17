@@ -3,21 +3,7 @@ import numpy as np
 import pandas as pd
 from analysis.rainfall import rainfallalert as ra
 
-rain_gauge = sys.argv[1]
-start_date = sys.argv[2].replace("n",'').replace("T"," ").replace("%20"," ")
-end_date = sys.argv[3].replace("n",'').replace("T"," ").replace("%20"," ")
-offset = sys.argv[4].replace("n",'').replace("T"," ").replace("%20"," ")
-
-start_date = pd.to_datetime(start_date)
-end_date = pd.to_datetime(end_date)
-offset = pd.to_datetime(offset)
-
-#rain_gauge = "rain_agbta"
-#offset = pd.to_datetime("2017-11-01 00:00")
-#start_date = pd.to_datetime("2017-11-04 00:00")
-#end_date = pd.to_datetime("2017-11-11 00:00")
-
-def getRainfallData():
+def get_rainfall_data_by_source_json(rain_gauge, start_date, end_date, offset):
     data = ra.get_resampled_data(rain_gauge, offset, start_date, 
                              end_date, check_nd=False, is_realtime=False)
 
@@ -38,9 +24,26 @@ def getRainfallData():
     data = data[(data.index >= start_date)]
     data = data[(data.index <= end_date)]
     
-    print "web_plots=" + data.reset_index() \
+    return "web_plots=" + data.reset_index() \
               .to_json(orient = "records", date_format = "iso") \
               .replace("T", " ").replace("Z", "") \
               .replace(".000", "")
 
-getRainfallData()
+if __name__ == "__main__":
+    
+#    rain_gauge = sys.argv[1]
+#    start_date = sys.argv[2].replace("n",'').replace("T"," ").replace("%20"," ")
+#    end_date = sys.argv[3].replace("n",'').replace("T"," ").replace("%20"," ")
+#    offset = sys.argv[4].replace("n",'').replace("T"," ").replace("%20"," ")
+#    
+#    start_date = pd.to_datetime(start_date)
+#    end_date = pd.to_datetime(end_date)
+#    offset = pd.to_datetime(offset)
+    
+    rain_gauge = "rain_agbta"
+    offset = pd.to_datetime("2017-11-01 00:00")
+    start_date = pd.to_datetime("2017-11-04 00:00")
+    end_date = pd.to_datetime("2017-11-11 00:00")
+    
+    json_data = get_rainfall_data_by_source_json(rain_gauge, star_date, end_date, offset)
+    print json_data
