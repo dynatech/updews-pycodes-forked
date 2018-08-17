@@ -211,7 +211,7 @@ def does_alert_exists(site_id, end, alert):
 ########################## SUBSURFACE-RELATED QUERIES ##########################
 
 
-def get_tsm_id_to_date(tsm_details="",tsm_id="",tsm_name="",to_time=""):
+def get_tsm_id(tsm_details="",tsm_name="",to_time=""):
 
     if tsm_details.tsm_id[tsm_details.tsm_name==tsm_name].count()>1:
         
@@ -270,7 +270,7 @@ def get_raw_accel_data_2(tsm_id='',tsm_name = "", from_time = "", to_time = "",
 
     tsm_details = memory.get('DF_TSM_SENSORS')
     tsm_details.date_deactivated=pd.to_datetime(tsm_details.date_deactivated)
-
+    from_time, to_time= check_timestamp(from_time,to_time)
 
     if tsm_id != '':
         try:
@@ -278,9 +278,9 @@ def get_raw_accel_data_2(tsm_id='',tsm_name = "", from_time = "", to_time = "",
         except IndexError:
             raise ValueError("Input tsm_id error")
     else:
-        tsm_id = get_tsm_id_to_date(tsm_details,tsm_id,tsm_name,to_time)
+        tsm_id = get_tsm_id(tsm_details,tsm_name,to_time)
         
-    from_time, to_time= check_timestamp(from_time,to_time)
+
     
     query = ("SELECT ts,'%s' as 'tsm_name',times.node_id,xval,yval,zval,batt,"
              " times.accel_number,accel_id, in_use from (select *, if(type_num"
