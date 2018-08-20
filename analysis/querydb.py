@@ -209,9 +209,27 @@ def does_alert_exists(site_id, end, alert):
     return df
 
 ########################## SUBSURFACE-RELATED QUERIES ##########################
+#def find_replace_multi(string, dictionary):
+#
 
+def query_pattern(template_id,dictionary=""):
+    if template_id == 'raw_accel':
+        string = ("SELECT ts,'[tsm_name]' as 'tsm_name',times.node_id,xval,yval,zval,batt,"
+                    " times.accel_number,accel_id, in_use from (select *, if(type_num"
+                    " in (32,11) or type_num is NULL, 1,if(type_num in (33,12),2,0))"
+                    " as 'accel_number' from tilt_[tsm_name] WHERE ts >= '[from_time]'"
+                    " AND ts <= '[to_time]' [node_id]) times  [node_id_query]) "
+                    "nodes on times.node_id = nodes.node_id and "
+                    "times.accel_number=nodes.accel_number")
+    else:
+         raise ValueError("template_id doesn't exists")
+         return
+         
+    for item in sorted(dictionary.keys()):
+        string = re.sub(r'\[' + item + '\]', dictionary[item], string)
+    return string
 
-def get_tsm_id_to_date(tsm_details="",tsm_id="",tsm_name="",to_time=""):
+def get_tsm_id_to_date(tsm_details="", tsm_name="", to_time=""):
 
     if tsm_details.tsm_id[tsm_details.tsm_name==tsm_name].count()>1:
         
@@ -245,7 +263,7 @@ def filter_raw_accel(accel_info,query,df):
              
      return df
 
-def check_timestamp(from_time, to_time):
+def check_timestamp(from_time="", to_time=""):
     if from_time=="":
         from_time= pd.to_datetime("2010-01-01")
     else:
@@ -261,16 +279,20 @@ def check_timestamp(from_time, to_time):
             to_time=pd.to_datetime(to_time)
         except ValueError:
             raise ValueError("Input to_time error")
+            
     
-    return from_time, to_time
+    return {'from_time':from_time, 'to_time':to_time}
     
-def get_raw_accel_data_2(tsm_id='',tsm_name = "", from_time = "", to_time = "", 
-                       accel_number = "", node_id ="", output_type=""):
     
-
+    
+def get_raw_accel_data_2(tsm_id="", tsm_name = "", from_time = "", 
+                         to_time = "", accel_number = "", node_id ="", 
+                         output_type=""):
+    
     tsm_details = memory.get('DF_TSM_SENSORS')
-    tsm_details.date_deactivated=pd.to_datetime(tsm_details.date_deactivated)
-
+    tsm_details.date_deactivated = pd.to_datetime(tsm_details.date_deactivated)
+    
+    ref_ts = check_timestamp(from_time, to_time)
 
     if tsm_id != '':
         try:
@@ -278,26 +300,15 @@ def get_raw_accel_data_2(tsm_id='',tsm_name = "", from_time = "", to_time = "",
         except IndexError:
             raise ValueError("Input tsm_id error")
     else:
-        tsm_id = get_tsm_id_to_date(tsm_details,tsm_id,tsm_name,to_time)
-        
-    from_time, to_time= check_timestamp(from_time,to_time)
-    
-    query = ("SELECT ts,'%s' as 'tsm_name',times.node_id,xval,yval,zval,batt,"
-             " times.accel_number,accel_id, in_use from (select *, if(type_num"
-             " in (32,11) or type_num is NULL, 1,if(type_num in (33,12),2,0)) "
-             " as 'accel_number' from tilt_%s" %(tsm_name,tsm_name))
+        tsm_id = get_tsm_id_to_date(tsm_details, tsm_name, to_time)
 
-    query += " WHERE ts >= '%s'" %from_time
-    query += " AND ts <= '%s'" %to_time
-    
     if node_id != '':
         if ((node_id>tsm_details.number_of_segments
              [tsm_details.tsm_id==tsm_id].iloc[0]) or (node_id<1)):
             raise ValueError('Error node_id')
         else:
-            query += ' AND node_id = %d' %node_id
-        
-    query += " ) times"
+            node_id =' AND node_id = %d' %node_id
+
     node_id_query = " inner join (SELECT * FROM senslopedb.accelerometers"
     node_id_query += " where tsm_id=%d" %tsm_id
 
@@ -309,11 +320,16 @@ def get_raw_accel_data_2(tsm_id='',tsm_name = "", from_time = "", to_time = "",
     else:
         raise ValueError('Error accel_number')
 
-    query += node_id_query + ") nodes"
-            
-    query += (" on times.node_id = nodes.node_id"
-              " and times.accel_number=nodes.accel_number")
-    df =  db.df_read(query)
+    variables = {'tsm_name':tsm_name,
+                'from_time':str(ref_ts['from_time'])[:-3],
+                'to_time':str(ref_ts['to_time'])[:-3],
+                'node_id':node_id,
+                'tsm_id':str(tsm_id),
+                'node_id_query':node_id_query
+                }            
+    query = query_pattern('raw_accel',variables)
+
+    df =  db.df_read(str(query))
     df.columns = ['ts','tsm_name','node_id','x','y','z'
                       ,'batt','accel_number','accel_id','in_use']
     df.ts = pd.to_datetime(df.ts)
@@ -437,7 +453,7 @@ def get_raw_accel_data(tsm_id='',tsm_name = "", from_time = "", to_time = "",
             
     query += (" on times.node_id = nodes.node_id"
               " and times.accel_number=nodes.accel_number")
-
+    print query
     if return_db:
         df =  db.df_read(query)
         df.columns = ['ts','tsm_name','node_id','x','y','z'
