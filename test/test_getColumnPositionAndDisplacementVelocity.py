@@ -12,7 +12,7 @@ class TestGetColumnPositionAndDisplacementVelocity(unittest.TestCase):
         return_json = subsurface.get_vcd_data_json(site_column="agbta",\
         	end_ts="2017-11-11 06:00:00", start_ts="2017-11-08 06:00:00")
 
-        self.assertMultiLineEqual(expected_json, return_json, "True positive success")
+        self.assertMultiLineEqual(expected_json, return_json, "True positive failed")
         
     def test_subsurface_return_json_true_positive_success_2(self):
         fp = open("subsurface_return_2.json", "r")
@@ -20,21 +20,21 @@ class TestGetColumnPositionAndDisplacementVelocity(unittest.TestCase):
         return_json = subsurface.get_vcd_data_json(site_column="magta",\
         	end_ts="2017-07-11 06:00:00", start_ts="2017-07-08 06:00:00")
         
-        self.assertMultiLineEqual(expected_json, return_json, "True positive success")
+        self.assertMultiLineEqual(expected_json, return_json, "True positive failed")
         
     def test_subsurface_return_json_true_negative_fail_1(self):
         expected_json = "false_string"
         return_json = subsurface.get_vcd_data_json(site_column="magta",\
         	end_ts="2017-07-11 06:00:00", start_ts="2017-07-08 06:00:00")
         
-        self.assertNotEqual(expected_json, return_json, "True negative success")
+        self.assertNotEqual(expected_json, return_json, "True negative failed")
         
     def test_subsurface_return_json_true_negative_fail_2(self):
         expected_json = "false_string"
         return_json = subsurface.get_vcd_data_json(site_column="jorta",\
         	end_ts="2017-03-11 06:00:00", start_ts="2017-03-08 06:00:00")
         
-        self.assertNotEqual(expected_json, return_json, "True negative success")
+        self.assertNotEqual(expected_json, return_json, "True negative failed")
         
     def test_subsurface_has_web_plots(self):
         return_json = subsurface.get_vcd_data_json(site_column="agbta",\
