@@ -621,7 +621,76 @@ def get_soms_raw(tsm_name = "", from_time = "", to_time = "", type_num="", node_
 #    df = df.drop('mval2', axis=1, inplace=False)
 
     return df
+ 
+def ref_get_soms_raw(tsm_name="", from_time="", to_time="", type_num="", node_id=""):
+    memc = memcache.Client(['127.0.0.1:11211'], debug=1)
     
+    tsm_details=memc.get('tsm')
+    #For blank tsm_name
+    if not tsm_name:
+        raise ValueError('enter valid tsm_name')
+    if not node_id:
+        node_id = 0
+    
+   
+    #For invalid node_id    
+    check_num_seg=tsm_details[tsm_details.tsm_name == tsm_name].reset_index().number_of_segments[0]
+    if (node_id > check_num_seg):
+        raise ValueError('Invalid node id. Exceeded number of nodes')
+    
+    #For invalid type_num
+    check_type_num=tsm_details[tsm_details.tsm_name == tsm_name].reset_index().version[0]
+    v3_types = [110,113,10,13]
+    v2_types = [21,26,112,111]
+    if (check_type_num ==3):
+        if type_num not in v3_types:
+            raise ValueError('Invalid msgid for version 3 soms sensor. Valid values are 110,113,10,13')
+    elif (check_type_num == 2):
+        if type_num not in v2_types:
+            raise ValueError('Invalid msgid for version 2 soms sensor. Valid values are 111,112,21,26')
+    else:
+        pass
+    
+    query_accel = "SELECT version FROM senslopedb.tsm_sensors where tsm_name = '%s'" %tsm_name  
+    df_accel =  get_db_dataframe(query_accel) 
+    query = "select * from senslopedb.soms_%s" %tsm_name
+    
+    if not from_time:
+        from_time = "2010-01-01"
+    
+        
+    query += " where ts > '%s'" %from_time
+    
+    if to_time:
+        query += " and ts < '%s'" %to_time
+    
+    
+    if node_id:
+        query += " and node_id = {}" .format(node_id)
+    
+    if type_num:
+        query += " and type_num = {}" .format(type_num)
+        
+    df =  get_db_dataframe(query)
+    
+    
+    df.ts = pd.to_datetime(df.ts)
+    
+    if (df_accel.version[0] == 2):
+        if (tsm_name== 'nagsa'):
+            df['mval1-n'] =(((8000000/(df.mval1))-(8000000/(df.mval2)))*4)/10
+        else:
+            df['mval1-n'] =(((20000000/(df.mval1))-(20000000/(df.mval2)))*4)/10     
+        
+        df = df.drop('mval1', axis=1, inplace=False)
+        df = df.drop('mval2', axis=1, inplace=False)
+        df['mval1'] = df['mval1-n']
+        df = df.drop('mval1-n', axis=1, inplace=False)
+    
+    #df = df.replace("-inf", "NAN")         
+    df = df.drop('mval2', axis=1, inplace=False)
+
+    return df 
     
 
 def get_coords_list():
