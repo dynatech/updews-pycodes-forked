@@ -6,6 +6,10 @@ from analysis.subsurface import filterdata as fd
 def get_filtered_accel_data_json(site_column, start_date, end_date, node_id, version):
     return_data = pd.DataFrame()
     
+    accel_id = [1]
+    if version == 2:
+        accel_id.append(2)
+    
     for a_id in accel_id:
         raw_data = query.get_raw_accel_data(
                 tsm_name = site_column, from_time = start_date,
@@ -26,27 +30,23 @@ def get_filtered_accel_data_json(site_column, start_date, end_date, node_id, ver
                             .replace(".000", "")
 
 if __name__ == "__main__":
-#    site_column = sys.argv[1]
-#    start_date = sys.argv[2].replace("n",'').replace("T"," ").replace("%20"," ")
-#    end_date = sys.argv[3].replace("n",'').replace("T"," ").replace("%20"," ")
-#    node_id = int(sys.argv[4])
-#    version = int(sys.argv[5])
+    site_column = sys.argv[1]
+    start_date = sys.argv[2].replace("n",'').replace("T"," ").replace("%20"," ")
+    end_date = sys.argv[3].replace("n",'').replace("T"," ").replace("%20"," ")
+    node_id = int(sys.argv[4])
+    version = int(sys.argv[5])
 
-    site_column = "agbta"
-    start_date = "2017-11-04 00:00"
-    end_date = "2017-11-11 00:00"
-    node_id = 1
-    version = 2
+#    site_column = "agbta"
+#    start_date = "2017-11-04 00:00"
+#    end_date = "2017-11-11 00:00"
+#    node_id = 1
+#    version = 2
 
-    #site_column = "labt"
-    #start_date = "2018-07-21 00:00"
-    #end_date = "2018-07-28 00:00"
-    #node_id = 1
-    #version = 1
+#    site_column = "labt"
+#    start_date = "2018-07-21 00:00"
+#    end_date = "2018-07-28 00:00"
+#    node_id = 1
+#    version = 1
 
-    accel_id = [1]
-    if version == 2:
-        accel_id.append(2)
-    
     json = get_filtered_accel_data_json(site_column, start_date, end_date, node_id, version)
     print json
