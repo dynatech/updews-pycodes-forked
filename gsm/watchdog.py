@@ -11,8 +11,8 @@ class GsmProcess:
 
 def execute_cmd(cmd, wait_for_out = True):
     my_env = os.environ.copy()
-    my_env["PATH"] = "/home/pi/centralserver/:" + my_env["PATH"]
-    my_env["PYTHONPATH"] = "/home/pi/centralserver/"
+    my_env["PATH"] = "/home/pi/centralserver:" + my_env["PATH"]
+    my_env["PYTHONPATH"] = "/home/pi/centralserver"
     my_env["USER"] = 'pi'
     my_env["USERNAME"] = 'pi'
     p = subprocess.Popen(cmd, stdout = subprocess.PIPE, 
