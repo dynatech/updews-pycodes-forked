@@ -93,8 +93,8 @@ def check_accel_drift(df):
     except IndexError:
         return
         
-def outlier_filter(dff):
-    df = dff.copy()
+def outlier_filter(df):
+#    df = dff.copy()
 #    df['ts'] = pandas.to_datetime(df['ts'], unit = 's')
 #    df = df.set_index('ts')
 #    df = df.resample('30min').first()
@@ -120,44 +120,44 @@ def outlier_filter(dff):
     return df
 
 def range_filter_accel(df):
-    dff = df.copy()
+#    dff = df.copy()
     ## adjust accelerometer values for valid overshoot ranges
-    dff.x[(dff.x<-2970) & (dff.x>-3072)] = dff.x[(dff.x<-2970) & (dff.x>-3072)] + 4096
-    dff.y[(dff.y<-2970) & (dff.y>-3072)] = dff.y[(dff.y<-2970) & (dff.y>-3072)] + 4096
-    dff.z[(dff.z<-2970) & (dff.z>-3072)] = dff.z[(dff.z<-2970) & (dff.z>-3072)] + 4096
+    df.x[(df.x<-2970) & (df.x>-3072)] = df.x[(df.x<-2970) & (df.x>-3072)] + 4096
+    df.y[(df.y<-2970) & (df.y>-3072)] = df.y[(df.y<-2970) & (df.y>-3072)] + 4096
+    df.z[(df.z<-2970) & (df.z>-3072)] = df.z[(df.z<-2970) & (df.z>-3072)] + 4096
     
     
-    dff.x[abs(dff.x) > 1126] = np.nan
-    dff.y[abs(dff.y) > 1126] = np.nan
-    dff.z[abs(dff.z) > 1126] = np.nan
+    df.x[abs(df.x) > 1126] = np.nan
+    df.y[abs(df.y) > 1126] = np.nan
+    df.z[abs(df.z) > 1126] = np.nan
 
     
-#    return dff[dfl.x.notnull()]
-    return dff[dff.x.notnull()]
+#    return df[dfl.x.notnull()]
+    return df[df.x.notnull()]
     
 ### Prado - Created this version to remove warnings
-def range_filter_accel2(dff):
+def range_filter_accel2(df):
     
-    x_index = (dff.x<-2970) & (dff.x>-3072)
-    y_index = (dff.y<-2970) & (dff.y>-3072)
-    z_index = (dff.z<-2970) & (dff.z>-3072)
+    x_index = (df.x<-2970) & (df.x>-3072)
+    y_index = (df.y<-2970) & (df.y>-3072)
+    z_index = (df.z<-2970) & (df.z>-3072)
     
     ## adjust accelerometer values for valid overshoot ranges
-    dff.loc[x_index,'x'] = dff.loc[x_index,'x'] + 4096
-    dff.loc[y_index,'y'] = dff.loc[y_index,'y'] + 4096
-    dff.loc[z_index,'z'] = dff.loc[z_index,'z'] + 4096
+    df.loc[x_index,'x'] = df.loc[x_index,'x'] + 4096
+    df.loc[y_index,'y'] = df.loc[y_index,'y'] + 4096
+    df.loc[z_index,'z'] = df.loc[z_index,'z'] + 4096
     
-#    x_range = ((dff.x > 1126) | (dff.x < 100))
-    x_range = abs(dff.x) > 1126
-    y_range = abs(dff.y) > 1126
-    z_range = abs(dff.z) > 1126
+#    x_range = ((df.x > 1126) | (df.x < 100))
+    x_range = abs(df.x) > 1126
+    y_range = abs(df.y) > 1126
+    z_range = abs(df.z) > 1126
     
     ## remove all invalid values
-    dff.loc[x_range,'x'] = np.nan
-    dff.loc[y_range,'y'] = np.nan
-    dff.loc[z_range,'z'] = np.nan
+    df.loc[x_range,'x'] = np.nan
+    df.loc[y_range,'y'] = np.nan
+    df.loc[z_range,'z'] = np.nan
     
-    return dff[dff.x.notnull()]
+    return df[df.x.notnull()]
     
 def orthogonal_filter(df):
 
@@ -171,11 +171,12 @@ def orthogonal_filter(df):
 def orthogonal_filter2(df):
 
     # remove all non orthogonal value
-    dfo = df[['x','y','z']]/1024.0
-    df["mag"] = (dfo.x*dfo.x + dfo.y*dfo.y + dfo.z*dfo.z).apply(np.sqrt)
+    df_temp = df[['x','y','z']]/1024.0
+    df["magnitude"] = (df_temp.x*df_temp.x + df_temp.y*df_temp.y +
+                       df_temp.z*df_temp.z).apply(np.sqrt)
     lim = .08
     
-    return df[((df.mag>(1-lim)) & (df.mag<(1+lim)))]
+    return df[((df.magnitude>(1-lim)) & (df.magnitude<(1+lim)))]
 
 def resample_df(df):
     df.ts = pd.to_datetime(df['ts'], unit = 's')
