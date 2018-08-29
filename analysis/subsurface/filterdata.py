@@ -168,6 +168,15 @@ def orthogonal_filter(df):
     
     return df[((mag>(1-lim)) & (mag<(1+lim)))]
 
+def orthogonal_filter2(df):
+
+    # remove all non orthogonal value
+    dfo = df[['x','y','z']]/1024.0
+    df["mag"] = (dfo.x*dfo.x + dfo.y*dfo.y + dfo.z*dfo.z).apply(np.sqrt)
+    lim = .08
+    
+    return df[((df.mag>(1-lim)) & (df.mag<(1+lim)))]
+
 def resample_df(df):
     df.ts = pd.to_datetime(df['ts'], unit = 's')
     df = df.set_index('ts')
