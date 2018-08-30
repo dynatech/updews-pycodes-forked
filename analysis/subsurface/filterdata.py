@@ -171,18 +171,20 @@ def orthogonal_filter(df):
 def orthogonal_filter2(df):
 
     # remove all non orthogonal value
-    df_temp = df[['x','y','z']]/1024.0
-    df["magnitude"] = (df_temp.x*df_temp.x + df_temp.y*df_temp.y +
-                       df_temp.z*df_temp.z).apply(np.sqrt)
+#    df_temp = df[['x','y','z']]
+#    df["magnitude"] = (df_temp.x**2 + df_temp.y**2 +
+#                       df_temp.z**2).apply(np.sqrt)/1024.0
+      
+    df["magnitude"]=(df[['x','y','z']]**2).sum(axis=1).apply(np.sqrt)/1024.0
     lim = .08
     
     return df[((df.magnitude>(1-lim)) & (df.magnitude<(1+lim)))]
 
 def resample_df(df):
     df.ts = pd.to_datetime(df['ts'], unit = 's')
-    df = df.set_index('ts')
-    df = df.resample('30min').first()
-    df = df.reset_index()
+    df = df.set_index('ts').resample('30min').first().reset_index()
+#    df = df.resample('30min').first()
+#    df = df.reset_index()
     return df
     
 def apply_filters(dfl, orthof=True, rangef=True, outlierf=True):
