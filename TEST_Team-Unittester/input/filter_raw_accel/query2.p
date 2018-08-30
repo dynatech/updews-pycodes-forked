@@ -1,0 +1,3 @@
+S"SELECT ts,'agbsb' as 'tsm_name',times.node_id,xval,yval,zval,batt, times.accel_number,accel_id, in_use from (select *, if(type_num in (32,11) or type_num is NULL, 1,if(type_num in (33,12),2,0))  as 'accel_number' from tilt_agbsb WHERE ts >= '2010-01-01' AND ts <= '2010-04-23 12:00' ) times inner join (SELECT * FROM senslopedb.accelerometers where tsm_id=1) nodes on times.node_id = nodes.node_id and times.accel_number=nodes.accel_number"
+p1
+.
