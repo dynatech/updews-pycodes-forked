@@ -525,7 +525,7 @@ def main():
     gsm_info = gsm_modules[args.gsm_id]
     gsm_info["pwr_on_pin"] = int(gsm_info["pwr_on_pin"])
     gsm_info["ring_pin"] = int(gsm_info["ring_pin"])
-    gsm_info["id"] = int(gsm_info["id"]) + 1
+    gsm_info["id"] = int(gsm_info["id"]) 
 
     if gsm_info['name'] == 'simulate':
         simulate_gsm(gsm_info['network'])
