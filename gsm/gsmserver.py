@@ -510,6 +510,8 @@ def main():
     
     gsm_modules = get_gsm_modules()
 
+    args.gsm_id = args.gsm_id - 1
+
     if args.gsm_id not in gsm_modules.keys():
         print ">> Error in gsm module selection (%s)" % (args.gsm_id) 
         sys.exit()
@@ -523,7 +525,7 @@ def main():
     gsm_info = gsm_modules[args.gsm_id]
     gsm_info["pwr_on_pin"] = int(gsm_info["pwr_on_pin"])
     gsm_info["ring_pin"] = int(gsm_info["ring_pin"])
-    gsm_info["id"] = int(gsm_info["id"])
+    gsm_info["id"] = int(gsm_info["id"]) + 1
 
     if gsm_info['name'] == 'simulate':
         simulate_gsm(gsm_info['network'])
