@@ -229,7 +229,7 @@ def query_pattern(template_id,dictionary=""):
         string = re.sub(r'\[' + item + '\]', dictionary[item], string)
     return string
 
-def get_tsm_id_to_date(tsm_details="", tsm_name="", to_time=""):
+def get_tsm_id(tsm_details="", tsm_name="", to_time=""):
 
     if tsm_details.tsm_id[tsm_details.tsm_name==tsm_name].count()>1:
         
@@ -300,7 +300,7 @@ def get_raw_accel_data_2(tsm_id="", tsm_name = "", from_time = "",
         except IndexError:
             raise ValueError("Input tsm_id error")
     else:
-        tsm_id = get_tsm_id_to_date(tsm_details, tsm_name, to_time)
+        tsm_id = get_tsm_id(tsm_details, tsm_name, to_time)
 
     if node_id != '':
         if ((node_id>tsm_details.number_of_segments
