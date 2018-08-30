@@ -334,7 +334,55 @@ class TestModule(unittest.TestCase):
         self.assertTrue('\'str\' object has no attribute \'tsm_id\'' 
         in context.exception)
         
-           
+        
+#    """
+#    - Function filter_raw_accel test cases
+#    """
+    def test_case_filter_raw_accel_1(self):
+        info = function_info('filter_raw_accel','test_1')
+        df = querydb.filter_raw_accel(
+            accel_info = info[0]['accel_info'], 
+            query = load_pickle(str(info[0]['query'])),
+            df= load_pickle(str(info[0]['df'])))
+            
+        assert_option(self,info,df) 
+
+    def test_case_filter_raw_accel_2(self):
+        info = function_info('filter_raw_accel','test_2')
+        df = querydb.filter_raw_accel(
+            accel_info = info[0]['accel_info'], 
+            query = load_pickle(str(info[0]['query'])),
+            df= load_pickle(str(info[0]['df'])))
+            
+        assert_option(self,info,df) 
+        
+    def test_case_filter_raw_accel_3(self):
+        info = function_info('filter_raw_accel','test_3')
+        df = querydb.filter_raw_accel(
+            accel_info = info[0]['accel_info'], 
+            query = load_pickle(str(info[0]['query'])),
+            df= load_pickle(str(info[0]['df'])))
+            
+        assert_option(self,info,df) 
+        
+    def test_case_filter_raw_accel_4(self):
+        info = function_info('filter_raw_accel','test_4')
+        df = querydb.filter_raw_accel(
+            accel_info = info[0]['accel_info'], 
+            query = load_pickle(str(info[0]['query'])),
+            df= load_pickle(str(info[0]['df'])))
+            
+        assert_option(self,info,df) 
+        
+    def test_case_filter_raw_accel_5(self):
+        info = function_info('filter_raw_accel','test_5')
+        df = querydb.filter_raw_accel(
+            accel_info = info[0]['accel_info'], 
+            query = load_pickle(str(info[0]['query'])),
+            df= load_pickle(str(info[0]['df'])))
+            
+        assert_option(self,info,df) 
+         
 #    """
 #    - Function get_soms_raw test cases
 #    """    

@@ -25,11 +25,11 @@ test_10 = {"from_time":"2018-02-12", "to_time":"2018-04-23 48:23:30"}>ValueError
 
 
 [filter_raw_accel]
-test_1 = {"accel_info":{"output_type":"query"},"input\\filter_raw_accel\\query1.p","input\\filter_raw_accel\\df1.p"}>output\\filter_raw_accel\\test_1.p>df
-test_2 = {"accel_info":{"output_type":"analysis"}, "input\\filter_raw_accel\\query1.p","input\\filter_raw_accel\\df1.p"}>output\\filter_raw_accel\\test_2.p>df
-test_3 = {"tsm_name":"blcsa", "accel_info":{"output_type": "voltf"},"input\\filter_raw_accel\\query1.p","input\\filter_raw_accel\\df1.p"}>output\\filter_raw_accel\\test_3.p>df
-test_4 = {"tsm_name":"agbsb", "accel_info":{"output_type": "query"},"input\\filter_raw_accel\\query2.p","input\\filter_raw_accel\\df2.p"}>output\\filter_raw_accel\\test_4.p>df
-test_5 = {"tsm_name":"agbsb", "accel_info":{"output_type": "analysis"},"input\\filter_raw_accel\\query2.p","input\\filter_raw_accel\\df2.p"}>output\\filter_raw_accel\\test_5.p>df
+test_1 = {"accel_info":{"output_type":"query"},"query":"input\\filter_raw_accel\\query1.p","df":"input\\filter_raw_accel\\df1.p"}>output\\filter_raw_accel\\test_1.p>df
+test_2 = {"accel_info":{"output_type":"analysis"}, "query":"input\\filter_raw_accel\\query1.p","df":"input\\filter_raw_accel\\df1.p"}>output\\filter_raw_accel\\test_2.p>df
+test_3 = {"accel_info":{"tsm_name":"blcsa", "output_type": "voltf"},"query":"input\\filter_raw_accel\\query1.p","df":"input\\filter_raw_accel\\df1.p"}>output\\filter_raw_accel\\test_3.p>df
+test_4 = {"accel_info":{"tsm_name":"agbsb", "output_type": "query"},"query":"input\\filter_raw_accel\\query2.p","df":"input\\filter_raw_accel\\df2.p"}>output\\filter_raw_accel\\test_4.p>df
+test_5 = {"accel_info":{"tsm_name":"agbsb", "output_type": "analysis"},"query":"input\\filter_raw_accel\\query2.p","df":"input\\filter_raw_accel\\df2.p"}>output\\filter_raw_accel\\test_5.p>df
 
 
 [get_raw_accel_2]
