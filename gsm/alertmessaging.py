@@ -100,7 +100,7 @@ def subsurface_details(site_id, start_monitor, ts_last_retrigger):
 def tsm_details(df):
     nodes = ','.join(set(df['node'].apply(lambda x: str(x))))
     lst = df['tsm_name'] + '(' + nodes + ')'
-    return lst
+    return str(lst)
 
 def surficial_details(site_id, start_monitor, ts_last_retrigger):
     query =  "SELECT marker_name FROM "

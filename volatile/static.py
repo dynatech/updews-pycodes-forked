@@ -360,4 +360,3 @@ def set_variables_old(reset_variables):
         print "done"
     except sqlalchemy.exc.ProgrammingError: 
         print ">> Error on getting surficial information. Skipping load"
-
