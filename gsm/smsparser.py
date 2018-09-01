@@ -520,7 +520,7 @@ def parse_all_messages(args,allmsgs=[]):
 
         elif args.table == 'users':
             if re.search("EQINFO",sms.msg.upper()):
-                data_table = parser.eq(sms)
+                data_table = parser.earthquake.eq(sms)
                 if data_table:
                     dbio.df_write(data_table, resource=resource)
                 else:
