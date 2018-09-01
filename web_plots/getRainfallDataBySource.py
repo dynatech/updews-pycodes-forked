@@ -35,10 +35,10 @@ if __name__ == "__main__":
     start_date = sys.argv[2].replace("n",'').replace("T"," ").replace("%20"," ")
     end_date = sys.argv[3].replace("n",'').replace("T"," ").replace("%20"," ")
     offset = sys.argv[4].replace("n",'').replace("T"," ").replace("%20"," ")
-#    
-#    start_date = pd.to_datetime(start_date)
-#    end_date = pd.to_datetime(end_date)
-#    offset = pd.to_datetime(offset)
+    
+    start_date = pd.to_datetime(start_date)
+    end_date = pd.to_datetime(end_date)
+    offset = pd.to_datetime(offset)
     
 #    rain_gauge = "rain_bakg"
 #    offset = pd.to_datetime("2009-11-01 00:00")
