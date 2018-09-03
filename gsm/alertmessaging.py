@@ -53,7 +53,7 @@ def monitoring_start(site_id, ts_last_retrigger):
             if pd.to_datetime(prev_pub_alerts['ts'].values[1]) - \
                     pd.to_datetime(prev_pub_alerts['ts_updated'].values[2]) \
                     <= td(hours=0.5):
-                start_monitor = pd.to_datetime(prev_pub_alerts['timestamp']\
+                start_monitor = pd.to_datetime(prev_pub_alerts['ts']\
                         .values[2])
             # one event with two previous positive alert
             else:
@@ -94,13 +94,13 @@ def subsurface_details(site_id, start_monitor, ts_last_retrigger):
     data_source_df = data_source_df.drop_duplicates(['node', 'tsm_name'])
     tsm_source_df = data_source_df.groupby('tsm_name', as_index=False)
     data_source = ':'+','.join(tsm_source_df.apply(tsm_details))
-    
+
     return data_source
 
 def tsm_details(df):
     nodes = ','.join(set(df['node'].apply(lambda x: str(x))))
-    lst = df['tsm_name'] + '(' + nodes + ')'
-    return str(lst)
+    lst = str(df["tsm_name"].iloc[0]) + '(' + nodes + ')'
+    return lst
 
 def surficial_details(site_id, start_monitor, ts_last_retrigger):
     query =  "SELECT marker_name FROM "
