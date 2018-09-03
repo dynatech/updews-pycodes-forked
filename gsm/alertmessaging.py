@@ -288,7 +288,7 @@ def process_ack_to_alert(sms):
         "ts_ack = '%s', remarks = '%s' where stat_id = %s") % (user_id,
         alert_status_dict[alert_status.lower()], sms.ts, remarks, stat_id)
     # print query
-    dbio.write(query,process_ack_to_alert)
+    dbio.write(query=query,resource="sensor_data")
 
     contacts = get_alert_staff_numbers()
     message = ("SANDBOX (test ack):\nAlert ID %s ACK by %s on %s\nStatus: %s\n"
