@@ -2,9 +2,11 @@ import pymysql as mysqlDriver
 import pandas.io.sql as psql
 import sys
 import datetime
+import volatile.memory as mem
 from pprint import pprint
 
 def connectDatabase(hostdb='local'):
+    sc = mem.server_config()
     Hostdb = "localhost"
     Userdb = "root"
     Passdb = "senslope"
@@ -43,11 +45,6 @@ def getMetric(metric_name):
     query = "SELECT metric_id FROM metrics WHERE metric_name = '%s';" %metric_name
     result = getDataFrame(query)
     return result
-
-# def getModule():
-
-
-# def getTeamName():
 
 def getTableReference(table_name):
     query = "SELECT table_id FROM table_references WHERE table_name = '%s';" %table_name
