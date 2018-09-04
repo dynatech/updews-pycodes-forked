@@ -15,6 +15,7 @@ import volatile.static as static
 import dynadb.db as db
 import smstables
 import modem.modem as modem
+import random
 
 def check_id_in_table(table,gsm_id):
     """
@@ -94,9 +95,20 @@ def get_allowed_prefixes(network):
         extended_prefix_list.append("09"+p)
 
     return extended_prefix_list
-    
+
+def mock_send_msg(sms_msg=None, sim_num=None):
+    print "SIM_NUM:", sim_num
+    print "SMS_MSG:", sms_msg
+    time.sleep(random.randint(5,10))
+    if random.randint(0,99) < 5:
+        print ">> Message sending failed!"
+        return 1
+    else:
+        print ">> Message sent!"
+        return 0
+
 def send_messages_from_db(gsm = None, table = 'users', send_status = 0, 
-    gsm_info = None, limit = 10):
+    gsm_info = None, limit = 10, mock_send=False):
     """
     - The process getting all message unset and try to send the message again.
      
@@ -166,7 +178,11 @@ def send_messages_from_db(gsm = None, table = 'users', send_status = 0,
             continue
             # check if recepient number in allowed prefixed list    
         if num_prefix in allowed_prefixes:
-            ret = gsm.send_msg(msg[0].data, msg[0].simnum.strip())
+            if mock_send:
+                ret = mock_send_msg(msg[0].data, msg[0].simnum.strip())
+            else:
+                ret = gsm.send_msg(msg[0].data, msg[0].simnum.strip())
+
             today = dt.today().strftime("%Y-%m-%d %H:%M:%S")
             if ret:
                 send_stat = 1
@@ -491,6 +507,32 @@ def get_gsm_modules(reset_val = False):
 
     return gsm_modules
 
+def mock_send_server(gsm, gsm_info):
+    print "Mocking sending"
+    print '**' + gsm_info['name'] + ' GSM server active**'
+    print time.asctime()
+
+    count = 0
+    network = gsm_info['name'].upper()
+
+    while True:
+        send_messages_from_db(gsm="Mock", table='users', send_status=5, 
+            gsm_info=gsm_info, limit=10, mock_send=True)
+        print ".",
+
+        today = dt.today()
+        if count == 10:
+            print "\n", network, today.strftime("Server active as of "
+                    "%A, %B %d, %Y, %X")
+            count = 0
+        else:
+            count = count + 1
+
+        time.sleep(2)
+       
+
+    sys.exit()
+
 def main():
     """
     -  The process of running the whole gsmserver by checking if the gsmserver arguement is being initialize as gsm_id, table or network with respective agruement id.
@@ -527,9 +569,13 @@ def main():
     gsm_info["ring_pin"] = int(gsm_info["ring_pin"])
     gsm_info["id"] = int(gsm_info["id"]) 
 
+    # 
     if gsm_info['name'] == 'simulate':
         simulate_gsm(gsm_info['network'])
         sys.exit()
+
+    if "mocksend" in gsm_info['name']:
+        mock_send_server(gsm=None, gsm_info=gsm_info)
 
     sc = mem.server_config()
     gsm = None
