@@ -257,8 +257,9 @@ def process_surficial_observation(sms):
 
         # print messages.iloc[err_val - 1].internal_msg
         # print messages.iloc[err_val - 1].external_msg
-        smstables.write_outbox(messages.iloc[err_val - 1].internal_msg, 
-            ct_sim_num)
+        sms_msg_for_operations = "{}\n\n{}".format(
+            messages.iloc[err_val - 1].internal_msg, sms.msg)
+        smstables.write_outbox(sms_msg_for_operations, ct_sim_num)
 
         return False
 

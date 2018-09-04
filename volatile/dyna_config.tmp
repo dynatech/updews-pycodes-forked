@@ -38,23 +38,6 @@ smartport = /dev/smartport
 resetpin = 38
 simulate_gsm = false
 
-[SMSAlert]
-communityphonenumber = 639175048863
-sunnumbers = 
-globenumbers=09166685391,09054537225,09068386258,09178825084,09163938789,09176023735
-smartnumbers=09288263063,09984405687,09228412065,09228120490,09253120491
-serveralert = 09490307559
-
-[ReplyMessages]
-SuccessEN = Success! Thank you for sending your ground measurements.
-SuccessTAG = Ayos! Salamat sa pag text ng inyong mga sukat ng crack.
-FailDateEN = Error! There is a problem with your DATE format. Please check your SMS and try again.
-FailTimeEN = Error! There is a problem with your TIME format. Please check your SMS and try again.
-FailMeasEN = Error! There is a problem with your ground measurements format.  Please check your SMS and try again.
-FailWeaEN = Error! There is no weather information sent.  Please check your SMS and try again.
-FailObvEN = Error! You did not put your name on the text message. Please check your SMS and try again.
-FailOobEN = Error! Your date or time value is either too late or too early. Please check your SMS and try again.
-
 [FileIO]
 allalertsfile = /home/dynaslope/Desktop/updews-pycodes/Analysis/GSMAlert.txt
 eqprocfile = /home/dynaslope/Desktop/updews-pycodes/Data\ Analysis/eq_alert_gen.py
@@ -88,6 +71,7 @@ script_mode = gsmserver
 [io]
 proc_limit = 10
 active_lgr_limit = 40
+server_id = 2
 
 [subsurface]
 disp = 0.05 			;Treshold displacement value for alert 1 (in meters)
