@@ -11,8 +11,25 @@ def get_alert_staff_numbers():
     query = ("select t1.user_id,t2.sim_num,t2.gsm_id from user_alert_info t1 inner join"
         " user_mobile t2 on t1.user_id = t2.user_id where t1.send_alert = 1;")
 
-    contacts = dbio.read(query=query,resource="sms_data")
-    return contacts
+    dev_contacts = dbio.read(query=query,resource="sms_data")
+
+    ts = dt.today().strftime("%Y-%m-%d %H:%M:%S")
+    query = ("select iompmt, iompct from monshiftsched where "
+        "ts < '{}' order by ts desc limit 1;".format(ts))
+
+    try:
+        iomp_nicknames_tuple = dbio.read(query=query,resource="sensor_data")[0]
+    except IndexError:
+        print ">> Error in getting IOMP nicknames"
+        print ">> No alert message will be sent to IOMPs"
+
+    query = ("select t1.user_id, t2.sim_num, t2.gsm_id from users t1 "
+        "inner join user_mobile t2 on t1.user_id = t2.user_id "
+        "where t1.nickname in {}".format(iomp_nicknames_tuple))
+
+    iomp_contacts = dbio.read(query=query,resource="sms_data")
+
+    return dev_contacts + iomp_contacts
 
 def monitoring_start(site_id, ts_last_retrigger):
 
