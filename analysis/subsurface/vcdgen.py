@@ -80,14 +80,15 @@ def velocity(tilt, window, sc, num_nodes):
     #vel_xy
     vel_xy = vel[['ts', 'vel_xy', 'node_id']]
     velplot_xy,L2_xy,L3_xy = plotter.vel_classify(vel_xy, sc, num_nodes, linearvel=False)
+    
+    L2_xz['ts'] = L2_xz['ts'].apply(lambda x: str(x))
+    L3_xz['ts'] = L3_xz['ts'].apply(lambda x: str(x))
+    L2_xy['ts'] = L2_xy['ts'].apply(lambda x: str(x))
+    L3_xy['ts'] = L3_xy['ts'].apply(lambda x: str(x))
 
-    L2 = L2_xz.append(L2_xy)
-    L3 = L3_xz.append(L3_xy) 
-    
-    L2['ts'] = L2['ts'].apply(lambda x: str(x))
-    L3['ts'] = L3['ts'].apply(lambda x: str(x))
-    
-    veldf = pd.DataFrame({'L2': [L2], 'L3': [L3]})
+    vel_xz = pd.DataFrame({'L2': [L2_xz], 'L3': [L3_xz]})
+    vel_xy = pd.DataFrame({'L2': [L2_xy], 'L3': [L3_xy]})
+    veldf = pd.DataFrame({'downslope': [vel_xz], 'latslope': [vel_xy]})
 
     return veldf
 

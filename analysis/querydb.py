@@ -621,7 +621,7 @@ def get_soms_raw(tsm_name = "", from_time = "", to_time = "", type_num="", node_
 #    df = df.drop('mval2', axis=1, inplace=False)
 
     return df
- 
+
 def ref_get_soms_raw(tsm_name="", from_time="", to_time="", type_num="", node_id=""):
     memc = memcache.Client(['127.0.0.1:11211'], debug=1)
     
@@ -743,7 +743,7 @@ def get_tsm_list(tsm_name='', end=datetime.now()):
             df = df.drop_duplicates('logger_id')
             
             # make a sensor list of loggerArray class functions
-            TSMdf = df.groupby('logger_id', as_index=False)
+            TSMdf = df.groupby('logger_id', as_index=False)>>>>>>> 2018-dewslandslide-complie-pyunit
             sensors = TSMdf.apply(logger_array_list)
             return sensors
         except:

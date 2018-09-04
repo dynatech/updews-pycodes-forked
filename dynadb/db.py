@@ -189,7 +189,6 @@ def write(query ='', identifier = '', last_insert=False,
 
     """ 
     ret_val = None
-    caller_func = str(inspect.stack()[1][3])
     db, cur = connect(host=host, connection=connection, 
         resource=resource)
 
@@ -203,10 +202,17 @@ def write(query ='', identifier = '', last_insert=False,
 
     except IndexError:
         print "IndexError on ",
-        print inspect.stack()[1][3]
+        print str(inspect.stack()[1][3])
     except (MySQLdb.Error, MySQLdb.Warning) as e:
-        print(e)
-        print caller_func
+        print (">> MySQL error/warning: %s" % e)
+        print ("Last calls:") 
+        for i in range(1,6):
+            try:
+                print "%s," % str(inspect.stack()[i][3]),
+            except IndexError:
+                continue
+        print ("\n")
+
     finally:
         db.close()
         return ret_val
@@ -284,6 +290,7 @@ def df_write(data_table, host='local', last_insert=False ,
     df = df.drop_duplicates(subset=None, keep='first', inplace=False)
     value_list = str(df.values.tolist())[:-1][1:]
     value_list = value_list.replace("]",")").replace("[","(")
+    value_list = value_list.replace("nan", "NULL")
     column_name_str = str(list(df))[:-1][1:].replace("\'","")
     duplicate_value_str = ", ".join(["%s = VALUES(%s)" % (name, name) 
         for name in list(df)]) 

@@ -471,31 +471,23 @@ def get_gsm_modules(reset_val = False):
         'module': 2, 'port': '/dev/ttyUSB1', 'num': '639088125638', 'pwr_on_pin': 29,
         'ring_pin': 33, 'id': 7, 'name': 'smart1'}}
     """
-    mc = mem.get_handle()
-    gsm_modules = mc.get('gsm_modules')
-    sc = mem.server_config()
-    gsm_modules_host = sc["resource"]["smsdb"]
-    if reset_val or (gsm_modules == None or len(gsm_modules.keys()) == 0):
-        print "Getting gsm modules information..."
-        query = ("select gsm_id, gsm_name, gsm_sim_num, network_type, ser_port, "
-            "pwr_on_pin, ring_pin, module_type from gsm_modules")
+    try:
+        DF_GSM_MODULES = mem.get("DF_GSM_MODULES")
+    except AttributeError:
+        raise AttributeError("No DF_GSM_MODULES in memory. Initialize first.")
+   
+    # backwards compatibility
+    DF_GSM_MODULES.rename(
+        columns={
+            "network_type": "network",
+            "gsm_name": "name",
+            "gsm_sim_num": "num",
+            "ser_port": "port",
+            "gsm_id": "id",
+            "module_type": "module"
+        }, inplace = True)
 
-        result_set = db.read(query=query, resource="sms_data")
-
-        gsm_modules = dict()
-        for gsm_id, name, num, net, port, pwr_on_pin, ring_pin, module in result_set:
-            gsm_info = dict()
-            gsm_info["network"] = net
-            gsm_info["name"] = name
-            gsm_info["num"] = num
-            gsm_info["port"] = port
-            gsm_info["pwr_on_pin"] = int(pwr_on_pin)
-            gsm_info["ring_pin"] = int(ring_pin)
-            gsm_info["id"] = gsm_id
-            gsm_info["module"] = module
-            gsm_modules[gsm_id] = gsm_info 
-
-        mc.set('gsm_modules',gsm_modules)
+    gsm_modules = DF_GSM_MODULES.to_dict(orient='index')
 
     return gsm_modules
 
@@ -516,8 +508,9 @@ def main():
 
     args = get_arguments()
     
-    gsm_modules = get_gsm_modules(True)
-    # print gsm_modules
+    gsm_modules = get_gsm_modules()
+
+    args.gsm_id = args.gsm_id - 1
 
     if args.gsm_id not in gsm_modules.keys():
         print ">> Error in gsm module selection (%s)" % (args.gsm_id) 
@@ -530,6 +523,9 @@ def main():
     print 'Running gsm server ...'
 
     gsm_info = gsm_modules[args.gsm_id]
+    gsm_info["pwr_on_pin"] = int(gsm_info["pwr_on_pin"])
+    gsm_info["ring_pin"] = int(gsm_info["ring_pin"])
+    gsm_info["id"] = int(gsm_info["id"]) 
 
     if gsm_info['name'] == 'simulate':
         simulate_gsm(gsm_info['network'])
@@ -560,3 +556,4 @@ if __name__ == '__main__':
         except KeyboardInterrupt:
             print 'Bye'
             break
+
