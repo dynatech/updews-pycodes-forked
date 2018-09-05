@@ -183,7 +183,7 @@ def summary_writer(site_id, site_code, gauge_name, rain_id, twoyrmax, halfmax,
     
     return summary
 
-def main(rain_props, end, sc, trigger_symbol):
+def main(rain_props, end, sc, trigger_symbol, write_to_db=True):
     """Computes rainfall alert.
     
     Args:
@@ -243,6 +243,8 @@ def main(rain_props, end, sc, trigger_symbol):
     operational_trigger['ts'] = str(end)
     operational_trigger['ts_updated'] = str(end)
     operational_trigger = operational_trigger.rename(columns = {'alert': 'trigger_sym_id'})
-    qdb.alert_to_db(operational_trigger, 'operational_triggers')
+    
+    if write_to_db == True:
+        qdb.alert_to_db(operational_trigger, 'operational_triggers')
 
     return summary
