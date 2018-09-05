@@ -44,7 +44,7 @@ def dict_format(query_string, variable_info):
         MySQLdb.OperationalError: Error in database connection.
 
     """ 
-    query_output = dbio.read(query_string)
+    query_output = dbio.read(query=query_string,resource=variable_info.resource)
     if query_output:
         dict_output = {a: b for a, b in query_output}
         return dict_output
