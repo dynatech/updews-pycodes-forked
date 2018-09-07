@@ -621,7 +621,7 @@ def GenerateGroundDataAlert(site=None,end=None):
     out_path = up_one(up_one(path2)) 
     
     cfg = ConfigParser.ConfigParser()
-    cfg.read(path2 + '/server-config.txt')
+    cfg.read(up_one(path2) + '/Analysis/server-config.txt')
     
     #Retrieving important declaration files
     printtostdout = True
