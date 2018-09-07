@@ -151,28 +151,41 @@ def summary_writer(site_id, site_code, gauge_name, rain_id, twoyrmax, halfmax,
         advisory='---'
 
     if write_alert or ralert == 1:
-        alert = ['E']
         if qdb.does_table_exist('rainfall_alerts') == False:
             #Create a site_alerts table if it doesn't exist yet
             qdb.create_rainfall_alerts()
 
+        columns = ['rain_alert', 'cumulative', 'threshold']
+        alerts = pd.DataFrame(columns=columns)
+
         if ralert == 0:
-            if one >= halfmax * 0.75 or three >= twoyrmax * 0.75:
-                alert = ['x']
+            if one >= halfmax * 0.75:
+                temp_df = pd.Series(['x', one, halfmax], index=columns)
+            elif three >= twoyrmax * 0.75:
+                temp_df = pd.Series(['x', three, twoyrmax], index=columns)
+            else:
+                temp_df = pd.Series([False, np.nan, np.nan], index=columns)
+            
+            alerts = alerts.append(temp_df, ignore_index=True)
         else:
             if one >= halfmax:
-                alert += ['a']
+                temp_df = pd.Series(['a', one, halfmax], index=columns)
+                alerts = alerts.append(temp_df, ignore_index=True)
             if three >= twoyrmax:
-                alert += ['b']
-
-        alert = alert[0]
-
-        if qdb.does_alert_exists(site_id, end, alert).values[0][0] == 0:
-            df = pd.DataFrame({'ts': [end], 'site_id': [site_id],
-                               'rain_id': [rain_id], 'rain_alert': [alert],
-                               'cumulative': [np.nan], 'threshold': [np.nan]})
-            data_table = sms.DataTable('rainfall_alerts', df)
-            db.df_write(data_table)
+                temp_df = pd.Series(['b', three, twoyrmax], index=columns)
+                alerts = alerts.append(temp_df, ignore_index=True)
+                
+        if alerts['rain_alert'][0] != False:
+            for index, row in alerts.iterrows():
+                rain_alert = row['rain_alert']
+                cumulative = row['cumulative']
+                threshold = row['threshold']
+                if qdb.does_alert_exists(site_id, end, rain_alert).values[0][0] == 0:
+                    df = pd.DataFrame({'ts': [end], 'site_id': [site_id],
+                                       'rain_id': [rain_id], 'rain_alert': [rain_alert],
+                                       'cumulative': [cumulative], 'threshold': [threshold]})
+                    data_table = sms.DataTable('rainfall_alerts', df)
+                    db.df_write(data_table)
 
 
     summary = pd.DataFrame({'site_id': [site_id], 'site_code': [site_code],
@@ -183,7 +196,7 @@ def summary_writer(site_id, site_code, gauge_name, rain_id, twoyrmax, halfmax,
     
     return summary
 
-def main(rain_props, end, sc, trigger_symbol):
+def main(rain_props, end, sc, trigger_symbol, write_to_db=True):
     """Computes rainfall alert.
     
     Args:
@@ -243,6 +256,8 @@ def main(rain_props, end, sc, trigger_symbol):
     operational_trigger['ts'] = str(end)
     operational_trigger['ts_updated'] = str(end)
     operational_trigger = operational_trigger.rename(columns = {'alert': 'trigger_sym_id'})
-    qdb.alert_to_db(operational_trigger, 'operational_triggers')
+    
+    if write_to_db == True:
+        qdb.alert_to_db(operational_trigger, 'operational_triggers')
 
     return summary
