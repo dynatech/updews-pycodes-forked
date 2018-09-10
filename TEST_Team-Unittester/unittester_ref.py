@@ -193,7 +193,7 @@ class TestModule(unittest.TestCase):
              querydb.check_timestamp(from_time= str(info[0]['from_time']), 
                                      to_time= str(info[0]['to_time']))
             
-         self.assertTrue('Expecting , delimiter: line 1 column 51 (char 50)'
+         self.assertTrue('Input from_time and to_time error'
          in context.exception) 
 
 
@@ -222,7 +222,14 @@ class TestModule(unittest.TestCase):
                                      to_time= str(info[0]['to_time']))
             
          self.assertTrue('Input to_time error' in context.exception)  
-         
+
+    def test_case_check_timestamp_11(self):
+        info = function_info('check_timestamp','test_11')
+        with self.assertRaises(ValueError) as context:
+             querydb.check_timestamp(from_time= str(info[0]['from_time']), 
+                                     to_time= str(info[0]['to_time']))
+            
+        self.assertTrue('Input from_time and to_time error' in context.exception)          
 
 #    """
 #    - Function get_tsm_id test cases
@@ -383,109 +390,110 @@ class TestModule(unittest.TestCase):
             
         assert_option(self,info,df) 
          
-#    """
-#    - Function get_soms_raw test cases
-#    """    
-#    
-#    
-#    def test_case_get_soms_raw_positive_1(self):
-#        info = function_info('get_soms_raw','test_1')
-#        df = querydb.get_soms_raw(tsm_name=str(info[0]['tsm_name']), 
-#                                        from_time= str(info[0]['from_time']), 
-#                                        to_time= str(info[0]['to_time']),
-#                                        type_num=int(info[0]['type_num']),
-#                                        node_id=int(info[0]['node_id']))
-#        assert_option(self,info,df)
-#
-#
-#    def test_case_get_soms_raw_positive_2(self):
-#        info = function_info('get_soms_raw','test_2')
-#        df = querydb.get_soms_raw(tsm_name=str(info[0]['tsm_name']), 
-#                                        from_time=str(info[0]['from_time']), 
-#                                        to_time=str(info[0]['to_time']),
-#                                        type_num=int(info[0]['type_num']),
-#                                        node_id=int(info[0]['node_id']))
-#        assert_option(self,info,df)
-#
-#    
-#    def test_case_get_soms_raw_positive_3(self):
-#        info = function_info('get_soms_raw','test_3')
-#        df = querydb.get_soms_raw(tsm_name=str(info[0]['tsm_name']), 
-#                                        from_time=str(info[0]['from_time']), 
-#                                        to_time=str(info[0]['to_time']),
-#                                        type_num=int(info[0]['type_num']),
-#                                        node_id=int(info[0]['node_id']))
-#        data_output = load_pickle(str(info[1]))
-#        pd.testing.assert_frame_equal(df, data_output,by_blocks=True, 
-#                          check_exact=True)
-#                          
-#                          
-#    def test_case_get_soms_raw_positive_4(self):
-#        info = function_info('get_soms_raw','test_4')
-#        df = querydb.get_soms_raw(tsm_name= str(info[0]['tsm_name']), 
-#                                        from_time= str(info[0]['from_time']), 
-#                                        to_time= str(info[0]['to_time']),
-#                                        type_num= int(info[0]['type_num']),
-#                                        node_id=  int(info[0]['node_id']))
-#        assert_option(self,info,df)
-#
-#
-#    def test_case_get_soms_raw_positive_5(self):
-#        info = function_info('get_soms_raw','test_5')
-#        df = querydb.get_soms_raw(tsm_name= str(info[0]['tsm_name']), 
-#                                        from_time= str(info[0]['from_time']), 
-#                                        to_time= str(info[0]['to_time']),
-#                                        type_num=int(info[0]['type_num']),
-#                                        node_id=int(info[0]['node_id']))
-#        assert_option(self,info,df)
-#
-#    ## Comment Test Cases/ Negative
-#    def test_case_get_soms_raw_data_6(self):
-#        info = function_info('get_soms_raw','test_6')
-#
-##        with self.assertRaises(ValueError) as context:
-#        df = querydb.get_soms_raw(tsm_name= str(info[0]['tsm_name']), 
-#                                        from_time= str(info[0]['from_time']), 
-#                                        to_time= str(info[0]['to_time']),
-#                                        type_num= int(info[0]['type_num']),
-#                                        node_id=  int(info[0]['node_id']))
-#        
-#        assert_option(self,info,len(df))
-#
-#
-#    def test_case_get_soms_raw_data_7(self):
-#        info = function_info('get_soms_raw','test_7')
-#
-#        with self.assertRaises(ValueError) as context:
-#            querydb.get_soms_raw(tsm_name= str(info[0]['tsm_name']),
-#                                        from_time= str(info[0]['from_time']), 
-#                                        to_time= str(info[0]['to_time']),
-#                                        type_num= int(info[0]['type_num']),
-#                                        node_id=  int(info[0]['node_id']))
-#        
-#        self.assertTrue('invalid tsm_name' in context.exception)
-#
-#
-#    def test_case_get_soms_raw_8(self):
-#         info = function_info('get_soms_raw','test_8')
-#         df = querydb.get_soms_raw(tsm_name= str(info[0]['tsm_name']),
-#                                       from_time = str(info[0]['from_time']),
-#                                       to_time= str(info[0]['to_time']),
-#                                       type_num = int(info[0]['type_num']),
-#                                       node_id = int(info[0]['node_id']))
-#                                       
-#         assert_option(self,info,len(df))
-#         
-#
-#    def test_case_get_soms_raw_9(self):
-#         info = function_info('get_soms_raw','test_9')
-#         df = querydb.get_soms_raw(tsm_name= str(info[0]['tsm_name']),
-#                                       from_time = str(info[0]['from_time']),
-#                                       to_time= str(info[0]['to_time']),
-#                                       type_num = int(info[0]['type_num']),
-#                                       node_id = int(info[0]['node_id']))
-#
-#         assert_option(self,info,len(df))
+    """
+    - Function get_soms_raw test cases
+    """    
+    
+    
+    def test_case_get_soms_raw_positive_1(self):
+        info = function_info('ref_get_soms_raw','test_1')
+        df = querydb.ref_get_soms_raw(tsm_name=str(info[0]['tsm_name']), 
+                                        from_time= str(info[0]['from_time']), 
+                                        to_time= str(info[0]['to_time']),
+                                        type_num=int(info[0]['type_num']),
+                                        node_id=int(info[0]['node_id']))
+        assert_option(self,info,df)
+
+
+    def test_case_get_soms_raw_positive_2(self):
+        info = function_info('ref_get_soms_raw','test_2')
+        df = querydb.ref_get_soms_raw(tsm_name=str(info[0]['tsm_name']), 
+                                        from_time=str(info[0]['from_time']), 
+                                        to_time=str(info[0]['to_time']),
+                                        type_num=int(info[0]['type_num']),
+                                        node_id=int(info[0]['node_id']))
+        assert_option(self,info,df)
+
+    
+    def test_case_get_soms_raw_positive_3(self):
+        info = function_info('ref_get_soms_raw','test_3')
+        df = querydb.ref_get_soms_raw(tsm_name=str(info[0]['tsm_name']), 
+                                        from_time=str(info[0]['from_time']), 
+                                        to_time=str(info[0]['to_time']),
+                                        type_num=int(info[0]['type_num']),
+                                        node_id=int(info[0]['node_id']))
+        data_output = load_pickle(str(info[1]))
+        pd.testing.assert_frame_equal(df, data_output,by_blocks=True, 
+                          check_exact=True)
+                          
+                          
+    def test_case_get_soms_raw_positive_4(self):
+        info = function_info('ref_get_soms_raw','test_4')
+        df = querydb.ref_get_soms_raw(tsm_name= str(info[0]['tsm_name']), 
+                                        from_time= str(info[0]['from_time']), 
+                                        to_time= str(info[0]['to_time']),
+                                        type_num= int(info[0]['type_num']),
+                                        node_id=  int(info[0]['node_id']))
+        assert_option(self,info,df)
+
+
+    def test_case_get_soms_raw_positive_5(self):
+        info = function_info('ref_get_soms_raw','test_5')
+        df = querydb.ref_get_soms_raw(tsm_name= str(info[0]['tsm_name']), 
+                                        from_time= str(info[0]['from_time']), 
+                                        type_num=int(info[0]['type_num']),
+                                        node_id=int(info[0]['node_id']))
+        assert_option(self,info,df)
+
+    ## Comment Test Cases/ Negative
+    def test_case_get_soms_raw_data_6(self):
+        info = function_info('ref_get_soms_raw','test_6')
+
+        with self.assertRaises(ValueError) as context:
+            querydb.ref_get_soms_raw(tsm_name= str(info[0]['tsm_name']), 
+                                            from_time= str(info[0]['from_time']), 
+                                            to_time= str(info[0]['to_time']),
+                                            type_num= int(info[0]['type_num']),
+                                            node_id=  int(info[0]['node_id']))
+        
+        self.assertTrue('Invalid msgid for version 2 soms sensor. Valid values are 111,112,21,26' in context.exception)
+
+
+    def test_case_get_soms_raw_data_7(self):
+        info = function_info('ref_get_soms_raw','test_7')
+
+        with self.assertRaises(ValueError) as context:
+            querydb.ref_get_soms_raw(tsm_name= str(info[0]['tsm_name']),
+                                        from_time= str(info[0]['from_time']), 
+                                        to_time= str(info[0]['to_time']),
+                                        type_num= int(info[0]['type_num']),
+                                        node_id=  int(info[0]['node_id']))
+        
+        self.assertTrue('enter valid tsm_name' in context.exception)
+
+
+    def test_case_get_soms_raw_8(self):
+        info = function_info('ref_get_soms_raw','test_8')
+        with self.assertRaises(ValueError) as context:
+            querydb.ref_get_soms_raw(tsm_name= str(info[0]['tsm_name']),
+                                        from_time= str(info[0]['from_time']), 
+                                        to_time= str(info[0]['to_time']),
+                                        type_num= int(info[0]['type_num']),
+                                        node_id=  int(info[0]['node_id']))
+        
+        self.assertTrue('Invalid node id. Exceeded number of nodes' in context.exception)
+         
+
+    def test_case_get_soms_raw_9(self):
+        info = function_info('ref_get_soms_raw','test_9')
+        with self.assertRaises(ValueError) as context:
+            querydb.ref_get_soms_raw(tsm_name= str(info[0]['tsm_name']),
+                                        from_time= str(info[0]['from_time']), 
+                                        to_time= str(info[0]['to_time']),
+                                        type_num= int(info[0]['type_num']),
+                                        node_id=  int(info[0]['node_id']))
+        
+        self.assertTrue('Invalid msgid for version 3 soms sensor. Valid values are 110,113,10,13' in context.exception)
 #
 #    """
 #    - Function f_outlier test cases

@@ -209,10 +209,8 @@ def does_alert_exists(site_id, end, alert):
     return df
 
 ########################## SUBSURFACE-RELATED QUERIES ##########################
-#def find_replace_multi(string, dictionary):
-#
 
-def query_pattern(template_id,dictionary=""):
+def query_pattern(template_id="",dictionary=""):
     if template_id == 'raw_accel':
         string = ("SELECT ts,'[tsm_name]' as 'tsm_name',times.node_id,xval,yval,zval,batt,"
                     " times.accel_number,accel_id, in_use from (select *, if(type_num"
@@ -221,6 +219,9 @@ def query_pattern(template_id,dictionary=""):
                     " AND ts <= '[to_time]' [node_id]) times  [node_id_query]) "
                     "nodes on times.node_id = nodes.node_id and "
                     "times.accel_number=nodes.accel_number")
+    elif template_id == 'soms_raw':
+       string = ("select * from senslopedb.soms_[tsm_name] where ts > '[from_time]' " 
+                  "[to_time] [node_id] [type_num]") 
     else:
          raise ValueError("template_id doesn't exists")
          return
@@ -264,6 +265,7 @@ def filter_raw_accel(accel_info,query,df):
      return df
 
 def check_timestamp(from_time="", to_time=""):
+
     if from_time=="":
         from_time= pd.to_datetime("2010-01-01")
     else:
@@ -280,9 +282,11 @@ def check_timestamp(from_time="", to_time=""):
         except ValueError:
             raise ValueError("Input to_time error")
             
-    
-    return {'from_time':from_time, 'to_time':to_time}
-    
+    time_diff = from_time - to_time
+    if str(time_diff.days).find("-") == 0:
+        return {'from_time':from_time, 'to_time':to_time}
+    else:
+        raise ValueError("Input from_time and to_time error")
     
     
 def get_raw_accel_data_2(tsm_id="", tsm_name = "", from_time = "", 
@@ -601,6 +605,8 @@ def get_soms_raw(tsm_name = "", from_time = "", to_time = "", type_num="", node_
     if type_num:
         query += " and type_num = '%s'" %type_num
         
+
+        
     df =  db.df_read(query)
     
     
@@ -623,19 +629,18 @@ def get_soms_raw(tsm_name = "", from_time = "", to_time = "", type_num="", node_
     return df
  
 def ref_get_soms_raw(tsm_name="", from_time="", to_time="", type_num="", node_id=""):
-    memc = memcache.Client(['127.0.0.1:11211'], debug=1)
-    
-    tsm_details=memc.get('tsm')
+
+    tsm_details=memory.get("DF_TSM_SENSORS")
     #For blank tsm_name
     if not tsm_name:
         raise ValueError('enter valid tsm_name')
     if not node_id:
         node_id = 0
     
-   
     #For invalid node_id    
     check_num_seg=tsm_details[tsm_details.tsm_name == tsm_name].reset_index().number_of_segments[0]
-    if (node_id > check_num_seg):
+
+    if (int(node_id) > int(check_num_seg)):
         raise ValueError('Invalid node id. Exceeded number of nodes')
     
     #For invalid type_num
@@ -643,36 +648,35 @@ def ref_get_soms_raw(tsm_name="", from_time="", to_time="", type_num="", node_id
     v3_types = [110,113,10,13]
     v2_types = [21,26,112,111]
     if (check_type_num ==3):
-        if type_num not in v3_types:
+        if int(type_num) not in v3_types:
             raise ValueError('Invalid msgid for version 3 soms sensor. Valid values are 110,113,10,13')
     elif (check_type_num == 2):
-        if type_num not in v2_types:
+        if int(type_num) not in v2_types:
             raise ValueError('Invalid msgid for version 2 soms sensor. Valid values are 111,112,21,26')
     else:
         pass
     
     query_accel = "SELECT version FROM senslopedb.tsm_sensors where tsm_name = '%s'" %tsm_name  
     df_accel =  get_db_dataframe(query_accel) 
-    query = "select * from senslopedb.soms_%s" %tsm_name
-    
+
     if not from_time:
         from_time = "2010-01-01"
-    
-        
-    query += " where ts > '%s'" %from_time
-    
     if to_time:
-        query += " and ts < '%s'" %to_time
-    
+        to_time = " and ts < '%s'" %to_time
     
     if node_id:
-        query += " and node_id = {}" .format(node_id)
-    
-    if type_num:
-        query += " and type_num = {}" .format(type_num)
+        node_id = " and node_id = {}" .format(node_id)
         
+    if type_num:
+        type_num = " and type_num = {}" .format(type_num)
+        
+    query = query_pattern(template_id='soms_raw',
+                        dictionary= {"tsm_name" : tsm_name, 
+                                     "from_time": from_time, 
+                                     "to_time": to_time, 
+                                     "node_id": node_id, 
+                                     "type_num": type_num})      
     df =  get_db_dataframe(query)
-    
     
     df.ts = pd.to_datetime(df.ts)
     
@@ -686,8 +690,7 @@ def ref_get_soms_raw(tsm_name="", from_time="", to_time="", type_num="", node_id
         df = df.drop('mval2', axis=1, inplace=False)
         df['mval1'] = df['mval1-n']
         df = df.drop('mval1-n', axis=1, inplace=False)
-    
-    #df = df.replace("-inf", "NAN")         
+         
     df = df.drop('mval2', axis=1, inplace=False)
 
     return df 

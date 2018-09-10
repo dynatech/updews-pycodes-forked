@@ -18,11 +18,11 @@ test_3 = {"from_time":"2012-02-21 09:20:20", "to_time":"2017-12-12 13:12:12"}>ou
 test_4 = {"from_time":"2015-07-26 23:59:59.10", "to_time":"2016-11-01 12:22:13.123123"}>output\\check_timestamp\\test_4.p>dict
 test_5 = {"from_time":"2018-02-12", "to_time":"2018-04-23 12:23:30"}>output\\check_timestamp\\test_5.p>dict
 test_6 = {"from_time":"birthday ko", "to_time":"2018-10-12 23:30"}>ValueError: Input from_time error>asserttrue
-test_7 = {"from_time":"2011-01-10 09:00:00", "to_time":2013-12-02}>output\\check_timestamp\\test_7.p>str
+test_7 = {"from_time":"2011-01-10 09:00:00", "to_time":2013-12-02}>ValueError: Input from_time and to_time error>asserttrue
 test_8 = {"from_time":"2012-02-21 09:20:20", "to_time":"happy new year"}>ValueError: Input to_time error>asserttrue
 test_9 = {"from_time":"2015-26-07", "to_time":"2016-11-01 12:22:13.123123"}>ValueError: Input from_time error>asserttrue
 test_10 = {"from_time":"2018-02-12", "to_time":"2018-04-23 48:23:30"}>ValueError: Input to_time error>asserttrue
-
+test_11 = {"from_time":"2018-01-12", "to_time":"2018-01-11"}>ValueError: Input from_time and to_time error>asserttrue
 
 [filter_raw_accel]
 test_1 = {"accel_info":{"output_type":"query"},"query":"input\\filter_raw_accel\\query1.p","df":"input\\filter_raw_accel\\df1.p"}>output\\filter_raw_accel\\test_1.p>str
@@ -56,3 +56,16 @@ test_7 = {"tsm_details":"input\\get_tsm_id\\empty_df.p","tsm_name":"tueta","to_t
 test_8 = {"tsm_details":"input\\get_tsm_id\\tsm_details.p","tsm_name":"pepsb","to_time":"pepsb"}>ValueError: could not convert string to Timestamp>asserttrue
 test_9 = {"tsm_details":"input\\get_tsm_id\\tsm_details.p","tsm_name":"","to_time":"2015-06-03"}>ValueError: Input tsm_name error>asserttrue
 test_10 = {"tsm_name":"agbsb","to_time":""}>AttributeError: 'str' object has no attribute 'tsm_id'>asserttrue
+
+
+
+[ref_get_soms_raw]
+test_1 = {"tsm_name":"laysa", "from_time":"2015-01-01", "to_time":"2015-12-31", "type_num": "110", "node_id":"10"}>output\\get_soms_raw\\test_1.p>df
+test_2 = {"tsm_name":"laysa", "from_time":"2015-01-01", "to_time":"2015-12-31", "type_num": "113", "node_id":"10"}>output\\get_soms_raw\\test_2.p>df
+test_3 = {"tsm_name":"hinsa", "from_time":"2016-01-01", "to_time":"2016-03-31", "type_num": "110", "node_id":"10"}>output\\get_soms_raw\\test_3.p>df
+test_4 = {"tsm_name":"hinsa", "from_time":"2016-01-01", "to_time":"2016-03-31", "type_num": "113", "node_id":"10"}>output\\get_soms_raw\\test_4.p>df
+test_5 = {"tsm_name":"hinsa", "from_time":"2018-01-01", "type_num": "110", "node_id":"10"}>output\\get_soms_raw\\test_5.p>df
+test_6 = {"tsm_name":"mcasb", "from_time":"2015-01-01", "to_time":"2015-12-31", "type_num": "110", "node_id":"10"}>ValueError: Invalid msgid for version 2 soms sensor. Valid values are 111,112,21,26>asserttrue
+test_7 = {"tsm_name":"", "from_time":"2015-01-01", "to_time":"2015-12-31", "type_num": "110", "node_id":"10"}>ValueError: enter valid tsm_name>asserttrue
+test_8 = {"tsm_name":"laysa", "from_time":"2015-01-01", "to_time":"2015-12-31", "type_num": "110", "node_id":"40"}>ValueError: Invalid node id. Exceeded number of nodes>asserttrue
+test_9 = {"tsm_name":"laysa", "from_time":"2015-01-01", "to_time":"2015-12-31", "type_num": "111", "node_id":"10"}>ValueError: Invalid msgid for version 3 soms sensor. Valid values are 110,113,10,13>asserttrue
