@@ -6,7 +6,8 @@ Created on Thu Apr 07 09:29:47 2016
 """
 
 import pandas as pd
-import querydb as qDb
+import analysis.querydb as qDb
+
 
 #import matplotlib.pyplot as plt
 
@@ -44,16 +45,20 @@ def filter_undervoltage(df,column,node):
     volt_a1 = voltage_compute(column,node,1)
     volt_a2 = voltage_compute(column,node,2) 
     
-    x=pd.concat([df,volt_a1.v1,volt_a2.v2],axis=1,ignore_index=True)
-    x.columns=['mval1','v1','v2']
-    df=x.mval1[((x.v1>3.2) & (x.v1<3.4) & (x.v2>3.2) & (x.v2<3.4)) | (x.v1.isnull() & x.v2.isnull())]
+    merge_voltage=pd.concat([df,volt_a1.v1,volt_a2.v2],axis=1,ignore_index=True)
+    merge_voltage.columns=['mval1','v1','v2']
+    df=merge_voltage.mval1[((merge_voltage.v1>3.2) & (merge_voltage.v1<3.4) & (merge_voltage.v2>3.2) & (merge_voltage.v2<3.4)) | 
+            (merge_voltage.v1.isnull() & merge_voltage.v2.isnull())]
     df_undervoltage = df.reset_index()
     return df_undervoltage
 
 def voltage_compute(column, node, a_num):
-    df_voltage = qDb.get_raw_accel_data(tsm_name = column, node_id = node, accel_number = a_num, batt=True, return_db=True)
+    df_voltage = qDb.get_raw_accel_data(tsm_name = column, 
+                                        node_id = node, 
+                                        accel_number = a_num, 
+                                        batt=True, return_db=True)
     df_voltage.index = df_voltage.ts
-    df_voltage.rename(columns={'batt':'v'+a_num}, inplace= True)
+    df_voltage.rename(columns={'batt':'v'+str(a_num)}, inplace= True)
     df_voltage=df_voltage.resample('30Min', base = 0).first()
 
     return df_voltage
