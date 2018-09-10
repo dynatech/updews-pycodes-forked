@@ -746,7 +746,7 @@ def get_tsm_list(tsm_name='', end=datetime.now()):
             df = df.drop_duplicates('logger_id')
             
             # make a sensor list of loggerArray class functions
-            TSMdf = df.groupby('logger_id', as_index=False)>>>>>>> 2018-dewslandslide-complie-pyunit
+            TSMdf = df.groupby('logger_id', as_index=False)
             sensors = TSMdf.apply(logger_array_list)
             return sensors
         except:
