@@ -7,21 +7,26 @@ Created on Thu Apr 07 09:29:47 2016
 
 import pandas as pd
 import analysis.querydb as qDb
+import volatile.memory as memory
 
-
-#import matplotlib.pyplot as plt
 
 
 v2=['NAGSA', 'BAYSB', 'AGBSB', 'MCASB', 'CARSB', 'PEPSB','BLCSA']
-#'absolute' minimum and maximum values for SOMS v2 and v3
-m=[['RAW v2', 'RAW v3'],['CAL v2', 'CAL v3']]   #format for smin and smax
 
 
-def filter_outlier(df,column,mode): 
+def filter_outlier(df): 
+#Checking of variables
+        
+    if (df.type_num[0] == 110 or df.type_num[0] == 10):
+        mode = 0
+    else:
+        mode = 1
+    
+
     soms_min=[[2000,500],[0,0]]                         #format: [[v2raw_min, v3raw_min], [v2calib_min,v3calib_min]]
     soms_max=[[7800,1600],[1700,1500]]
 
-    if column.upper() in v2:
+    if df.tsm_name[0].upper() in v2:
         ver = 0
     else:
         ver = 1
@@ -35,12 +40,15 @@ def filter_outlier(df,column,mode):
     
     return df_outlier
     
-def filter_undervoltage(df,column,node):
+def filter_undervoltage(df):
     '''for v3 only'''
+    
+    column = df.tsm_name[0]
+    node = df.node_id[0]
 #    seek_undervoltage(df,column,node,mode)
     df = df.set_index('ts')
     df = df.resample('30Min',base=0).first()
-    df = df.drop(['data_id', 'node_id', 'type_num'], axis=1)
+    df = df.drop(['data_id', 'node_id', 'type_num', 'tsm_name'], axis=1)
     
     volt_a1 = voltage_compute(column,node,1)
     volt_a2 = voltage_compute(column,node,2) 
@@ -53,6 +61,20 @@ def filter_undervoltage(df,column,node):
     return df_undervoltage
 
 def voltage_compute(column, node, a_num):
+    
+    tsm_details=memory.get("DF_TSM_SENSORS")
+    #For blank tsm_name
+    if not column:
+        raise ValueError('enter valid column')
+    if (a_num >= 3):
+        raise ValueError('enter valid accelerometer number')
+    
+    #For invalid node    
+    check_num_seg=tsm_details[tsm_details.tsm_name == column].reset_index().number_of_segments[0]
+
+    if (int(node) > int(check_num_seg)):
+        raise ValueError('Invalid node id. Exceeded number of nodes')
+    
     df_voltage = qDb.get_raw_accel_data(tsm_name = column, 
                                         node_id = node, 
                                         accel_number = a_num, 
