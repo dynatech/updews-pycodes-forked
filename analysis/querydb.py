@@ -692,7 +692,7 @@ def ref_get_soms_raw(tsm_name="", from_time="", to_time="", type_num="", node_id
         df = df.drop('mval1-n', axis=1, inplace=False)
          
     df = df.drop('mval2', axis=1, inplace=False)
-
+    df['tsm_name'] = tsm_name
     return df 
     
 
