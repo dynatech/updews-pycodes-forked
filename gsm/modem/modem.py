@@ -1,8 +1,8 @@
 import serial
 import time
 import re
-#from messaging.sms import SmsDeliver as smsdeliver
-#from messaging.sms import SmsSubmit as smssubmit
+from messaging.sms import SmsDeliver as smsdeliver
+from messaging.sms import SmsSubmit as smssubmit
 import volatile.memory as mem
 from datetime import datetime as dt
 from datetime import timedelta as td

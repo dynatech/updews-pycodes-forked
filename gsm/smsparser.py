@@ -257,8 +257,9 @@ def process_surficial_observation(sms):
 
         # print messages.iloc[err_val - 1].internal_msg
         # print messages.iloc[err_val - 1].external_msg
-        smstables.write_outbox(messages.iloc[err_val - 1].internal_msg, 
-            ct_sim_num)
+        sms_msg_for_operations = "{}\n\n{}".format(
+            messages.iloc[err_val - 1].internal_msg, sms.msg)
+        smstables.write_outbox(sms_msg_for_operations, ct_sim_num)
 
         return False
 
@@ -275,7 +276,7 @@ def process_surficial_observation(sms):
     markers_unk = markers_unk[["marker_name", "measurement"]]
     markers_unk = markers_unk.set_index(["marker_name"])
     markers_unk = markers_unk.to_dict()
-    internal_msg = "SANDBOX TEST MESSAGE:\n\n%s\n\n" % (sms.msg)
+    internal_msg = "DEWSL Beta:\n\n%s\n\n" % (sms.msg)
     if len(markers_unk["measurement"].keys()) > 0:
         internal_msg += "%s\n%s\n\n" % (reply_msgs.iloc[13]["internal_msg"],
             "\n".join(["%s = %s" % (key, value) for (key, value) in \
@@ -342,7 +343,7 @@ def process_surficial_observation(sms):
         smstables.write_outbox(internal_msg, ct_sim_num)
     # for community who sent the data
     if SEND_REPLY_TO_COMMUNITY:
-        smstables.write_outbox(success_msg, ct_sim_num)
+        smstables.write_outbox(success_msg, sms.sim_num)
 
     # spawn surficial measurement analysis
     if enable_analysis:
