@@ -27,6 +27,7 @@ class VariableInfo:
         self.query = str(info[1])
         self.type = str(info[2])
         self.index_id = str(info[3])
+        self.resource = str(info[4])
         
         
 def dict_format(query_string, variable_info):
@@ -65,17 +66,12 @@ def set_static_variable(name=""):
         MySQLdb.OperationalError: Error in database connection.
 
     """ 
-    query = "Select name, query, data_type, "
-    query += "ts_updated from static_variables"
+    query = ("Select name, query, data_type, ts_updated, resource from "
+        "static_variables")
     date = dt.now()
     date = date.strftime('%Y-%m-%d %H:%M:%S')
     if name != "":
         query += " where name = '%s'" % (name)
-
-    mc = memory.get_handle()
-    sc = mc.get('SERVER_CONFIG')
-    print sc["resource_connection"]["sensor_data"]
-
 
     try:
         variables = dbio.read(query=query,resource='sensor_data')
@@ -86,31 +82,31 @@ def set_static_variable(name=""):
     if not variables:
         print "Error getting static variable information"
         return False
-    
+
     for data in variables:
         variable_info = VariableInfo(data)
 
         if variable_info.type == 'data_frame':
-            static_output = dbio.df_read(
-                query=variable_info.query)
+            static_output = dbio.df_read(query=variable_info.query,
+                resource=variable_info.resource)
 
         elif variable_info.type == 'dict':
             static_output = dict_format(variable_info.query, 
                 variable_info)
 
         else:
-            static_output = dbio.read(
-                query=variable_info.query)
+            static_output = dbio.read(query=variable_info.query,
+                resource=variable_info.resource)
             
         if static_output is None: 
-            warnings.warn('Query Error ' + variable_info.name)
+            warnings.warn('Query error: ' + variable_info.name, stacklevel=2)
         else:
             memory.set(variable_info.name, static_output)
             query_ts_update = ("UPDATE static_variables SET "
                 " ts_updated ='%s' WHERE name ='%s'") % (date, 
                     variable_info.name)
-            dbio.write(query=query_ts_update)
-            print variable_info.name
+            dbio.write(query=query_ts_update, resource="sensor_data")
+            print variable_info.name, "success"
 
 
 def get_db_dataframe(query):
@@ -129,7 +125,7 @@ def get_db_dataframe(query):
     """ 
     try:
         db, cur = dbio.connect(host='local')
-        df = psql.read_sql(query, db)
+        df = psql.read_sql_query(query, db)
         # df.columns = ['ts','id','x','y','z','m']
         # change ts column to datetime
         # df.ts = pd.to_datetime(df.ts)
@@ -288,8 +284,8 @@ def get_surficial_markers(host = None, from_memory = True):
         "inner join markers as m4 "
         "on m2.marker_id = m4.marker_id ")
 
-    engine = dbio.connect(host=host,conn_type=0)
-    surficial_markers = pd.read_sql(query, engine)
+    engine = dbio.connect(resource="sensor_data",conn_type=0)
+    surficial_markers = psql.read_sql_query(query, engine)
     mc.set("surficial_markers", surficial_markers)
 
     return surficial_markers
