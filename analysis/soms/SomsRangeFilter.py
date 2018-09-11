@@ -16,7 +16,6 @@ v2=['NAGSA', 'BAYSB', 'AGBSB', 'MCASB', 'CARSB', 'PEPSB','BLCSA']
 
 def filter_outlier(df): 
 #Checking of variables
-        
     if (df.type_num[0] == 110 or df.type_num[0] == 10):
         mode = 0
     else:
@@ -42,7 +41,6 @@ def filter_outlier(df):
     
 def filter_undervoltage(df):
     '''for v3 only'''
-    
     column = df.tsm_name[0]
     node = df.node_id[0]
 #    seek_undervoltage(df,column,node,mode)
@@ -63,11 +61,6 @@ def filter_undervoltage(df):
 def voltage_compute(column, node, a_num):
     
     tsm_details=memory.get("DF_TSM_SENSORS")
-    #For blank tsm_name
-    if not column:
-        raise ValueError('enter valid column')
-    if (a_num >= 3):
-        raise ValueError('enter valid accelerometer number')
     
     #For invalid node    
     check_num_seg=tsm_details[tsm_details.tsm_name == column].reset_index().number_of_segments[0]
