@@ -655,7 +655,7 @@ def main(end=datetime.now()):
     alerts = site_alerts.apply(subsurface_sym,
                                sym_map=subsurface_map).reset_index(drop=True)
 
-    all_alerts = pd.DataFrame({'invalids': [np.nan], 'alerts': [alerts]})
+    all_alerts = pd.DataFrame({'invalids': [pd.DataFrame()], 'alerts': [alerts]})
 
     public_json = all_alerts.to_json(orient="records")
 
@@ -674,5 +674,5 @@ def main(end=datetime.now()):
 ################################################################################
 
 if __name__ == "__main__":
-#    df = main()
-    df = main("2018-08-14 19:30:00")
+    df = main()
+#    df = main("2018-08-14 19:30:00")
