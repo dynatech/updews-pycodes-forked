@@ -221,3 +221,32 @@ def apply_filters(dfl, orthof=True, rangef=True, outlierf=True):
     dfl = dfl.reset_index(drop=True)     
     dfl = dfl[['ts','tsm_name','node_id','x','y','z']]
     return dfl
+
+
+def apply_filters2(df, orthof=True, rangef=True, outlierf=True):
+
+    if df.empty:
+        return df[['ts','tsm_name','node_id','x','y','z']]
+        
+  
+    if rangef:
+        df = range_filter_accel(df)  
+        if df.empty:
+            return df[['ts','tsm_name','node_id','x','y','z']]
+
+    if orthof: 
+        df = orthogonal_filter(df)
+        if df.empty:
+            return df[['ts','tsm_name','node_id','x','y','z']]
+            
+    
+    if outlierf:
+        df = df.groupby(['node_id']).apply(resample_df).reset_index(drop=True)
+        df = df.groupby(['node_id']).apply(outlier_filter).reset_index(drop=True)
+        if df.empty:
+            return df[['ts','tsm_name','node_id','x','y','z']]
+
+    
+    df = df.reset_index(drop=True)     
+    df = df[['ts','tsm_name','node_id','x','y','z']]
+    return df
