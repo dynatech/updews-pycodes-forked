@@ -4,6 +4,7 @@ import os
 import pandas as pd
 
 import querydb as qdb
+import techinfomaker as tech_info_maker
 
 def release_time(date_time):
     """Rounds time to 4/8/12 AM/PM.
@@ -358,7 +359,7 @@ def check_rainfall_alert(internal_df, internal_symbols, site_id,
             rain_df['alert_symbol'] = rain_df['alert_symbol'].apply(lambda x: \
                                                                     x.lower())
             internal_df = internal_df.append(rain_df, ignore_index=True)
-                            
+            
     return internal_df
 
 def site_public_alert(site_props, end, public_symbols, internal_symbols,
@@ -401,7 +402,7 @@ def site_public_alert(site_props, end, public_symbols, internal_symbols,
         start_monitor = end - timedelta(1)
 
     # operational triggers for monitoring at timestamp end
-    op_trig = get_operational_trigger(site_id, start_monitor, end) 
+    op_trig = get_operational_trigger(site_id, start_monitor, end)
     release_op_trig = op_trig[op_trig.ts_updated >= \
             release_time(end)-timedelta(hours=4)]
     release_op_trig = release_op_trig.drop_duplicates(['source_id', \
@@ -443,7 +444,7 @@ def site_public_alert(site_props, end, public_symbols, internal_symbols,
                             timedelta(hours=0.5))]['alert_level'].values[0]
     except:
         rainfall = -1
-
+    
     # INTERNAL ALERT
     internal_id = internal_symbols[internal_symbols.trigger_source == \
             'internal']['source_id'].values[0]
@@ -538,11 +539,13 @@ def site_public_alert(site_props, end, public_symbols, internal_symbols,
         triggers['ts'] = triggers['ts'].apply(lambda x: str(x))
     except:
         triggers = pd.DataFrame(columns=['alert', 'ts'])
-
+     
     #technical info for bulletin release
     try:
-        tech_info = pd.DataFrame(columns=['subsurface', 'surficial', 'rainfall', \
-            'earthquake', 'on demand'])
+        #tech_info = pd.DataFrame(columns=['subsurface', 'surficial', 'rainfall', \
+        #  'earthquake', 'on demand'])
+        pos_trig = pd.merge(pos_trig, internal_symbols, on='trigger_sym_id')
+        tech_info = tech_info_maker.main(pos_trig)
     except:
         tech_info = pd.DataFrame()
     
@@ -579,7 +582,7 @@ def site_public_alert(site_props, end, public_symbols, internal_symbols,
     except:
         pass
     
-    qdb.alert_to_db(site_public_df, 'public_alerts')
+    #qdb.alert_to_db(site_public_df, 'public_alerts')
     
     return public_df
 
@@ -634,7 +637,7 @@ def main(end=datetime.now()):
     # site id and code
     query = "SELECT site_id, site_code FROM sites WHERE active = 1"
     props = qdb.get_db_dataframe(query)
-#    props = props[props.site_code == 'gaa']
+    #props = props[props.site_code == 'nag']
     site_props = props.groupby('site_id', as_index=False)
     
     alerts = site_props.apply(site_public_alert, end=end,
@@ -671,4 +674,5 @@ def main(end=datetime.now()):
 ################################################################################
 
 if __name__ == "__main__":
-    df = main()
+#    df = main()
+    df = main("2018-08-14 19:30:00")
