@@ -441,6 +441,7 @@ class TestModule(unittest.TestCase):
         info = function_info('ref_get_soms_raw','test_5')
         df = querydb.ref_get_soms_raw(tsm_name= str(info[0]['tsm_name']), 
                                         from_time= str(info[0]['from_time']), 
+                                        to_time= str(info[0]['to_time']),
                                         type_num=int(info[0]['type_num']),
                                         node_id=int(info[0]['node_id']))
         assert_option(self,info,df)
@@ -630,35 +631,35 @@ class TestModule(unittest.TestCase):
 #    - Function outlier_filter test cases
 #    """
 #    
-#    def test_case_outlier_filter_1(self):
-#         info = function_info('outlier_filter','test_1')
-#         df = flt.outlier_filter(dff=load_pickle(str(info[0]['dff'])))
-#         assert_option(self,info,df)      
-#
-#
-#    def test_case_outlier_filter_2(self):
-#         info = function_info('outlier_filter','test_2')
-#         df = flt.outlier_filter(dff=load_pickle(str(info[0]['dff'])))
-#         assert_option(self,info,df)     
-#
-#
-#    def test_case_outlier_filter_3(self):
-#         info = function_info('outlier_filter','test_3')
-#         df = flt.outlier_filter(dff=load_pickle(str(info[0]['dff'])))
-##         print load_pickle(str(info[0]['dff']))
-#         assert_option(self,info,df)         
-#
-#
-#    def test_case_outlier_filter_4(self):
-#         info = function_info('outlier_filter','test_4')
-#         df = flt.outlier_filter(dff=load_pickle(str(info[0]['dff'])))
-#         assert_option(self,info,df) 
-#
-#
-#    def test_case_outlier_filter_5(self):
-#         info = function_info('outlier_filter','test_5')
-#         df = flt.outlier_filter(dff=load_pickle(str(info[0]['dff'])))
-#         assert_option(self,info,df)      
+    def test_case_outlier_filter_1(self):
+         info = function_info('outlier_filter','test_1')
+         df = flt.outlier_filter(dff=load_pickle(str(info[0]['dff'])))
+         assert_option(self,info,df)      
+
+
+    def test_case_outlier_filter_2(self):
+         info = function_info('outlier_filter','test_2')
+         df = flt.outlier_filter(dff=load_pickle(str(info[0]['dff'])))
+         assert_option(self,info,df)     
+
+
+    def test_case_outlier_filter_3(self):
+         info = function_info('outlier_filter','test_3')
+         df = flt.outlier_filter(dff=load_pickle(str(info[0]['dff'])))
+#         print load_pickle(str(info[0]['dff']))
+         assert_option(self,info,df)         
+
+
+    def test_case_outlier_filter_4(self):
+         info = function_info('outlier_filter','test_4')
+         df = flt.outlier_filter(dff=load_pickle(str(info[0]['dff'])))
+         assert_option(self,info,df) 
+
+
+    def test_case_outlier_filter_5(self):
+         info = function_info('outlier_filter','test_5')
+         df = flt.outlier_filter(dff=load_pickle(str(info[0]['dff'])))
+         assert_option(self,info,df)      
 #    
 #    
 #    """

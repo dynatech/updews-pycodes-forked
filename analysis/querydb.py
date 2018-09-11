@@ -6,6 +6,8 @@ import platform
 import volatile.memory as memory 
 from sqlalchemy import create_engine
 import re
+import cPickle as pickle
+
 curOS = platform.system()
 
 if curOS == "Windows":
@@ -208,11 +210,13 @@ def does_alert_exists(site_id, end, alert):
     
     return df
 
+
 ########################## SUBSURFACE-RELATED QUERIES ##########################
 
-def query_pattern(template_id="",dictionary=""):
+
+def query_pattern(template_id="", dictionary=""):
     if template_id == 'raw_accel':
-        string = ("SELECT ts,'[tsm_name]' as 'tsm_name',times.node_id,xval,yval,zval,batt,"
+        string = ("SELECT ts,'[tsm_name]' as 'tsm_name',times.node_id, xval, yval, zval, batt,"
                     " times.accel_number,accel_id, in_use from (select *, if(type_num"
                     " in (32,11) or type_num is NULL, 1,if(type_num in (33,12),2,0))"
                     " as 'accel_number' from tilt_[tsm_name] WHERE ts >= '[from_time]'"
@@ -220,7 +224,7 @@ def query_pattern(template_id="",dictionary=""):
                     "nodes on times.node_id = nodes.node_id and "
                     "times.accel_number=nodes.accel_number")
     elif template_id == 'soms_raw':
-       string = ("select * from senslopedb.soms_[tsm_name] where ts > '[from_time]' " 
+        string = ("select * from senslopedb.soms_[tsm_name] where ts > '[from_time]' " 
                   "[to_time] [node_id] [type_num]") 
     else:
          raise ValueError("template_id doesn't exists")
@@ -230,7 +234,8 @@ def query_pattern(template_id="",dictionary=""):
         string = re.sub(r'\[' + item + '\]', dictionary[item], string)
     return string
 
-def get_tsm_id(tsm_details="", tsm_name="", to_time=""):
+
+def get_tsm_id(tsm_details="", ltsm_name="", to_time=""):
 
     if tsm_details.tsm_id[tsm_details.tsm_name==tsm_name].count()>1:
         
@@ -264,7 +269,7 @@ def filter_raw_accel(accel_info,query,df):
              
      return df
 
-def check_timestamp(from_time="", to_time=""):
+def check_timestamp(from_time="",to_time=""):
 
     if from_time=="":
         from_time= pd.to_datetime("2010-01-01")
