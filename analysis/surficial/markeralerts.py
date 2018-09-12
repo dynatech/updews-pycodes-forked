@@ -42,7 +42,7 @@ elif curOS == "Linux":
     import pymysql as mysqlDriver
 
 #### Open config files
-sc = qdb.memcached()
+#sc = qdb.memcached()
 
 #### Create directory
 output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))

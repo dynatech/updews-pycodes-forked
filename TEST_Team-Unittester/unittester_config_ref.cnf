@@ -18,11 +18,10 @@ test_3 = {"from_time":"2012-02-21 09:20:20", "to_time":"2017-12-12 13:12:12"}>ou
 test_4 = {"from_time":"2015-07-26 23:59:59.10", "to_time":"2016-11-01 12:22:13.123123"}>output\\check_timestamp\\test_4.p>dict
 test_5 = {"from_time":"2018-02-12", "to_time":"2018-04-23 12:23:30"}>output\\check_timestamp\\test_5.p>dict
 test_6 = {"from_time":"birthday ko", "to_time":"2018-10-12 23:30"}>ValueError: Input from_time error>asserttrue
-test_7 = {"from_time":"2011-01-10 09:00:00", "to_time":2013-12-02}>ValueError: Input from_time and to_time error>asserttrue
-test_8 = {"from_time":"2012-02-21 09:20:20", "to_time":"happy new year"}>ValueError: Input to_time error>asserttrue
-test_9 = {"from_time":"2015-26-07", "to_time":"2016-11-01 12:22:13.123123"}>ValueError: Input from_time error>asserttrue
-test_10 = {"from_time":"2018-02-12", "to_time":"2018-04-23 48:23:30"}>ValueError: Input to_time error>asserttrue
-test_11 = {"from_time":"2018-01-12", "to_time":"2018-01-11"}>ValueError: Input from_time and to_time error>asserttrue
+test_7 = {"from_time":"2012-02-21 09:20:20", "to_time":"happy new year"}>ValueError: Input to_time error>asserttrue
+test_8 = {"from_time":"2015-26-07", "to_time":"2016-11-01 12:22:13.123123"}>ValueError: Input from_time error>asserttrue
+test_9 = {"from_time":"2018-02-12", "to_time":"2018-04-23 48:23:30"}>ValueError: Input to_time error>asserttrue
+test_10 = {"from_time":"2018-01-12", "to_time":"2018-01-11"}>ValueError: Input from_time and to_time error>asserttrue
 
 [filter_raw_accel]
 test_1 = {"accel_info":{"output_type":"query"},"query":"input\\filter_raw_accel\\query1.p","df":"input\\filter_raw_accel\\df1.p"}>output\\filter_raw_accel\\test_1.p>str
@@ -69,3 +68,56 @@ test_6 = {"tsm_name":"mcasb", "from_time":"2015-01-01", "to_time":"2015-12-31", 
 test_7 = {"tsm_name":"", "from_time":"2015-01-01", "to_time":"2015-12-31", "type_num": "110", "node_id":"10"}>ValueError: enter valid tsm_name>asserttrue
 test_8 = {"tsm_name":"laysa", "from_time":"2015-01-01", "to_time":"2015-12-31", "type_num": "110", "node_id":"40"}>ValueError: Invalid node id. Exceeded number of nodes>asserttrue
 test_9 = {"tsm_name":"laysa", "from_time":"2015-01-01", "to_time":"2015-12-31", "type_num": "111", "node_id":"10"}>ValueError: Invalid msgid for version 3 soms sensor. Valid values are 110,113,10,13>asserttrue
+
+
+[filter_outlier]
+test_1={"df":"input\\SOMS_FILTER_INPUT\\df_laysa0.p"}>output\\filter_outlier\\test_1.p>df
+test_2={"df":"input\\SOMS_FILTER_INPUT\\df_laysa1.p"}>output\\filter_outlier\\test_2.p>df
+test_3={}>output\\f_outlier\\test_3.p>TypeError: filter_outlier() takes exactly 1 argument (0 given)>asserttrue
+
+
+
+[filter_undervoltage]
+test_1={"df":"input\\SOMS_FILTER_INPUT\\df_laysa0.p"}>output\\filter_undervoltage\\test_1.p>df
+test_2={"df":"input\\SOMS_FILTER_INPUT\\df_laysa1.p"}>output\\filter_undervoltage\\test_2.p>df
+test_3={}>TypeError: filter_undervoltage() takes exactly 1 argument (0 given)>asserttrue
+
+
+[voltage_compute]
+test_1={"column":"laysa","node":"10","a_num":"1"}>output\\voltage_compute\\test_1.p>df
+test_2 = {"column":"laysa","node":"11","a_num":"1"}>ValueError: Invalid node id. Exceeded number of nodes>asserttrue
+test_3 = {"column":"laysa","node":"10","a_num":"3"}>ValueError: Error accel_number>asserttrue
+
+
+[apply_filters]
+test_1 ={"dfl":"input\\filterdata\\in_test_1.p"}>output\\apply_filters\\test_1.p>df
+test_2 ={"dfl":"input\\filterdata\\in_test_2.p"}>output\\apply_filters\\test_2.p>df
+test_3 ={"dfl":"input\\filterdata\\in_test_3.p"}>output\\apply_filters\\test_3.p>df
+test_4 ={"dfl":"input\\filterdata\\in_test_4.p"}>output\\apply_filters\\test_4.p>df
+test_5 ={"dfl":"input\\filterdata\\in_test_5.p"}>output\\apply_filters\\test_5.p>df
+
+
+[orthogonal_filter]
+test_1 ={"df":"input\\filterdata\\in_test_1.p"}>output\\orthogonal_filter\\test_1.p>df
+test_2 ={"df":"input\\filterdata\\in_test_2.p"}>output\\orthogonal_filter\\test_2.p>df
+test_3 ={"df":"input\\filterdata\\in_test_3.p"}>output\\orthogonal_filter\\test_3.p>df
+test_4 ={"df":"input\\filterdata\\in_test_4.p"}>output\\orthogonal_filter\\test_4.p>df
+test_5 ={"df":"input\\filterdata\\in_test_5.p"}>output\\orthogonal_filter\\out_test_5.p>df
+
+
+[outlier_filter]
+test_1 ={"dff":"input\\filterdata\\in_test_1.p"}>output\\outlier_filter\\out_test_1.p>df
+test_2 ={"dff":"input\\filterdata\\in_test_2.p"}>output\\outlier_filter\\out_test_2.p>df
+test_3 ={"dff":"input\\filterdata\\in_test_3.p"}>output\\outlier_filter\\out_test_3.p>df
+test_4 ={"dff":"input\\filterdata\\in_test_4.p"}>output\\outlier_filter\\out_test_4.p>df
+test_5 ={"dff":"input\\filterdata\\in_test_5.p"}>output\\outlier_filter\\out_test_5.p>df
+
+
+[range_filter_accel]
+test_1 ={"df":"input\\filterdata\\in_test_1.p"}>output\\range_filter_accel\\out_test_1.p>df
+test_2 ={"df":"input\\filterdata\\in_test_2.p"}>output\\range_filter_accel\\out_test_2.p>df
+test_3 ={"df":"input\\filterdata\\in_test_3.p"}>output\\range_filter_accel\\out_test_3.p>df
+test_4 ={"df":"input\\filterdata\\in_test_4.p"}>output\\range_filter_accel\\out_test_4.p>df
+test_5 ={"df":"input\\filterdata\\in_test_5.p"}>output\\range_filter_accel\\out_test_5.p>df
+
+

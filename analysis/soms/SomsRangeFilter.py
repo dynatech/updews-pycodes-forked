@@ -8,7 +8,7 @@ Created on Thu Apr 07 09:29:47 2016
 import pandas as pd
 import analysis.querydb as qDb
 import volatile.memory as memory
-
+#
 
 
 v2=['NAGSA', 'BAYSB', 'AGBSB', 'MCASB', 'CARSB', 'PEPSB','BLCSA']
@@ -24,7 +24,7 @@ def filter_outlier(df):
 
     soms_min=[[2000,500],[0,0]]                         #format: [[v2raw_min, v3raw_min], [v2calib_min,v3calib_min]]
     soms_max=[[7800,1600],[1700,1500]]
-
+ 
     if df.tsm_name[0].upper() in v2:
         ver = 0
     else:
@@ -39,6 +39,7 @@ def filter_outlier(df):
     
     return df_outlier
     
+
 def filter_undervoltage(df):
     '''for v3 only'''
     column = df.tsm_name[0]
@@ -58,6 +59,7 @@ def filter_undervoltage(df):
     df_undervoltage = df.reset_index()
     return df_undervoltage
 
+
 def voltage_compute(column, node, a_num):
     
     tsm_details=memory.get("DF_TSM_SENSORS")
@@ -68,10 +70,9 @@ def voltage_compute(column, node, a_num):
     if (int(node) > int(check_num_seg)):
         raise ValueError('Invalid node id. Exceeded number of nodes')
     
-    df_voltage = qDb.get_raw_accel_data(tsm_name = column, 
+    df_voltage = qDb.get_raw_accel_data_2(tsm_name = column, 
                                         node_id = node, 
-                                        accel_number = a_num, 
-                                        batt=True, return_db=True)
+                                        accel_number = a_num)
     df_voltage.index = df_voltage.ts
     df_voltage.rename(columns={'batt':'v'+str(a_num)}, inplace= True)
     df_voltage=df_voltage.resample('30Min', base = 0).first()
