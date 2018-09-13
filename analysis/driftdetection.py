@@ -113,7 +113,7 @@ def drift_detection(acc_id = "",f_time = pd.to_datetime(dt.now()-td(weeks=12))):
     #Check if there are 4 weeks consecutive threshold data
     week = 1
     days = td(days = 0)
-    while days < td(days = 28) and week < l en(dfw.index):
+    while days < td(days = 28) and week < len(dfw.index):
         if ((dfw.loc[week]['diff_TS'] <= td(days = 14)) & 
             (dfw.loc[week]['sign'] > 0)):
             days = days + dfw.loc[week]['diff_TS']
