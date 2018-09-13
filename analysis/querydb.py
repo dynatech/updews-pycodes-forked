@@ -6,7 +6,6 @@ import platform
 import volatile.memory as memory 
 from sqlalchemy import create_engine
 import re
-import cPickle as pickle
 
 curOS = platform.system()
 
@@ -24,7 +23,6 @@ def print_out(line):
     """Prints line.
     
     """
-    
     sc = mem.server_config()
     if sc['print']['print_stdout']:
         print line
@@ -88,7 +86,9 @@ def get_alert_level(site_id, end):
     
     return df
 
+
 ########################### RAINFALL-RELATED QUERIES ###########################
+
 
 def create_rainfall_gauges():    
     """Creates rainfall_gauges table; record of available rain gauges for
@@ -215,17 +215,30 @@ def does_alert_exists(site_id, end, alert):
 
 
 def query_pattern(template_id="", dictionary=""):
+    """
+    - Query pattern.
+
+    Args:
+        template_id (str): Args.
+        dictionary (dict):
+    Returns:
+        query (string) : Returns the query with details in dictionary
+
+    """
     if template_id == 'raw_accel':
-        string = ("SELECT ts,'[tsm_name]' as 'tsm_name',times.node_id, xval, yval, zval, batt,"
-                    " times.accel_number,accel_id, in_use from (select *, if(type_num"
-                    " in (32,11) or type_num is NULL, 1,if(type_num in (33,12),2,0))"
-                    " as 'accel_number' from tilt_[tsm_name] WHERE ts >= '[from_time]'"
-                    " AND ts <= '[to_time]' [node_id]) times  [node_id_query]) "
-                    "nodes on times.node_id = nodes.node_id and "
+        string = ("SELECT ts,'[tsm_name]' as 'tsm_name',times.node_id, xval, "
+                    " yval, zval, batt, times.accel_number, accel_id, "
+                    " in_use from (select *, if(type_num in (32,11) or "
+                    " type_num is NULL, 1,if(type_num in (33,12),2,0)) "
+                    " as 'accel_number' from tilt_[tsm_name] WHERE "
+                    " ts >= '[from_time]' AND ts <= '[to_time]' [node_id]) "
+                    " times  [node_id_query]) nodes on "
+                    " times.node_id = nodes.node_id and "
                     "times.accel_number=nodes.accel_number")
+                    
     elif template_id == 'soms_raw':
-        string = ("select * from senslopedb.soms_[tsm_name] where ts > '[from_time]' " 
-                  "[to_time] [node_id] [type_num]") 
+        string = ("select * from senslopedb.soms_[tsm_name] where " 
+                  " ts > '[from_time]' [to_time] [node_id] [type_num]") 
     else:
          raise ValueError("template_id doesn't exists")
          return
@@ -236,6 +249,21 @@ def query_pattern(template_id="", dictionary=""):
 
 
 def get_tsm_id(tsm_details="", tsm_name="", to_time=""):
+    """
+    - Get tsm id.
+
+    Args:
+        tsm_details (str): Sensor Details.
+        tsm_name (str) : Sensor Name
+        to_time (datetime) : To time.
+
+    Returns:
+        tsm_id : tilt sensor id.
+
+    Raises:
+        ValueError : Input tsm_name error
+
+    """
 
     if tsm_details.tsm_id[tsm_details.tsm_name==tsm_name].count()>1:
         
@@ -252,25 +280,55 @@ def get_tsm_id(tsm_details="", tsm_name="", to_time=""):
         return tsm_id.iloc[0]
 
 
-def filter_raw_accel(accel_info,query,df):
+def filter_raw_accel(accel_info="",query="",df=""):
 
-     accelerometers = memory.get('DF_ACCELEROMETERS')  
-            
-     if re.search("analysis", accel_info['output_type']):
-         df = df[df.in_use==1]
-         df = df.drop(['accel_number','in_use'],axis=1)
-     elif re.search("query", accel_info['output_type']):
-         return query
+    """
+    - Filter raw accel dataframe data.
+
+    Args:
+        accel_info (obj): Compiled details of raw accel.
+        query (str) : Query statement of raw accel data.
+        df (dataframe) : Raw accel dataframe
+
+    Returns:
+        df (dataframe) : filtered dataframe.
+        query (str) : Query statement of raw accel data.
+   
+    """
+
+    accelerometers = memory.get('DF_ACCELEROMETERS')  
+        
+    if re.search("analysis", accel_info['output_type']):
+        df = df[df.in_use==1]
+        df = df.drop(['accel_number','in_use'],axis=1)
+    elif re.search("query", accel_info['output_type']):
+        return query
+     
+    if re.search("voltf", accel_info['output_type']):
+     if len(accel_info['tsm_name'])==5:
+        df = df.merge(accelerometers,how='inner', on='accel_id')
+        df = df[(df.batt>=df.voltage_min) & (df.batt<=df.voltage_max)]
+        df = df.drop(['voltage_min','voltage_max'],axis=1)
          
-     if re.search("voltf", accel_info['output_type']):
-         if len(accel_info['tsm_name'])==5:
-             df = df.merge(accelerometers,how='inner', on='accel_id')
-             df = df[(df.batt>=df.voltage_min) & (df.batt<=df.voltage_max)]
-             df = df.drop(['voltage_min','voltage_max'],axis=1)
-             
-     return df
+    return df
 
 def check_timestamp(from_time="",to_time=""):
+
+    """
+    - Check timestamp format.
+
+    Args:
+        from_time (date, datetime): From time.
+        to_time (date, datetime): To Time
+    Returns:
+        Returns valid date and datetime format.
+
+    Raises:
+        ValueError : Input from_time error
+        ValueError : Input to_time error
+        ValueError : Input from_time and to_time error
+
+    """
 
     if from_time=="":
         from_time= pd.to_datetime("2010-01-01")
@@ -295,10 +353,35 @@ def check_timestamp(from_time="",to_time=""):
         raise ValueError("Input from_time and to_time error")
     
     
-def get_raw_accel_data_2(tsm_id="", tsm_name = "", from_time = "", 
-                         to_time = "", accel_number = "", node_id ="", 
+def get_raw_accel_data_2(tsm_id="", tsm_name="", from_time="", 
+                         to_time= "", accel_number="", node_id="", 
                          output_type=""):
+                             
+    """
+    - Retrieves raw accel data.
     
+    Args:
+        tsm_id (int): ID of tsm sensor to retrieve data from. 
+                      Optional if with tsm_name.
+        tsm_name (str): name of tsm sensor to retrieve data from. 
+                        Optional if with tsm_id.
+        from_time (datetime): Start timestamp of data to be retrieved. Optional.
+        to_time (datetime): End timestamp of data to be retrieved. Optional.
+        accel_number (int): ID of accel to be retrieved. Optional.
+        node_id (int): ID of node to be retrieved. Optional.
+        output_type (str): Whether to return dataframe or filtered dataframe. 
+                          Defaults to dataframe.
+
+    Returns:
+        dataframe/str: Dataframe containing accel data / 
+                       query used in retrieving data.
+    
+    Raises:
+        ValueError : Input tsm_id error
+        ValueError : Error node_id
+        ValueError : Error accel_number
+
+    """
     tsm_details = memory.get('DF_TSM_SENSORS')
     tsm_details.date_deactivated = pd.to_datetime(tsm_details.date_deactivated)
     
@@ -354,144 +437,6 @@ def get_raw_accel_data_2(tsm_id="", tsm_name = "", from_time = "",
         return filter_raw_accel(accel_info,query,df)      
 
     
-def get_raw_accel_data(tsm_id='',tsm_name = "", from_time = "", to_time = "", 
-                       accel_number = "", node_id ="", batt=False, 
-                       analysis=False, voltf=False, return_db=True):
-    """Retrieves accel data.
-    
-    Args:
-        tsm_id (int): ID of tsm sensor to retrieve data from. 
-                      Optional if with tsm_name.
-        tsm_name (str): name of tsm sensor to retrieve data from. 
-                        Optional if with tsm_id.
-        from_time (datetime): Start timestamp of data to be retrieved. Optional.
-        to_time (datetime): End timestamp of data to be retrieved. Optional.
-        accel_number (int): ID of accel to be retrieved. Optional.
-        node_id (int): ID of node to be retrieved. Optional.
-        batt (bool): Whether to include batt voltage of each accel. 
-                     Defaults to False.
-        analysis (bool): Whether to include accel in use and drop columns 
-                         'in_use' and 'accel_number'. Defaults to False.
-        voltf (bool): Whether to apply voltage filter. Defaults to False.
-        return_db (bool): Whether to return dataframe (True) or query (False). 
-                          Defaults to True.
-
-    Returns:
-        dataframe/str: Dataframe containing accel data / 
-                       query used in retrieving data.
-    
-    """
-
-    #memcached
-    memc = memcache.Client(['127.0.0.1:11211'], debug=1)
-    
-    try:
-        if not memc.get('tsm') and not memc.get('accel'):
-            update_memcache()
-            
-    except ValueError:
-        print_out("Data already saved in memcached")
-        pass
-    
-    tsm_details = memc.get('tsm')
-    accelerometers = memc.get('accel')
-        
-    tsm_details.date_deactivated=pd.to_datetime(tsm_details.date_deactivated)
-    
-    #range time
-    if from_time == "":
-        from_time = "2010-01-01"
-    if to_time == "":
-        to_time = pd.to_datetime(datetime.now())
-    
-    if not tsm_name and not tsm_id:
-        raise ValueError('no tsm_sensor entered')
-        
-    #get tsm_name if input tsm_id
-    if tsm_id != '':
-        tsm_name = tsm_details.tsm_name[tsm_details.tsm_id==tsm_id].iloc[0]
-    
-    #get tsm_id if input is tsm_name and not tsm_id
-    else:
-        #if tsm_name has more than 1 tsm_id, it will return tsm_name 
-        #where the date_deactivation is NULL or greater than or equal to_time 
-        if tsm_details.tsm_id[tsm_details.tsm_name==tsm_name].count()>1:
-            
-            tsm_id = (tsm_details.tsm_id[(tsm_details.tsm_name==tsm_name) & 
-                                         ((tsm_details.date_deactivated>=to_time) 
-                                         | (tsm_details.date_deactivated.isnull()))
-                                        ].iloc[0])
-        else:
-            tsm_id = tsm_details.tsm_id[tsm_details.tsm_name==tsm_name].iloc[0]
-                   
-    #query
-    print_out('Querying database ...')
-
-    query = ("SELECT ts,'%s' as 'tsm_name',times.node_id,xval,yval,zval,batt,"
-             " times.accel_number,accel_id, in_use from (select *, if(type_num"
-             " in (32,11) or type_num is NULL, 1,if(type_num in (33,12),2,0)) "
-             " as 'accel_number' from tilt_%s" %(tsm_name,tsm_name))
-
-    query += " WHERE ts >= '%s'" %from_time
-    query += " AND ts <= '%s'" %to_time
-    
-    if node_id != '':
-        #check node_id
-        if ((node_id>tsm_details.number_of_segments
-             [tsm_details.tsm_id==tsm_id].iloc[0]) or (node_id<1)):
-            raise ValueError('Error node_id')
-        else:
-            query += ' AND node_id = %d' %node_id
-        
-    query += " ) times"
-    
-    node_id_query = " inner join (SELECT * FROM senslopedb.accelerometers"
-
-    node_id_query += " where tsm_id=%d" %tsm_id
-    
-    #check accel_number
-    if accel_number in (1,2):
-        if len(tsm_name)==5:
-            node_id_query += " and accel_number = %d" %accel_number
-            analysis = False
-    elif accel_number == '':
-        pass
-    else:
-        raise ValueError('Error accel_number')
-
-    query += node_id_query + ") nodes"
-            
-    query += (" on times.node_id = nodes.node_id"
-              " and times.accel_number=nodes.accel_number")
-    print query
-    if return_db:
-        df =  db.df_read(query)
-        df.columns = ['ts','tsm_name','node_id','x','y','z'
-                      ,'batt','accel_number','accel_id','in_use']
-        df.ts = pd.to_datetime(df.ts)
-        
-        #filter accel in_use
-        if analysis:
-            df = df[df.in_use==1]
-            df = df.drop(['accel_number','in_use'],axis=1)
-        
-        #voltage filter
-        if voltf:
-            if len(tsm_name)==5:
-                df = df.merge(accelerometers,how='inner', on='accel_id')
-                df = df[(df.batt>=df.voltage_min) & (df.batt<=df.voltage_max)]
-                df = df.drop(['voltage_min','voltage_max'],axis=1)
-        
-        if not batt:                
-            df = df.drop('batt',axis=1)
-
-        return df
-        
-    else:
-        return query
-
-
-
 ################################################################################
 
 
