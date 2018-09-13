@@ -15,7 +15,21 @@ v2=['NAGSA', 'BAYSB', 'AGBSB', 'MCASB', 'CARSB', 'PEPSB','BLCSA']
 
 
 def filter_outlier(df): 
-#Checking of variables
+    #Checking of variables
+
+    """
+    - this function computes running mean and standard deviation for 
+    48 data points and remove data are NOT within 3 standard dev from the mean.
+
+    Args:
+        df (dataframe) : Dataframe of accelerometer data, must be per node
+
+    Returns:
+        df (dataframe) : accelerometer dataframe in which the data 
+        are within 3 standard dev from the mean for 48 data points.
+   
+    """
+
     if (df.type_num[0] == 110 or df.type_num[0] == 10):
         mode = 0
     else:
@@ -41,6 +55,19 @@ def filter_outlier(df):
     
 
 def filter_undervoltage(df):
+
+    """
+    - This function removes all undervoltage soil moisture data.
+
+    Args:
+        df (dataframe) : Dataframe of accelerometer data, must be per node
+
+    Returns:
+        df (dataframe) : soil moisture dataframe which the data are filtered and 
+        resampled every 30 min (timestamp and filtered data).
+   
+    """
+
     '''for v3 only'''
     column = df.tsm_name[0]
     node = df.node_id[0]
@@ -54,14 +81,30 @@ def filter_undervoltage(df):
     
     merge_voltage=pd.concat([df,volt_a1.v1,volt_a2.v2],axis=1,ignore_index=True)
     merge_voltage.columns=['mval1','v1','v2']
-    df=merge_voltage.mval1[((merge_voltage.v1>3.2) & (merge_voltage.v1<3.4) & (merge_voltage.v2>3.2) & (merge_voltage.v2<3.4)) | 
+    df=merge_voltage.mval1[((merge_voltage.v1>3.2) & (merge_voltage.v1<3.4) 
+        & (merge_voltage.v2>3.2) & (merge_voltage.v2<3.4)) | 
             (merge_voltage.v1.isnull() & merge_voltage.v2.isnull())]
     df_undervoltage = df.reset_index()
     return df_undervoltage
 
 
-def voltage_compute(column, node, a_num):
-    
+def voltage_compute(column, node, accel_num):
+
+    """
+    - This function removes all undervoltage soil moisture data.
+
+    Args:
+        column (dataframe) : Sensor column name.
+        node (int) : Geological id of the node.
+        accel_num : accelerometer number being used of the node.
+
+
+    Returns:
+        df (dataframe) : Battery value and timestamp 
+        data frame from the raw accel data and resampled every 30 min.
+   
+    """
+
     tsm_details=memory.get("DF_TSM_SENSORS")
     
     #For invalid node    
@@ -72,9 +115,9 @@ def voltage_compute(column, node, a_num):
     
     df_voltage = qDb.get_raw_accel_data_2(tsm_name = column, 
                                         node_id = node, 
-                                        accel_number = a_num)
+                                        accel_number = accel_num)
     df_voltage.index = df_voltage.ts
-    df_voltage.rename(columns={'batt':'v'+str(a_num)}, inplace= True)
+    df_voltage.rename(columns={'batt':'v'+str(accel_num)}, inplace= True)
     df_voltage=df_voltage.resample('30Min', base = 0).first()
 
     return df_voltage
