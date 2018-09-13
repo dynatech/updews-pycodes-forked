@@ -15,25 +15,27 @@ import gsm.smsparser2.smsclass as smsclass
 import dynadb.db as db
 
 
-def drift_detection(acc_id = "",f_time = pd.to_datetime(dt.now()-td(weeks=12))):
+def drift_detection(acc_id = "", from_time = pd.to_datetime(dt.now() -td(weeks=12))):
     accelerometers = memory.get('DF_ACCELEROMETERS')
-    acc_det = accelerometers[accelerometers.accel_id == acc_id].iloc[0]
+    accel_details = accelerometers[accelerometers.accel_id == acc_id].iloc[0]
     
     try:
-        df = q.get_raw_accel_data(tsm_id = acc_det.tsm_id,
-                                  node_id = acc_det.node_id, 
-                                  accel_number = acc_det.accel_number,
-                                  from_time = f_time)
+        df = q.get_raw_accel_data(tsm_id = accel_details.tsm_id,
+                                  node_id = accel_details.node_id, 
+                                  accel_number = accel_details.accel_number,
+                                  from_time = from_time)
     #lagpas yung node_id
     except ValueError:
-        return 0
+        
+        return 
     #walang table ng tilt_***** sa db 
     except AttributeError:
-        return 0
+        return 
     
     #walang laman yung df
     if df.empty:
-        return 0
+        raise ValueError("Empty DataFrame")
+#        return 0
     
     #Resample 30min
     df = df.set_index('ts').resample('30min').first()
@@ -59,8 +61,8 @@ def drift_detection(acc_id = "",f_time = pd.to_datetime(dt.now()-td(weeks=12))):
     df['mag'] = (df[['x','y','z']]**2).sum(axis = 1).apply(np.sqrt) / 1024.0
     
     #count number of data    
-    dfw = pd.DataFrame()    
-    dfw['count'] = df.mag.resample('1W').count()        
+    df_week = pd.DataFrame()    
+    df_week['count'] = df.mag.resample('1W').count()        
     
     # Filter data with very big/small magnitude 
     df[df.mag>3.0] = np.nan
@@ -94,52 +96,56 @@ def drift_detection(acc_id = "",f_time = pd.to_datetime(dt.now()-td(weeks=12))):
     df['acc'] = df.vel - df.vel.shift(1)   
     
     #Resample 1week
-    dfw['vel_week'] = df.vel.resample('1W').mean()        
-    dfw['acc_week'] = df.acc.resample('1W').mean()
-    dfw['corr'] = df.resample('1W').mag.corr(df.i) 
-    dfw['corr'] = dfw['corr']**2
+    df_week['vel_week'] = df.vel.resample('1W').mean()        
+    df_week['acc_week'] = df.acc.resample('1W').mean()
+    df_week['corr'] = df.resample('1W').mag.corr(df.i) 
+    df_week['corr'] = df_week['corr']**2
     
        
     # Get the data that exceeds the threshold value   
-    dfw = dfw[(abs(dfw['acc_week']) > 0.000003) &
-              (dfw['corr'] > 0.7) & (dfw['count'] >= 84)]
+    df_week = df_week[(abs(df_week['acc_week']) > 0.000003) &
+              (df_week['corr'] > 0.7) & (df_week['count'] >= 84)]
     
     #Compute the difference for each threshold data
-    if len(dfw) > 0:    
-        dfw = dfw.reset_index()    
-        dfw['diff_TS'] = dfw.ts - dfw.ts.shift(1)
-        dfw['sign'] = dfw.vel_week * dfw.vel_week.shift(1)
+    if len(df_week) > 0:    
+        df_week = df_week.reset_index()    
+        df_week['diff_TS'] = df_week.ts - df_week.ts.shift(1)
+        df_week['sign'] = df_week.vel_week * df_week.vel_week.shift(1)
     
     #Check if there are 4 weeks consecutive threshold data
     week = 1
     days = td(days = 0)
-    while days < td(days = 28) and week < len(dfw.index):
-        if ((dfw.loc[week]['diff_TS'] <= td(days = 14)) & 
-            (dfw.loc[week]['sign'] > 0)):
-            days = days + dfw.loc[week]['diff_TS']
+    while days < td(days = 28) and week < len(df_week.index):
+        if ((df_week.loc[week]['diff_TS'] <= td(days = 14)) & 
+            (df_week.loc[week]['sign'] > 0)):
+            days = days + df_week.loc[week]['diff_TS']
         else:
             days = td(days = 0)
         week = week + 1
     
     
     if days >= td(days = 28):
-        print acc_id, dfw.ts[week - 1]
+        print acc_id, df_week.ts[week - 1]
 
 #    df['mag'].plot()
 #    plt.savefig(OutputFP+col+nids+a+"-mag")
 #    plt.close()
 
-        dft = pd.DataFrame(columns = ['accel_id', 'ts_identified'])                
-        dft.loc[0] = [acc_id, dfw.ts[week - 1]]
-
-        #save to db        
-        db.df_write(smsclass.DataTable("drift_detection", dft))
-                
+        df_drift = pd.DataFrame(columns = ['accel_id', 'ts_identified'])                
+        df_drift.loc[0] = [acc_id, df_week.ts[week - 1]]
+        
+        try:
+            #save to db        
+            db.df_write(smsclass.DataTable("drift_detection", df_drift))
+            print "Successfully written to DB"
+        except TypeError:
+            raise ValueError("Connection Fail")
+        
 def main():
-    tsm_details = memory.get('DF_TSM_SENSORS')
+    tsm_sensors = memory.get('DF_TSM_SENSORS')
     accelerometers = memory.get('DF_ACCELEROMETERS')
     
-    dfa = accelerometers.merge(tsm_details,how='inner', on='tsm_id')
+    dfa = accelerometers.merge(tsm_sensors,how='inner', on='tsm_id')
     dfa = dfa[dfa.date_deactivated.isnull()]
     #dfa=dfa[dfa.accel_id>=1240]
     
@@ -147,7 +153,9 @@ def main():
         try:
             drift_detection(acc_id = i)
             print i
-        except TypeError:
+#        except TypeError:
+#            pass
+        except ValueError:
             pass
         
 #        if (i==12):
