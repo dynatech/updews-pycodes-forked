@@ -293,7 +293,7 @@ def get_tsm_alert(site_id, end):
                    for current release
     """
 
-    query =  "SELECT tsm_name, sub.alert_level FROM "
+    query =  "SELECT tsm_name, sub.alert_lORDER BY stat_id DESCevel FROM "
     query += "  (SELECT tsm_name, alert_level FROM "
     query += "    (SELECT * FROM tsm_alerts "
     query += "     WHERE ts <= '%s' " %end
@@ -361,6 +361,15 @@ def check_rainfall_alert(internal_df, internal_symbols, site_id,
             internal_df = internal_df.append(rain_df, ignore_index=True)
             
     return internal_df
+
+def query_invalid_alerts(latest_trigger_ts):
+        query = "SELECT * FROM alert_status WHERE alert_status = -1 AND "
+        query += "ts_last_retrigger BETWEEN "
+        query += "'%s' AND '%s' " %(latest_trigger_ts - timedelta(days=30), latest_trigger_ts)
+        query += "ORDER BY stat_id DESC"
+        result = qdb.get_db_dataframe(query)
+    
+        return result
 
 def site_public_alert(site_props, end, public_symbols, internal_symbols,
                       start_time):  
@@ -582,7 +591,7 @@ def site_public_alert(site_props, end, public_symbols, internal_symbols,
     except:
         pass
     
-    #qdb.alert_to_db(site_public_df, 'public_alerts')
+    qdb.alert_to_db(site_public_df, 'public_alerts')
     
     return public_df
 
@@ -675,4 +684,4 @@ def main(end=datetime.now()):
 
 if __name__ == "__main__":
     df = main()
-#    df = main("2018-08-14 19:30:00")
+#    df = main("2018-09-11 19:30:00")
