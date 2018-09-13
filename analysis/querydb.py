@@ -353,7 +353,7 @@ def check_timestamp(from_time="",to_time=""):
         raise ValueError("Input from_time and to_time error")
     
     
-def get_raw_accel_data_2(tsm_id="", tsm_name="", from_time="", 
+def get_raw_accel_data(tsm_id="", tsm_name="", from_time="", 
                          to_time= "", accel_number="", node_id="", 
                          output_type=""):
                              
