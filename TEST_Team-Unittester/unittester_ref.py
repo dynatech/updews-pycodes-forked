@@ -59,7 +59,7 @@ class TestModule(unittest.TestCase):
     
     def test_case_get_raw_accel_data_1(self):
          info = function_info('get_raw_accel_2','test_1')
-         df = querydb.get_raw_accel_data_2(tsm_name= str(info[0]['tsm_name']), 
+         df = querydb.get_raw_accel_data(tsm_name= str(info[0]['tsm_name']), 
                                          from_time= str(info[0]['from_time']), 
                                          to_time= str(info[0]['to_time']))
          assert_option(self,info,df)
@@ -67,20 +67,20 @@ class TestModule(unittest.TestCase):
 
     def test_case_get_raw_accel_data_2(self):
          info = function_info('get_raw_accel_2','test_2')
-         df = querydb.get_raw_accel_data_2(tsm_id= int(info[0]['tsm_id']))
+         df = querydb.get_raw_accel_data(tsm_id= int(info[0]['tsm_id']))
          assert_option(self,info,df)
 
 
     def test_case_get_raw_accel_data_3(self):
          info = function_info('get_raw_accel_2','test_3')
-         df = querydb.get_raw_accel_data_2(tsm_id= int(info[0]['tsm_id']),  
+         df = querydb.get_raw_accel_data(tsm_id= int(info[0]['tsm_id']),  
                                          to_time= str(info[0]['to_time']))
          assert_option(self,info,df)
               
                          
     def test_case_get_raw_accel_data_4(self):
          info = function_info('get_raw_accel_2','test_4')
-         df = querydb.get_raw_accel_data_2(tsm_id= int(info[0]['tsm_id']), 
+         df = querydb.get_raw_accel_data(tsm_id= int(info[0]['tsm_id']), 
                                          from_time= str(info[0]['from_time']),
                                          output_type= str(info[0]['output_type']))
          assert_option(self,info,df)
@@ -88,7 +88,7 @@ class TestModule(unittest.TestCase):
                    
     def test_case_get_raw_accel_data_5(self):
          info = function_info('get_raw_accel_2','test_5')
-         df = querydb.get_raw_accel_data_2(tsm_id= int(info[0]['tsm_id']),
+         df = querydb.get_raw_accel_data(tsm_id= int(info[0]['tsm_id']),
                                          to_time= str(info[0]['to_time']),
                                          from_time= str(info[0]['from_time']),
                                          output_type= str(info[0]['output_type']))
@@ -99,21 +99,21 @@ class TestModule(unittest.TestCase):
     def test_case_get_raw_accel_data_6(self):
          info = function_info('get_raw_accel_2','test_6')
          with self.assertRaises(ValueError) as context:
-            querydb.get_raw_accel_data_2(tsm_id= int(info[0]['tsm_id']))
+            querydb.get_raw_accel_data(tsm_id= int(info[0]['tsm_id']))
         
          self.assertTrue('Input tsm_id error' in context.exception)
          
     def test_case_get_raw_accel_data_7(self):
          info = function_info('get_raw_accel_2','test_7')
          with self.assertRaises(ValueError) as context:
-            querydb.get_raw_accel_data_2(tsm_name= str(info[0]['tsm_name']))
+            querydb.get_raw_accel_data(tsm_name= str(info[0]['tsm_name']))
             
          self.assertTrue('Input tsm_name error' in context.exception)
          
     def test_case_get_raw_accel_data_8(self):
          info = function_info('get_raw_accel_2','test_8')
          with self.assertRaises(ValueError) as context:
-            querydb.get_raw_accel_data_2(tsm_id= int(info[0]['tsm_id']),
+            querydb.get_raw_accel_data(tsm_id= int(info[0]['tsm_id']),
                                          to_time= str(info[0]['to_time']),
                                          from_time= str(info[0]['from_time']))
             
@@ -123,7 +123,7 @@ class TestModule(unittest.TestCase):
     def test_case_get_raw_accel_data_9(self):
          info = function_info('get_raw_accel_2','test_9')
          with self.assertRaises(ValueError) as context:
-            querydb.get_raw_accel_data_2(tsm_name= str(info[0]['tsm_name']), 
+            querydb.get_raw_accel_data(tsm_name= str(info[0]['tsm_name']), 
                                        from_time= str(info[0]['from_time']), 
                                        accel_number= int(info[0]['accel_number']), 
                                        to_time= str(info[0]['to_time']))
@@ -134,7 +134,7 @@ class TestModule(unittest.TestCase):
          info = function_info('get_raw_accel_2','test_10')
 
          with self.assertRaises(ValueError) as context:
-            querydb.get_raw_accel_data_2(tsm_name= str(info[0]['tsm_name']), 
+            querydb.get_raw_accel_data(tsm_name= str(info[0]['tsm_name']), 
                                        node_id= int(info[0]['node_id']))
             
          self.assertTrue('Error node_id' in context.exception)
@@ -542,7 +542,7 @@ class TestModule(unittest.TestCase):
         info = function_info('voltage_compute','test_1')
         df = srf.voltage_compute(column=str(info[0]['column']),
                                  node=int(info[0]['node']),
-                                 a_num=int(info[0]['a_num']))                                        
+                                 accel_num=int(info[0]['a_num']))                                        
         assert_option(self,info,df)
 
 
@@ -551,7 +551,7 @@ class TestModule(unittest.TestCase):
         with self.assertRaises(ValueError) as context:
              srf.voltage_compute(column=str(info[0]['column']),
                                  node=int(info[0]['node']),
-                                 a_num=int(info[0]['a_num']))   
+                                 accel_num=int(info[0]['a_num']))   
                                         
         self.assertTrue('Invalid node id. Exceeded number of nodes'
          in context.exception)     
@@ -562,7 +562,7 @@ class TestModule(unittest.TestCase):
         with self.assertRaises(ValueError) as context:
              srf.voltage_compute(column=str(info[0]['column']),
                                  node=int(info[0]['node']),
-                                 a_num=int(info[0]['a_num']))   
+                                 accel_num=int(info[0]['a_num']))   
                                         
         self.assertTrue('Error accel_number'
          in context.exception)

@@ -113,7 +113,7 @@ def voltage_compute(column, node, accel_num):
     if (int(node) > int(check_num_seg)):
         raise ValueError('Invalid node id. Exceeded number of nodes')
     
-    df_voltage = qDb.get_raw_accel_data_2(tsm_name = column, 
+    df_voltage = qDb.get_raw_accel_data(tsm_name = column, 
                                         node_id = node, 
                                         accel_number = accel_num)
     df_voltage.index = df_voltage.ts
