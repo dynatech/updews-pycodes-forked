@@ -1,7 +1,29 @@
 from datetime import timedelta
-from publicalerts import release_time
 import pandas as pd
 import querydb as qdb
+
+def release_time(date_time):
+    """Rounds time to 4/8/12 AM/PM.
+
+    Args:
+        date_time (datetime): Timestamp to be rounded off. 04:00 to 07:30 is
+        rounded off to 8:00, 08:00 to 11:30 to 12:00, etc.
+
+    Returns:
+        datetime: Timestamp with time rounded off to 4/8/12 AM/PM.
+
+    """
+
+    time_hour = int(date_time.strftime('%H'))
+
+    quotient = time_hour / 4
+
+    if quotient == 5:
+        date_time = datetime.combine(date_time.date()+timedelta(1), time(0,0))
+    else:
+        date_time = datetime.combine(date_time.date(), time((quotient+1)*4,0))
+            
+    return date_time
 
 def query_tsm_alerts(site_id, start_ts, latest_trigger_ts):   
         query =  "SELECT ts, t_s.tsm_name, node_id, disp_alert, vel_alert FROM node_alerts "
@@ -21,7 +43,7 @@ def query_tsm_alerts(site_id, start_ts, latest_trigger_ts):
 def query_rainfall_alerts(site_id, latest_trigger_ts):
         query = "SELECT * FROM rainfall_alerts "
         query += "where site_id = '%s' and ts = '%s'" %(site_id, latest_trigger_ts)
-        result = result = qdb.get_db_dataframe(query)
+        result = qdb.get_db_dataframe(query)
         
         return result
     
@@ -31,7 +53,7 @@ def query_surficial_alerts(site_id, latest_trigger_ts):
         query += "ON ma.marker_id = sm.marker_id "
         query += "WHERE sm.site_id = '%s' and ts = '%s'" %(site_id, latest_trigger_ts)
         query += "AND alert_level > 0"
-        result = result = qdb.get_db_dataframe(query)
+        result = qdb.get_db_dataframe(query)
         
         return result
 
@@ -159,4 +181,3 @@ def main(trigger_df):
             technical_info['surficial'] = get_surficial_tech_info(site_id, latest_trigger_ts)
     
     return technical_info
-        
