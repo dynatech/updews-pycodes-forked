@@ -283,17 +283,15 @@ def get_internal_alert(pos_trig, release_op_trig, internal_symbols):
 
 def get_tsm_alert(site_id, end):
     """Dataframe containing alert level on each tsm sensor
-
     Args:
         site_id (dataframe): ID each site.
         end (datetime): Public alert timestamp.
-
     Returns:
         dataframe: Contains tsm name, alert level, and alert symbol
                    for current release
     """
 
-    query =  "SELECT tsm_name, sub.alert_lORDER BY stat_id DESCevel FROM "
+    query =  "SELECT tsm_name, sub.alert_level FROM "
     query += "  (SELECT tsm_name, alert_level FROM "
     query += "    (SELECT * FROM tsm_alerts "
     query += "     WHERE ts <= '%s' " %end
