@@ -13,7 +13,8 @@ from sqlalchemy import create_engine
 from mpl_toolkits.basemap import Basemap
 import matplotlib.pyplot as plt
 import os
-
+import dynadb.db as dynadb
+from gsm.smsparser2.smsclass import DataTable
 
 path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 if not path in sys.path:
@@ -77,38 +78,22 @@ def get_distance_to_eq(df,eq_lat,eq_lon):#,eq_lat,eq_lon):
     a=(np.sin(dlat/2))**2 + ( np.cos(np.radians(eq_lat)) * np.cos(np.radians(df.latitude)) * (np.sin(dlon/2))**2 )
     c= 2 * np.arctan2(np.sqrt(a),np.sqrt(1-a))
     d= 6371 * c
-    
     df['dist'] = d    
-    
     return df
 
 def get_unprocessed():
-    query = """ select * from %s.earthquake_events where processed=0 """ % (qdb.Namedb)
-    dfeq =  qdb.get_db_dataframe(query)
+    query = "select * from earthquake_events where processed=0"
+    dfeq = dynadb.df_read(query=query, resource="sensor_data")
     dfeq = dfeq.set_index('eq_id')
-#    dfeq = dfeq[dfeq.issuer != 'CRB']
     return dfeq
 
 def get_sites():
-    query = """SELECT s.site_id, site_code, latitude, longitude FROM """
-    query += """%s.loggers as l """ % (qdb.Namedb)
-    query += """left join """
-    query += """%s.sites as s """ % (qdb.Namedb)
-    query += """on s.site_id = l.site_id """
-      
-    df = qdb.get_db_dataframe(query)
+    query = ("SELECT s.site_id, site_code, latitude, longitude FROM "
+        "loggers as l left join sites as s on s.site_id = l.site_id ")
+    df = dynadb.df_read(query=query, resource="sensor_data")
     df = df.drop_duplicates('site_id',keep='last').dropna()
     return df
     
-def up_to_eq_alerts(alerts,name):
-    engine=create_engine('mysql://root:senslope@192.168.150.128:3306/senslopedb')
-    alerts.to_sql(name = name, con = engine, if_exists = 'append', schema = qdb.Namedb, index = False)
-
-def up_to_op_trig(op_trig,name):
-    engine=create_engine('mysql://root:senslope@192.168.150.128:3306/senslopedb')
-    op_trig.to_sql(name = name, con = engine, if_exists = 'append', schema = qdb.Namedb, index = False)
-
-       
 def get_alert_symbol():
     query =  "SELECT trigger_sym_id FROM "
     query += "  operational_trigger_symbols AS op "
@@ -117,7 +102,7 @@ def get_alert_symbol():
     query += "  WHERE trigger_source = 'earthquake' "
     query += "  ) AS trig "
     query += "ON op.source_id = trig.source_id"
-    sym = qdb.get_db_dataframe(query)
+    sym = dynadb.df_read(query=query, resource="sensor_data")
     return sym.trigger_sym_id[0]
 
 def create_table():
@@ -212,78 +197,71 @@ eq_a = pd.DataFrame(columns=['site_id','eq_id','distance'])
 def main():
     dfeq = get_unprocessed()
     sym = get_alert_symbol()
-    to_plot = 1
+    to_plot = False
+    sites = get_sites()
+    dfg = sites.groupby('site_id')
     
     for i in dfeq.index:
         cur = dfeq.loc[i]
         
         mag, eq_lat, eq_lon,ts = cur.magnitude, cur.latitude, cur.longitude,cur.ts
            
-        
         critdist = get_crit_dist(mag)
     
         if False in np.isfinite([mag,eq_lat,eq_lon]): #has NaN value in mag, lat, or lon 
-            query = """ update %s set processed = -1 where eq_id = %s """ % (events_table, i)
-            qdb.execute_query(query)
+            query = "update %s set processed = -1 where eq_id = %s " % (events_table, i)
+            dynadb.write(query=query, resource="sensor_data")
             continue
          
-        
-        print mag
-        if mag >=4:    
-            sites = get_sites()
-            dfg = sites.groupby('site_id')
-            sites = dfg.apply(get_distance_to_eq,eq_lat=eq_lat,eq_lon=eq_lon)
-            
-            query = """update %s set processed = 1, critical_distance = %s where eq_id = %s""" % (events_table,critdist,i)
-            qdb.execute_query(query) 
-            
-            #tanggal weird values
-            sites = sites[sites.latitude>1]
-            
-            
-            crits = sites[sites.dist<=critdist]
-            
-            if len(crits.site_id.values) > 0: #merong may trigger
-                
-                crits['ts']  = ts
-                crits['source'] = 'earthquake'
-                crits['trigger_sym_id'] = sym
-                crits['ts_updated'] = ts       
-                crits['eq_id'] = i
-                crits['distance'] = critdist
-            
-            
-            
-                eq_a = crits[['eq_id','site_id','distance']]
-                op_trig = crits[['ts','site_id','trigger_sym_id','ts_updated']]
-         
-                
-            
-                try:
-                    up_to_op_trig(op_trig,'operational_triggers')
-                    up_to_eq_alerts(eq_a,'earthquake_alerts')
-                except:
-                    pass
-                
-                query = """ update %s set processed = 1, critical_distance = %s where eq_id = %s """ % (events_table,critdist,i)
-                qdb.execute_query(query)            
-                
-                if to_plot:
-                    plot_map(output_path,sites,crits,mag, eq_lat, eq_lon,ts,critdist)
-                    
-            else:
-                print "> No affected sites. "
-                query = """ update %s set processed = 1 where eq_id = %s """ % (events_table,i)
-                qdb.execute_query(query)       
-        
+        if mag < 4:
+            print "> Magnitude too small: %d" % (mag)
+            query = "update %s set processed = 1 where eq_id = %s " % (events_table,i)
+            dynadb.write(query=query, resource="sensor_data")
+            continue
         else:
-            print '> Magnitude too small. '
-            query = """ update %s set processed = 1 where eq_id = %s """ % (events_table,i)
-            qdb.execute_query(query)  
-            pass
-    
-    return 0
+            print "> Magnitude reached threshold: %d" % (mag)
 
+        # magnitude is big enough to consider
+        sites = dfg.apply(get_distance_to_eq,eq_lat=eq_lat,eq_lon=eq_lon)
+        
+        query = "update %s set processed = 1, critical_distance = %s where eq_id = %s" % (events_table,critdist,i)
+        dynadb.write(query=query, resource="sensor_data")
+        
+        #tanggal weird values
+        sites = sites[sites.latitude>1]
+        
+        crits = sites[sites.dist<=critdist]
+            
+        if len(crits.site_id.values) < 1: #merong may trigger
+            print "> No affected sites. "
+            query = """ update %s set processed = 1 where eq_id = %s """ % (events_table,i)
+            dynadb.write(query=query, resource="sensor_data")
+            continue
+        else:
+            print ">> Possible sites affected: %d" % (len(crits.site_id.values))
+
+        crits['ts']  = ts
+        crits['source'] = 'earthquake'
+        crits['trigger_sym_id'] = sym
+        crits['ts_updated'] = ts       
+        crits['eq_id'] = i
+        crits['distance'] = critdist
+
+        eq_a = crits[['eq_id','site_id','distance']]
+        op_trig = crits[['ts','site_id','trigger_sym_id','ts_updated']]
+
+        # write to tables
+        dynadb.df_write(DataTable("operational_triggers", op_trig), resource="sensor_data")
+        dynadb.df_write(DataTable("earthquake_alerts", eq_a), resource="sensor_data")
+        
+        query = "update %s set processed = 1, critical_distance = %s where eq_id = %s " % (events_table,critdist,i)
+        dynadb.write(query=query, resource="sensor_data")
+
+        print ">> Alert iniated.\n"
+        
+        if to_plot:
+            plot_map(output_path,sites,crits,mag, eq_lat, eq_lon,ts,critdist)
+                    
 if __name__ == "__main__":
     main()
     print datetime.now()
