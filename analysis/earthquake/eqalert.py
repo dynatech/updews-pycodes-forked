@@ -4,7 +4,6 @@ mpl.use('Agg')
 import matplotlib.pyplot as plt
 plt.ioff()
 
-
 import numpy as np
 import pandas as pd
 import sys
@@ -15,16 +14,8 @@ import matplotlib.pyplot as plt
 import os
 import dynadb.db as dynadb
 from gsm.smsparser2.smsclass import DataTable
-
-path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-if not path in sys.path:
-    sys.path.insert(1,path)
-del path   
-
-import querydb as qdb
-import configfileio as cfg
-
-config = cfg.config()
+from volatile.memory import server_config
+import argparse
 
 
 def plot_basemap(ax,mag,eq_lat,eq_lon,plotsites,critdist):
@@ -181,26 +172,33 @@ def plot_map(output_path,sites,crits,mag, eq_lat, eq_lon,ts,critdist):
     plt.savefig(output_path+'eq_%s' % ts.strftime("%Y-%m-%d %H-%M-%S"))
     return 0
 
+def get_arguments():
+    parser = argparse.ArgumentParser(description="Process earthquake_events [-options]")
+    parser.add_argument("-p", "--to_plot", action="store_true",
+        help="flag to plot output")
     
-output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
+    try:
+        args = parser.parse_args()
+        return args        
+    except IndexError:
+        print '>> Error in parsing arguments'
+        error = parser.format_help()
+        print error
+        sys.exit()
 
-if not os.path.exists(output_path+config.io.eq_plots_path):
-    os.makedirs(output_path+config.io.eq_plots_path)
-
-output_path += config.io.eq_plots_path
-events_table = 'earthquake_events'
-
-eq_a = pd.DataFrame(columns=['site_id','eq_id','distance'])
-
+    
 ############################ MAIN ############################
 
 def main():
+    args = get_arguments()
+
     dfeq = get_unprocessed()
     sym = get_alert_symbol()
-    to_plot = False
     sites = get_sites()
     dfg = sites.groupby('site_id')
-    
+    eq_a = pd.DataFrame(columns=['site_id','eq_id','distance'])
+    EVENTS_TABLE = 'earthquake_events'
+
     for i in dfeq.index:
         cur = dfeq.loc[i]
         
@@ -209,13 +207,13 @@ def main():
         critdist = get_crit_dist(mag)
     
         if False in np.isfinite([mag,eq_lat,eq_lon]): #has NaN value in mag, lat, or lon 
-            query = "update %s set processed = -1 where eq_id = %s " % (events_table, i)
+            query = "update %s set processed = -1 where eq_id = %s " % (EVENTS_TABLE, i)
             dynadb.write(query=query, resource="sensor_data")
             continue
          
         if mag < 4:
             print "> Magnitude too small: %d" % (mag)
-            query = "update %s set processed = 1 where eq_id = %s " % (events_table,i)
+            query = "update %s set processed = 1 where eq_id = %s " % (EVENTS_TABLE,i)
             dynadb.write(query=query, resource="sensor_data")
             continue
         else:
@@ -224,20 +222,19 @@ def main():
         # magnitude is big enough to consider
         sites = dfg.apply(get_distance_to_eq,eq_lat=eq_lat,eq_lon=eq_lon)
         
-        query = "update %s set processed = 1, critical_distance = %s where eq_id = %s" % (events_table,critdist,i)
-        dynadb.write(query=query, resource="sensor_data")
         
         #tanggal weird values
         sites = sites[sites.latitude>1]
         
         crits = sites[sites.dist<=critdist]
             
-        if len(crits.site_id.values) < 1: #merong may trigger
+        if len(crits.site_id.values) < 1: 
             print "> No affected sites. "
-            query = """ update %s set processed = 1 where eq_id = %s """ % (events_table,i)
+            query = "update %s set processed = 1, critical_distance = %s where eq_id = %s" % (EVENTS_TABLE,critdist,i)
             dynadb.write(query=query, resource="sensor_data")
             continue
         else:
+            #merong may trigger
             print ">> Possible sites affected: %d" % (len(crits.site_id.values))
 
         crits['ts']  = ts
@@ -254,13 +251,21 @@ def main():
         dynadb.df_write(DataTable("operational_triggers", op_trig), resource="sensor_data")
         dynadb.df_write(DataTable("earthquake_alerts", eq_a), resource="sensor_data")
         
-        query = "update %s set processed = 1, critical_distance = %s where eq_id = %s " % (events_table,critdist,i)
+        query = "update %s set processed = 1, critical_distance = %s where eq_id = %s " % (EVENTS_TABLE,critdist,i)
         dynadb.write(query=query, resource="sensor_data")
 
         print ">> Alert iniated.\n"
         
-        if to_plot:
-            plot_map(output_path,sites,crits,mag, eq_lat, eq_lon,ts,critdist)
+        if not args.to_plot:
+            # plot not enabled
+            continue
+
+        sc = server_config()
+        output_path = "{}{}".format(os.getenv("HOME"),sc["fileio"]["eq_path"])
+        if os.path.isdir(output_path):
+            os.makedirs(output_path)
+
+        plot_map(output_path,sites,crits,mag, eq_lat, eq_lon,ts,critdist)
                     
 if __name__ == "__main__":
     main()
