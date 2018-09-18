@@ -262,7 +262,12 @@ class GsmModem:
         if multipart_sms[sms_ref]['seq_rec'] == smsdata['cnt']:
             multipart_sms[sms_ref]['text'] = ""
             for i in range(1,smsdata['cnt']+1):
-                multipart_sms[sms_ref]['text'] += multipart_sms[sms_ref][i]
+                try:
+                    multipart_sms[sms_ref]['text'] += multipart_sms[sms_ref][i]
+                except KeyError:
+                    print ">> Error in reading multipart_sms.", 
+                    print "Text replace with empty line."
+
             # print multipart_sms[sms_ref]['text']
 
             smsdata_complete = multipart_sms[sms_ref]
