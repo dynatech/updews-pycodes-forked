@@ -94,7 +94,7 @@ def check_accel_drift(df):
         return
         
 def outlier_filter(df):
-#    df = dff.copy()
+    dff = df.copy()
 #    df['ts'] = pandas.to_datetime(df['ts'], unit = 's')
 #    df = df.set_index('ts')
 #    df = df.resample('30min').first()
@@ -102,22 +102,22 @@ def outlier_filter(df):
 #    df = df.resample('30Min', how='first', fill_method = 'ffill')
     
 #    dfmean = pd.stats.moments.rolling_mean(df[['x','y','z']],48, min_periods=1, freq=None, center=False)
-    dfmean = df[['x','y','z']].rolling(min_periods=1,window=48,center=False).mean()
+    dfmean = dff[['x','y','z']].rolling(min_periods=1,window=48,center=False).mean()
 #    dfsd = pd.stats.moments.rolling_std(df[['x','y','z']],48, min_periods=1, freq=None, center=False)
-    dfsd = df[['x','y','z']].rolling(min_periods=1,window=48,center=False).std()
+    dfsd = dff[['x','y','z']].rolling(min_periods=1,window=48,center=False).std()
     #setting of limits
     dfulimits = dfmean + (3*dfsd)
     dfllimits = dfmean - (3*dfsd)
 
-    df.x[(df.x > dfulimits.x) | (df.x < dfllimits.x)] = np.nan
-    df.y[(df.y > dfulimits.y) | (df.y < dfllimits.y)] = np.nan
-    df.z[(df.z > dfulimits.z) | (df.z < dfllimits.z)] = np.nan
+    dff.x[(dff.x > dfulimits.x) | (dff.x < dfllimits.x)] = np.nan
+    dff.y[(dff.y > dfulimits.y) | (dff.y < dfllimits.y)] = np.nan
+    dff.z[(dff.z > dfulimits.z) | (dff.z < dfllimits.z)] = np.nan
     
-    dflogic = df.x * df.y * df.z
+    dflogic = dff.x * dff.y * dff.z
     
-    df = df[dflogic.notnull()]
+    dff = dff[dflogic.notnull()]
    
-    return df
+    return dff
 
 def range_filter_accel(df):
 #    dff = df.copy()
