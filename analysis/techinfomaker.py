@@ -34,15 +34,18 @@ def query_tsm_alerts(site_id, start_ts, latest_trigger_ts):
         query += "  ON t_s.site_id = sc.site_id "
         query += "WHERE ts >= '%s' " %(start_ts)
         query += "AND ts <= '%s' " %(latest_trigger_ts) 
-        query += "and t_s.tsm_name like CONCAT(sc.site_code, '%') "
-        query += "order by ts desc"  
+        query += "AND t_s.tsm_name LIKE CONCAT(sc.site_code, '%') "
+        query += "ORDER BY ts DESC"  
         result = qdb.get_db_dataframe(query)
         
         return result
 
 def query_rainfall_alerts(site_id, latest_trigger_ts):
-        query = "SELECT * FROM rainfall_alerts "
-        query += "where site_id = '%s' and ts = '%s'" %(site_id, latest_trigger_ts)
+        query = "SELECT ra.*, rp.* "
+        query += "FROM rainfall_alerts AS ra "
+        query += "JOIN rain_props AS rp "
+        query += "ON ra.rain_id = rp.rain_id "
+        query += "WHERE ra.site_id = '%s' AND ts = '%s'" %(site_id, latest_trigger_ts)
         result = qdb.get_db_dataframe(query)
         
         return result
@@ -66,7 +69,8 @@ def format_node_details(result):
             node_details += ['%s (node %s)' %(i.upper(), col_df['node_id'].values[0])]
         else:
             sorted_nodes = sorted(col_df['node_id'].values)
-            node_details += ['%s (nodes %s)' %(i.upper(), ', '.join(str(v) for v in sorted_nodes))]
+            node_details += ['%s (nodes %s)' %(i.upper(), ', '.join(str(v) \
+                                               for v in sorted_nodes))]
     
     return ','.join(node_details)
 
@@ -110,6 +114,11 @@ def get_subsurface_tech_info(site_id, start_ts, latest_trigger_ts):
 def get_rainfall_tech_info(site_id, latest_trigger_ts):
     alert_detail = query_rainfall_alerts(site_id, latest_trigger_ts)
     
+    rain_gauge = alert_detail['gauge_name'][0]
+    if alert_detail['data_source'][0] == "noah":
+        rain_gauge = "NOAH " + str(rain_gauge)
+    rain_gauge = rain_gauge.upper()
+    
     one_day_data = alert_detail[(alert_detail.rain_alert == 'a')]
     three_day_data = alert_detail[(alert_detail.rain_alert == 'b')].reset_index(drop=True)
     
@@ -131,7 +140,8 @@ def get_rainfall_tech_info(site_id, latest_trigger_ts):
     cumulative = ' and '.join(cumulatives)
     threshold = ' and '.join(thresholds)    
     
-    rain_tech_info = '%s cumulative rainfall (%s mm) exceeded threshold (%s mm)' %(day, cumulative, threshold)
+    rain_tech_info = "RAIN %s: %s cumulative rainfall " %(rain_gauge, day)
+    rain_tech_info += "(%s mm) exceeded threshold (%s mm)" %(cumulative, threshold)
     return rain_tech_info  
 
 def formulate_surficial_tech_info(alert_detail):
@@ -162,7 +172,7 @@ def get_surficial_tech_info(site_id, latest_trigger_ts):
     return surficial_tech_info
         
 def main(trigger_df):
-#    print trigger_df
+    # print trigger_df
     trigger_group = trigger_df.groupby('trigger_source', as_index=False)
     site_id = trigger_df.iloc[0]['site_id']
     
