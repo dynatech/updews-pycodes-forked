@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime, timedelta, time
 import pandas as pd
 import querydb as qdb
 
@@ -172,7 +172,7 @@ def main(trigger_df):
         latest_trigger_ts = group.iloc[0]['ts_updated']
         start_ts = release_time(pd.to_datetime(latest_trigger_ts)) \
                     - timedelta(hours=4)
-                    
+        
         if trigger_source == 'subsurface':
             technical_info['subsurface'] = get_subsurface_tech_info(site_id, start_ts, latest_trigger_ts)
         elif trigger_source == 'rainfall':

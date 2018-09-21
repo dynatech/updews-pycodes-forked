@@ -131,7 +131,7 @@ def event_start(site_id, end):
     
     # previous positive alert
     prev_pub_alerts = qdb.get_db_dataframe(query)
-    
+
     if len(prev_pub_alerts) == 1:
         start_monitor = pd.to_datetime(prev_pub_alerts['ts'].values[0])
     # two previous positive alert
@@ -360,14 +360,43 @@ def check_rainfall_alert(internal_df, internal_symbols, site_id,
             
     return internal_df
 
-def query_invalid_alerts(latest_trigger_ts):
-        query = "SELECT * FROM alert_status WHERE alert_status = -1 AND "
-        query += "ts_last_retrigger BETWEEN "
-        query += "'%s' AND '%s' " %(latest_trigger_ts - timedelta(days=30), latest_trigger_ts)
-        query += "ORDER BY stat_id DESC"
-        result = qdb.get_db_dataframe(query)
+def query_current_events(end):
     
-        return result
+    query = "SELECT PA.ts, PA.ts_updated, PA.site_id FROM public_alerts as PA "
+    query += "  JOIN public_alert_symbols as PAS "
+    query += "    ON PA.pub_sym_id = PAS.pub_sym_id "
+    query += "    WHERE PAS.alert_level > 0 "
+    query += "    AND ts_updated >= '%s' " %end
+    query += "    ORDER BY ts DESC "
+    events = qdb.get_db_dataframe(query)
+    current_events = events.groupby('site_id', as_index=False)
+    
+    return current_events
+
+def get_alert_history(current_events):
+    site_id = current_events['site_id'].values[0]
+    start_ts = current_events['ts'].values[0]
+    
+    query = "SELECT CONCAT(cdb.firstname, ' ', cdb.lastname) as iomp, " 
+    query += "sites.site_code, OTS.alert_symbol, ALS.ts_last_retrigger, " 
+    query += "ALS.remarks, TH.trigger_source, ALS.alert_status FROM alert_status as ALS "
+    query += "  JOIN operational_triggers as OT "
+    query += "    ON ALS.trigger_id = OT.trigger_id "
+    query += "      JOIN sites "
+    query += "      ON sites.site_id = OT.site_id " 
+    query += "      JOIN operational_trigger_symbols as OTS "
+    query += "      ON OT.trigger_sym_id = OTS.trigger_sym_id " 
+    query += "      JOIN trigger_hierarchies as TH "
+    query += "      ON OTS.source_id = TH.source_id "
+    query += "      JOIN comms_db.users as cdb "
+    query += "      ON ALS.user_id = cdb.user_id " 
+    query += "WHERE OT.site_id = '%s' " %site_id
+    query += "AND OT.ts >= '%s' " %start_ts
+    query += "ORDER BY OT.ts DESC"
+    
+    current_events_history = qdb.get_db_dataframe(query)
+    
+    return current_events_history
 
 def site_public_alert(site_props, end, public_symbols, internal_symbols,
                       start_time):  
@@ -555,6 +584,8 @@ def site_public_alert(site_props, end, public_symbols, internal_symbols,
         tech_info = tech_info_maker.main(pos_trig)
     except:
         tech_info = pd.DataFrame()
+        
+
     
     try:    
         ts = max(op_trig[op_trig.alert_level != -1]['ts_updated'].values)
@@ -592,6 +623,7 @@ def site_public_alert(site_props, end, public_symbols, internal_symbols,
     qdb.alert_to_db(site_public_df, 'public_alerts')
     
     return public_df
+
 
 def alert_map(df):
     dict_map = df[['alert_symbol', 'alert_level']]
@@ -644,7 +676,7 @@ def main(end=datetime.now()):
     # site id and code
     query = "SELECT site_id, site_code FROM sites WHERE active = 1"
     props = qdb.get_db_dataframe(query)
-    #props = props[props.site_code == 'nag']
+    #props = props[props.site_code == 'sum']
     site_props = props.groupby('site_id', as_index=False)
     
     alerts = site_props.apply(site_public_alert, end=end,
@@ -654,15 +686,34 @@ def main(end=datetime.now()):
 
     alerts = alerts.sort_values(['public_alert', 'site_code'], ascending=[False, True])
 
-    # map alert level to alert symbol
+# map alert level to alert symbol
+#    invalid_alerts = invalid_alert_map(end)
     alerts['public_alert'] = alerts['public_alert'].map(pub_map)
     alerts['rainfall'] = alerts['rainfall'].map(rain_map)
     alerts['surficial'] = alerts['surficial'].map(surficial_map)
     site_alerts = alerts.groupby('site_code', as_index=False)
     alerts = site_alerts.apply(subsurface_sym,
                                sym_map=subsurface_map).reset_index(drop=True)
+    # map invalid alerts
+    current_events = query_current_events(end)
+    current_alerts = current_events.apply(get_alert_history)
 
-    all_alerts = pd.DataFrame({'invalids': [pd.DataFrame()], 'alerts': [alerts]})
+    columns = ['iomp', 'site_code', 'alert_symbol', 'ts_last_retrigger', 'remarks', 'trigger_source', 'alert_status']
+    invalid_alerts = pd.DataFrame(columns=columns)
+
+    for site in current_alerts.site_code.unique():
+        site_df = current_alerts[current_alerts.site_code == site]
+        count = len(site_df)
+        for i in range(0, count):
+            if site_df.alert_status.values[i] == -1:
+                alert = pd.Series(site_df.values[i], index=columns)
+                invalid_alerts = invalid_alerts.append(alert, ignore_index=True)
+            else:
+                invalid_alerts = invalid_alerts
+    
+    invalid_alerts['ts_last_retrigger'] = invalid_alerts['ts_last_retrigger'].apply(lambda x: str(x))
+    
+    all_alerts = pd.DataFrame({'invalids': [invalid_alerts], 'alerts': [alerts]})
 
     public_json = all_alerts.to_json(orient="records")
 
@@ -682,4 +733,4 @@ def main(end=datetime.now()):
 
 if __name__ == "__main__":
     df = main()
-#    df = main("2018-09-11 19:30:00")
+#    df = main("2018-09-19 17:00:00")
