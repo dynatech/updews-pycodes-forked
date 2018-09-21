@@ -686,8 +686,7 @@ def main(end=datetime.now()):
 
     alerts = alerts.sort_values(['public_alert', 'site_code'], ascending=[False, True])
 
-# map alert level to alert symbol
-#    invalid_alerts = invalid_alert_map(end)
+    # map alert level to alert symbol
     alerts['public_alert'] = alerts['public_alert'].map(pub_map)
     alerts['rainfall'] = alerts['rainfall'].map(rain_map)
     alerts['surficial'] = alerts['surficial'].map(surficial_map)
