@@ -717,11 +717,13 @@ def main(end=datetime.now()):
                     invalid_alerts = invalid_alerts.append(alert, ignore_index=True)
                 else:
                     invalid_alerts = invalid_alerts
+                    
+        invalid_alerts = invalid_alerts.drop_duplicates(['alert_symbol', 'site_code'])
+        invalid_alerts['ts_last_retrigger'] = invalid_alerts['ts_last_retrigger'].apply(lambda x: str(x))
+
     except:
         invalid_alerts = pd.DataFrame()
     
-    invalid_alerts = invalid_alerts.drop_duplicates(['alert_symbol', 'site_code'])
-    invalid_alerts['ts_last_retrigger'] = invalid_alerts['ts_last_retrigger'].apply(lambda x: str(x))
     all_alerts = pd.DataFrame({'invalids': [invalid_alerts], 'alerts': [alerts]})
 
     public_json = all_alerts.to_json(orient="records")
