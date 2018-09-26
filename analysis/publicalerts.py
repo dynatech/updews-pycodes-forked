@@ -362,7 +362,7 @@ def check_rainfall_alert(internal_df, internal_symbols, site_id,
 
 def query_current_events(end):
     
-    query = "SELECT PA.ts, PA.ts_updated, PA.site_id FROM public_alerts as PA "
+    query = "SELECT PA.ts, PA.ts_updated, PA.site_id, PAS.alert_symbol FROM public_alerts as PA "
     query += "  JOIN public_alert_symbols as PAS "
     query += "    ON PA.pub_sym_id = PAS.pub_sym_id "
     query += "    WHERE PAS.alert_level > 0 "
@@ -376,10 +376,12 @@ def query_current_events(end):
 def get_alert_history(current_events):
     site_id = current_events['site_id'].values[0]
     start_ts = current_events['ts'].values[0]
+    public_alert_symbols = current_events['alert_symbol'].values[0]
     
     query = "SELECT CONCAT(cdb.firstname, ' ', cdb.lastname) as iomp, " 
     query += "sites.site_code, OTS.alert_symbol, ALS.ts_last_retrigger, " 
-    query += "ALS.remarks, TH.trigger_source, ALS.alert_status FROM alert_status as ALS "
+    query += "ALS.remarks, TH.trigger_source, ALS.alert_status, PAS.alert_symbol as public_alert_symbol "
+    query += "FROM alert_status as ALS "
     query += "  JOIN operational_triggers as OT "
     query += "    ON ALS.trigger_id = OT.trigger_id "
     query += "      JOIN sites "
@@ -389,9 +391,14 @@ def get_alert_history(current_events):
     query += "      JOIN trigger_hierarchies as TH "
     query += "      ON OTS.source_id = TH.source_id "
     query += "      JOIN comms_db.users as cdb "
-    query += "      ON ALS.user_id = cdb.user_id " 
+    query += "      ON ALS.user_id = cdb.user_id "
+    query += "      JOIN public_alerts as PA"
+    query += "      ON PA.site_id = OT.site_id"
+    query += "      JOIN public_alert_symbols as PAS "
+    query += "      ON PA.pub_sym_id = PAS.pub_sym_id "
     query += "WHERE OT.site_id = '%s' " %site_id
     query += "AND OT.ts >= '%s' " %start_ts
+    query += "AND PAS.alert_symbol = '%s' " %public_alert_symbols
     query += "ORDER BY OT.ts DESC"
     
     current_events_history = qdb.get_db_dataframe(query)
@@ -697,21 +704,24 @@ def main(end=datetime.now()):
     current_events = query_current_events(end)
     current_alerts = current_events.apply(get_alert_history)
 
-    columns = ['iomp', 'site_code', 'alert_symbol', 'ts_last_retrigger', 'remarks', 'trigger_source', 'alert_status']
+    columns = ['iomp', 'site_code', 'alert_symbol', 'ts_last_retrigger', 'remarks', 'trigger_source', 'alert_status', 'public_alert_symbol']
     invalid_alerts = pd.DataFrame(columns=columns)
-
-    for site in current_alerts.site_code.unique():
-        site_df = current_alerts[current_alerts.site_code == site]
-        count = len(site_df)
-        for i in range(0, count):
-            if site_df.alert_status.values[i] == -1:
-                alert = pd.Series(site_df.values[i], index=columns)
-                invalid_alerts = invalid_alerts.append(alert, ignore_index=True)
-            else:
-                invalid_alerts = invalid_alerts
     
+    try:
+        for site in current_alerts.site_code.unique():
+            site_df = current_alerts[current_alerts.site_code == site]
+            count = len(site_df)
+            for i in range(0, count):
+                if site_df.alert_status.values[i] == -1:
+                    alert = pd.Series(site_df.values[i], index=columns)
+                    invalid_alerts = invalid_alerts.append(alert, ignore_index=True)
+                else:
+                    invalid_alerts = invalid_alerts
+    except:
+        invalid_alerts = pd.DataFrame()
+    
+    invalid_alerts = invalid_alerts.drop_duplicates(['alert_symbol', 'site_code'])
     invalid_alerts['ts_last_retrigger'] = invalid_alerts['ts_last_retrigger'].apply(lambda x: str(x))
-    
     all_alerts = pd.DataFrame({'invalids': [invalid_alerts], 'alerts': [alerts]})
 
     public_json = all_alerts.to_json(orient="records")
