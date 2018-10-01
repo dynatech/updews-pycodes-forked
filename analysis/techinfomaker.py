@@ -45,6 +45,7 @@ def query_rainfall_alerts(site_id, latest_trigger_ts):
         query += "FROM rainfall_alerts AS ra "
         query += "JOIN rain_props AS rp "
         query += "ON ra.rain_id = rp.rain_id "
+        query += "AND ra.site_id = rp.site_id "
         query += "WHERE ra.site_id = '%s' AND ts = '%s'" %(site_id, latest_trigger_ts)
         result = qdb.get_db_dataframe(query)
         
