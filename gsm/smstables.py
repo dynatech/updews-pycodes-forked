@@ -4,6 +4,7 @@ import volatile.static as static
 from datetime import datetime as dt
 import time
 import MySQLdb
+from pprint import pprint #For debugging only
 
 def check_number_in_table(num):
     """
@@ -208,7 +209,7 @@ def write_inbox(msglist='',gsm_info='',resource="sms_data"):
             users_count += 1
         else:            
             print 'Unknown number', m.simnum
-            sms_id_unk.append(m.num)
+            sms_id_unk.append(m)
             continue
 
         sms_id_ok.append(m.num)
@@ -224,6 +225,23 @@ def write_inbox(msglist='',gsm_info='',resource="sms_data"):
             dbio.write(query=query_loggers, host=sms_host, resource=resource)
         if users_count > 0:
             dbio.write(query=query_users, host=sms_host, resource=resource)
+
+    if len(sms_id_unk)>0:
+        for msg_details in sms_id_unk:
+            query_insert_mobile_details = 'insert into user_mobile (user_id,' \
+            'sim_num,priority,mobile_status,gsm_id) values ' \
+            '("%s","%s","%s","%s","%s")' % ('491',msg_details.simnum,'1','1', gsm_id)
+
+            dbio.write(query=query_insert_mobile_details, host=sms_host, resource=resource)
+
+            query_users += "('%s','%s',(SELECT mobile_id FROM user_mobile WHERE sim_num = '%s'),'%s',%d,%d)" \
+            % (msg_details.dt, ts_stored, msg_details.simnum, msg_details.data, 0, gsm_id)
+
+            dbio.write(query=query_users, host=sms_host, resource=resource)
+
+        # INSERT INTO USERS WITH UNKNOWN USER
+        # INSERT INTO USER_MOBILE 
+        # INSERT INTO UNKNOWN TABLE
         
 def write_outbox(message=None,recipients=None,gsm_id=None,table=None,
     resource="sms_data"):
