@@ -75,7 +75,7 @@ def rainfall_gauges(end=datetime.now()):
 
     return gauges
 
-def main(site_code='', Print=True, end=datetime.now()):
+def main(site_code='', Print=True, end=datetime.now(), write_to_db=True):
     """Computes alert and plots rainfall data.
     
     Args:
@@ -122,8 +122,9 @@ def main(site_code='', Print=True, end=datetime.now()):
     trigger_symbol = trigger_symbol[trigger_symbol.trigger_source == 'rainfall']
     trigger_symbol['trigger_sym_id'] = trigger_symbol['trigger_sym_id'].apply(lambda x: float(x))
     site_props = gauges.groupby('site_id')
+    
     summary = site_props.apply(ra.main, end=end, sc=sc,
-                                trigger_symbol=trigger_symbol)
+                                trigger_symbol=trigger_symbol, write_to_db=write_to_db)
     summary = summary.reset_index(drop=True).set_index('site_id')[['site_code',
                     '1D cml', 'half of 2yr max', '3D cml', '2yr max',
                     'DataSource', 'alert', 'advisory']]
