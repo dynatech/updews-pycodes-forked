@@ -110,6 +110,7 @@ def update_single_table(noah_gauges):
     #check if table gauge_name exists
     if qdb.does_table_exist(gauge_name) == False:
         #Create a NOAH table if it doesn't exist yet
+        qdb.print_out("Creating NOAH table '%s'" %gauge_name)
         qdb.create_NOAH_table(gauge_name)
     else:
         qdb.print_out('%s exists' %gauge_name)
