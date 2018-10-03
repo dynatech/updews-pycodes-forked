@@ -182,7 +182,8 @@ def get_raw_rain_data(gauge_name, from_time='2010-01-01', to_time=""):
     query += "ORDER BY ts"
 
     df = db.df_read(query)
-    df['ts'] = pd.to_datetime(df['ts'])
+    if df is not None:
+        df['ts'] = pd.to_datetime(df['ts'])
     
     return df
 
