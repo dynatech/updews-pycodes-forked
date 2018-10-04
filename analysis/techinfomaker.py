@@ -168,7 +168,7 @@ def get_surficial_tech_info(site_id, latest_trigger_ts):
     for index, group in enumerate(group_array):
         if (len(group) != 0):
             tech_info = formulate_surficial_tech_info(group)
-            surficial_tech_info["L" + str(index+2)] = tech_info
+            surficial_tech_info["l" + str(index+2)] = tech_info
             
     return surficial_tech_info
         
