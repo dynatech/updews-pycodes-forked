@@ -3,6 +3,7 @@ import volatile.memory as mem
 import volatile.static as static
 from datetime import datetime as dt
 import time
+import random
 import MySQLdb
 from pprint import pprint #For debugging only
 
@@ -219,7 +220,6 @@ def write_inbox(msglist='',gsm_info='',resource="sms_data"):
 
     sc = mem.server_config()
     sms_host = sc["resource"]["smsdb"]
-
     if len(sms_id_ok)>0:
         if loggers_count > 0:
             dbio.write(query=query_loggers, host=sms_host, resource=resource)
@@ -228,16 +228,38 @@ def write_inbox(msglist='',gsm_info='',resource="sms_data"):
 
     if len(sms_id_unk)>0:
         for msg_details in sms_id_unk:
-            query_insert_mobile_details = 'insert into user_mobile (user_id,' \
-            'sim_num,priority,mobile_status,gsm_id) values ' \
-            '("%s","%s","%s","%s","%s")' % ('491',msg_details.simnum,'1','1', gsm_id)
+            check_if_existing = "SELECT * FROM user_mobile where sim_num = '%s'" % msg_details.simnum
+            is_exist = dbio.read(query=check_if_existing, host=sms_host, resource=resource)
+            
+            if len(is_exist) == 0:
+                random_id = random.randint(200,999999)*5
+                new_unknown_query = 'INSERT INTO users VALUES (0,"UN",'\
+                '"UNKNOWN_%d","UNKNOWN","UNKNOWN_%d","UNKNOWN",' \
+                '"1994-08-16","M","1")' % (random_id, random_id)
+                dbio.write(query=new_unknown_query, host=sms_host, resource=resource)
 
-            dbio.write(query=query_insert_mobile_details, host=sms_host, resource=resource)
+                query_insert_mobile_details = 'insert into user_mobile (user_id,' \
+                'sim_num,priority,mobile_status,gsm_id) values ' \
+                '((SELECT user_id FROM users WHERE firstname = "UNKNOWN_%s"),"%s","%s","%s","%s")' % (random_id, msg_details.simnum,'1','1', gsm_id)
 
-            query_users += "('%s','%s',(SELECT mobile_id FROM user_mobile WHERE sim_num = '%s'),'%s',%d,%d)" \
-            % (msg_details.dt, ts_stored, msg_details.simnum, msg_details.data, 0, gsm_id)
+                dbio.write(query=query_insert_mobile_details, host=sms_host, resource=resource)
 
-            dbio.write(query=query_users, host=sms_host, resource=resource)
+                get_mobile_id_query = "SELECT mobile_id FROM user_mobile WHERE sim_num = '%s'" % msg_details.simnum
+                mobile_id = dbio.read(query=get_mobile_id_query, host=sms_host, resource=resource)
+
+                user_mobile_sim_nums[mobile_id[0][0]] = msg_details.simnum
+
+                query_users += "('%s','%s','%s','%s',%d,%d)" \
+                % (msg_details.dt, ts_stored, mobile_id[0][0], msg_details.data, 0, gsm_id)
+                dbio.write(query=query_users, host=sms_host, resource=resource)
+
+            else:
+                get_mobile_id_query = "SELECT mobile_id FROM user_mobile WHERE sim_num = '%s'" % msg_details.simnum
+                mobile_id = dbio.read(query=get_mobile_id_query, host=sms_host, resource=resource)
+                
+                query_users += "('%s','%s','%s','%s',%d,%d)" \
+                % (msg_details.dt, ts_stored, mobile_id[0][0], msg_details.data, 0, gsm_id)
+                dbio.write(query=query_users, host=sms_host, resource=resource)
 
         # INSERT INTO USERS WITH UNKNOWN USER
         # INSERT INTO USER_MOBILE 
