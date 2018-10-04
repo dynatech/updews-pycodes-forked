@@ -94,7 +94,7 @@ def plot_rain(ax, df, rain_gauge, plot_inst=True):
     if plot_inst:
         ax2 = ax.twinx()
         width = float(0.004 * (max(df['ts']) - min(df['ts'])).days)
-        ax2.bar(df['ts'].apply(lambda x: pltdates.date2num(x)), df.rain, width=width,alpha=0.1, color='k', label = '30min rainfall')
+        ax2.bar(df['ts'].apply(lambda x: pltdates.date2num(x)), df.rain, width=width,alpha=0.05, color='k', label = '30min rainfall')
         ax2.xaxis_date()
     
     query = "SELECT * FROM rain_props where name = '%s'" %site
@@ -166,10 +166,10 @@ def plot_disp(ax, df, axis, node_lst, tsm_name):
     ax.grid()
 
 def plot_single_event(ax, ts, color='red'):
-    ax.axvline(ts, color=color, linestyle='--', alpha=1)    
+    ax.axvline(pd.to_datetime(ts), color=color, linestyle='--', alpha=1)    
     
 def plot_span(ax, start, end, color):
-    ax.axvspan(start, end, facecolor=color, alpha=0.2, edgecolor=None,linewidth=0)
+    ax.axvspan(start, end, facecolor=color, alpha=0.25, edgecolor=None,linewidth=0)
 
 def get_surficial_csv(fname,start,end):
     df = pd.read_csv(fname)
@@ -296,6 +296,11 @@ def main(site, start, end, rainfall_props, surficial_props, subsurface_props, cs
         disp = subsurface_props['disp']['disp_tsm_axis']
         for tsm_name in disp.keys():
             tsm_data = get_tsm_data(tsm_name, start, subsurface_end, 'disp', 'all')
+            if subsurface_props['mirror_xz']:
+                tsm_data['zeroed_xz'] = -tsm_data['zeroed_xz']
+            if subsurface_props['mirror_xy']:
+                tsm_data['zeroed_xy'] = -tsm_data['zeroed_xy']
+
             axis_lst = disp[tsm_name]
             for axis in axis_lst.keys():
                 try:
@@ -329,6 +334,11 @@ def main(site, start, end, rainfall_props, surficial_props, subsurface_props, cs
             else:
                 node_lst = list(set(node_lst))
             tsm_data = get_tsm_data(tsm_name, start, subsurface_end, 'cml', node_lst)
+            if subsurface_props['mirror_xz']:
+                tsm_data['xz'] = -tsm_data['xz']
+            if subsurface_props['mirror_xy']:
+                tsm_data['xy'] = -tsm_data['xy']
+                
             axis_lst = cml[tsm_name]
             for axis in axis_lst.keys():
                 try:
@@ -350,7 +360,7 @@ def main(site, start, end, rainfall_props, surficial_props, subsurface_props, cs
 
     ax.set_xlim([start, end])
     fig.subplots_adjust(top=0.9, right=0.95, left=0.15, bottom=0.05, hspace=0.3)
-    fig.suptitle(site.upper() + " Rainfall Data",fontsize='x-large')
+    fig.suptitle(site.upper() + " Event Timeline",fontsize='x-large')
     plt.savefig(site + "_event_timeline", dpi=200,mode='w')#, 
 #        facecolor='w', edgecolor='w',orientation='landscape')
 
@@ -358,59 +368,63 @@ def main(site, start, end, rainfall_props, surficial_props, subsurface_props, cs
 
 if __name__ == '__main__':
     
-    site = 'bar'
-    start = '2018-01-10'
-    end = '2018-01-20'
-    subsurface_end = '2018-01-20 00:00'
+    site = 'tue'
+    start = '2018-07-06'
+    end = '2018-08-02'
+    subsurface_end = '2018-08-02'
     
     # annotate events
-    event_lst = ['2018-01-14 10:00','2018-01-17 09:35']
-    event_color = []#['gold', 'red', 'red'] # [] kapag red lang everything
+    event_lst = ['2018-07-23 15:30' ]#['2017-12-15 05:16', '2017-12-16 12:30', '2017-12-16 18:00']
+    event_color = ['orange']#['gold', 'red', 'red'] # [] kapag red lang everything
     
-    span_starts = ['2018-01-14 10:00','2018-01-17 09:35'] 
-    span_ends = ['2018-01-17 08:00','2018-01-19 16:00']
-    alert = ['green', 'yellow', 'orange', 'red']
-    span_colors = ['yellow','orange']
+    span_starts = []#['2017-10-14 09:30', '2017-10-18 16:00', '2017-10-28 16:00', '2017-10-28 17:35'] 
+    span_ends = []#['2017-10-17 16:00', '2017-10-21 20:00', '2017-10-28 17:35', '2017-11-04 20:00']
+    alert = []
+    span_colors = ['red'] #['yellow', 'yellow', 'yellow', 'red']
     span_list = zip(span_starts, span_ends, span_colors)
     
     
     # rainfall plot                                                 
-    rainfall = True                              ### True if to plot rainfall
-    plot_inst = True                             ### True if to plot instantaneous rainfall
-    rain_gauge_lst = ['imeraw']                  ### specifiy rain gauge
+    rainfall = True                             ### True if to plot rainfall
+    plot_inst = True                           ### True if to plot instantaneous rainfall
+    rain_gauge_lst = ['rain_noah_469']                ### specifiy rain gauge
     rainfall_props = {'to_plot': rainfall, 'rain_gauge_lst': rain_gauge_lst, 'plot_inst': plot_inst}
 
     # surficial plot
-    surficial = True                ### True if to plot surficial
-    markers = 'all'    ### specifiy markers; 'all' if all markers
+    surficial = False             ### True if to plot surficial
+    markers = ['D','J','L','M','N']    ### specifiy markers; 'all' if all markers
     surficial_props = {'to_plot': surficial, 'markers': markers}
     
     
     # from csv
-    from_csv = False                ### True if to plot surficial
-    fname = 'PAR_surficialdata.csv'
-    markers = 'all'    ### specifiy markers; 'all' if all markers
+    from_csv = False               ### True if to plot surficial
+    fname = 'nag_surficialdata.csv'
+    markers = ['D','J','L','M','N']    ### specifiy markers; 'all' if all markers
     csv_props = {'to_plot': from_csv, 'markers': markers, 'fname':fname}
     
     # subsurface plot
     
+    mirror_xz = False
+    mirror_xy = False
+    
     # subsurface displacement
-    disp = False                 ### True if to plot subsurface displacement
+    disp = True                 ### True if to plot subsurface displacement
     ### specifiy tsm name and axis; 'all' if all nodes
-    disp_tsm_axis = {'agbta': {'xz': range(1,7), 'xy': range(1,7)}}
-        #'blcsb': {'xy': range(4,9), 'xz': range(4,9)}}
+    disp_tsm_axis = {'Tueta': {'xz': [1,9,10]}, 'tuetb': {'xz': [5,6,7,8,9,10]}} #{'xz': [7,8,9], 'xy': [7,8,9]},
+            #'blcsb': {'xy': range(1,11), 'xz': range(1,11)}}
     
     # subsurface cumulative displacement
     cml = False     ### True if to plot subsurface cumulative displacement
     ### specifiy tsm name and axis; 'all' if all nodes
-    cml_tsm_axis = {'agbta': {'xz': range(1,7), 'xy':range(1,7)}}
-                            #'magtb': {'xy': range(11,16), 'xz': range(11,16)}}
+    cml_tsm_axis = {'nagsa': {'xz': [1,9,10]}, 'tuetb': {'xz': [5,6,7,8,9,10]}} 
+    #'sagtb': {'xz':range(3,20)}} #'magtb': {'xy': range(11,16), 'xz': range(11,16)}}
     
     subsurface_props = {'disp': {'to_plot': disp, 'disp_tsm_axis': disp_tsm_axis},
-                        'cml': {'to_plot': cml, 'cml_tsm_axis': cml_tsm_axis},
-                        'end': subsurface_end}
+                       'cml': {'to_plot': cml, 'cml_tsm_axis': cml_tsm_axis},
+                        'end': subsurface_end, 'mirror_xz': mirror_xz,
+                        'mirror_xy': mirror_xy}
     
-    df = main(site, start, end, rainfall_props, surficial_props, subsurface_props, csv_props, [event_lst, event_color], span_list)
+    df = main (site, start, end, rainfall_props, surficial_props, subsurface_props, csv_props, [event_lst, event_color], span_list)
     
 ################################################################################
     

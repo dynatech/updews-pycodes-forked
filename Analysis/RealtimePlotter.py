@@ -57,7 +57,7 @@ def mon_main():
             column_fix = raw_input('column fix for colpos (top/bottom); default for monitoring is fix bottom: ').lower()
             if column_fix != 'top':
                 column_fix = 'bottom'
-                
+
             config.io.column_fix = column_fix
             
             monitoring = g.genproc(col[0], window, config, fixpoint=config.io.column_fix, realtime=True)
@@ -113,6 +113,22 @@ def mon_main():
                 column_fix = 'bottom'
                 
             config.io.column_fix = column_fix
+            
+            # mirror xz and/or xy colpos
+            while True:
+                try:
+                    mirror_xz = bool(int(raw_input('mirror image of xz colpos? (0/1): ')))
+                    break
+                except:
+                    print 'Invalid. 1 for mirror image of xz colpos else 0'
+                    continue
+            while True:
+                try:
+                    mirror_xy = bool(int(raw_input('mirror image of xy colpos? (0/1): ')))
+                    break
+                except:
+                    print 'Invalid. 1 for mirror image of xy colpos else 0'
+                    continue
     
             while True:
                 show_all_legend = raw_input('show all legend in column position plot? (Y/N): ').lower()
@@ -145,7 +161,10 @@ def mon_main():
                 plotvel = False
     
             monitoring = g.genproc(col[0], window, config, fixpoint=config.io.column_fix, comp_vel = plotvel)
-            plotter.main(monitoring, window, config, plotvel=plotvel, show_part_legend = show_part_legend, plotvel_start=window.start, plot_inc=False, comp_vel=plotvel)
+            plotter.main(monitoring, window, config, plotvel=plotvel,
+                         show_part_legend = show_part_legend,
+                         plotvel_start=window.start, plot_inc=False,
+                         comp_vel=plotvel, mirror_xz=mirror_xz, mirror_xy=mirror_xy)
         
     # plots from start to end of data
     elif plot_all_data == 'y':
@@ -193,6 +212,22 @@ def mon_main():
             column_fix = 'bottom'
             
         config.io.column_fix = column_fix
+        
+        # mirror xz and/or xy colpos
+        while True:
+            try:
+                mirror_xz = bool(int(raw_input('mirror image of xz colpos? (0/1): ')))
+                break
+            except:
+                print 'Invalid. 1 for mirror image of xz colpos else 0'
+                continue
+        while True:
+            try:
+                mirror_xy = bool(int(raw_input('mirror image of xy colpos? (0/1): ')))
+                break
+            except:
+                print 'Invalid. 1 for mirror image of xz colpos else 0'
+                continue
     
         while True:
             show_all_legend = raw_input('show all legend in column position plot? (Y/N): ').lower()
@@ -225,7 +260,10 @@ def mon_main():
             plotvel = False
 
         monitoring = g.genproc(col[0], window, config, fixpoint=config.io.column_fix, comp_vel = plotvel)
-        plotter.main(monitoring, window, config, plotvel=plotvel, plotvel_start=window.start, show_part_legend = show_part_legend, plot_inc=False, comp_vel=plotvel)
+        plotter.main(monitoring, window, config, plotvel=plotvel,
+                     plotvel_start=window.start, show_part_legend = show_part_legend,
+                     plot_inc=False, comp_vel=plotvel,
+                     mirror_xz=mirror_xz, mirror_xy=mirror_xy)
         
     try:
         plotvel

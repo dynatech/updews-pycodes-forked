@@ -93,7 +93,7 @@ def subplot_colpos(dfts, ax_xz, ax_xy, show_part_legend, config, colposTS):
     curax=ax_xy
     curcolpos_xy = dfts['cs_xy'].apply(lambda x: x*1000).values
     if show_part_legend == False:
-        curax.plot(curcolpos_xy,curcolpos_x,'.-', label=pd.to_datetime(dfts.ts.values[0]).strftime('%Y-%m-%d'))
+        curax.plot(curcolpos_xy,curcolpos_x,'.-', label=pd.to_datetime(dfts.ts.values[0]).strftime('%Y-%m-%d %H:%M'))
     else:
         if i % show_part_legend == 0 or i == config.io.num_col_pos - 1:
             curax.plot(curcolpos_xy,curcolpos_x,'.-', label=pd.to_datetime(dfts.ts.values[0]).strftime('%Y-%m-%d'))
@@ -124,7 +124,7 @@ def plot_column_positions(df,colname,end, show_part_legend, config, num_nodes=0,
         ax_xy=nonrepeat_colors(ax_xy,len(set(df.ts.values)),color='plasma')
     
         colposTS = pd.DataFrame({'ts': sorted(set(df.ts)), 'index': range(len(set(df.ts)))})
-        
+		
         dfts = df.groupby('ts', as_index=False)
         dfts.apply(subplot_colpos, ax_xz=ax_xz, ax_xy=ax_xy, show_part_legend=show_part_legend, config=config, colposTS=colposTS)
     
@@ -567,7 +567,8 @@ def df_add_offset_col(df, offset, num_nodes):
     
 def main(monitoring, window, config, plotvel_start='', plotvel_end='',
          plotvel=True, show_part_legend = False, realtime=True, plot_inc=True,
-         comp_vel=True, end_mon=False, non_event_path=True):
+         comp_vel=True, end_mon=False, non_event_path=True,
+         mirror_xz=False, mirror_xy=False):
 
     colname = monitoring.colprops.name
     num_nodes = monitoring.colprops.nos
@@ -596,6 +597,10 @@ def main(monitoring, window, config, plotvel_start='', plotvel_end='',
             
     # compute column position
     colposdf = compute_colpos(window, config, monitoring_vel, num_nodes, seg_len)
+    if mirror_xz:
+        colposdf['cs_xz'] = -colposdf['cs_xz']
+    if mirror_xy:
+        colposdf['cs_xy'] = -colposdf['cs_xy']
 
     # plot column position
     plot_column_positions(colposdf,colname,window.end, show_part_legend, config, num_nodes=num_nodes, max_min_cml=max_min_cml)
