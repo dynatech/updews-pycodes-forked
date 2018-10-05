@@ -29,7 +29,7 @@ def release_time(date_time):
             
     return date_time
 
-def data_ts(date_time):
+def round_data_ts(date_time):
     """Rounds time to HH:00 or HH:30.
 
     Args:
@@ -452,14 +452,17 @@ def site_public_alert(site_props, end, public_symbols, internal_symbols,
             'alert_level'])
     subsurface_id = internal_symbols[internal_symbols.trigger_source == \
             'subsurface']['source_id'].values[0]
+    surficial_id = internal_symbols[internal_symbols.trigger_source == \
+            'surficial']['source_id'].values[0]
     release_op_trig = release_op_trig[~((release_op_trig.source_id \
             == subsurface_id) & (release_op_trig.ts_updated < end))]
-    pos_trig = op_trig[op_trig.alert_level > 0]
+    pos_trig = op_trig[(op_trig.alert_level > 0) & ~((op_trig.alert_level == 1) \
+                        & (op_trig.source_id == surficial_id))]
     last_pos_trig = pos_trig.drop_duplicates(['source_id', \
             'alert_level'])
 
     # public alert based on highest alert level in operational triggers
-    public_alert = max(list(op_trig['alert_level'].values) + [0])
+    public_alert = max(list(pos_trig['alert_level'].values) + [0])
     qdb.print_out('Public Alert %s' %public_alert)
 
     # subsurface alert
@@ -596,7 +599,7 @@ def site_public_alert(site_props, end, public_symbols, internal_symbols,
     
     try:    
         ts = max(op_trig[op_trig.alert_level != -1]['ts_updated'].values)
-        ts = data_ts(pd.to_datetime(ts))
+        ts = round_data_ts(pd.to_datetime(ts))
     except:
         ts = end
         
@@ -623,7 +626,7 @@ def site_public_alert(site_props, end, public_symbols, internal_symbols,
     
     # onset trigger
     try:
-        site_public_df['ts'] = ts_onset
+        site_public_df['ts'] = round_data_ts(ts_onset)
     except:
         pass
     
@@ -657,7 +660,7 @@ def main(end=datetime.now()):
     start_time = datetime.now()
     qdb.print_out(start_time)
 
-    end = data_ts(pd.to_datetime(end))
+    end = round_data_ts(pd.to_datetime(end))
     
     # alert symbols
     # public alert
@@ -683,7 +686,7 @@ def main(end=datetime.now()):
     # site id and code
     query = "SELECT site_id, site_code FROM sites WHERE active = 1"
     props = qdb.get_db_dataframe(query)
-    #props = props[props.site_code == 'sum']
+#    props = props[props.site_code == 'phi']
     site_props = props.groupby('site_id', as_index=False)
     
     alerts = site_props.apply(site_public_alert, end=end,
@@ -744,4 +747,4 @@ def main(end=datetime.now()):
 
 if __name__ == "__main__":
     df = main()
-#    df = main("2018-09-19 17:00:00")
+    #df = main("2018-09-19 17:00:00")
