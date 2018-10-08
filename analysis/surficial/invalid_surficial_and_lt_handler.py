@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 import pandas as pd
-import querydb as qdb
+import analysis.querydb as qdb
 from publicalerts import round_data_ts
 
 def insert_l2_operational_trigger(ts, site_id):
