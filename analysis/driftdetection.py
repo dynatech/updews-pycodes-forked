@@ -123,7 +123,6 @@ def drift_detection(acc_id = "", from_time = pd.to_datetime(dt.now() -td(weeks=1
             days = td(days = 0)
         week = week + 1
     
-    
     if days >= td(days = 28):
         print acc_id, df_week.ts[week - 1]
 
@@ -138,6 +137,8 @@ def drift_detection(acc_id = "", from_time = pd.to_datetime(dt.now() -td(weeks=1
             #save to db        
             db.df_write(smsclass.DataTable("drift_detection", df_drift))
             print "Successfully written to DB"
+            return True
+        
         except TypeError:
             raise ValueError("Connection Fail")
         
@@ -145,16 +146,15 @@ def main():
     tsm_sensors = memory.get('DF_TSM_SENSORS')
     accelerometers = memory.get('DF_ACCELEROMETERS')
     
-    dfa = accelerometers.merge(tsm_sensors,how='inner', on='tsm_id')
-    dfa = dfa[dfa.date_deactivated.isnull()]
-    #dfa=dfa[dfa.accel_id>=1240]
+    df_accel = accelerometers.merge(tsm_sensors,how='inner', on='tsm_id')
+    df_accel = df_accel[df_accel.date_deactivated.isnull()]
+    #df_accel=df_accel[df_accel.accel_id>=1240]
     
-    for i in dfa.accel_id:
+    for i in df_accel.accel_id:
         try:
             drift_detection(acc_id = i)
             print i
-#        except TypeError:
-#            pass
+
         except ValueError:
             pass
         
