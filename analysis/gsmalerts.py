@@ -63,7 +63,7 @@ def main():
     start_time = datetime.now()
     qdb.print_out(start_time)
     
-    ts = pub.data_ts(start_time)
+    ts = pub.round_data_ts(start_time)
     release_data_ts = pub.release_time(ts) - timedelta(hours=0.5)
     
     if qdb.does_table_exist('operational_triggers') == False:
