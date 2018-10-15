@@ -498,6 +498,8 @@ def site_public_alert(site_props, end, public_symbols, internal_symbols,
         # validity of alert
         validity = pd.to_datetime(max(pos_trig['ts_updated'].values)) \
                                  + timedelta(1)
+        validity = release_time(validity)
+        
         if public_alert == 3:
             validity += timedelta(1)
         # internal alert based on positive triggers and data presence
