@@ -233,7 +233,7 @@ def process_surficial_observation(sms):
 
     """
     mc = mem.get_handle()
-    surf_mark = mc.get("surficial_markers")
+    surf_mark = mc.get("DF_SURFICIAL_MARKERS")
     reply_msgs = mc.get("surficial_parser_reply_messages")
     sc = mem.server_config()
     data_host = sc["resource"]["datadb"]
@@ -264,7 +264,7 @@ def process_surficial_observation(sms):
         return False
 
     site_surf_mark = surf_mark[surf_mark["site_id"] == obv["obv"]["site_id"]]
-       
+
     df_meas = pd.DataFrame()
     df_meas = df_meas.from_dict(obv["markers"]["measurements"], orient = 'index')
     
