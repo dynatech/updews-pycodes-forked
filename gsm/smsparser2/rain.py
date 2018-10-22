@@ -72,8 +72,7 @@ def check_name_of_number(number):
     """  
     query = ("select logger_name from loggers where "
                 "logger_id = (select logger_id from logger_mobile "
-                "where sim_num = '%s' order by date_activated desc limit 1)" 
-                % (number)
+                "where sim_num like '%{}' order by date_activated desc limit 1)".format(number) 
                 )
     query = dynadb.read(query,'check_name_of_number')
     if len(query) != 0:
@@ -101,7 +100,7 @@ def rain_arq(sms):
     """       
     #msg = message
     line = sms.msg
-    sender = sms.sim_num
+    sender = sms.sim_num[-10:]
 
     print 'ARQ Weather data: ' + line
 
@@ -116,7 +115,7 @@ def rain_arq(sms):
         print ">> Number registered as", msgname
         msgname_contact = msgname
     else:
-        raise ValueError("Number not registered")
+        raise ValueError("Number not registered {}".format(sender))
 
     try:
         rain = int(linesplit[1])*0.5
