@@ -305,7 +305,8 @@ def write_outbox(message=None,recipients=None,gsm_id=None,table=None,
     if not table:
         table_name = check_number_in_table(recipients[0])
         if not table_name:
-            raise ValueError("No record for '%s" % (recipients[0]))
+            print("No record for '%s" % (recipients[0]))
+            return
     else:
         table_name = table
 
