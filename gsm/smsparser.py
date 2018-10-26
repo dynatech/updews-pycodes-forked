@@ -290,6 +290,8 @@ def process_surficial_observation(sms):
             ", ".join(["%s" % name for name in \
             markers_nd["marker_name"].values()]))
 
+        internal_msg += "\n\n"
+
     print ">> Updating observations"
 
     df_obv = pd.DataFrame(obv["obv"], index = [0])
