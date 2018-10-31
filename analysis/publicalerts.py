@@ -577,6 +577,7 @@ def site_public_alert(site_props, end, public_symbols, internal_symbols,
     # start of event
     if monitoring_type != 'event' and len(pos_trig) != 0:
         ts_onset = min(pos_trig['ts'].values)
+        ts_onset = pd.to_datetime(ts_onset)
     
     # most recent retrigger of positive operational triggers
     try:
