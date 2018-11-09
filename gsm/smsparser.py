@@ -501,12 +501,16 @@ def parse_all_messages(args,allmsgs=[]):
                 else:
                     print '>> Value Error'
             elif re.search("ARQ\+[0-9\.\+/\- ]+$",sms.msg):
-                df_data = rain.rain_arq(sms)
-                if df_data:
-                    print df_data.data
-                    dbio.df_write(df_data, resource=resource)
-                else:
-                    print '>> Value Error'
+                try: 
+                    df_data = rain.rain_arq(sms)
+                    if df_data:
+                        print df_data.data
+                        dbio.df_write(df_data, resource=resource)
+                    else:
+                        print '>> Value Error'
+                except:
+                    print "Kennex temp fix"
+                    pass
 
             elif (sms.msg.split('*')[0] == 'COORDINATOR' or 
                 sms.msg.split('*')[0] == 'GATEWAY'):
