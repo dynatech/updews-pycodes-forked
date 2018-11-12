@@ -322,7 +322,7 @@ def get_tsm_alert(site_id, end):
     
     return subsurface
 
-def check_rainfall_alert(internal_df, internal_symbols, site_id,
+def replace_rainfall_alert_if_rx(internal_df, internal_symbols, site_id,
                          end, rainfall_id, rain75_id):
     """Current internal alert sysmbol: includes rainfall symbol if 
     above 75% of threshold
@@ -347,10 +347,14 @@ def check_rainfall_alert(internal_df, internal_symbols, site_id,
 
     if len(rainfall_df) != 0:
         if rainfall_id in internal_df['source_id'].values:
-            rain_alert = internal_symbols[internal_symbols.source_id == \
-                            rainfall_id]['alert_symbol'].values[0]
+            rain_alert = internal_symbols[internal_symbols.trigger_sym_id == \
+                                        rain75_id]['alert_symbol'].values[0]
+            trigger_sym_id = internal_symbols[internal_symbols.trigger_sym_id == \
+                                        rain75_id]['trigger_sym_id'].values[0]
             internal_df.loc[internal_df.source_id == rainfall_id,
                             'alert_symbol'] = rain_alert
+            internal_df.loc[internal_df.source_id == rainfall_id,
+                            'trigger_sym_id'] = trigger_sym_id
         else:
             rain_df = internal_symbols[internal_symbols.trigger_sym_id == \
                                         rain75_id]
@@ -510,8 +514,9 @@ def site_public_alert(site_props, end, public_symbols, internal_symbols,
         rain75_id = internal_symbols[(internal_symbols.source_id == \
                         rainfall_id)&(internal_symbols.alert_level \
                         == -2)]['trigger_sym_id'].values[0]
+        
         if rainfall == 0 and end >= validity - timedelta(hours=0.5):
-            internal_df = check_rainfall_alert(internal_df, internal_symbols,
+            internal_df = replace_rainfall_alert_if_rx(internal_df, internal_symbols,
                                                site_id, end, rainfall_id,
                                                rain75_id)
 
@@ -689,7 +694,7 @@ def main(end=datetime.now()):
     # site id and code
     query = "SELECT site_id, site_code FROM sites WHERE active = 1"
     props = qdb.get_db_dataframe(query)
-#    props = props[props.site_code == 'phi']
+#    props = props[props.site_code == 'car']
     site_props = props.groupby('site_id', as_index=False)
     
     alerts = site_props.apply(site_public_alert, end=end,
@@ -750,4 +755,4 @@ def main(end=datetime.now()):
 
 if __name__ == "__main__":
     df = main()
-    #df = main("2018-09-19 17:00:00")
+#    df = main("2018-11-12 15:30:00")
