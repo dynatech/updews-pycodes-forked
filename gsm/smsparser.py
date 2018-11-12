@@ -247,8 +247,6 @@ def process_surficial_observation(sms):
     obv = []
     try:
         obv = parser.surficial.observation(sms.msg)
-        print obv["obv"]
-        print obv["markers"]
         
     except ValueError as err_val:
         err_val = int(str(err_val))
@@ -263,7 +261,8 @@ def process_surficial_observation(sms):
 
         return False
 
-    site_surf_mark = surf_mark[surf_mark["site_id"] == obv["obv"]["site_id"]]
+    site_surf_mark = surf_mark[(surf_mark["site_id"] == obv["obv"]["site_id"]) \
+                               & (surf_mark["in_use"] == 1)]
 
     df_meas = pd.DataFrame()
     df_meas = df_meas.from_dict(obv["markers"]["measurements"], orient = 'index')
