@@ -562,7 +562,7 @@ def site_public_alert(site_props, end, public_symbols, internal_symbols,
         elif rain75_id in internal_df['trigger_sym_id'].values \
                 or validity + timedelta(3) > end + timedelta(hours=0.5) \
                     and ground_alert == -1 \
-                    and not (end.time() in [time(3, 30), time(7, 30),
+                    or not (end.time() in [time(3, 30), time(7, 30),
                         time(11, 30), time(15, 30), time(19, 30),
                         time(23, 30)] and int(start_time.strftime('%M')) > 45):
             validity = release_time(end)
