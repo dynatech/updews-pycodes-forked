@@ -268,7 +268,7 @@ def get_internal_alert(pos_trig, release_op_trig, internal_symbols):
     
     # SPECIAL CASE FOR ON-DEMAND ALERTS
     on_demand_id = internal_symbols[internal_symbols.trigger_source == \
-            'on demand']['source_id'].values[0]
+            'on demand']['trigger_sym_id'].values[0]
     check_for_on_demand = highest_triggers[highest_triggers["trigger_sym_id"] \
                                            == on_demand_id]
     if len(check_for_on_demand) != 0:
