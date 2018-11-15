@@ -260,13 +260,22 @@ def get_internal_alert(pos_trig, release_op_trig, internal_symbols):
         dataframe: alert symbol indicating event triggers and data presence.
     """
 
-    highest_trigger = pos_trig.sort_values('alert_level',
+    highest_triggers = pos_trig.sort_values('alert_level',
                         ascending=False).drop_duplicates('source_id')
     with_data = release_op_trig[release_op_trig.alert_level != -1]
     with_data_id = with_data['source_id'].values
-    with_data = highest_trigger[highest_trigger.source_id.isin(with_data_id)]
+    with_data = highest_triggers[highest_triggers.source_id.isin(with_data_id)]
+    
+    # SPECIAL CASE FOR ON-DEMAND ALERTS
+    on_demand_id = internal_symbols[internal_symbols.trigger_source == \
+            'on demand']['source_id'].values[0]
+    check_for_on_demand = highest_triggers[highest_triggers["trigger_sym_id"] \
+                                           == on_demand_id]
+    if len(check_for_on_demand) != 0:
+        with_data = with_data.append(check_for_on_demand)
+    
     sym_id = with_data['trigger_sym_id'].values
-    no_data = highest_trigger[~highest_trigger.source_id.isin(with_data_id)]
+    no_data = highest_triggers[~highest_triggers.source_id.isin(with_data_id)]
     nd_source_id = no_data['source_id'].values
     internal_df = internal_symbols[(internal_symbols.trigger_sym_id.isin(sym_id)) \
             | ((internal_symbols.source_id.isin(nd_source_id)) & \
@@ -506,6 +515,7 @@ def site_public_alert(site_props, end, public_symbols, internal_symbols,
         
         if public_alert == 3:
             validity += timedelta(1)
+            
         # internal alert based on positive triggers and data presence
         internal_df = get_internal_alert(pos_trig, release_op_trig,       
                                   internal_symbols)
@@ -602,7 +612,6 @@ def site_public_alert(site_props, end, public_symbols, internal_symbols,
         tech_info = tech_info_maker.main(pos_trig)
     except:
         tech_info = pd.DataFrame()
-        
 
     
     try:    
@@ -694,7 +703,7 @@ def main(end=datetime.now()):
     # site id and code
     query = "SELECT site_id, site_code FROM sites WHERE active = 1"
     props = qdb.get_db_dataframe(query)
-#    props = props[props.site_code == 'car']
+#    props = props[props.site_code == 'par']
     site_props = props.groupby('site_id', as_index=False)
     
     alerts = site_props.apply(site_public_alert, end=end,
