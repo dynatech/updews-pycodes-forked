@@ -703,7 +703,7 @@ def main(end=datetime.now()):
     # site id and code
     query = "SELECT site_id, site_code FROM sites WHERE active = 1"
     props = qdb.get_db_dataframe(query)
-#    props = props[props.site_code == 'par']
+#    props = props[props.site_code == 'bto']
     site_props = props.groupby('site_id', as_index=False)
     
     alerts = site_props.apply(site_public_alert, end=end,
@@ -764,4 +764,4 @@ def main(end=datetime.now()):
 
 if __name__ == "__main__":
     df = main()
-#    df = main("2018-11-12 15:30:00")
+#    df = main("2018-11-19 11:30:00")
