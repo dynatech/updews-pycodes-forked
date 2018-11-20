@@ -354,7 +354,10 @@ def replace_rainfall_alert_if_rx(internal_df, internal_symbols, site_id,
     query += "and ts = '%s'" %end
     rainfall_df = qdb.get_db_dataframe(query)
 
+    is_x = False
     if len(rainfall_df) != 0:
+        is_x = True
+        
         if rainfall_id in internal_df['source_id'].values:
             rain_alert = internal_symbols[internal_symbols.trigger_sym_id == \
                                         rain75_id]['alert_symbol'].values[0]
@@ -371,7 +374,7 @@ def replace_rainfall_alert_if_rx(internal_df, internal_symbols, site_id,
                                                                     x.lower())
             internal_df = internal_df.append(rain_df, ignore_index=True)
             
-    return internal_df
+    return internal_df, is_x
 
 def query_current_events(end):
     
@@ -526,9 +529,12 @@ def site_public_alert(site_props, end, public_symbols, internal_symbols,
                         == -2)]['trigger_sym_id'].values[0]
         
         if rainfall == 0 and end >= validity - timedelta(hours=0.5):
-            internal_df = replace_rainfall_alert_if_rx(internal_df, internal_symbols,
+            internal_df, is_x = replace_rainfall_alert_if_rx(internal_df, internal_symbols,
                                                site_id, end, rainfall_id,
                                                rain75_id)
+            
+            if is_x == True:
+                rainfall = -2
 
         internal_df = internal_df.sort_values('hierarchy_id')
         internal_alert = ''.join(internal_df['alert_symbol'].values)
@@ -703,7 +709,7 @@ def main(end=datetime.now()):
     # site id and code
     query = "SELECT site_id, site_code FROM sites WHERE active = 1"
     props = qdb.get_db_dataframe(query)
-#    props = props[props.site_code == 'bto']
+#    props = props[props.site_code == 'pla']
     site_props = props.groupby('site_id', as_index=False)
     
     alerts = site_props.apply(site_public_alert, end=end,
@@ -764,4 +770,4 @@ def main(end=datetime.now()):
 
 if __name__ == "__main__":
     df = main()
-#    df = main("2018-11-19 11:30:00")
+#    df = main("2018-11-17 15:30:00")
