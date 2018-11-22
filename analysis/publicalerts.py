@@ -572,16 +572,20 @@ def site_public_alert(site_props, end, public_symbols, internal_symbols,
     # PUBLIC ALERT
     # check if end of validity: lower alert if with data and not rain75
     if public_alert > 0:
+        is_not_yet_write_time = not (end.time() in [time(3, 30), time(7, 30),
+                        time(11, 30), time(15, 30), time(19, 30),
+                        time(23, 30)] and int(start_time.strftime('%M')) > 45)
+        
         # check if end of validity: lower alert if with data and not rain75
         if validity > end + timedelta(hours=0.5):
             pass
         elif rain75_id in internal_df['trigger_sym_id'].values \
                 or validity + timedelta(3) > end + timedelta(hours=0.5) \
-                    and ground_alert == -1 \
-                    or not (end.time() in [time(3, 30), time(7, 30),
-                        time(11, 30), time(15, 30), time(19, 30),
-                        time(23, 30)] and int(start_time.strftime('%M')) > 45):
+                    and ground_alert == -1 or is_not_yet_write_time:
             validity = release_time(end)
+            
+            if is_not_yet_write_time:
+                do_not_write_to_db = True
         else:
             validity = ''
             public_alert = 0
@@ -653,7 +657,10 @@ def site_public_alert(site_props, end, public_symbols, internal_symbols,
     except:
         pass
     
-    qdb.alert_to_db(site_public_df, 'public_alerts')
+    try:
+        do_not_write_to_db
+    except:
+        qdb.alert_to_db(site_public_df, 'public_alerts')
     
     return public_df
 
