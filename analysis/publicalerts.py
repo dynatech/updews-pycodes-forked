@@ -572,9 +572,11 @@ def site_public_alert(site_props, end, public_symbols, internal_symbols,
     # PUBLIC ALERT
     # check if end of validity: lower alert if with data and not rain75
     if public_alert > 0:
-        is_not_yet_write_time = not (end.time() in [time(3, 30), time(7, 30),
+        is_release_time_run = end.time() in [time(3, 30), time(7, 30),
                         time(11, 30), time(15, 30), time(19, 30),
-                        time(23, 30)] and int(start_time.strftime('%M')) > 45)
+                        time(23, 30)]
+        is_45_minute_beyond = int(start_time.strftime('%M')) > 45
+        is_not_yet_write_time = not (is_release_time_run and is_45_minute_beyond)
         
         # check if end of validity: lower alert if with data and not rain75
         if validity > end + timedelta(hours=0.5):
@@ -584,8 +586,9 @@ def site_public_alert(site_props, end, public_symbols, internal_symbols,
                     and ground_alert == -1 or is_not_yet_write_time:
             validity = release_time(end)
             
-            if is_not_yet_write_time:
-                do_not_write_to_db = True
+            if is_release_time_run:
+                if not(is_45_minute_beyond):
+                    do_not_write_to_db = True
         else:
             validity = ''
             public_alert = 0
