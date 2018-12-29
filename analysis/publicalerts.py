@@ -207,7 +207,7 @@ def get_operational_trigger(site_id, start_monitor, end):
                    start of monitoring
     """
 
-    query =  "SELECT op.trigger_sym_id, ts, site_id, source_id, alert_level, "
+    query =  "SELECT op.trigger_id, op.trigger_sym_id, ts, site_id, source_id, alert_level, "
     query += "alert_symbol, ts_updated FROM"
     query += "  (SELECT * FROM operational_triggers "
     query += "  WHERE site_id = %s" %site_id
@@ -273,6 +273,14 @@ def get_internal_alert(pos_trig, release_op_trig, internal_symbols):
                                            == on_demand_id]
     if len(check_for_on_demand) != 0:
         with_data = with_data.append(check_for_on_demand)
+        
+    # SPECIAL CASE FOR EARTHQUAKE ALERTS
+    earthquake_id = internal_symbols[internal_symbols.trigger_source == \
+            'earthquake']['trigger_sym_id'].values[0]
+    check_for_earthquake = highest_triggers[highest_triggers["trigger_sym_id"] \
+                                           == earthquake_id]
+    if len(check_for_earthquake) != 0:
+        with_data = with_data.append(check_for_earthquake)
     
     sym_id = with_data['trigger_sym_id'].values
     no_data = highest_triggers[~highest_triggers.source_id.isin(with_data_id)]
@@ -610,12 +618,12 @@ def site_public_alert(site_props, end, public_symbols, internal_symbols,
     # most recent retrigger of positive operational triggers
     try:
         #last positive retriggger/s
-        triggers = last_pos_trig[['alert_symbol', 'ts_updated']]
+        triggers = last_pos_trig[['trigger_id', 'alert_symbol', 'ts_updated']]
         triggers = triggers.rename(columns = {'alert_symbol': 'alert', \
                 'ts_updated': 'ts'})
         triggers['ts'] = triggers['ts'].apply(lambda x: str(x))
     except:
-        triggers = pd.DataFrame(columns=['alert', 'ts'])
+        triggers = pd.DataFrame(columns=['trigger_id', 'alert', 'ts'])
      
     #technical info for bulletin release
     try:
@@ -719,7 +727,7 @@ def main(end=datetime.now()):
     # site id and code
     query = "SELECT site_id, site_code FROM sites WHERE active = 1"
     props = qdb.get_db_dataframe(query)
-#    props = props[props.site_code == 'pla']
+#    props = props[props.site_code == 'dad']
     site_props = props.groupby('site_id', as_index=False)
     
     alerts = site_props.apply(site_public_alert, end=end,
