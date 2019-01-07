@@ -124,8 +124,10 @@ def vcdgen(tsm_name, endTS='', startTS='', hour_interval='', fixpoint='bottom'):
     tilt, window, sc, tsm_props = proc_data(tsm_name, endTS, startTS, sc, hour_interval, fixpoint)    
 
     dispdf = displacement(tilt, window, sc, tsm_props.nos)
-    
     colposdf = colpos(tilt, window, sc, tsm_props)
+    
+    # Clip velocity start to 3 hours from endTS
+    window.start = window.end - timedelta(hours=3)
     veldf = velocity(tilt, window, sc, tsm_props.nos)
 
     vcd = pd.DataFrame({'v': [veldf], 'c': [colposdf], 'd': [dispdf]})

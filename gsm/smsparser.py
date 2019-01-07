@@ -247,8 +247,6 @@ def process_surficial_observation(sms):
     obv = []
     try:
         obv = parser.surficial.observation(sms.msg)
-        print obv["obv"]
-        print obv["markers"]
         
     except ValueError as err_val:
         err_val = int(str(err_val))
@@ -289,6 +287,8 @@ def process_surficial_observation(sms):
         internal_msg += "%s\n%s" % (reply_msgs.iloc[14]["internal_msg"],
             ", ".join(["%s" % name for name in \
             markers_nd["marker_name"].values()]))
+
+        internal_msg += "\n\n"
 
     print ">> Updating observations"
 
@@ -499,12 +499,16 @@ def parse_all_messages(args,allmsgs=[]):
                 else:
                     print '>> Value Error'
             elif re.search("ARQ\+[0-9\.\+/\- ]+$",sms.msg):
-                df_data = rain.rain_arq(sms)
-                if df_data:
-                    print df_data.data
-                    dbio.df_write(df_data, resource=resource)
-                else:
-                    print '>> Value Error'
+                try: 
+                    df_data = rain.rain_arq(sms)
+                    if df_data:
+                        print df_data.data
+                        dbio.df_write(df_data, resource=resource)
+                    else:
+                        print '>> Value Error'
+                except:
+                    print "Kennex temp fix"
+                    pass
 
             elif (sms.msg.split('*')[0] == 'COORDINATOR' or 
                 sms.msg.split('*')[0] == 'GATEWAY'):

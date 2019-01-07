@@ -207,7 +207,7 @@ def get_operational_trigger(site_id, start_monitor, end):
                    start of monitoring
     """
 
-    query =  "SELECT op.trigger_sym_id, ts, site_id, source_id, alert_level, "
+    query =  "SELECT op.trigger_id, op.trigger_sym_id, ts, site_id, source_id, alert_level, "
     query += "alert_symbol, ts_updated FROM"
     query += "  (SELECT * FROM operational_triggers "
     query += "  WHERE site_id = %s" %site_id
@@ -260,13 +260,30 @@ def get_internal_alert(pos_trig, release_op_trig, internal_symbols):
         dataframe: alert symbol indicating event triggers and data presence.
     """
 
-    highest_trigger = pos_trig.sort_values('alert_level',
+    highest_triggers = pos_trig.sort_values('alert_level',
                         ascending=False).drop_duplicates('source_id')
     with_data = release_op_trig[release_op_trig.alert_level != -1]
     with_data_id = with_data['source_id'].values
-    with_data = highest_trigger[highest_trigger.source_id.isin(with_data_id)]
+    with_data = highest_triggers[highest_triggers.source_id.isin(with_data_id)]
+    
+    # SPECIAL CASE FOR ON-DEMAND ALERTS
+    on_demand_id = internal_symbols[internal_symbols.trigger_source == \
+            'on demand']['trigger_sym_id'].values[0]
+    check_for_on_demand = highest_triggers[highest_triggers["trigger_sym_id"] \
+                                           == on_demand_id]
+    if len(check_for_on_demand) != 0:
+        with_data = with_data.append(check_for_on_demand)
+        
+    # SPECIAL CASE FOR EARTHQUAKE ALERTS
+    earthquake_id = internal_symbols[internal_symbols.trigger_source == \
+            'earthquake']['trigger_sym_id'].values[0]
+    check_for_earthquake = highest_triggers[highest_triggers["trigger_sym_id"] \
+                                           == earthquake_id]
+    if len(check_for_earthquake) != 0:
+        with_data = with_data.append(check_for_earthquake)
+    
     sym_id = with_data['trigger_sym_id'].values
-    no_data = highest_trigger[~highest_trigger.source_id.isin(with_data_id)]
+    no_data = highest_triggers[~highest_triggers.source_id.isin(with_data_id)]
     nd_source_id = no_data['source_id'].values
     internal_df = internal_symbols[(internal_symbols.trigger_sym_id.isin(sym_id)) \
             | ((internal_symbols.source_id.isin(nd_source_id)) & \
@@ -322,7 +339,7 @@ def get_tsm_alert(site_id, end):
     
     return subsurface
 
-def check_rainfall_alert(internal_df, internal_symbols, site_id,
+def replace_rainfall_alert_if_rx(internal_df, internal_symbols, site_id,
                          end, rainfall_id, rain75_id):
     """Current internal alert sysmbol: includes rainfall symbol if 
     above 75% of threshold
@@ -345,12 +362,19 @@ def check_rainfall_alert(internal_df, internal_symbols, site_id,
     query += "and ts = '%s'" %end
     rainfall_df = qdb.get_db_dataframe(query)
 
+    is_x = False
     if len(rainfall_df) != 0:
+        is_x = True
+        
         if rainfall_id in internal_df['source_id'].values:
-            rain_alert = internal_symbols[internal_symbols.source_id == \
-                            rainfall_id]['alert_symbol'].values[0]
+            rain_alert = internal_symbols[internal_symbols.trigger_sym_id == \
+                                        rain75_id]['alert_symbol'].values[0]
+            trigger_sym_id = internal_symbols[internal_symbols.trigger_sym_id == \
+                                        rain75_id]['trigger_sym_id'].values[0]
             internal_df.loc[internal_df.source_id == rainfall_id,
                             'alert_symbol'] = rain_alert
+            internal_df.loc[internal_df.source_id == rainfall_id,
+                            'trigger_sym_id'] = trigger_sym_id
         else:
             rain_df = internal_symbols[internal_symbols.trigger_sym_id == \
                                         rain75_id]
@@ -358,7 +382,7 @@ def check_rainfall_alert(internal_df, internal_symbols, site_id,
                                                                     x.lower())
             internal_df = internal_df.append(rain_df, ignore_index=True)
             
-    return internal_df
+    return internal_df, is_x
 
 def query_current_events(end):
     
@@ -502,6 +526,7 @@ def site_public_alert(site_props, end, public_symbols, internal_symbols,
         
         if public_alert == 3:
             validity += timedelta(1)
+            
         # internal alert based on positive triggers and data presence
         internal_df = get_internal_alert(pos_trig, release_op_trig,       
                                   internal_symbols)
@@ -510,10 +535,14 @@ def site_public_alert(site_props, end, public_symbols, internal_symbols,
         rain75_id = internal_symbols[(internal_symbols.source_id == \
                         rainfall_id)&(internal_symbols.alert_level \
                         == -2)]['trigger_sym_id'].values[0]
+        
         if rainfall == 0 and end >= validity - timedelta(hours=0.5):
-            internal_df = check_rainfall_alert(internal_df, internal_symbols,
+            internal_df, is_x = replace_rainfall_alert_if_rx(internal_df, internal_symbols,
                                                site_id, end, rainfall_id,
                                                rain75_id)
+            
+            if is_x == True:
+                rainfall = -2
 
         internal_df = internal_df.sort_values('hierarchy_id')
         internal_alert = ''.join(internal_df['alert_symbol'].values)
@@ -551,16 +580,23 @@ def site_public_alert(site_props, end, public_symbols, internal_symbols,
     # PUBLIC ALERT
     # check if end of validity: lower alert if with data and not rain75
     if public_alert > 0:
+        is_release_time_run = end.time() in [time(3, 30), time(7, 30),
+                        time(11, 30), time(15, 30), time(19, 30),
+                        time(23, 30)]
+        is_45_minute_beyond = int(start_time.strftime('%M')) > 45
+        is_not_yet_write_time = not (is_release_time_run and is_45_minute_beyond)
+        
         # check if end of validity: lower alert if with data and not rain75
         if validity > end + timedelta(hours=0.5):
             pass
         elif rain75_id in internal_df['trigger_sym_id'].values \
                 or validity + timedelta(3) > end + timedelta(hours=0.5) \
-                    and ground_alert == -1 \
-                    and not (end.time() in [time(3, 30), time(7, 30),
-                        time(11, 30), time(15, 30), time(19, 30),
-                        time(23, 30)] and int(start_time.strftime('%M')) > 45):
+                    and ground_alert == -1 or is_not_yet_write_time:
             validity = release_time(end)
+            
+            if is_release_time_run:
+                if not(is_45_minute_beyond):
+                    do_not_write_to_db = True
         else:
             validity = ''
             public_alert = 0
@@ -577,16 +613,17 @@ def site_public_alert(site_props, end, public_symbols, internal_symbols,
     # start of event
     if monitoring_type != 'event' and len(pos_trig) != 0:
         ts_onset = min(pos_trig['ts'].values)
+        ts_onset = pd.to_datetime(ts_onset)
     
     # most recent retrigger of positive operational triggers
     try:
         #last positive retriggger/s
-        triggers = last_pos_trig[['alert_symbol', 'ts_updated']]
+        triggers = last_pos_trig[['trigger_id', 'alert_symbol', 'ts_updated']]
         triggers = triggers.rename(columns = {'alert_symbol': 'alert', \
                 'ts_updated': 'ts'})
         triggers['ts'] = triggers['ts'].apply(lambda x: str(x))
     except:
-        triggers = pd.DataFrame(columns=['alert', 'ts'])
+        triggers = pd.DataFrame(columns=['trigger_id', 'alert', 'ts'])
      
     #technical info for bulletin release
     try:
@@ -596,7 +633,6 @@ def site_public_alert(site_props, end, public_symbols, internal_symbols,
         tech_info = tech_info_maker.main(pos_trig)
     except:
         tech_info = pd.DataFrame()
-        
 
     
     try:    
@@ -632,7 +668,10 @@ def site_public_alert(site_props, end, public_symbols, internal_symbols,
     except:
         pass
     
-    qdb.alert_to_db(site_public_df, 'public_alerts')
+    try:
+        do_not_write_to_db
+    except:
+        qdb.alert_to_db(site_public_df, 'public_alerts')
     
     return public_df
 
@@ -688,7 +727,7 @@ def main(end=datetime.now()):
     # site id and code
     query = "SELECT site_id, site_code FROM sites WHERE active = 1"
     props = qdb.get_db_dataframe(query)
-#    props = props[props.site_code == 'phi']
+#    props = props[props.site_code == 'dad']
     site_props = props.groupby('site_id', as_index=False)
     
     alerts = site_props.apply(site_public_alert, end=end,
@@ -749,4 +788,4 @@ def main(end=datetime.now()):
 
 if __name__ == "__main__":
     df = main()
-    #df = main("2018-09-19 17:00:00")
+#    df = main("2018-11-17 15:30:00")

@@ -241,16 +241,8 @@ def get_raw_accel_data(tsm_id='',tsm_name = "", from_time = "", to_time = "",
     #memcached
     memc = memcache.Client(['127.0.0.1:11211'], debug=1)
     
-    try:
-        if not memc.get('tsm') and not memc.get('accel'):
-            update_memcache()
-            
-    except ValueError:
-        print_out("Data already saved in memcached")
-        pass
-    
-    tsm_details = memc.get('tsm')
-    accelerometers = memc.get('accel')
+    tsm_details = memc.get('DF_TSM_SENSORS')
+    accelerometers = memc.get('DF_ACCELEROMETERS')
         
     tsm_details.date_deactivated=pd.to_datetime(tsm_details.date_deactivated)
     
@@ -491,7 +483,7 @@ def get_soms_raw(tsm_name = "", from_time = "", to_time = "", type_num="", node_
 def ref_get_soms_raw(tsm_name="", from_time="", to_time="", type_num="", node_id=""):
     memc = memcache.Client(['127.0.0.1:11211'], debug=1)
     
-    tsm_details=memc.get('tsm')
+    tsm_details=memc.get('DF_TSM_SENSORS')
     #For blank tsm_name
     if not tsm_name:
         raise ValueError('enter valid tsm_name')
