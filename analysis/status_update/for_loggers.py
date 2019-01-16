@@ -53,7 +53,7 @@ print df
 
 def dftosql(df):
     df['tsm_id'] = gdf.tsm_id
-    diff = df['ts_updated'] - df['last_data']
+    diff = df['ts_updated'].subtract(df['last_data'])
     df['time_delta'] = diff
     tdta = diff
     fdta = tdta.astype('timedelta64[D]')
