@@ -173,28 +173,52 @@ def rename_markers(rename_history, data):
     ts = rename_history['ts'].values[0]
     mask = np.logical_and(data.ts <= ts, data.marker_name == prev_name)
     data.loc[mask, ['marker_name']] = new_name
-    print data
 
-def get_surficial_csv(site, fname, hist, start, end):
+def cml_disp(data, repo_hist):
+    data['disp'] = (data['meas'] - data['meas'].shift()).fillna(0)
+    for ts, marker_name,data_source in repo_hist[['ts', 'marker_name','data_source']].values:
+        mask = np.logical_and(data.ts == ts, data.marker_name == marker_name)
+        mask = np.logical_and(mask, data.data_source == data_source)
+        data.loc[mask, ['disp']] = 0
+    data['zeroed_meas'] = data['disp'].cumsum()
+    return data
+
+def get_surficial_csv(site, fname, hist, start, end, hide_mute, zero_repo):
     
     data = pd.read_csv(fname)
     data['site_code'] = data.site_code.str.upper()
     data = data[data.site_code == site.upper()]
     data['ts'] = pd.to_datetime(data.ts)
     data = data.set_index('ts').truncate(start,end).reset_index()
-    
     data['marker_name'] = data.marker_name.str.upper()
+    data = data.reset_index()
 
     hist = pd.read_csv(hist)
     hist['site_code'] = hist.site_code.str.upper()
     hist = hist[hist.site_code == site.upper()]
+    hist['marker_name'] = hist.marker_name.str.upper()
+    hist['previous_name'] = hist.previous_name.str.upper()
     hist['ts'] = pd.to_datetime(hist.ts)
     rename_hist = hist[hist.operation == 'rename'].reset_index()
     rename_grp = rename_hist.groupby('index')
     rename_grp.apply(rename_markers, data=data)
     
+    keep_index = data[['ts', 'marker_name', 'data_source']].drop_duplicates().index
+    data = data[data.index.isin(keep_index)]
+    
+    if hide_mute:
+        keep_index = pd.concat([data[['ts', 'marker_name', 'data_source']], 
+                                hist[hist.operation == 'mute'][['ts', 'marker_name',
+                                    'data_source']]]).drop_duplicates(keep=False).index
+        data = data[data.index.isin(keep_index)]
+    
+    data = data.sort_index()
     dfg = data.groupby('marker_name', as_index=False)
-    data = dfg.apply(zeroed, column='meas')
+    if zero_repo:
+        data = dfg.apply(cml_disp, repo_hist=hist[hist.operation == 'reposition'])
+    else:
+        data = dfg.apply(zeroed, column='meas')
+    
     return data
 
 def plot_from_csv(ax, df, marker_lst):    
@@ -286,7 +310,8 @@ def main(site, start, end, rainfall_props, surficial_props, subsurface_props, cs
 
     if csv_props['to_plot']:
         df = get_surficial_csv(site, csv_props['fname'], csv_props['hist'],
-                               start, end)
+                               start, end, csv_props['hide_mute'],
+                               csv_props['zero_repo'])
         try:
             ax = fig.add_subplot(subplot-1, sharex=ax)
             subplot -= 1
@@ -416,7 +441,7 @@ if __name__ == '__main__':
     from_csv = True               ### True if to plot surficial
     fname = 'MSL_surficialdata.csv'
     hist = 'MSL_markerhistory.csv'
-    markers = ['F']               ### specifiy markers; 'all' if all markers
+    markers = ['A']               ### specifiy markers; 'all' if all markers
     hide_mute = True              ### Hide muted points
     zero_repo = True              ### Set displacement to zero for repositioned points
     csv_props = {'to_plot': from_csv, 'markers': markers, 'fname':fname,
