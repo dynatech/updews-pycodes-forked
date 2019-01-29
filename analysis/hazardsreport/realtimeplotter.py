@@ -8,10 +8,10 @@ plt.ion()
 import pandas as pd
 from datetime import date, time, datetime, timedelta
 
-import rtwindow as rtw
-import querydb as qdb
-import proc
-import plotterlib as plotter
+import analysis.subsurface.rtwindow as rtw
+import analysis.querydb as qdb
+import analysis.subsurface.proc as proc
+import analysis.subsurface.plotterlib as plotter
 
 def main():
 
@@ -193,11 +193,28 @@ def main():
     if column_fix == '':
         column_fix = 'bottom'        
     sc['subsurface']['column_fix'] = column_fix
-            
+      
+    # mirror xz and/or xy colpos
+    while True:
+        try:
+            mirror_xz = bool(int(raw_input('mirror image of xz colpos? (0/1): ')))
+            break
+        except:
+            print 'Invalid. 1 for mirror image of xz colpos else 0'
+            continue
+    while True:
+        try:
+            mirror_xy = bool(int(raw_input('mirror image of xy colpos? (0/1): ')))
+            break
+        except:
+            print 'Invalid. 1 for mirror image of xy colpos else 0'
+            continue
+
     data = proc.proc_data(tsm_props, window, sc, realtime=True, comp_vel=plotvel)
     plotter.main(data, tsm_props, window, sc, plotvel=plotvel,
                  show_part_legend = show_part_legend, realtime=True,
-                 plot_inc=False, three_day_window=three_day_window)
+                 plot_inc=False, three_day_window=three_day_window,
+                 mirror_xz=mirror_xz, mirror_xy=mirror_xy)
 
 ##########################################################
 if __name__ == "__main__":

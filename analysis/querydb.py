@@ -610,16 +610,15 @@ def get_tsm_list(tsm_name='', end=datetime.now()):
 #returns list of non-working nodes from the node status table
 #function will only return the latest entry per site per node with
 #"Not OK" status
-def get_node_status(tsm_id, status=4):   
+def get_node_status(tsm_id, status=4, ts=datetime.now()):   
     try:
-        query = "SELECT DISTINCT node_id FROM ("
-        query += " SELECT a.node_id FROM"
+        query = "SELECT DISTINCT node_id FROM"
         query += " accelerometer_status as s"
         query += " left join accelerometers as a"
         query += " on s.accel_id = a.accel_id"
         query += " where tsm_id = %s" %tsm_id
-        query += " and status = %s" %status
-        query += " ) AS sub"
+        query += " and status = %s" %status        
+        query += " and ts_flag <= '%s'" %ts
         df = db.df_read(query)
         return df['node_id'].values
     except:

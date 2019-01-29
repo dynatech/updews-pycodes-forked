@@ -166,7 +166,7 @@ def proc_data(tsm_props, window, sc, realtime=False, comp_vel=True,
         
         monitoring=monitoring.append(lgdpm)
 
-    invalid_nodes = qdb.get_node_status(tsm_props.tsm_id)
+    invalid_nodes = qdb.get_node_status(tsm_props.tsm_id, ts=window.offsetstart)
     monitoring = monitoring.loc[~monitoring.node_id.isin(invalid_nodes)]
 
     lgd = get_last_good_data(monitoring)

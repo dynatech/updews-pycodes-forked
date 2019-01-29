@@ -308,7 +308,7 @@ def process_ack_to_alert(sms):
     dbio.write(query=query,resource="sensor_data")
 
     contacts = get_alert_staff_numbers()
-    message = ("SANDBOX (test ack):\nAlert ID %s ACK by %s on %s\nStatus: %s\n"
+    message = ("\nAlert ID %s ACK by %s on %s\nStatus: %s\n"
         "Remarks: %s") % (stat_id, nickname, sms.ts, alert_status, remarks)
     
     tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")

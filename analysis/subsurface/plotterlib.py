@@ -155,7 +155,7 @@ def plot_column_positions(df, tsm_props, window, sc, show_part_legend,
     
 #        try:
 #            max_min_cml = max_min_cml.apply(lambda x: x*1000)
-#            xl = df.loc[(df.ts == end)&(df.node_id <= tsm_props.nos)&(df.node_id >= 1)]['x'].values[::-1]
+#            xl = df.loc[(df.ts == window.end)&(df.node_id <= tsm_props.nos)&(df.node_id >= 1)]['x'].values[::-1]
 #            ax_xz.fill_betweenx(xl, max_min_cml['xz_maxlist'].values, max_min_cml['xz_minlist'].values, where=max_min_cml['xz_maxlist'].values >= max_min_cml['xz_minlist'].values, facecolor='0.7',linewidth=0)
 #            ax_xy.fill_betweenx(xl, max_min_cml['xy_maxlist'].values, max_min_cml['xy_minlist'].values, where=max_min_cml['xy_maxlist'].values >= max_min_cml['xy_minlist'].values, facecolor='0.7',linewidth=0)
 #        except:
@@ -232,31 +232,21 @@ def cum_surf(df, xzd_plotoffset, num_nodes):
     return cs_df
 
 def noise_env(df, max_min_df, window, num_nodes, xzd_plotoffset):
+    max_min_df = max_min_df.sort_index()
+    
     #creating noise envelope
     first_row = df.loc[df.ts == window.start].sort_values('node_id')
     first_row = first_row.set_index('node_id')[['xz', 'xy']]
     
     for axis in ['xy', 'xz']:
-        max_min_df[axis+'_maxlist'] = max_min_df[axis+'_maxlist'] - first_row[axis]
-        max_min_df[axis+'_minlist'] = max_min_df[axis+'_minlist'] - first_row[axis]
+        max_min_df[axis+'_maxlist'] = (max_min_df[axis+'_maxlist'] - first_row[axis]) + ((num_nodes - max_min_df.index) * xzd_plotoffset)
+        max_min_df[axis+'_minlist'] = (max_min_df[axis+'_minlist'] - first_row[axis]) + ((num_nodes - max_min_df.index) * xzd_plotoffset)
         
     max_min_df = max_min_df.reset_index()
-    max_min_df = max_min_df.append([max_min_df] * (len(set(df.ts))-1),
-                                   ignore_index = True)
-    nodal_max_min_df = max_min_df.groupby('node_id')
-
-    noise_df = nodal_max_min_df.apply(noise_env_df, tsdf = sorted(set(df.ts)))
-    nodal_noise_df = noise_df.groupby('node_id')
-    noise_df = nodal_noise_df.apply(df_add_offset_col, offset = xzd_plotoffset,
-                                    num_nodes = num_nodes)
+    noise_df = max_min_df.append(max_min_df, ignore_index=True)
+    tsdf = [window.start]*len(max_min_df)+[window.end]*len(max_min_df)
+    noise_df['ts'] = tsdf
     noise_df = noise_df.set_index('ts')
-
-    # conpensates double offset of node 1 due to df.apply
-    a = noise_df.loc[noise_df.node_id == 1] - (num_nodes - 1) * xzd_plotoffset
-    a['node_id'] = 1
-    noise_df = noise_df.loc[noise_df.node_id != 1]
-    noise_df = noise_df.append(a)
-    noise_df = noise_df.sort_index()
 
     return noise_df
 
@@ -372,10 +362,10 @@ def plot_annotation(curax, axis, df0off, inc_df, plot_inc):
             text_size = inc_df.loc[inc_df.node_id == j][axis+'_text_size'].values[0]
             curax.annotate(text,xy=(x,i),xytext = (5,-2.5), textcoords='offset points', size = text_size )
 
-def plot_noise_env(axis, noise_df):
+def plot_noise_env(curax, axis, noise_df):
     nodal_noise_df = noise_df.groupby('node_id')
-    nodal_noise_df[axis+'_maxlist'].apply(plt.plot, ls=':')
-    nodal_noise_df[axis+'_minlist'].apply(plt.plot, ls=':')
+    nodal_noise_df[axis+'_maxlist'].apply(curax.plot, ls=':')
+    nodal_noise_df[axis+'_minlist'].apply(curax.plot, ls=':')
 
 def plot_disp(curax, axis, df0off):
     plt.sca(curax)
@@ -452,7 +442,7 @@ def plot_disp_vel(noise_df, df0off, cs_df, colname, window, sc, plotvel,
     #plotting displacement for xz
     curax=ax_xzd
     plot_disp(curax, 'xz', df0off)
-#    plot_noise_env('xz', noise_df)
+    plot_noise_env(curax, 'xz', noise_df)
     plot_annotation(curax, 'xz', df0off, inc_df, plot_inc)
     curax.set_title('displacement\n downslope', fontsize='medium')
     curax.set_ylabel('displacement scale, m')
@@ -460,7 +450,7 @@ def plot_disp_vel(noise_df, df0off, cs_df, colname, window, sc, plotvel,
     #plotting displacement for xy
     curax=ax_xyd
     plot_disp(curax, 'xy', df0off)
-#    plot_noise_env('xy', noise_df)
+    plot_noise_env(curax, 'xy', noise_df)
     plot_annotation(curax, 'xy', df0off, inc_df, plot_inc)
     curax.set_title('displacement\n across slope', fontsize='medium')
            
@@ -559,7 +549,8 @@ def df_add_offset_col(df, offset, num_nodes):
     
     
 def main(data, tsm_props, window, sc, plotvel=True, show_part_legend = False,
-         realtime=True, plot_inc=True, three_day_window=True):
+         realtime=True, plot_inc=True, three_day_window=True,
+         mirror_xz=False, mirror_xy=False):
 
     output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
 
@@ -570,17 +561,39 @@ def main(data, tsm_props, window, sc, plotvel=True, show_part_legend = False,
 
     if not os.path.exists(output_path+plot_path):
         os.makedirs(output_path+plot_path)
-    
+
+    # mirror image
+    mirror_axis = []
+    if mirror_xz:
+        mirror_axis += ['xz']
+    if mirror_xy:
+        mirror_axis += ['xy']
+
+
     tilt = data.tilt.reset_index()
     tilt['ts'] = pd.to_datetime(tilt['ts'])
-    max_min_df = data.max_min_df.reset_index()
+    # mirror image
+    for axis in mirror_axis:
+        tilt[axis] = -tilt[axis]
     
+    max_min_df = data.max_min_df
+    # mirror image
+    for axis in mirror_axis:
+        max_min_df[axis+'_maxlist'] = -max_min_df[axis+'_maxlist']
+        max_min_df[axis+'_minlist'] = -max_min_df[axis+'_minlist']
+        
+    max_min_cml=data.max_min_cml
+    # mirror image
+    for axis in mirror_axis:
+        max_min_cml[axis+'_maxlist'] = -max_min_cml[axis+'_maxlist']
+        max_min_cml[axis+'_minlist'] = -max_min_cml[axis+'_minlist']
+
     # compute column position
     colposdf = compute_colpos(window, sc, tilt, tsm_props)
 
     # plot column position
     plot_column_positions(colposdf, tsm_props, window, sc, show_part_legend,
-                          max_min_cml=data.max_min_cml)
+                          max_min_cml=max_min_cml)
     
     lgd = plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 

@@ -119,7 +119,7 @@ def get_date(text):
     MON_RE1 = "[JFMASOND][AEPUCO][NBRYLGTVCP]"
     MON_RE2 = "[A-Z]{4,9}"
     DAY_RE1 = "(([0-3]{0,1})([0-9]{1}))"
-    YEAR_RE1 = "(201[678]){0,1}"
+    YEAR_RE1 = "(201[6789]){0,1}"
 
     cur_year = str(dt.today().year)
 
