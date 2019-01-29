@@ -173,6 +173,9 @@ def summary_writer(site_id, site_code, gauge_name, rain_id, twoyrmax, halfmax,
                 alerts = alerts.append(temp_df, ignore_index=True)
             if three >= twoyrmax:
                 temp_df = pd.Series(['b', three, twoyrmax], index=columns)
+                alerts = alerts.append(temp_df, ignore_index=True) 
+            if ralert == -1:
+                temp_df = pd.Series([False, np.nan, np.nan], index=columns)
                 alerts = alerts.append(temp_df, ignore_index=True)
                 
         if alerts['rain_alert'][0] != False:
