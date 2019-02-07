@@ -1,7 +1,7 @@
-import memory
-from datetime import datetime as dt
 import os
-import ConfigParser
+import configparser
+
+import memory
 
 
 def set_cnf(file='', static_name=''):
@@ -11,7 +11,7 @@ def set_cnf(file='', static_name=''):
     if not os.path.isfile(cfile):
         raise ValueError("File does not exist: %s" % (cfile))
 
-    cnf = ConfigParser.ConfigParser()
+    cnf = configparser.ConfigParser()
     cnf.read(cfile)
 
     config_dict = dict()

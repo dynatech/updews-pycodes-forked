@@ -1,11 +1,12 @@
-import dynadb.db as dbio
-import MySQLdb
-import memory
-import pandas.io.sql as psql
-import pandas as pd
-import sqlalchemy
-import warnings
 from datetime import datetime as dt
+import MySQLdb
+import pandas.io.sql as psql
+import sqlalchemy
+import sys
+import warnings
+
+import dynadb.db as dbio
+import memory
 
 
 class VariableInfo:
@@ -76,11 +77,11 @@ def set_static_variable(name=""):
     try:
         variables = dbio.read(query=query,resource='sensor_data')
     except MySQLdb.ProgrammingError:
-        print ">> static_variables table does not exist on host"
+        print (">> static_variables table does not exist on host")
         return
 
     if not variables:
-        print "Error getting static variable information"
+        print ("Error getting static variable information")
         return False
 
     for data in variables:
@@ -106,7 +107,7 @@ def set_static_variable(name=""):
                 " ts_updated ='%s' WHERE name ='%s'") % (date, 
                     variable_info.name)
             dbio.write(query=query_ts_update, resource="sensor_data")
-            print variable_info.name, "success"
+            print (variable_info.name, "success")
 
 
 def get_db_dataframe(query):
@@ -133,10 +134,10 @@ def get_db_dataframe(query):
         db.close()
         return df
     except KeyboardInterrupt:
-        print "Exception detected in accessing database"
+        print ("Exception detected in accessing database")
         sys.exit()
     except psql.DatabaseError:
-        print "Error getting query %s" % (query)
+        print ("Error getting query %s" % (query))
         return None
 
 
@@ -156,9 +157,9 @@ def set_mysql_tables(mc):
     """ 
     tables = ['sites','tsm_sensors','loggers','accelerometers']
 
-    print 'Setting dataframe tables to memory'
+    print ('Setting dataframe tables to memory')
     for key in tables:
-        print "%s," % (key),
+        print ("%s," % (key),)
         df = get_db_dataframe("select * from %s;" % key)
 
         if df is None:
@@ -170,7 +171,7 @@ def set_mysql_tables(mc):
         if key == 'sites':
             mc.set(key+'_dict',df.set_index('site_code').to_dict())
 
-    print ' ... done'
+    print (' ... done')
 
 
 def get_mobiles(table=None,host=None,reset_variables=False,resource=None):
@@ -200,7 +201,7 @@ def get_mobiles(table=None,host=None,reset_variables=False,resource=None):
         if logger_mobile_sim_nums and not is_reset_variables:
             return logger_mobile_sim_nums
 
-        print "Force reset logger mobiles in memory"
+        print ("Force reset logger mobiles in memory")
 
         query = ("SELECT t1.mobile_id, t1.sim_num, t1.gsm_id "
             "FROM logger_mobile AS t1 "
@@ -228,7 +229,7 @@ def get_mobiles(table=None,host=None,reset_variables=False,resource=None):
         if user_mobile_sim_nums and not is_reset_variables:
             return user_mobile_sim_nums
 
-        print "Force reset user mobiles in memory"
+        print ("Force reset user mobiles in memory")
         
         query = "select mobile_id, sim_num, gsm_id from user_mobile group by sim_num"
 
@@ -244,7 +245,7 @@ def get_mobiles(table=None,host=None,reset_variables=False,resource=None):
         mc.set("user_mobile_def_gsm_id", user_mobile_def_gsm_id)
 
     else:
-        print 'Error: table', table
+        print ('Error: table', table)
         sys.exit()
 
     return nums
@@ -271,7 +272,7 @@ def get_surficial_markers(host = None, from_memory = True):
         return mc.get("surficial_markers")
 
     if not host:
-        print "Host defaults to datadb"
+        print ("Host defaults to datadb")
         host = sc["resource"]["datadb"]
 
     query = ("select m2.marker_id, m3.marker_name, m4.site_id from "
@@ -328,35 +329,35 @@ def set_variables_old(reset_variables):
 
     """ 
 
-    print dt.today().strftime('%Y-%m-%d %H:%M:%S')  
+    print (dt.today().strftime('%Y-%m-%d %H:%M:%S'))
     mc = memory.get_handle()
     sc = memory.server_config()
 
-    print "Reset alergenexec",
+    print ("Reset alergenexec",)
     mc.set("alertgenexec", False)
-    print "done"
+    print ("done")
 
-    print "Set static tables to memory",
+    print ("Set static tables to memory",)
     try:
         set_mysql_tables(mc)
     except KeyError:
-        print ">> KeyError"
-    print "done"
+        print (">> KeyError")
+    print ("done")
 
-    print "Set mobile numbers to memory",
-    mobiles_host = sc["resource"]["mobile_nums_db"]
+    print ("Set mobile numbers to memory",)
+#    mobiles_host = sc["resource"]["mobile_nums_db"]
     get_mobiles(table="loggers", reset_variables=reset_variables, resource="sms_data")
     get_mobiles(table="users", reset_variables=reset_variables, resource="sms_data")
-    print "done"
+    print ("done")
 
     try:
-        print "Set surficial_markers to memory", 
+        print ("Set surficial_markers to memory", )
         get_surficial_markers(from_memory = False)
-        print "done"
+        print ("done")
 
-        print "Set surficial_parser_reply_messages",
+        print ("Set surficial_parser_reply_messages",)
         df = get_surficial_parser_reply_messages()
         mc.set("surficial_parser_reply_messages", df)
-        print "done"
+        print ("done")
     except sqlalchemy.exc.ProgrammingError: 
-        print ">> Error on getting surficial information. Skipping load"
+        print (">> Error on getting surficial information. Skipping load")

@@ -17,10 +17,10 @@ def get_handle(print_out = False):
 	"""
 
 	if print_out:
-		print "Connecting to memcache client ...",
+		print ("Connecting to memcache client ...",)
 	mc = memcache.Client(['127.0.0.1:11211'],debug=1)
 	if print_out:
-		print "done"
+		print ("done")
 	return mc
 
 
@@ -81,7 +81,7 @@ def delete(name=""):
 	name = name.upper()
 	mc = get_handle()
 	mc.delete(name)
-	print "Delete successfully " + name
+	print ("Delete successfully " + name)
 
 
 def print_config(cfg = None):
@@ -104,9 +104,9 @@ def print_config(cfg = None):
 
 	if not cfg:
 		for key in sc.keys():
-			print key, sc[key], "\n"
+			print (key, sc[key], "\n")
 	else:
-		print cfg, sc[cfg]
+		print (cfg, sc[cfg])
 
 
 def server_config():
