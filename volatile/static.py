@@ -1,12 +1,14 @@
 from datetime import datetime as dt
 import MySQLdb
+import os
 import pandas.io.sql as psql
 import sqlalchemy
 import sys
 import warnings
 
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import dynadb.db as dbio
-import memory
+import volatile.memory as memory
 
 
 class VariableInfo:

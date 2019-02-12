@@ -1,9 +1,10 @@
-import sys,re
-import pandas as pd
-import numpy as np
-import dynadb.db as dynadb
 from datetime import datetime as dt
+import numpy as np
+import pandas as pd
+import re
+
 import smsclass
+#------------------------------------------------------------------------------
 
 
 cols = ['site','timestamp','id', 'msgid', 'mval1', 'mval2']
@@ -67,48 +68,48 @@ def v1(sms):
 
    
     tsm_name = line[0:4]
-    print 'SITE: ' + tsm_name
+    print ('SITE: ' + tsm_name)
     ##msgdata = line[5:len(line)-11] #data is 6th char, last 10 char are date
     try:
         msgdata = (line.split('*'))[1]
     except IndexError:
         raise ValueError("Wrong message construction")
         
-    print 'raw data: ' + msgdata
+    print ('raw data: ' + msgdata)
     #getting date and time
     #msgdatetime = line[-10:]
     try:
         timestamp = (line.split('*'))[2][:10]
-        print 'date & time: ' + timestamp
+        print ('date & time: ' + timestamp)
     except:
-        print '>> Date and time defaults to SMS not sensor data'
+        print ('>> Date and time defaults to SMS not sensor data')
         timestamp = sms.ts
 
     # col_list = cfg.get("Misc","AdjustColumnTimeOf").split(',')
     if tsm_name == 'PUGB':
         timestamp = sms.ts
-        print "date & time adjusted " + timestamp
+        print ("date & time adjusted " + timestamp)
     else:
         try:
             timestamp = dt.strptime(timestamp,
                 '%y%m%d%H%M').strftime('%Y-%m-%d %H:%M:00')
         except ValueError:
-            print ">> Error: date time conversion"
+            print (">> Error: date time conversion")
             return False
-        print 'date & time no change'
+        print ('date & time no change')
         
     dlen = len(msgdata) #checks if data length is divisible by 15
     #print 'data length: %d' %dlen
     nodenum = dlen/15
     #print 'number of nodes: %d' %nodenum
     if dlen == 0:
-        print 'Error: There is NO data!'
+        print ('Error: There is NO data!')
         return 
     elif((dlen % 15) == 0):
         #print 'Data has correct length!'
         valid = dlen
     else:
-        print 'Warning: Excess data will be ignored!'
+        print ('Warning: Excess data will be ignored!')
         valid = nodenum*15
         
     outl_tilt = []
@@ -168,18 +169,18 @@ def v1(sms):
             data = [df_tilt,df_soms]
             return data
         else:
-            print '\n>>Error: Error in Data format'
+            print ('\n>>Error: Error in Data format')
             return 
       
     except KeyError:
-        print '\n>>Error: Error in Data format'
+        print ('\n>>Error: Error in Data format')
         return 
     except KeyboardInterrupt:
-        print '\n>>Error: Unknown'
+        print ('\n>>Error: Unknown')
         raise KeyboardInterrupt
         return
     except ValueError:
-        print '\n>>Error: Unknown'
+        print ('\n>>Error: Unknown')
         return
 
 def twos_comp(hexstr):
@@ -227,7 +228,7 @@ def v2(sms):
     msg = sms.msg
     
     if len(msg.split(",")) == 3:
-        print ">> Editing old data format"
+        print (">> Editing old data format")
         datafield = msg.split(",")[1]
         dtype = datafield[2:4].upper()
         if dtype == "20" or dtype == "0B":
@@ -251,15 +252,15 @@ def v2(sms):
     tsm_name = msgsplit[0] # column id
 
     if len(msgsplit) != 4:
-        print 'wrong data format'
+        print ('wrong data format')
         # print msg
         return
 
     if len(tsm_name) != 5:
-        print 'wrong master name'
+        print ('wrong master name')
         return
 
-    print msg
+    print (msg)
 
     dtype = msgsplit[1].upper()
    
@@ -272,11 +273,11 @@ def v2(sms):
   
     if datastr == '':
         datastr = '000000000000000'
-        print ">> Error: No parsed data in sms"
+        print (">> Error: No parsed data in sms")
         return
    
     if len(ts) < 10:
-       print '>> Error in time value format: '
+       print ('>> Error in time value format: ')
        return
     
     ts_patterns = ['%y%m%d%H%M%S', '%Y-%m-%d %H:%M:%S']
@@ -287,7 +288,7 @@ def v2(sms):
             timestamp = dt.strptime(ts,pattern).strftime('%Y-%m-%d %H:%M:00')
             break
         except ValueError:
-            print "Error: wrong timestamp format", ts, "for pattern", pattern
+            print ("Error: wrong timestamp format", ts, "for pattern", pattern)
  
     if timestamp == '':
         raise ValueError(">> Error: Unrecognized timestamp pattern " + ts)
@@ -332,8 +333,8 @@ def v2(sms):
                 "xval":xd, "yval":yd, "zval":zd, "batt":bd}
                 outl.append(line)
             except ValueError:
-                print ">> Value Error detected.", piece,
-                print "Piece of data to be ignored"
+                print (">> Value Error detected.", piece,)
+                print ("Piece of data to be ignored")
                 return
     
     df = pd.DataFrame(outl)
@@ -431,7 +432,7 @@ def soms_parser(msgline,mode,div,err):
     if firsttwo in nodecommands:        # kapag msgid yung first 2 chars ng msgline
         log_errors(2,msgline,dt)
             
-        if long(r[3][:10])-long(prevdatetime[a])<=10:
+        if int(r[3][:10])-int(prevdatetime[a])<=10:
             data=backupGID[a]+r[2]
             #print 'data: ' + data
         else: #hanap next line na pareho
@@ -529,7 +530,7 @@ def soms_parser(msgline,mode,div,err):
 
 def b64Parser(sms):
     msg = sms.msg
-    print msg
+    print (msg)
     if len(msg.split("*")) == 4:
         msgsplit = msg.split('*')
 		
@@ -558,7 +559,7 @@ def b64Parser(sms):
                 timestamp = dt.strptime(ts,pattern).strftime('%Y-%m-%d %H:%M:00')
                 break
             except ValueError:
-                print "Error: wrong timestamp format", ts, "for pattern", pattern
+                print ("Error: wrong timestamp format", ts, "for pattern", pattern)
 
         outl = []
         if dtype in [11,12,32,33]:
@@ -577,8 +578,8 @@ def b64Parser(sms):
                     "xval":xd, "yval":yd, "zval":zd, "batt":bd}
                     outl.append(line)
                 except ValueError:
-                    print ">> b64 Value Error detected.", piece,
-                    print "Piece of data to be ignored"
+                    print (">> b64 Value Error detected.", piece,)
+                    print ("Piece of data to be ignored")
                     return
         #elif dtype in [110,111,112,113,21,26,10,13]: # wala pang support for v2 bradcast soms
         elif dtype in [110,113,10,13]: # wala pang support for v2 bradcast soms
@@ -594,8 +595,8 @@ def b64Parser(sms):
                     "mval1":soms, "mval2":0}
                     outl.append(line)
                 except ValueError:
-                    print ">> b64 Value Error detected.", piece,
-                    print "Piece of data to be ignored"
+                    print (">> b64 Value Error detected.", piece,)
+                    print ("Piece of data to be ignored")
                     return
         else:
             raise ValueError("dtype not recognized")

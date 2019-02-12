@@ -1,7 +1,11 @@
-import dynadb.db as dbio
+import argparse
 from datetime import datetime as dt
 from datetime import timedelta as td
-import argparse
+import os
+import sys
+
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
+import dynadb.db as dbio
 import volatile.memory as mem
 
 def count_items(ts_end = None, ts_start = None, table = None, stat_col = None,

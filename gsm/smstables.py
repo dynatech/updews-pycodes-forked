@@ -1,11 +1,15 @@
+from datetime import datetime as dt
+import MySQLdb
+import os, sys
+from pprint import pprint #For debugging only
+import random
+import time
+
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import dynadb.db as dbio
 import volatile.memory as mem
 import volatile.static as static
-from datetime import datetime as dt
-import time
-import random
-import MySQLdb
-from pprint import pprint #For debugging only
+#------------------------------------------------------------------------------
 
 def check_number_in_table(num):
     """
@@ -36,12 +40,12 @@ def set_read_status(sms_id_list='',read_status=0,table='',host='local',
 
     if type(sms_id_list) is list:
         if len(sms_id_list) == 0:
-            print ">> Nothing to do here"
+            print (">> Nothing to do here")
             return
         else:
             where_clause = ("where inbox_id "
                 "in (%s)") % (str(sms_id_list)[1:-1].replace("L",""))
-    elif type(sms_id_list) is long:
+    elif type(sms_id_list) in (int, float):
         where_clause = "where inbox_id = %d" % (sms_id_list)
     else:
         raise ValueError("Unknown sms_id_list type")        
@@ -100,7 +104,7 @@ def get_inbox(host='local',read_status=0,table='loggers',limit=200,
             return out
 
         except MySQLdb.OperationalError:
-            print '9.',
+            print ('9.',)
             time.sleep(20)
 
 def get_all_outbox_sms_from_db(table='',send_status=5,gsm_id=5,limit=10,
@@ -146,7 +150,7 @@ def get_all_outbox_sms_from_db(table='',send_status=5,gsm_id=5,limit=10,
             return out
 
         except MySQLdb.OperationalError:
-            print '10.',
+            print ('10.',)
             time.sleep(20)
 
 def write_inbox(msglist='',gsm_info='',resource="sms_data"):
@@ -209,7 +213,7 @@ def write_inbox(msglist='',gsm_info='',resource="sms_data"):
                 user_mobile_sim_nums[m.simnum], sms_msg, read_status, gsm_id)
             users_count += 1
         else:            
-            print 'Unknown number', m.simnum
+            print ('Unknown number', m.simnum)
             sms_id_unk.append(m)
             continue
 
@@ -310,7 +314,7 @@ def write_outbox(message=None,recipients=None,gsm_id=None,table=None,
     else:
         table_name = table
 
-    print "table_name:", table_name
+    print ("table_name:", table_name)
 
     query = ("insert into smsoutbox_%s (ts_written,sms_msg,source) VALUES "
         "('%s','%s','central')") % (table_name,tsw,message)
@@ -329,10 +333,10 @@ def write_outbox(message=None,recipients=None,gsm_id=None,table=None,
         try:
             mobile_id = table_mobile[r]
             gsm_id = def_gsm_id[mobile_id]
-            print outbox_id, mobile_id, gsm_id
+            print (outbox_id, mobile_id, gsm_id)
             query += "(%d, %d, %d)," % (outbox_id, mobile_id, gsm_id)
         except KeyError:
-            print ">> Error: Possible key error for", r
+            print (">> Error: Possible key error for", r)
             continue
     query = query[:-1]
 

@@ -1,7 +1,8 @@
-import sys
-import os
-import subprocess
 import datetime
+import os, sys
+import subprocess
+
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import volatile.memory as mem
 
 class GsmProcess:

@@ -1,21 +1,13 @@
 from datetime import datetime, timedelta, time
-import os
 import pandas as pd
 import sys
 
 import alertlib as lib
+import analysis.querydb as qdb
 import proc
 import rtwindow as rtw
 import trendingalert as trend
-import plotterlib as plotter
-
-#include the path of outer folder for the python scripts searching
-path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-if not path in sys.path:
-    sys.path.insert(1,path)
-del path   
-
-import querydb as qdb
+#------------------------------------------------------------------------------
 
 def RoundReleaseTime(date_time):
     # rounds time to 4/8/12 AM/PM
@@ -107,9 +99,9 @@ def main(tsm_name='', end='', end_mon=False):
         
     tsm_alert = pd.DataFrame({'ts': [window.end], 'tsm_id': [tsm_props.tsm_id], 'alert_level': [site_alert], 'ts_updated': [window.end]})
 
-    qdb.alert_to_db(tsm_alert, 'tsm_alerts')
-    
-    writeOperationalTriggers(tsm_props.site_id, window.end)
+#    qdb.alert_to_db(tsm_alert, 'tsm_alerts')
+#    
+#    writeOperationalTriggers(tsm_props.site_id, window.end)
 
 #######################
 
@@ -136,4 +128,4 @@ def main(tsm_name='', end='', end_mon=False):
 ################################################################################
 
 if __name__ == "__main__":
-    main()
+    main('agbta')

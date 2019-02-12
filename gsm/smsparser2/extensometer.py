@@ -7,7 +7,7 @@ import smsclass
 def uts(sms):
     values = {}
 
-    print sms.msg
+    print (sms.msg)
 
     uts_name = re.search("^[A-Z]{5}(?=\*U\*)",sms.msg).group(0)
 
@@ -42,7 +42,7 @@ def uts(sms):
         identifier, value = tuple(ma.split(":"))
 
         if identifier not in MATCH_ITEMS.keys():
-            print "Unknown identifier", identifier
+            print ("Unknown identifier", identifier)
             continue
 
         param = MATCH_ITEMS[identifier]
@@ -50,13 +50,13 @@ def uts(sms):
         try:
             values[param["name"]] = param["fxn"](value)
         except ValueError:
-            print ">> Error: converting %s using %s" % (value, str(param["fxn"]))
+            print (">> Error: converting %s using %s" % (value, str(param["fxn"])))
             continue
 
         conversion_count += 1
 
     if conversion_count == 0:
-        print ">> Error: no successful conversion"
+        print (">> Error: no successful conversion")
         raise ValueError("No successful conversion of values")
 
     try:
@@ -69,7 +69,7 @@ def uts(sms):
 
     df_ext_values = pd.DataFrame([values])
 
-    print df_ext_values
+    print (df_ext_values)
 
     return smsclass.DataTable(DATA_TABLE_NAME, df_ext_values)
 

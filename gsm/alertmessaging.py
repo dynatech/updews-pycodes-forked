@@ -1,11 +1,12 @@
-import re
+import argparse
 from datetime import datetime as dt
 from datetime import timedelta as td
-import dynadb.db as dbio
-import argparse
-import smstables
 import pandas as pd
-#---------------------------------------------------------------------------------------------------------------------------
+import re
+
+import dynadb.db as dbio
+import smstables
+#------------------------------------------------------------------------------
 
 def get_alert_staff_numbers():
     query = ("select t1.user_id,t2.sim_num,t2.gsm_id from user_alert_info t1 inner join"
@@ -20,8 +21,8 @@ def get_alert_staff_numbers():
     try:
         iomp_nicknames_tuple = dbio.read(query=query,resource="sensor_data")[0]
     except IndexError:
-        print ">> Error in getting IOMP nicknames"
-        print ">> No alert message will be sent to IOMPs"
+        print (">> Error in getting IOMP nicknames")
+        print (">> No alert message will be sent to IOMPs")
 
     query = ("select t1.user_id, t2.sim_num, t2.gsm_id from users t1 "
         "inner join user_mobile t2 on t1.user_id = t2.user_id "
@@ -185,7 +186,7 @@ def send_alert_message():
     contacts = get_alert_staff_numbers()
 
     if len(alert_msgs) == 0:
-        print 'No alertmsg set for sending'
+        print ('No alertmsg set for sending')
         return
 
     for (stat_id, site_id, site_code, trigger_source, alert_symbol, 
@@ -248,7 +249,7 @@ def check_alerts():
 
     alert_msgs = dbio.read(query=query,resource="sensor_data")
 
-    print "alert messages:", alert_msgs
+    print ("alert messages:", alert_msgs)
 
     return alert_msgs
 
@@ -268,12 +269,12 @@ def process_ack_to_alert(sms):
         return False
 
     user_id, nickname, def_gsm_id = get_name_of_staff(sms.sim_num)
-    print user_id, nickname, sms.msg
+    print (user_id, nickname, sms.msg)
     if re.search("server",nickname.lower()):
         try:
             nickname = re.search("(?<=-).+(?= from)", sms.msg).group(0)
         except AttributeError:
-            print "Error in processing nickname"
+            print ("Error in processing nickname")
     # else:
     #     name = nickname
 
@@ -315,7 +316,7 @@ def process_ack_to_alert(sms):
     recipients_list = ""
     for mobile_id, sim_num, gsm_id in contacts:
         recipients_list += "%s," % (sim_num)
-    recipents_list = recipients_list[:-1]
+    recipients_list = recipients_list[:-1]
     smstables.write_outbox(message = message, recipients = recipients_list,
         gsm_id=gsm_id, table='users')
 
@@ -324,7 +325,7 @@ def process_ack_to_alert(sms):
 def update_shift_tags():
     # remove tags to old shifts
     today = dt.today().strftime("%Y-%m-%d %H:%M:%S")
-    print 'Updating shift tags for', today
+    print ('Updating shift tags for', today)
 
     query = ("update senslopedb.dewslcontacts set grouptags = "
         "replace(grouptags,',alert-mon','') where grouptags like '%alert-mon%'")
@@ -364,9 +365,9 @@ def main():
     try:
         args = parser.parse_args()
     except:
-        print '>> Error in parsing in line arguments'
+        print ('>> Error in parsing in line arguments')
         error = parser.format_help()
-        print error
+        print (error)
         return
 
     if args.writetodb: 

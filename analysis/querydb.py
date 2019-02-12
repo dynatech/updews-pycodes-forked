@@ -15,7 +15,7 @@ elif curOS == "Linux":
 import dynadb.db as db
 import gsm.smsparser2.smsclass as sms
 import volatile.memory as mem
-
+#------------------------------------------------------------------------------
 
 def print_out(line):
     """Prints line.
@@ -24,7 +24,7 @@ def print_out(line):
     
     sc = mem.server_config()
     if sc['print']['print_stdout']:
-        print line
+        print (line)
 
 
 def does_table_exist(table_name, hostdb='local'):

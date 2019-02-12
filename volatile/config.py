@@ -1,7 +1,9 @@
-import os
 import configparser
+import os
+import sys
 
-import memory
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
+import volatile.memory as memory
 
 
 def set_cnf(file='', static_name=''):
@@ -11,7 +13,7 @@ def set_cnf(file='', static_name=''):
     if not os.path.isfile(cfile):
         raise ValueError("File does not exist: %s" % (cfile))
 
-    cnf = configparser.ConfigParser()
+    cnf = configparser.ConfigParser(inline_comment_prefixes=';')
     cnf.read(cfile)
 
     config_dict = dict()

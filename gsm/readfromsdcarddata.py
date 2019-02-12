@@ -1,16 +1,18 @@
-import os,time,serial,re,sys
-import MySQLdb
-import datetime
 import ConfigParser
+import datetime
 from datetime import datetime as dt
 from datetime import timedelta as td
-from senslopedbio import *
 from groundMeasurements import *
 import multiprocessing
-from subsurface import soms_parser as SSP
-import messageprocesses as proc
+import MySQLdb
+import os,time,serial,re,sys
 from os import listdir
 from os.path import isfile, join
+
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
+import messageprocesses as proc
+from senslopedbio import *
+from subsurface import soms_parser as SSP
 #---------------------------------------------------------------------------------------------------------------------------
 
 def main():

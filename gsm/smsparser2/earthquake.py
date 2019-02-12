@@ -1,10 +1,9 @@
-import sys
-import re
-import pandas as pd
-import numpy as np
-import dynadb.db as dynadb
 from datetime import datetime as dt
+import pandas as pd
+import re
+
 import smsclass
+#------------------------------------------------------------------------------
 
 EQ_SMS_PATTERNS = {
     "date": re.compile(r"\d{1,2}\w+201[6789]", re.IGNORECASE),
@@ -34,11 +33,11 @@ def eq(sms):
         if search_results:
             pattern_matches[name] = search_results.group(0)
         else:
-            print "No match for <%s> pattern." % (name),
-            print "Incomplete message not stored."
+            print ("No match for <%s> pattern." % (name),)
+            print ("Incomplete message not stored.")
             return False
 
-    print pattern_matches
+    print (pattern_matches)
 
     # format date
     datestr_init = pattern_matches["date"].upper()
@@ -51,7 +50,7 @@ def eq(sms):
         except:
             pass
     if datestr == None:
-        print ">> Error in datetime conversion for <%s>" % (datestr_init)
+        print (">> Error in datetime conversion for <%s>" % (datestr_init))
         return False
 
     # format time
@@ -59,7 +58,7 @@ def eq(sms):
     try:
         timestr = dt.strptime(timestr,"%I:%M%p").strftime("%H:%M:00")
     except:
-        print ">> Error in datetime conversion", timestr
+        print (">> Error in datetime conversion", timestr)
         return False
 
     del pattern_matches["date"]
@@ -71,7 +70,7 @@ def eq(sms):
         out[col_name] = pattern_matches[col_name]
 
     df = pd.DataFrame([out])
-    print df
+    print (df)
     return smsclass.DataTable("earthquake_events", df)
 
 

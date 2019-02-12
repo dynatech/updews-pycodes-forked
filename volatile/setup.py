@@ -1,7 +1,11 @@
-import config
-import memory
-import static
 import argparse
+import os
+import sys
+
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
+import config
+import static
+
 
 def get_arguments():
     parser = argparse.ArgumentParser(description = ("Setup static variables in "
@@ -14,9 +18,9 @@ def get_arguments():
 
         return args        
     except IndexError:
-        print '>> Error in parsing arguments'
+        print ('>> Error in parsing arguments')
         error = parser.format_help()
-        print error
+        print (error)
         sys.exit()
 
 def main():

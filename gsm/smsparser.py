@@ -1,21 +1,22 @@
-import os,time,serial,re,sys,traceback
-import MySQLdb, subprocess
+import argparse
 from datetime import datetime as dt
 from datetime import timedelta as td
-import argparse
-import lockscript as lock
-import alertmessaging as amsg
-import memcache
+import MySQLdb, subprocess
+import os,re,sys
 import lockscript
+import pandas as pd
+
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
+import alertmessaging as amsg
 import dynadb.db as dbio
+import smsparser2 as parser
+import smsparser2.extensometer as extenso
+import smsparser2.rain as rain
+import smsparser2.smsclass as smsclass
+import smsparser2.subsurface as subsurface
 import smstables
 import volatile.memory as mem
-import smsparser2.subsurface as subsurface
-import smsparser2 as parser
-import smsparser2.smsclass as smsclass
-import smsparser2.rain as rain
-import smsparser2.extensometer as extenso
-import pandas as pd
+
 
 def logger_response(sms,log_type,log='False'):
     """
@@ -36,7 +37,7 @@ def logger_response(sms,log_type,log='False'):
          % (sms.sim_num,sms.inbox_id,log_type))
                     
         dbio.write(query, resource="sensor_data")
-        print '>> Log response'
+        print ('>> Log response')
     else:
         return False
 
@@ -92,7 +93,7 @@ def process_piezometer(sms):
     #msg = message
     line = sms.msg
     sender = sms.sim_num
-    print 'Piezometer data: ' + line
+    print ('Piezometer data: ' + line)
     line = re.sub("\*\*","*",line)
     try:
     #PUGBPZ*13173214*1511091800 
@@ -105,11 +106,11 @@ def process_piezometer(sms):
         if len(msgname) == 3:
             msgname = msgname + 'pz'
         
-        print 'msg_name: ' + msgname
+        print ('msg_name: ' + msgname)
         data = linesplit[1]
         data = re.sub("F","",data)        
         
-        print "data:", data
+        print ("data:", data)
 
         # msgid = int(('0x'+data[:4]), 16)
         # p1 = int(('0x'+data[4:6]), 16)*100
@@ -133,12 +134,12 @@ def process_piezometer(sms):
         if int(txtdatetime[0:4]) < 2009:
             txtdatetime = sms.ts
             
-    except IndexError, AttributeError:
-        print '\n>> Error: Piezometer message format is not recognized'
-        print line
+    except (IndexError, AttributeError):
+        print ('\n>> Error: Piezometer message format is not recognized')
+        print (line)
         return
     except ValueError:    
-        print '>> Error: Possible conversion mismatch ' + line
+        print ('>> Error: Possible conversion mismatch ' + line)
         return      
 
         # try:
@@ -149,17 +150,17 @@ def process_piezometer(sms):
       # print query
         # print query
     except ValueError:
-        print '>> Error writing query string.', 
+        print ('>> Error writing query string.', )
         return False
    
     
     try:
         dbio.write(query, resource="sensor_data")
     except MySQLdb.ProgrammingError:
-        print '>> Unexpected programing error'
+        print ('>> Unexpected programing error')
         return False
         
-    print 'End of Process Piezometer data'
+    print ('End of Process Piezometer data')
     return True
 
 def check_logger_model(logger_name):
@@ -183,10 +184,10 @@ def spawn_alert_gen(tsm_name, timestamp):
     args = get_arguments()
 
     if args.nospawn:
-        print ">> Not spawning alert gen"
+        print (">> Not spawning alert gen")
         return
 
-    print "For alertgen.py", tsm_name, timestamp
+    print ("For alertgen.py", tsm_name, timestamp)
     # print timestamp
     timestamp = (dt.strptime(timestamp,'%Y-%m-%d %H:%M:%S')+\
         td(minutes=10)).strftime('%Y-%m-%d %H:%M:%S')
@@ -198,7 +199,7 @@ def spawn_alert_gen(tsm_name, timestamp):
 
     if alertgenlist == None:
         mc.set('alertgenlist',[])
-        print "Setting alertgenlist for the first time"
+        print ("Setting alertgenlist for the first time")
         alertgenlist = []
 
     alert_info = dict()
@@ -211,10 +212,10 @@ def spawn_alert_gen(tsm_name, timestamp):
             break
 
     if for_processing:
-        print tsm_name, "already in alert gen list"
+        print (tsm_name, "already in alert gen list")
     else:
         # insert tsm_name to list
-        print "Adding", tsm_name, "to alert gen list"
+        print ("Adding", tsm_name, "to alert gen list")
         alert_info['tsm_name'] = tsm_name.lower()
         alert_info['ts'] = timestamp
         alertgenlist.insert(0, alert_info)
@@ -290,7 +291,7 @@ def process_surficial_observation(sms):
 
         internal_msg += "\n\n"
 
-    print ">> Updating observations"
+    print (">> Updating observations")
 
     df_obv = pd.DataFrame(obv["obv"], index = [0])
 
@@ -299,13 +300,13 @@ def process_surficial_observation(sms):
 
     try:
         mo_id = int(mo_id[0][0])
-    except ValueError, TypeError:
-        print "Error: conversion of measurement observation id during last insert"
+    except (ValueError, TypeError):
+        print ("Error: conversion of measurement observation id during last insert")
         internal_msg += "\n\nERROR: Resultset conversion"
         smstables.write_outbox(internal_msg, ct_sim_num)
         return False
 
-    print ">> Updating marker measurements"
+    print (">> Updating marker measurements")
     if mo_id == 0:
         # Duplicate entry
         query = ("SELECT marker_observations.mo_id FROM marker_observations "
@@ -373,12 +374,12 @@ def parse_all_messages(args,allmsgs=[]):
     read_success_list = []
     read_fail_list = []
 
-    print "table:", args.table
+    print ("table:", args.table)
    
     ref_count = 0
 
     if allmsgs==[]:
-        print 'Error: No message to Parse'
+        print ('Error: No message to Parse')
         sys.exit()
 
     total_msgs = len(allmsgs)
@@ -390,7 +391,7 @@ def parse_all_messages(args,allmsgs=[]):
 
     while allmsgs:
         is_msg_proc_success = True
-        print '\n\n*******************************************************'
+        print ('\n\n*******************************************************')
 
         sms = allmsgs.pop(0)
         ref_count += 1
@@ -410,7 +411,7 @@ def parse_all_messages(args,allmsgs=[]):
             elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*.*",sms.msg):
                 df_data = subsurface.v1(sms)
                 if df_data:
-                    print df_data[0].data ,  df_data[1].data
+                    print (df_data[0].data ,  df_data[1].data)
                     dbio.df_write(df_data[0], resource=resource)
                     dbio.df_write(df_data[1], resource=resource)
                     tsm_name = df_data[0].name.split("_")
@@ -419,7 +420,7 @@ def parse_all_messages(args,allmsgs=[]):
                     timestamp = str(timestamp['ts'][0])
                     spawn_alert_gen(tsm_name,timestamp)
                 else:
-                    print '>> Value Error'
+                    print ('>> Value Error')
                     is_msg_proc_success = False
               
             elif re.search("^[A-Z]{4,5}\*[xyabcXYABC]\*[A-F0-9]+\*[0-9]+T?$",
@@ -427,7 +428,7 @@ def parse_all_messages(args,allmsgs=[]):
                 try:
                     df_data = subsurface.v2(sms)
                     if df_data:
-                        print df_data.data
+                        print (df_data.data)
                         dbio.df_write(df_data, resource=resource)
                         tsm_name = df_data.name.split("_")
                         tsm_name = str(tsm_name[1])
@@ -435,18 +436,18 @@ def parse_all_messages(args,allmsgs=[]):
                         timestamp = str(timestamp['ts'][0])
                         spawn_alert_gen(tsm_name,timestamp)
                     else:
-                        print '>> Value Error'
+                        print ('>> Value Error')
                         is_msg_proc_success = False
 
                 except IndexError:
-                    print "\n\n>> Error: Possible data type error"
-                    print sms.msg
+                    print ("\n\n>> Error: Possible data type error")
+                    print (sms.msg)
                     is_msg_proc_success = False
                 except ValueError:
-                    print ">> Value error detected"
+                    print (">> Value error detected")
                     is_msg_proc_success = False
                 except MySQLdb.ProgrammingError:
-                    print ">> Error writing data to DB"
+                    print (">> Error writing data to DB")
                     is_msg_proc_success = False
 
             elif re.search("^[A-Z]{5}\*[A-Za-z0-9/+]{2}\*[A-Za-z0-9/+]+\*[0-9]{12}$",
@@ -454,7 +455,7 @@ def parse_all_messages(args,allmsgs=[]):
                 try:
                     df_data = subsurface.b64Parser(sms)
                     if df_data:
-                        print df_data.data
+                        print (df_data.data)
                         dbio.df_write(df_data, resource=resource)
                         tsm_name = df_data.name.split("_")
                         tsm_name = str(tsm_name[1])
@@ -462,24 +463,24 @@ def parse_all_messages(args,allmsgs=[]):
                         timestamp = str(timestamp['ts'][0])
                         spawn_alert_gen(tsm_name,timestamp)
                     else:
-                        print '>>b64 Value Error'
+                        print ('>>b64 Value Error')
                         is_msg_proc_success = False
 
                 except IndexError:
-                    print "\n\n>> Error: Possible data type error"
-                    print sms.msg
+                    print ("\n\n>> Error: Possible data type error")
+                    print (sms.msg)
                     is_msg_proc_success = False
                 except ValueError:
-                    print ">> Value error detected"
+                    print (">> Value error detected")
                     is_msg_proc_success = False
                 except MySQLdb.ProgrammingError:
-                    print ">> Error writing data to DB"
+                    print (">> Error writing data to DB")
                     is_msg_proc_success = False
                     
             elif re.search("[A-Z]{4}\*[A-F0-9]+\*[0-9]+$",sms.msg):
                 df_data =subsurface.v1(sms)
                 if df_data:
-                    print df_data[0].data ,  df_data[1].data
+                    print (df_data[0].data ,  df_data[1].data)
                     dbio.df_write(df_data[0], resource=resource)
                     dbio.df_write(df_data[1], resource=resource)
                     tsm_name = df_data[0].name.split("_")
@@ -488,38 +489,38 @@ def parse_all_messages(args,allmsgs=[]):
                     timestamp = str(timestamp['ts'][0])
                     spawn_alert_gen(tsm_name,timestamp)
                 else:
-                    print '>> Value Error'
+                    print ('>> Value Error')
                     is_msg_proc_success = False
             #check if message is from rain gauge
             elif re.search("^\w{4},[\d\/:,]+",sms.msg):
                 df_data = rain.v3(sms)
                 if df_data:
-                    print df_data.data
+                    print (df_data.data)
                     dbio.df_write(df_data, resource=resource)
                 else:
-                    print '>> Value Error'
+                    print ('>> Value Error')
             elif re.search("ARQ\+[0-9\.\+/\- ]+$",sms.msg):
                 try: 
                     df_data = rain.rain_arq(sms)
                     if df_data:
-                        print df_data.data
+                        print (df_data.data)
                         dbio.df_write(df_data, resource=resource)
                     else:
-                        print '>> Value Error'
+                        print ('>> Value Error')
                 except:
-                    print "Kennex temp fix"
+                    print ("Kennex temp fix")
                     pass
 
             elif (sms.msg.split('*')[0] == 'COORDINATOR' or 
                 sms.msg.split('*')[0] == 'GATEWAY'):
                 is_msg_proc_success = process_gateway_msg(sms)
             elif common_logger_sms(sms) > 0:
-                print 'inbox_id: ', sms.inbox_id
-                print 'match'
+                print ('inbox_id: ', sms.inbox_id)
+                print ('match')
             else:
-                print '>> Unrecognized message format: '
-                print 'NUM: ' , sms.sim_num
-                print 'MSG: ' , sms.msg
+                print ('>> Unrecognized message format: ')
+                print ('NUM: ' , sms.sim_num)
+                print ('MSG: ' , sms.msg)
                 is_msg_proc_success = False
 
 
@@ -535,7 +536,7 @@ def parse_all_messages(args,allmsgs=[]):
             elif re.search("^ *(R(O|0)*U*TI*N*E )|(EVE*NT )", sms.msg.upper()):
                 is_msg_proc_success = process_surficial_observation(sms)                  
             else:
-                print "User SMS not in known template.", sms.msg
+                print ("User SMS not in known template.", sms.msg)
                 is_msg_proc_success = True
 
         else:
@@ -548,7 +549,7 @@ def parse_all_messages(args,allmsgs=[]):
         else:
             read_fail_list.append(sms.inbox_id)
 
-        print ">> SMS count processed:", ref_count
+        print (">> SMS count processed:", ref_count)
 
         # method for updating the read_status all messages that have been processed
         # so that they will not be processed again in another run
@@ -594,8 +595,8 @@ def process_gateway_msg(sms):
         bool: True output for success parsing and return
        False if fails.
     """
-    print ">> Coordinator message received"
-    print sms.msg
+    print (">> Coordinator message received")
+    print (sms.msg)
     
     # dbio.create_table("coordrssi","coordrssi")
 
@@ -614,7 +615,7 @@ def process_gateway_msg(sms):
         if smstype == "RSSI":
             site_name = datafield.split(',')[1]
             rssi_string = datafield.split(',',2)[2]
-            print rssi_string
+            print (rssi_string)
             # format is
             # <router name>,<rssi value>,...
             query = ("INSERT IGNORE INTO router_rssi "
@@ -627,7 +628,7 @@ def process_gateway_msg(sms):
                         routers[item.split(',')[0].lower()], item.split(',')[1])
                     count += 1
                 except KeyError:
-                    print 'Key error for', item
+                    print ('Key error for', item)
                     continue
                 
             query = query[:-1]
@@ -635,18 +636,18 @@ def process_gateway_msg(sms):
             # print query
             
             if count != 0:
-                print 'count', count
+                print ('count', count)
                 dbio.write(query, resource="sensor_data")
             else:
-                print '>> no data to commit'
+                print ('>> no data to commit')
             return True
         else:
-            print ">> Processing coordinator weather"
+            print (">> Processing coordinator weather")
     except IndexError:
-        print "IndexError: list index out of range"
+        print ("IndexError: list index out of range")
         logger_response(sms,14,True)
     except:
-        print ">> Unknown Error", sms.msg
+        print (">> Unknown Error", sms.msg)
         return False
 
 def get_arguments():
@@ -704,24 +705,24 @@ def get_arguments():
 
         if args.dbhost == None:
             args.dbhost = 'local'
-        print "Host: %s" % args.dbhost
+        print ("Host: %s" % args.dbhost)
         
-        print "Table: %s" % args.table
+        print ("Table: %s" % args.table)
 
         if args.status == None:
             args.status = 0
-        print "Staus to read: %s" % args.status
+        print ("Staus to read: %s" % args.status)
 
 
         if args.messagelimit == None:
             args.messagelimit = 200
-        print "Message limit: %s" % args.messagelimit
+        print ("Message limit: %s" % args.messagelimit)
 
         return args        
     except IndexError:
-        print '>> Error in parsing arguments'
+        print ('>> Error in parsing arguments')
         error = parser.format_help()
-        print error
+        print (error)
         sys.exit()
 
 def main():
@@ -753,7 +754,7 @@ def main():
 
     .. note:: To run in terminal **python smsparser.py ** with arguments (** -db,-ns,-b,-r,-l,-s,-g,-m,-t**).
     """
-    print 'SMS Parser'
+    print ('SMS Parser')
     args = get_arguments()
 
     if not args.bypasslock:
@@ -773,11 +774,11 @@ def main():
         try:
             parse_all_messages(args,allmsgs)
         except KeyboardInterrupt:
-            print '>> User exit'
+            print ('>> User exit')
             sys.exit()
 
     else:
-        print dt.today().strftime("\nServer active as of %A, %B %d, %Y, %X")
+        print (dt.today().strftime("\nServer active as of %A, %B %d, %Y, %X"))
         return
 
 if __name__ == "__main__":

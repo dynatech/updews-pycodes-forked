@@ -1,20 +1,12 @@
 from datetime import timedelta
 import numpy as np
-import os
 import pandas as pd
-from pandas.stats.api import ols
-import sys
+from pyfinance.ols import PandasRollingOLS
 
+import analysis.querydb as qdb
 import filterdata as filt
 import erroranalysis as err
-
-#include the path of "Analysis" folder for the python scripts searching
-path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-if not path in sys.path:
-    sys.path.insert(1,path)
-del path   
-
-import querydb as qdb
+#------------------------------------------------------------------------------
 
 class ProcData:
     def __init__ (self, invalid_nodes, tilt, lgd, max_min_df, max_min_cml):
@@ -25,6 +17,9 @@ class ProcData:
         self.max_min_cml = max_min_cml
         
 def resample_node(df, window):
+    print ('\n\n###df###\n', df, '\n######################\n\n')
+    print (df.columns)
+    print (df['node_id'])
     blank_df = pd.DataFrame({'ts': [window.end, window.offsetstart],
                     'node_id': [df['node_id'].values[0]]*2,
                     'tsm_name': [df['tsm_name'].values[0]]*2}).set_index('ts')
@@ -102,11 +97,12 @@ def fill_smooth(df, offsetstart, end, roll_window_numpts, to_smooth, to_fill):
         return df
         
 def node_inst_vel(filled_smoothened, roll_window_numpts, start):
+    print (filled_smoothened)
     try:          
-        lr_xz = ols(y=filled_smoothened.xz, x=filled_smoothened.td,
-                    window=roll_window_numpts, intercept=True)
-        lr_xy = ols(y=filled_smoothened.xy, x=filled_smoothened.td,
-                    window=roll_window_numpts, intercept=True)
+        lr_xz = PandasRollingOLS(y=filled_smoothened.xz, x=filled_smoothened.td,
+                    window=roll_window_numpts)
+        lr_xy = PandasRollingOLS(y=filled_smoothened.xy, x=filled_smoothened.td,
+                    window=roll_window_numpts)
                 
         filled_smoothened = filled_smoothened.loc[filled_smoothened.ts >= start]
         
@@ -190,7 +186,7 @@ def proc_data(tsm_props, window, sc, realtime=False, comp_vel=True,
     monitoring = monitoring.append(nodes_nodata)
     
     max_min_df, max_min_cml = err.cml_noise_profiling(monitoring, sc, tsm_props.nos)
-        
+
     #resamples xz and xy values per node using forward fill
     monitoring = monitoring.groupby('node_id').apply(resample_node,
                          window = window).reset_index(level=1).set_index('ts')
