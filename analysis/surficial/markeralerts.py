@@ -5,36 +5,32 @@ Created on Tue May 02 15:18:52 2017
 @author: LUL
 """
 
-
-#### Import essential libraries
+##### IMPORTANT matplotlib declarations must always be FIRST
+##### to make sure that matplotlib works with cron-based automation
 import matplotlib as mpl
 mpl.use('Agg')
-import matplotlib.pyplot as plt
 from matplotlib.legend_handler import HandlerLine2D
+import matplotlib.pyplot as plt
+
+#### Import essential libraries
+from datetime import datetime, time, timedelta
+import numpy as np
 import os
 import pandas as pd
-import numpy as np
-import sys
-from datetime import datetime, time, timedelta
-import time as mytime
+import platform
 from scipy.interpolate import UnivariateSpline
-from scipy.signal import gaussian
 from scipy.ndimage import filters
+from scipy.signal import gaussian
 from sqlalchemy import create_engine
-
-
-#### Add 'Analysis' folder to python scripts search
-path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-if not path in sys.path:
-    sys.path.insert(1,path)
-del path 
+import sys
+import time as mytime
 
 #### Import local codes
-import platform
-import querydb as qdb
-#### Determine current os
-curOS = platform.system()
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
+import analysis.querydb as qdb
 
+### Determine current os
+curOS = platform.system()
 #### Import corresponding mysql library
 if curOS == "Windows":
     import MySQLdb as mysqlDriver

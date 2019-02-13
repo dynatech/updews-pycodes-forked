@@ -1,8 +1,11 @@
 from datetime import timedelta
 import math
 import numpy as np
+import os
 import pandas as pd
+import sys
 
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import analysis.publicalerts as pub
 import analysis.querydb as qdb
 import dynadb.db as db

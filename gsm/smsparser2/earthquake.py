@@ -1,7 +1,10 @@
 from datetime import datetime as dt
+import os
 import pandas as pd
 import re
+import sys
 
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import smsclass
 #------------------------------------------------------------------------------
 

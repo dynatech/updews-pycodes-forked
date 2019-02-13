@@ -22,7 +22,7 @@ class TestDb(unittest.TestCase):
         status = dbio.connect(host="local")
         self.assertIsNotNone(status)
 
-    def test_connect_use_host_local_exp_success(self):
+    def test_connect_use_host_sb_local_exp_success(self):
 
         status = dbio.connect(connection="sb_local")
         self.assertIsNotNone(status)

@@ -33,7 +33,7 @@ def count_items(ts_end = None, ts_start = None, table = None, stat_col = None,
 		ts_start = ts_start.strftime("%Y-%m-%d %H:%M:%S")
 		ts_end = ts_end.strftime("%Y-%m-%d %H:%M:%S")
 
-	print "Count %s items from %s to %s:" % (table, ts_start, ts_end)
+	print ("Count %s items from %s to %s:" % (table, ts_start, ts_end))
 
 	query = ("select count(%s) from %s "
 		"where %s > (select max(%s) - %d from %s) "
@@ -51,7 +51,7 @@ def count_items(ts_end = None, ts_start = None, table = None, stat_col = None,
 		stat = "undefined"
 
 	if pq:
-		print "Count query:", query
+		print ("Count query:", query)
 
 	mc = mem.get_handle()
 	sc = mc.get("server_config")
@@ -61,12 +61,12 @@ def count_items(ts_end = None, ts_start = None, table = None, stat_col = None,
 
 	try:
 		item_count = rs[0][0]
-		print "Count: %d" % (item_count)
+		print ("Count: %d" % (item_count))
 	except ValueError:
-		print "Error in resultset conversion. %s", rs
+		print ("Error in resultset conversion. %s", rs)
 		return None
-	except IndexError, TypeError:
-		print "Error: Query error (%s)" % (query)
+	except (IndexError, TypeError):
+		print ("Error: Query error (%s)" % (query))
 		return None
 
 	# return item_count
@@ -85,7 +85,7 @@ def count_items(ts_end = None, ts_start = None, table = None, stat_col = None,
 				col_dict[stat_col], item_count))
 
 		if pq:
-			print "Write query:", query
+			print ("Write query:", query)
 
 		dbio.write(query, 'item_count', dbinstance)
 
@@ -120,9 +120,9 @@ def get_arguments():
         return args        
 
     except IndexError:
-        print '>> Error in parsing arguments'
+        print ('>> Error in parsing arguments')
         error = parser.format_help()
-        print error
+        print (error)
         sys.exit()
 
 

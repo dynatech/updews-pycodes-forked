@@ -1,9 +1,11 @@
 import datetime
-import os, sys
+import os
 import subprocess
+import sys
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import volatile.memory as mem
+
 
 class GsmProcess:
     def __init__(self, pattern_str, cmd_str):
@@ -23,7 +25,7 @@ def execute_cmd(cmd, wait_for_out = True):
 
     if wait_for_out:
         out, err = p.communicate()
-        print "out: %s, err: %s" % (out, err)
+        print ("out: %s, err: %s" % (out, err))
         return out, err
     else:
         return
@@ -34,7 +36,7 @@ def count_processes(proc):
     return int(out)
 
 def main():
-    print "Time: %s" % (datetime.datetime.now().strftime("%X"))
+    print ("Time: %s" % (datetime.datetime.now().strftime("%X")))
 
     try:
         server_id = mem.get("server_config")["gsmio"]["server_id"]
@@ -61,10 +63,10 @@ def main():
     for proc in process_list:
         proc_count = count_processes(proc)
         if proc_count <= 3:
-            print "Execute: %s" % (proc.cmd_str)
+            print ("Execute: %s" % (proc.cmd_str))
             execute_cmd(proc.cmd_str, False)
         else:
-            print "Script ok:", proc.pattern_str
+            print ("Script ok:", proc.pattern_str)
 
 if __name__ == "__main__":
     main()

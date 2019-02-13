@@ -1,4 +1,5 @@
-import ConfigParser, os
+import configparser
+import os
 
 # USAGE
 # 
@@ -16,7 +17,7 @@ cfgfiletxt = 'serverconfig.txt'
 cfile = os.path.dirname(os.path.realpath(__file__)) + '/' + cfgfiletxt
     
 def readCfgFile():
-    cfg = ConfigParser.ConfigParser()
+    cfg = configparser.ConfigParser()
     cfg.read(cfile)
     return cfg
 

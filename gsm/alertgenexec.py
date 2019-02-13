@@ -1,8 +1,13 @@
-import sys
-import subprocess
-import lockscript, time
 from datetime import datetime as dt
+import os
+import subprocess
+import sys
+import time
+
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
+import lockscript
 import volatile.memory as mem
+
 
 def count_alert_analysis_instances():
 	p = subprocess.Popen("ps ax | grep alertgen.py -c", stdout=subprocess.PIPE, 
@@ -11,18 +16,16 @@ def count_alert_analysis_instances():
 	return int(out)
 
 def main(mc):
-	print dt.today().strftime("%c")
-
-	ongoing = []
+	print (dt.today().strftime("%c"))
 
 	sc = mem.server_config()
 
- 	proc_limit = sc["io"]["proc_limit"]
+	proc_limit = sc["io"]["proc_limit"]
 	
 	while True:
 		alertgenlist = mc.get('alertgenlist')
 
-		print alertgenlist
+		print (alertgenlist)
 
 		if alertgenlist is None:
 			break
@@ -38,18 +41,18 @@ def main(mc):
 		command = "python %s %s '%s'" % (sc["fileio"]["alertgenscript"], 
 			alert_info['tsm_name'], alert_info['ts'])
 
-		print "Running", alert_info['tsm_name'], "alertgen"
+		print ("Running", alert_info['tsm_name'], "alertgen")
         
 		if lockscript.get_lock('alertgen for %s' % alert_info['tsm_name'], 
 			exitifexist=False):
-			p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, 
+			subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, 
 				stderr=subprocess.STDOUT)
 		else:
 			continue
 
 		while count_alert_analysis_instances() > proc_limit:
 			time.sleep(5)
-			print '.',
+			print ('.',)
 
 
 
@@ -59,13 +62,13 @@ if __name__ == "__main__":
 	ag_instance = mc.get('alertgenexec')
 
 	if ag_instance == True:
-		print 'Process already exists (via memcache).. aborting'
+		print ('Process already exists (via memcache).. aborting')
 		sys.exit()
 
 	mc.set('alertgenexec', True)
 	try:
 		main(mc)
 	except KeyboardInterrupt:
-		print 'Unexpected Error'
+		print ('Unexpected Error')
 	mc.set('alertgenexec', False)
 	    	

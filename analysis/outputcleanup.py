@@ -1,5 +1,8 @@
-import os
 from datetime import datetime, timedelta
+import os
+import sys
+
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import querydb as qdb
 
 path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))

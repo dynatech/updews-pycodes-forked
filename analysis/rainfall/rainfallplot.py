@@ -7,9 +7,13 @@ plt.ioff()
 
 from datetime import timedelta
 import numpy as np
+import os
 import pandas as pd
+import sys
 
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import rainfallalert as ra
+
 
 def stitch_intervals(ranges):
     """Stiches overlapping timestamp ranges without data.

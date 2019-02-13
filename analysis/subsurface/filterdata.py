@@ -6,18 +6,9 @@ Created on Thu Jun 18 14:39:48 2015
 """
 
 import numpy as np
-import os
 import pandas as pd
-import sys
 
-#include the path of outer folder for the python scripts searching
-path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-if not path in sys.path:
-    sys.path.insert(1,path)
-del path   
 
-#import querydb as q
-#
 #def volt_filter(dfc):
 #    #assume for a single node lang ito
 #    df = dfc.copy()

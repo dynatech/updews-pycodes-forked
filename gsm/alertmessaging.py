@@ -1,9 +1,12 @@
 import argparse
 from datetime import datetime as dt
 from datetime import timedelta as td
+import os
 import pandas as pd
 import re
+import sys
 
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import dynadb.db as dbio
 import smstables
 #------------------------------------------------------------------------------
@@ -312,7 +315,6 @@ def process_ack_to_alert(sms):
     message = ("\nAlert ID %s ACK by %s on %s\nStatus: %s\n"
         "Remarks: %s") % (stat_id, nickname, sms.ts, alert_status, remarks)
     
-    tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
     recipients_list = ""
     for mobile_id, sim_num, gsm_id in contacts:
         recipients_list += "%s," % (sim_num)

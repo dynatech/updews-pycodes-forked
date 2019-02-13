@@ -1,7 +1,10 @@
 from datetime import datetime as dt
+import os
 import pandas as pd
 import re
+import sys
 
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import dynadb.db as dynadb
 import smsclass
 #------------------------------------------------------------------------------
@@ -114,7 +117,7 @@ def rain_arq(sms):
     if msgname:
         msgname = msgname.lower()
         print (">> Number registered as", msgname)
-        msgname_contact = msgname
+#        msgname_contact = msgname
     else:
         raise ValueError("Number not registered {}".format(sender))
 
@@ -132,7 +135,7 @@ def rain_arq(sms):
     try:
         temp = linesplit[10]
         hum = linesplit[11]
-        flashp = linesplit[12]
+#        flashp = linesplit[12]
     except IndexError:
         raise ValueError("Incomplete data")
     txtdatetime = dt.strptime(linesplit[13],

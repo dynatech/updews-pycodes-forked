@@ -1,10 +1,11 @@
 """ Mirroring Data from dyna to sanbox and sandbox to dyna."""
 
-import MySQLdb
-import subprocess
 import argparse
-import memcache
+import os
+import subprocess
 import sys
+
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import volatile.memory as mem
 
 def get_arguments():
@@ -31,9 +32,9 @@ def get_arguments():
         #     args.messagelimit = 200
         return args
     except IndexError:
-        print '>> Error in parsing arguments'
+        print ('>> Error in parsing arguments')
         error = parser.format_help()
-        print error
+        print (error)
         sys.exit()
 
 def dyna_to_sandbox():
@@ -52,12 +53,11 @@ def dyna_to_sandbox():
     name = sc["db"]["name"]
 
     sb_host = sc["hosts"]["sandbox"]
-    dyna_host = sc["hosts"]["dynaslope"]
     gsm_host = sc["hosts"]["gsm"]
     sqldumpsdir = sc["fileio"]["sqldumpsdir"]
 
     
-    print "Checking max sms_id in sandbox smsinbox "
+    print ("Checking max sms_id in sandbox smsinbox ")
     command = ("mysql -u %s -h %s -e 'select max(sms_id) "
         "from %s.smsinbox' -p%s") % (user, sb_host, name, password)
     # print command
@@ -68,52 +68,52 @@ def dyna_to_sandbox():
     try:
         max_sms_id = out.split('\n')[2]
     except IndexError:
-        print "Index Error"
-        print out, err
+        print ("Index Error")
+        print (out, err)
         sys.exit()
     # max_sms_id = 4104000
-    print "Max sms_id from sandbox smsinbox:", max_sms_id
-    print  "done\n"
+    print ("Max sms_id from sandbox smsinbox:", max_sms_id)
+    print ("done\n")
 
     # dump table entries
-    print "Dumping tables from gsm host to sandbox dump file ...", 
+    print ("Dumping tables from gsm host to sandbox dump file ...",)
 
     f_dump = sqldumpsdir + "mirrordump.sql"
     command = ("mysqldump -h %s --skip-add-drop-table --no-create-info --single-transaction "
         "-u %s %s smsinbox --where='sms_id > %s' > %s ") % (gsm_host, 
             user, name, max_sms_id, f_dump)
-    print command
+    print (command)
     p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, 
         stderr=subprocess.STDOUT)
     out, err = p.communicate()
     if out or err:
-        print ">> Error on dyna mysql > dump"
-        print out, err
+        print (">> Error on dyna mysql > dump")
+        print (out, err)
     else:
-        print ">> No errors"
-    print 'done\n'
+        print (">> No errors")
+    print ('done\n')
 
     # write to local db
-    print "Dumping tables from gsm host to sandbox dump file ...", 
+    print ("Dumping tables from gsm host to sandbox dump file ...", )
     command = "mysql -h %s -u %s %s < %s" % (sb_host, user, name, f_dump)
-    print command
+    print (command)
     p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, 
         stderr=subprocess.STDOUT)
     out, err = p.communicate()
     if out or err:
-        print ">> Error on sandbox mysql < dump"
-        print out, err
+        print (">> Error on sandbox mysql < dump")
+        print (out, err)
     else:
-        print ">> No errors"
-    print 'done\n'
+        print (">> No errors")
+    print ('done\n')
 
     # delete dump file
-    print "Deleting dump file ..."
+    print ("Deleting dump file ...")
     command = "rm %s" % (f_dump)
     p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, 
         stderr=subprocess.STDOUT)
     out, err = p.communicate()
-    print 'done\n'
+    print ('done\n')
 
 def get_max_index_from_table(table_name):
     """
@@ -169,8 +169,8 @@ def import_sql_file_to_dyna(table, max_inbox_id, max_index_last_copied):
     :type max_index_last_copied: int
 
     """
-    print "importing to dyna tables"
-    print table
+    print ("importing to dyna tables")
+    print (table)
 
     sc = mem.server_config()
     
@@ -179,12 +179,9 @@ def import_sql_file_to_dyna(table, max_inbox_id, max_index_last_copied):
 
     host_ip = sc["hosts"][smsdb_host]
     host_ip2 = sc["hosts"][smsdb2_host]
-    user = sc["db"]["user"]
     password = sc["db"]["password"]
     smsdb_name = sc["db"]["smsdb_name"]
-    name = sc["db"]["name"]
     logsdir = sc["fileio"]["logsdir"]
-    sqldumpsdir = sc["fileio"]["sqldumpsdir"]
 
     copy_query = ("SELECT t1.ts_sms as 'timestamp', t2.sim_num, t1.sms_msg, "
         "'UNREAD' as read_status, 'W' AS web_flag FROM smsinbox_%s t1 "
@@ -202,9 +199,8 @@ def import_sql_file_to_dyna(table, max_inbox_id, max_index_last_copied):
     p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, 
         stderr=subprocess.STDOUT)
     out, err = p.communicate()
-    print command
-    print ""
-    # # print err
+    print (command)
+    # print err
 
     import_query = ("LOAD XML LOCAL INFILE '%s' INTO TABLE smsinbox2" % (f_dump))
     command = ("mysql -e \"%s\" -h%s senslopedb -upysys_local -p%s") % (import_query,
@@ -212,7 +208,7 @@ def import_sql_file_to_dyna(table, max_inbox_id, max_index_last_copied):
     p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, 
         stderr=subprocess.STDOUT)
     out, err = p.communicate()
-    print command
+    print (command)
 
     # write new value in max_index_last_copied
     tmpfile = logsdir + ("%s_inbox_index.tmp" % table)
@@ -233,20 +229,20 @@ def sandbox_to_dyna(table_name):
     from dyna.
     """
     # get index of items not yet copied to dyna
-    print "sandbox -> dyna"
+    print ("sandbox -> dyna")
 
     table = table_name
     max_inbox_id = get_max_index_from_table(table)
-    print "max index from table:", max_inbox_id
+    print ("max index from table:", max_inbox_id)
 
     # check if this index is already copied
     max_index_last_copied = get_last_copied_index(table)
-    print "max index copied:", max_index_last_copied
+    print ("max index copied:", max_index_last_copied)
 
     if max_inbox_id > max_index_last_copied:
         import_sql_file_to_dyna(table, max_inbox_id, max_index_last_copied)
     else:
-        print "smsinbox2 up to date"
+        print ("smsinbox2 up to date")
 
 def main():
     """
@@ -271,9 +267,9 @@ def main():
     elif args.mode == 2:
         sandbox_to_dyna(args.execute)
     elif args.mode is None:
-        print ">> Error: No mode given"
+        print (">> Error: No mode given")
     else:
-        print ">> Error: mode not available (%d)" % (args.mode)
+        print (">> Error: mode not available (%d)" % (args.mode))
 
 
 if __name__ == "__main__":

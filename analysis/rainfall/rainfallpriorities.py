@@ -1,10 +1,14 @@
 from datetime import datetime
+import os
 import numpy as np
+import sys
 
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import analysis.querydb as qdb
 import dynadb.db as db
 import gsm.smsparser2.smsclass as sms
 import volatile.memory as mem
+
 
 def all_site_coord():
     """Retrieves coordinates of sites from memcache

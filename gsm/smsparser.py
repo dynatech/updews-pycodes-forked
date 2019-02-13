@@ -1,10 +1,13 @@
 import argparse
 from datetime import datetime as dt
 from datetime import timedelta as td
-import MySQLdb, subprocess
-import os,re,sys
 import lockscript
+import MySQLdb
+import os
 import pandas as pd
+import re
+import subprocess
+import sys
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import alertmessaging as amsg
@@ -92,7 +95,6 @@ def process_piezometer(sms):
     """     
     #msg = message
     line = sms.msg
-    sender = sms.sim_num
     print ('Piezometer data: ' + line)
     line = re.sub("\*\*","*",line)
     try:
@@ -237,7 +239,6 @@ def process_surficial_observation(sms):
     surf_mark = mc.get("DF_SURFICIAL_MARKERS")
     reply_msgs = mc.get("surficial_parser_reply_messages")
     sc = mem.server_config()
-    data_host = sc["resource"]["datadb"]
     ct_sim_num = str(sc["surficial"]["ct_sim_num"])
     enable_analysis = sc["surficial"]["enable_analysis"]
     SEND_REPLY_TO_COMMUNITY = sc["surficial"]["send_reply_to_community"]
@@ -351,7 +352,7 @@ def process_surficial_observation(sms):
         obv = obv["obv"]
         surf_cmd_line = "python %s %d '%s' > %s 2>&1" % (sc['fileio']['gndalert1'],
             obv['site_id'], obv['ts'], sc['fileio']['surfscriptlogs'])
-        p = subprocess.Popen(surf_cmd_line, stdout=subprocess.PIPE, shell=True, 
+        subprocess.Popen(surf_cmd_line, stdout=subprocess.PIPE, shell=True, 
             stderr=subprocess.STDOUT)
 
     return True
@@ -381,12 +382,13 @@ def parse_all_messages(args,allmsgs=[]):
     if allmsgs==[]:
         print ('Error: No message to Parse')
         sys.exit()
-
-    total_msgs = len(allmsgs)
-
-    sc = mem.server_config()
-    mc = mem.get_handle()
-    table_sim_nums = mc.get('%s_mobile_sim_nums' % args.table[:-1])
+        
+#    total_msgs = len(all_msgs)
+#    
+#    sc = mem.server_config()
+#    mc = mem.get_handle()
+#    table_sim_nums = mc.get('%s_mobile_sim_nums' % args.table[:-1])
+    
     resource = "sensor_data"
 
     while allmsgs:
@@ -613,7 +615,7 @@ def process_gateway_msg(sms):
         smstype = datafield.split(',')[0]
         # process rssi parameters
         if smstype == "RSSI":
-            site_name = datafield.split(',')[1]
+#            site_name = datafield.split(',')[1
             rssi_string = datafield.split(',',2)[2]
             print (rssi_string)
             # format is

@@ -1,7 +1,10 @@
 from datetime import datetime, timedelta
+import os
 import pandas as pd
 import requests
+import sys
 
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import analysis.querydb as qdb
 import dynadb.db as db
 import gsm.smsparser2.smsclass as sms

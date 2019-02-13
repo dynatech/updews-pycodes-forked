@@ -1,8 +1,11 @@
 from datetime import timedelta
 import numpy as np
+import os
 import pandas as pd
 from pyfinance.ols import PandasRollingOLS
+import sys
 
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import analysis.querydb as qdb
 import filterdata as filt
 import erroranalysis as err
@@ -61,6 +64,12 @@ def accel_to_lin_xz_xy(monitoring, seg_len):
     ya = monitoring.y.values
     za = monitoring.z.values
 
+    print(np.sqrt(2))
+    print(type(np))
+    
+    sqr_denom = xa**2 + ya**2
+    print (type(sqr_denom))
+    xz_denom = np.sqrt(sqr_denom)
     theta_xz = np.arctan(za / (np.sqrt(xa**2 + ya**2)))
     theta_xy = np.arctan(ya / (np.sqrt(xa**2 + za**2)))
     xz = seg_len * np.sin(theta_xz)

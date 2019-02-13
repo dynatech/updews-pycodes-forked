@@ -13,19 +13,16 @@ import pandas as pd
 from scipy.stats import spearmanr
 import sys
 
-#include the path of outer folder for the python scripts searching
-path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-if not path in sys.path:
-    sys.path.insert(1,path)
-del path   
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
+import analysis.querydb as qdb
 
-import querydb as qdb
 
 mpl.rcParams['xtick.labelsize'] = 'xx-small'
 mpl.rcParams['ytick.labelsize'] = 'small'
 mpl.rcParams['axes.labelsize'] = 'medium'
 mpl.rcParams['figure.titlesize'] = 'x-large'
 mpl.rcParams['legend.fontsize'] = 'small'
+
 
 def col_pos(colpos_dfts):  
     colpos_dfts = colpos_dfts.drop_duplicates()

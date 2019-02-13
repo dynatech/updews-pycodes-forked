@@ -8,10 +8,10 @@ The modal values are represented by peaks in the distribution of the node values
 approximated by a gaussian kde. Arbitrary parameters of peak height and area under the curve are used to determine 
 whether a peak is signficant or not.  
 """
-from scipy.stats import gaussian_kde
-from scipy.interpolate import UnivariateSpline
-import pandas as pd
 import numpy as np
+import pandas as pd
+from scipy.interpolate import UnivariateSpline
+from scipy.stats import gaussian_kde
 
 
 def max_min(df, num_nodes, mx_mn_df):

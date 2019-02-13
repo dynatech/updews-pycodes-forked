@@ -1,9 +1,11 @@
 from datetime import datetime, timedelta
 import memcache
+import os
 import pandas.io.sql as psql
 import pandas as pd
 import platform
 from sqlalchemy import create_engine
+import sys
 
 curOS = platform.system()
 
@@ -12,6 +14,7 @@ if curOS == "Windows":
 elif curOS == "Linux":
     import pymysql as mysqlDriver
 
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import dynadb.db as db
 import gsm.smsparser2.smsclass as sms
 import volatile.memory as mem

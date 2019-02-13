@@ -1,7 +1,9 @@
 from datetime import datetime, timedelta, time
+import os
 import pandas as pd
 import sys
 
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import alertlib as lib
 import analysis.querydb as qdb
 import proc
@@ -99,9 +101,9 @@ def main(tsm_name='', end='', end_mon=False):
         
     tsm_alert = pd.DataFrame({'ts': [window.end], 'tsm_id': [tsm_props.tsm_id], 'alert_level': [site_alert], 'ts_updated': [window.end]})
 
-#    qdb.alert_to_db(tsm_alert, 'tsm_alerts')
-#    
-#    writeOperationalTriggers(tsm_props.site_id, window.end)
+    qdb.alert_to_db(tsm_alert, 'tsm_alerts')
+    
+    writeOperationalTriggers(tsm_props.site_id, window.end)
 
 #######################
 
@@ -128,4 +130,4 @@ def main(tsm_name='', end='', end_mon=False):
 ################################################################################
 
 if __name__ == "__main__":
-    main('agbta')
+    main()

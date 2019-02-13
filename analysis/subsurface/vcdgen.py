@@ -1,10 +1,14 @@
-import pandas as pd
 from datetime import date, time, datetime, timedelta
+import os
+import pandas as pd
+import sys
 
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import rtwindow as rtw
-import querydb as qdb
+import analysis.querydb as qdb
 import proc
 import plotterlib as plotter
+
 
 def proc_data(tsm_name, endTS, startTS, sc, hour_interval, fixpoint):
     tsm_props = qdb.get_tsm_list(tsm_name)[0]
@@ -53,9 +57,6 @@ def proc_data(tsm_name, endTS, startTS, sc, hour_interval, fixpoint):
 
     data = proc.proc_data(tsm_props, window, sc)
 
-    num_nodes = tsm_props.nos
-    seg_len = tsm_props.seglen
-    
     tilt = data.tilt[window.start:window.end]
     tilt = tilt.reset_index().sort_values('ts',ascending=True)
     tilt = tilt[['ts', 'node_id', 'xz', 'xy', 'vel_xz', 'vel_xy']]

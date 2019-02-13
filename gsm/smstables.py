@@ -1,8 +1,8 @@
 from datetime import datetime as dt
 import MySQLdb
-import os, sys
-from pprint import pprint #For debugging only
+import os
 import random
+import sys
 import time
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
@@ -195,7 +195,7 @@ def write_inbox(msglist='',gsm_info='',resource="sms_data"):
     sms_id_ok = []
     sms_id_unk = []
     ts_sms = 0
-    ltr_mobile_id= 0
+#    ltr_mobile_id= 0
 
     for m in msglist:
         # print m.simnum, m.data, m.dt, m.num
@@ -206,7 +206,7 @@ def write_inbox(msglist='',gsm_info='',resource="sms_data"):
         if m.simnum in logger_mobile_sim_nums.keys():
             query_loggers += "('%s','%s',%d,'%s',%d,%d)," % (ts_sms, ts_stored,
                 logger_mobile_sim_nums[m.simnum], sms_msg, read_status, gsm_id)
-            ltr_mobile_id= logger_mobile_sim_nums[m.simnum]
+#            ltr_mobile_id= logger_mobile_sim_nums[m.simnum]
             loggers_count += 1
         elif m.simnum in user_mobile_sim_nums.keys():
             query_users += "('%s','%s',%d,'%s',%d,%d)," % (ts_sms, ts_stored,

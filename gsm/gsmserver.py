@@ -1,21 +1,22 @@
 """ Running mainserver scripts    """
 
-import os,time,serial,re,sys
-import MySQLdb
-import datetime
-import ConfigParser
+import argparse
 from datetime import datetime as dt
 from datetime import timedelta as td
-import multiprocessing
-import math
-import memcache
-import argparse
+import os
+import random
+import re
+import serial
+import sys
+import time
+
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import volatile.memory as mem
 import volatile.static as static
 import dynadb.db as db
 import smstables
 import modem.modem as modem
-import random
+
 
 def check_id_in_table(table,gsm_id):
     """
@@ -34,7 +35,7 @@ def check_id_in_table(table,gsm_id):
     if len(query_number.sim_num) != 0:
         return query_number[0][0]
     else:
-        print " >> gsm id doesn't exist"
+        print (" >> gsm id doesn't exist")
         
 def log_runtime_status(script_name,status):
     """
@@ -57,7 +58,7 @@ def log_runtime_status(script_name,status):
     else:
         logtimestamp = dt.today().strftime("%Y-%m-%d %H:%M:00")
     
-    print ">> Logging runtime '" + status + "' at " + logtimestamp 
+    print (">> Logging runtime '" + status + "' at " + logtimestamp )
     
     query = ("insert ignore into runtimelog (ts, script_name, log_details) "
         "Values ('%s','%s','%s')") % (logtimestamp, script_name, status)
@@ -97,14 +98,14 @@ def get_allowed_prefixes(network):
     return extended_prefix_list
 
 def mock_send_msg(sms_msg=None, sim_num=None):
-    print "SIM_NUM:", sim_num
-    print "SMS_MSG:", sms_msg
+    print ("SIM_NUM:", sim_num)
+    print ("SMS_MSG:", sms_msg)
     time.sleep(random.randint(5,10))
     if random.randint(0,99) < 5:
-        print ">> Message sending failed!"
+        print (">> Message sending failed!")
         return 1
     else:
-        print ">> Message sent!"
+        print (">> Message sent!")
         return 0
 
 def send_messages_from_db(gsm = None, table = 'users', send_status = 0, 
@@ -132,7 +133,7 @@ def send_messages_from_db(gsm = None, table = 'users', send_status = 0,
     if len(allmsgs) <= 0:
         return
     
-    print ">> Sending messagess from db"
+    print (">> Sending messagess from db")
 
     table_mobile = static.get_mobiles(table=table, resource="sms_data")
     inv_table_mobile = {v: k for k, v in table_mobile.iteritems()}
@@ -147,18 +148,18 @@ def send_messages_from_db(gsm = None, table = 'users', send_status = 0,
             msglist.append([smsItem, gsm_id, outbox_id, mobile_id])
 
         except KeyError:
-            print ">> Unknown mobile_id:", mobile_id
+            print (">> Unknown mobile_id:", mobile_id)
             error_stat_list.append((stat_id,-1,today,gsm_id,outbox_id,mobile_id))
         
             continue
 
     if len(error_stat_list) > 0:
-        print ">> Ignoring invalid messages...",
+        print (">> Ignoring invalid messages...",)
         smstables.set_send_status(table, error_stat_list)
-        print "done"
+        print ("done")
 
     if len(msglist) == 0:
-        print ">> No valid message to send"
+        print (">> No valid message to send")
         return
         
     allmsgs = msglist
@@ -174,7 +175,7 @@ def send_messages_from_db(gsm = None, table = 'users', send_status = 0,
             num_prefix = re.match("^ *((0)|(63))9\d\d",msg[0].simnum).group()
             num_prefix = num_prefix.strip()
         except:
-            print 'Error getting prefix', msg[0].simnum
+            print ('Error getting prefix', msg[0].simnum)
             continue
             # check if recepient number in allowed prefixed list    
         if num_prefix in allowed_prefixes:
@@ -185,7 +186,6 @@ def send_messages_from_db(gsm = None, table = 'users', send_status = 0,
 
             today = dt.today().strftime("%Y-%m-%d %H:%M:%S")
             if ret:
-                send_stat = 1
                 stat = msg[0].num,1,today,msg[1],msg[2],msg[3]
             else:
                 stat = msg[0].num,5,today,msg[1],msg[2],msg[3]
@@ -193,7 +193,7 @@ def send_messages_from_db(gsm = None, table = 'users', send_status = 0,
             status_list.append(stat)
             
         else:
-            print "Number not in prefix list", num_prefix
+            print ("Number not in prefix list", num_prefix)
             today = dt.today().strftime("%Y-%m-%d %H:%M:%S")
             stat = msg[0].num,-1,today,msg[1],msg[2],msg[3]
             status_list.append(stat)
@@ -225,7 +225,7 @@ def try_sending_messages(gsm, gsm_info):
             gsm_info = gsm_info)
         send_messages_from_db(gsm, table = 'loggers', send_status = 5, 
             gsm_info = gsm_info)
-        print '.',
+        print ('.',)
         time.sleep(5)
         if (dt.now()-start).seconds > 30:
             break
@@ -238,12 +238,10 @@ def simulate_gsm(network='simulate'):
     :type table: str
 
     """
-    print "Simulating GSM"
+    print ("Simulating GSM")
 
     sc = mem.server_config()
-    sms_mirror_host = sc["resource"]["sms_mirror_db"]
     mobile_nums_db = sc["resource"]["mobile_nums_db"]
-    smsdb_host = sc["resource"]["smsdb"]
     
     smsinbox_sms = []
 
@@ -269,7 +267,7 @@ def simulate_gsm(network='simulate'):
     sms_id_ok = []
     sms_id_unk = []
     ts_sms = 0
-    ltr_mobile_id= 0
+#    ltr_mobile_id = 0
 
     for m in smsinbox_sms:
         ts_sms = m[1]
@@ -279,7 +277,7 @@ def simulate_gsm(network='simulate'):
         if m[2] in logger_mobile_sim_nums.keys():
             query_loggers += "('%s','%s',%d,'%s',%d,%d)," % (ts_sms, ts_stored,
                 logger_mobile_sim_nums[m[2]], sms_msg, read_status, gsm_id)
-            ltr_mobile_id= logger_mobile_sim_nums[m[2]]
+#            ltr_mobile_id = logger_mobile_sim_nums[m[2]]
             loggers_count += 1
         elif m[2] in user_mobile_sim_nums.keys():
             query_users += "('%s','%s',%d,'%s',%d,%d)," % (ts_sms, ts_stored,
@@ -360,20 +358,20 @@ def run_server(gsm_mod, gsm_info, table='loggers'):
     :type table: str
 
     """
-    minute_of_last_alert = dt.now().minute
-    timetosend = 0
-    lastAlertMsgSent = ''
-    logruntimeflag = True
+#    minute_of_last_alert = dt.now().minute
+#    timetosend = 0
+#    lastAlertMsgSent = ''
+#    logruntimeflag = True
     checkIfActive = True
 
     gsm_mod.set_defaults() 
             
     log_runtime_status(gsm_info["name"],"startup")
     
-    print '**' + gsm_info['name'] + ' GSM server active**'
-    print time.asctime()
+    print ('**' + gsm_info['name'] + ' GSM server active**')
+    print (time.asctime())
     network = gsm_info['name'].upper()
-    print "CSQ:", log_csq(gsm_mod, gsm_info['id'])
+    print ("CSQ:", log_csq(gsm_mod, gsm_info['id']))
 
     while True:
         m = gsm_mod.count_msg()
@@ -383,14 +381,14 @@ def run_server(gsm_mod, gsm_info, table='loggers'):
             try:
                 smstables.write_inbox(allmsgs,gsm_info)
             except KeyboardInterrupt:
-                print ">> Error: May be an empty line.. skipping message storing"
+                print (">> Error: May be an empty line.. skipping message storing")
             
             gsm_mod.delete_sms(gsm_info["module"])
                 
-            print dt.today().strftime("\n" + network 
-                + " Server active as of %A, %B %d, %Y, %X")
+            print (dt.today().strftime("\n" + network 
+                + " Server active as of %A, %B %d, %Y, %X"))
 
-            print "CSQ:", log_csq(gsm_mod, gsm_info['id'])
+            print ("CSQ:", log_csq(gsm_mod, gsm_info['id']))
 
             log_runtime_status(gsm_info["name"],"alive")
 
@@ -403,16 +401,16 @@ def run_server(gsm_mod, gsm_info, table='loggers'):
             today = dt.today()
             if (today.minute % 10 == 0):
                 if checkIfActive:
-                    print "\n", network, today.strftime("Server active as of "
-                        "%A, %B %d, %Y, %X")
-                    print "CSQ:", log_csq(gsm_mod, gsm_info['id'])
+                    print ("\n", network, today.strftime("Server active as of "
+                        "%A, %B %d, %Y, %X"))
+                    print ("CSQ:", log_csq(gsm_mod, gsm_info['id']))
                     log_runtime_status(gsm_info["name"],"alive")
                 checkIfActive = False
             else:
                 checkIfActive = True
                 
         elif m == -1:
-            serverstate = 'inactive'
+            # serverstate = 'inactive'
             # log_runtime_status(network,"gsm inactive")
             raise modem.ResetException("GSM MODULE MAYBE INACTIVE")
 
@@ -456,9 +454,9 @@ def get_arguments():
         #     args.messagelimit = 200
         return args        
     except IndexError:
-        print '>> Error in parsing arguments'
+        print ('>> Error in parsing arguments')
         error = parser.format_help()
-        print error
+        print (error)
         sys.exit()
 
 def get_gsm_modules(reset_val = False):
@@ -508,9 +506,9 @@ def get_gsm_modules(reset_val = False):
     return gsm_modules
 
 def mock_send_server(gsm, gsm_info):
-    print "Mocking sending"
-    print '**' + gsm_info['name'] + ' GSM server active**'
-    print time.asctime()
+    print ("Mock sending")
+    print ('**' + gsm_info['name'] + ' GSM server active**')
+    print (time.asctime())
 
     count = 0
     network = gsm_info['name'].upper()
@@ -518,12 +516,12 @@ def mock_send_server(gsm, gsm_info):
     while True:
         send_messages_from_db(gsm="Mock", table='users', send_status=5, 
             gsm_info=gsm_info, limit=10, mock_send=True)
-        print ".",
+        print (".",)
 
         today = dt.today()
         if count == 10:
-            print "\n", network, today.strftime("Server active as of "
-                    "%A, %B %d, %Y, %X")
+            print ("\n", network, today.strftime("Server active as of "
+                    "%A, %B %d, %Y, %X"))
             count = 0
         else:
             count = count + 1
@@ -555,14 +553,14 @@ def main():
     args.gsm_id = args.gsm_id - 1
 
     if args.gsm_id not in gsm_modules.keys():
-        print ">> Error in gsm module selection (%s)" % (args.gsm_id) 
+        print (">> Error in gsm module selection (%s)" % (args.gsm_id) )
         sys.exit()
 
     if gsm_modules[args.gsm_id]["port"] is None:
-        print ">> Error: missing information on gsm_module"
+        print (">> Error: missing information on gsm_module")
         sys.exit()
     
-    print 'Running gsm server ...'
+    print ('Running gsm server ...')
 
     gsm_info = gsm_modules[args.gsm_id]
     gsm_info["pwr_on_pin"] = int(gsm_info["pwr_on_pin"])
@@ -584,14 +582,14 @@ def main():
         gsm = modem.GsmModem(gsm_info['port'], sc["serial"]["baudrate"], 
             gsm_info["pwr_on_pin"], gsm_info["ring_pin"])
     except serial.SerialException:
-        print '**NO COM PORT FOUND**'
-        serverstate = 'serial'
+        print ('**NO COM PORT FOUND**')
+        # serverstate = 'serial'
         raise ValueError(">> Error: no com port found")
 
     try:
         run_server(gsm, gsm_info)
     except modem.ResetException:
-        print "> Resetting system because of GSM failure"
+        print ("> Resetting system because of GSM failure")
         gsm.reset()
         sys.exit()
     
@@ -600,6 +598,6 @@ if __name__ == '__main__':
         try:
             main()
         except KeyboardInterrupt:
-            print 'Bye'
+            print ('Bye')
             break
 
