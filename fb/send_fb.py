@@ -5,12 +5,12 @@ Created on Wed Jan 17 11:28:19 2018
 @author: Brainerd Cruz
 """
 
-import querydb as qdb
+import analysis.querydb as qdb
 import pandas as pd
 from datetime import timedelta as td
 import os
 import xyzrealtimeplot as xyz
-import filterdata as fsd
+import analysis.subsurface.filterdata as fsd
 from fbchat import Client
 from fbchat.models import *
 

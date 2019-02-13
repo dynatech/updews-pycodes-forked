@@ -9,9 +9,9 @@ import pandas as pd
 #import numpy as np
 from datetime import timedelta as td
 #from datetime import datetime as dt
-import querydb as qdb
+import analysis.querydb as qdb
 import matplotlib.pyplot as plt
-import filterdata as fsd
+import analysis.subsurface.filterdata as fsd
 
     
 def xyzplot(df_node, tsm_id,nid,time, OutputFP='', percent=0):
