@@ -19,8 +19,8 @@ def main(alert):
     site = alert.site_code
     ts = alert.ts_last_retrigger
     
-    OutputFP=  os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')) #os.path.dirname(os.path.realpath(__file__))+'/{} {}/'.format(site, ts.strftime("%Y-%m-%d %H%M"))
-    OutputFP += 'node alert validation sandbox/' + '{} {}/'.format(site, ts.strftime("%Y-%m-%d %H%M")) 
+    OutputFP=  os.path.abspath(os.path.join(os.path.dirname(__file__), '../')) #os.path.dirname(os.path.realpath(__file__))+'/{} {}/'.format(site, ts.strftime("%Y-%m-%d %H%M"))
+    OutputFP += '/node alert validation sandbox/' + '{} {}/'.format(site, ts.strftime("%Y-%m-%d %H%M")) 
     OutputFP=OutputFP.replace("\\", "/")
     
     if not os.path.exists(OutputFP):
@@ -56,7 +56,7 @@ def main(alert):
     return OutputFP
 
 def send_messenger(OutputFP, alert):
-    client = Client('dynaslope.test@gmail.com', 'dynaslope1')
+    client = Client('dynaslope.test@gmail.com', 'dynaslope0')
     
     message=("SANDBOX:\n"
             "As of {}\n"
@@ -101,7 +101,9 @@ query = ("SELECT stat_id, site_code,s.site_id, trigger_source, alert_symbol, "
         "sites as s "
         "ON s.site_id = alert.site_id")
         
-smsalert=qdb.get_db_dataframe(query)
+#smsalert=qdb.get_db_dataframe(query)
+Output = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
+
 for i in smsalert.index:
     OutputFP=main(smsalert.loc[0])
     send_messenger(OutputFP,smsalert.loc[0])
