@@ -101,8 +101,8 @@ query = ("SELECT stat_id, site_code,s.site_id, trigger_source, alert_symbol, "
         "sites as s "
         "ON s.site_id = alert.site_id")
         
-#smsalert=qdb.get_db_dataframe(query)
-Output = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
+smsalert=qdb.get_db_dataframe(query)
+#Output = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
 
 for i in smsalert.index:
     OutputFP=main(smsalert.loc[0])
