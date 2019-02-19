@@ -149,11 +149,11 @@ def find_spline_maxima(xi,yi,min_normpeak=0.05,min_area_k=0.05):
             df_integ['ub']=inflection[1:]
 
             #assigning maxima to specific ranges
-            df_integ['maxloc']=np.nan            
+            df_integ['maxloc']=np.nan
             for i in range(len(df_integ)):
                 try:
-                    len((maxima>df_integ['lb'][i])*(maxima<df_integ['ub'][i]))>0
-                    df_integ['maxloc'][i]=maxima[(maxima>df_integ['lb'][i])*(maxima<df_integ['ub'][i])]
+                    len((maxima>df_integ['lb'][i])&(maxima<df_integ['ub'][i]))>0
+                    df_integ['maxloc'][i]=maxima[(maxima>df_integ['lb'][i])&(maxima<df_integ['ub'][i])]
                 except:
                     continue
             
@@ -163,12 +163,12 @@ def find_spline_maxima(xi,yi,min_normpeak=0.05,min_area_k=0.05):
             df_integ=df_integ[df_integ['maxpeak']>0.001]
             df_integ['normpeak']=s0(df_integ['maxpeak'])/s0(df_integ['maxpeak'].values.max())
             df_integ['area']=df_integ.apply(lambda x: s0.integral(x[0],x[1]), axis = 1)
-            df_integ=df_integ[(df_integ['area']>min_area_k*df_integ['area'].values.max())*(df_integ['normpeak']>min_normpeak)]
+            df_integ=df_integ[(df_integ['area']>min_area_k*df_integ['area'].values.max())&(df_integ['normpeak']>min_normpeak)]
             return df_integ['maxloc'],df_integ['maxpeak']#,inflection[df_integ.index],s0(inflection[df_integ.index])
 
         except:
             #filtering maxima based on peak height only
-            maxima=extrema[(s2(extrema)<0)*(s0(extrema)/s0(extrema).max()>min_normpeak)]
+            maxima=extrema[(s2(extrema)<0)&(s0(extrema)/s0(extrema).max()>min_normpeak)]
             return maxima,s0(maxima)#,inflection,s0(inflection)
     
     except:

@@ -1,14 +1,10 @@
-##### IMPORTANT matplotlib declarations must always be FIRST
-##### to make sure that matplotlib works with cron-based automation
-import matplotlib as mpl
-mpl.use('Agg')
-import matplotlib.pyplot as plt
-plt.ion()
-
 from datetime import date, time, datetime, timedelta
+import matplotlib.pyplot as plt
 import os
 import pandas as pd
 import sys
+
+plt.ion()
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import analysis.querydb as qdb

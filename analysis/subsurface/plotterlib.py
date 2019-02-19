@@ -27,20 +27,20 @@ mpl.rcParams['legend.fontsize'] = 'small'
 def col_pos(colpos_dfts):  
     colpos_dfts = colpos_dfts.drop_duplicates()
     cumsum_df = colpos_dfts[['xz','xy']].cumsum()
-    colpos_dfts['cs_xz'] = cumsum_df['xz'].values
-    colpos_dfts['cs_xy'] = cumsum_df['xy'].values
+    colpos_dfts.loc[:, 'cs_xz'] = cumsum_df['xz'].values
+    colpos_dfts.loc[:, 'cs_xy'] = cumsum_df['xy'].values
     return np.round(colpos_dfts, 4)
 
 def compute_depth(colpos_dfts):
     colpos_dfts = colpos_dfts.drop_duplicates()
     cumsum_df = colpos_dfts[['x']].cumsum()
-    cumsum_df['x'] = cumsum_df['x'] - min(cumsum_df.x)
-    colpos_dfts['x'] = cumsum_df['x'].values
+    cumsum_df.loc[:, 'x'] = cumsum_df['x'] - min(cumsum_df.x)
+    colpos_dfts.loc[:, 'x'] = cumsum_df['x'].values
     return np.round(colpos_dfts, 4)
 
 def adjust_depth(colpos_dfts, max_depth):
     depth = max_depth - max(colpos_dfts['x'].values)
-    colpos_dfts['x'] = colpos_dfts['x'] + depth
+    colpos_dfts.loc[:, 'x'] = colpos_dfts['x'] + depth
     return colpos_dfts
 
 def compute_colpos(window, sc, tilt, tsm_props):
@@ -48,10 +48,10 @@ def compute_colpos(window, sc, tilt, tsm_props):
                                 freq=sc['subsurface']['col_pos_interval'],
                                 periods=sc['subsurface']['num_col_pos'],
                                 name='ts', closed=None)
-    colpos_df = tilt[tilt.ts.isin(colposdate)]
-    colpos_df['x'] = np.sqrt(tsm_props.seglen**2 - np.power(colpos_df['xz'], 2)
+    colpos_df = tilt[tilt.ts.isin(colposdate)].copy()
+    colpos_df.loc[:, 'x'] = np.sqrt(tsm_props.seglen**2 - np.power(colpos_df['xz'], 2)
                                 - np.power(colpos_df['xy'], 2))
-    colpos_df['x'] = colpos_df['x'].fillna(tsm_props.seglen)
+    colpos_df.loc[:, 'x'] = colpos_df['x'].fillna(tsm_props.seglen)
     
     if sc['subsurface']['column_fix'] == 'top':
         colpos_df0 = pd.DataFrame({'ts': colposdate, 'node_id':
@@ -64,33 +64,34 @@ def compute_colpos(window, sc, tilt, tsm_props):
                                 [0]*len(colposdate), 'xy': [0]*len(colposdate),
                                 'x': [tsm_props.seglen]*len(colposdate)})
     
-    colpos_df = colpos_df.append(colpos_df0, ignore_index = True)
+    colpos_df = colpos_df.append(colpos_df0, ignore_index = True, sort=False)
     
     if sc['subsurface']['column_fix'] == 'top':
-        colpos_df = colpos_df.sort('node_id', ascending = True)
+        colpos_df = colpos_df.sort_values('node_id', ascending = True)
     elif sc['subsurface']['column_fix'] == 'bottom':
-        colpos_df = colpos_df.sort('node_id', ascending = False)
+        colpos_df = colpos_df.sort_values('node_id', ascending = False)
     
-    colpos_dfts = colpos_df.groupby('ts')
-    colposdf = colpos_dfts.apply(col_pos)
+    colpos_dfts = colpos_df.groupby('ts', as_index=False)
+    colposdf = colpos_dfts.apply(col_pos).reset_index(drop=True)
     
-    colposdf = colposdf.sort('node_id', ascending = True)
-    colpos_dfts = colposdf.groupby('ts')
-    colposdf = colpos_dfts.apply(compute_depth)
+    colposdf = colposdf.sort_values('node_id', ascending = True)
+
+    colpos_dfts = colposdf.groupby('ts', as_index=False)
+    colposdf = colpos_dfts.apply(compute_depth).reset_index(drop=True)
     
     if sc['subsurface']['column_fix'] == 'bottom':
         max_depth = max(colposdf['x'].values)
         colposdfts = colposdf.groupby('ts')
         colposdf = colposdfts.apply(adjust_depth, max_depth=max_depth)
     
-    colposdf['x'] = colposdf['x'].apply(lambda x: -x)
-    
+    colposdf.loc[:, 'x'] = colposdf['x'].apply(lambda x: -x)
+
     return colposdf
 
 def nonrepeat_colors(ax,NUM_COLORS,color='gist_rainbow'):
     cm = plt.get_cmap(color)
-    ax.set_color_cycle([cm(1.*(NUM_COLORS-i-1)/NUM_COLORS) for i in
-                                range(NUM_COLORS)[::-1]])
+    ax.set_prop_cycle(color=[cm(1.*(NUM_COLORS-i-1)/NUM_COLORS) for i in
+                                range(NUM_COLORS+1)[::-1]])
     return ax
     
     
@@ -175,7 +176,7 @@ def plot_column_positions(df, tsm_props, window, sc, show_part_legend,
     return ax_xz,ax_xy
 
 def vel_plot(df, velplot, num_nodes):
-    velplot[df['node_id'].values[0]] = num_nodes - df['node_id'].values[0] + 1
+    velplot.loc[:, df['node_id'].values[0]] = num_nodes - df['node_id'].values[0] + 1
     return velplot
 
 def vel_classify(df, sc, num_nodes, linearvel=True):
@@ -185,7 +186,7 @@ def vel_classify(df, sc, num_nodes, linearvel=True):
         velplot = nodal_df.apply(vel_plot, velplot=vel, num_nodes=num_nodes)
         velplot = velplot.reset_index()
         velplot = velplot.loc[velplot.node_id == len(set(df.node_id))]
-        velplot = velplot[['level_1'] + range(1, len(set(df.node_id))+1)]
+        velplot = velplot[['level_1'] + list(range(1, len(set(df.node_id))+1))]
         velplot = velplot.rename(columns = {'level_1': 'ts'}).set_index('ts')
     else:
         velplot = ''
@@ -201,7 +202,7 @@ def vel_classify(df, sc, num_nodes, linearvel=True):
     return velplot, L2mask, L3mask
     
 def noise_env_df(df, tsdf):
-    df['ts'] = tsdf
+    df.loc[:, 'ts'] = tsdf
     return df
 
 def plotoffset(df, disp_offset = 'mean'):
@@ -236,32 +237,32 @@ def noise_env(df, max_min_df, window, num_nodes, xzd_plotoffset):
     first_row = first_row.set_index('node_id')[['xz', 'xy']]
     
     for axis in ['xy', 'xz']:
-        max_min_df[axis+'_maxlist'] = (max_min_df[axis+'_maxlist'] - first_row[axis]) + ((num_nodes - max_min_df.index) * xzd_plotoffset)
-        max_min_df[axis+'_minlist'] = (max_min_df[axis+'_minlist'] - first_row[axis]) + ((num_nodes - max_min_df.index) * xzd_plotoffset)
+        max_min_df.loc[:, axis+'_maxlist'] = (max_min_df[axis+'_maxlist'] - first_row[axis]) + ((num_nodes - max_min_df.index) * xzd_plotoffset)
+        max_min_df.loc[:, axis+'_minlist'] = (max_min_df[axis+'_minlist'] - first_row[axis]) + ((num_nodes - max_min_df.index) * xzd_plotoffset)
         
     max_min_df = max_min_df.reset_index()
-    noise_df = max_min_df.append(max_min_df, ignore_index=True)
+    noise_df = max_min_df.append(max_min_df, ignore_index=True, sort=False)
     tsdf = [window.start]*len(max_min_df)+[window.end]*len(max_min_df)
-    noise_df['ts'] = tsdf
+    noise_df.loc[:, 'ts'] = tsdf
     noise_df = noise_df.set_index('ts')
 
     return noise_df
 
 def disp0off(df, window, sc, xzd_plotoffset, num_nodes):
     if sc['subsurface']['column_fix'] == 'top':
-        df['xz'] = df['xz'].apply(lambda x: -x)
-        df['xy'] = df['xy'].apply(lambda x: -x)
+        df.loc[:, 'xz'] = df['xz'].apply(lambda x: -x)
+        df.loc[:, 'xy'] = df['xy'].apply(lambda x: -x)
     nodal_df = df.groupby('node_id')
     df0 = nodal_df.apply(df_zero_initial_row, window = window)
-    nodal_df0 = df0.groupby('node_id')
+    nodal_df0 = df0.groupby('node_id', as_index=False)
     df0off = nodal_df0.apply(df_add_offset_col, offset = xzd_plotoffset,
                              num_nodes = num_nodes)
-    
+
     # conpensates double offset of node 1 due to df.apply
-    a = df0off.loc[df0off.node_id == 1] - (num_nodes - 1) * xzd_plotoffset
-    a['node_id'] = 1
+    a = df0off.loc[df0off.node_id == 1].copy()
+    a.loc[:, ['xz', 'xy']] = a[['xz', 'xy']] - (num_nodes - 1) * xzd_plotoffset
     df0off = df0off.loc[df0off.node_id != 1]
-    df0off = df0off.append(a)
+    df0off = df0off.append(a, sort=False)
     df0off = df0off.sort_values('ts')
 
     return df0off
@@ -325,10 +326,10 @@ def metadata(inc_df):
         text_xy = node_id
         xy_text_size = 'x-small'
     
-    inc_df['text_xz'] = text_xz
-    inc_df['xz_text_size'] = xz_text_size
-    inc_df['text_xy'] = text_xy
-    inc_df['xy_text_size'] = xy_text_size
+    inc_df.loc[:, 'text_xz'] = text_xz
+    inc_df.loc[:, 'xz_text_size'] = xz_text_size
+    inc_df.loc[:, 'text_xy'] = text_xy
+    inc_df.loc[:, 'xy_text_size'] = xy_text_size
 
     return inc_df
 
@@ -455,7 +456,7 @@ def plot_disp_vel(noise_df, df0off, cs_df, colname, window, sc, plotvel,
         #plotting velocity for xz
         curax=ax_xzv
 
-        vel_xz.plot(ax=curax,marker='.',legend=False)
+        vel_xz.plot(ax=curax, marker='.', legend=False)
 
         L2_xz = L2_xz.sort_values('ts', ascending = True).set_index('ts')
         nodal_L2_xz = L2_xz.groupby('node_id')
@@ -479,7 +480,7 @@ def plot_disp_vel(noise_df, df0off, cs_df, colname, window, sc, plotvel,
         #plotting velocity for xy        
         curax=ax_xyv
 
-        vel_xy.plot(ax=curax,marker='.',legend=False)
+        vel_xy.plot(ax=curax, marker='.', legend=False)
         
         L2_xy = L2_xy.sort_values('ts', ascending = True).set_index('ts')
         nodal_L2_xy = L2_xy.groupby('node_id')
@@ -520,12 +521,10 @@ def plot_disp_vel(noise_df, df0off, cs_df, colname, window, sc, plotvel,
     except:
         qdb.print_out('Error in setting date format of x-label in disp subplots')
 
-    fig.tight_layout()
+    fig.set_tight_layout(True)
     
-    fig.subplots_adjust(top=0.85)        
+    fig.subplots_adjust(top=0.85)
     fig.suptitle(colname)
-    line=mpl.lines.Line2D((0.5,0.5),(0.1,0.8))
-    fig.lines=line,
 
 def df_zero_initial_row(df, window):
     #zeroing time series to initial value;
@@ -533,7 +532,7 @@ def df_zero_initial_row(df, window):
     #from all the rows of the dataframe
     for m in df.columns:
         if m not in ['ts', 'node_id']:
-            df[m] = df[m] - df.loc[df.ts == window.start][m].values[0]
+            df.loc[:, m] = df[m] - df.loc[df.ts == window.start][m].values[0]
     return np.round(df,4)
 
 def df_add_offset_col(df, offset, num_nodes):
@@ -541,7 +540,7 @@ def df_add_offset_col(df, offset, num_nodes):
     #topmost node (node 1) has largest offset
     for m in df.columns:
         if m not in ['ts', 'node_id']:
-            df[m] = df[m] + (num_nodes - df['node_id'].values[0]) * offset
+            df.loc[:, m] = df[m] + (num_nodes - df['node_id'].values[0]) * offset
     return np.round(df,4)
     
     
@@ -568,22 +567,22 @@ def main(data, tsm_props, window, sc, plotvel=True, show_part_legend = False,
 
 
     tilt = data.tilt.reset_index()
-    tilt['ts'] = pd.to_datetime(tilt['ts'])
+    tilt.loc[:, 'ts'] = pd.to_datetime(tilt['ts'])
     # mirror image
     for axis in mirror_axis:
-        tilt[axis] = -tilt[axis]
+        tilt.loc[:, axis] = -tilt[axis]
     
     max_min_df = data.max_min_df
     # mirror image
     for axis in mirror_axis:
-        max_min_df[axis+'_maxlist'] = -max_min_df[axis+'_maxlist']
-        max_min_df[axis+'_minlist'] = -max_min_df[axis+'_minlist']
+        max_min_df.loc[:, axis+'_maxlist'] = -max_min_df[axis+'_maxlist']
+        max_min_df.loc[:, axis+'_minlist'] = -max_min_df[axis+'_minlist']
         
     max_min_cml=data.max_min_cml
     # mirror image
     for axis in mirror_axis:
-        max_min_cml[axis+'_maxlist'] = -max_min_cml[axis+'_maxlist']
-        max_min_cml[axis+'_minlist'] = -max_min_cml[axis+'_minlist']
+        max_min_cml.loc[:, axis+'_maxlist'] = -max_min_cml[axis+'_maxlist']
+        max_min_cml.loc[:, axis+'_minlist'] = -max_min_cml[axis+'_minlist']
 
     # compute column position
     colposdf = compute_colpos(window, sc, tilt, tsm_props)
@@ -639,6 +638,7 @@ def main(data, tsm_props, window, sc, plotvel=True, show_part_legend = False,
     plot_disp_vel(noise_df, df0off, cs_df, tsm_props.tsm_name, window, sc,
                   plotvel, xzd_plotoffset, tsm_props.nos, velplot,
                   plot_inc, inc_df=inc_df)
-    plt.savefig(output_path + sc['fileio']['output_path'] + tsm_props.tsm_name \
-            +'dispvel'+str(window.end.strftime('%Y-%m-%d_%H-%M'))+'.png',
-            dpi=160, facecolor='w', edgecolor='w', mode='w')
+
+    plt.savefig(output_path + plot_path + tsm_props.tsm_name + 'dispvel' \
+            + str(window.end.strftime('%Y-%m-%d_%H-%M')) + '.png', dpi=160,
+            facecolor='w', edgecolor='w', mode='w')

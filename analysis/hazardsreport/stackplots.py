@@ -2,14 +2,10 @@
 end-of-event report plotting tools
 """
 
-##### IMPORTANT matplotlib declarations must always be FIRST to make sure that
-##### matplotlib works with cron-based automation
-import matplotlib as mpl
-mpl.use('Agg')
-import matplotlib.pyplot as plt
-import matplotlib.dates as pltdates
-
 from datetime import timedelta
+import matplotlib as mpl
+import matplotlib.dates as pltdates
+import matplotlib.pyplot as plt
 import numpy as np
 import os
 import pandas as pd

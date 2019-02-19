@@ -186,7 +186,7 @@ def get_raw_rain_data(gauge_name, from_time='2010-01-01', to_time=""):
 
     df = db.df_read(query)
     if df is not None:
-        df['ts'] = pd.to_datetime(df['ts'])
+        df.loc[:, 'ts'] = pd.to_datetime(df['ts'])
     
     return df
 
@@ -469,13 +469,13 @@ def get_soms_raw(tsm_name = "", from_time = "", to_time = "", type_num="", node_
     
     if ((df_accel.version[0] == 2) and (type_num == 111)):
         if (tsm_name== 'nagsa'):
-            df['mval1-n'] =(((8000000/(df.mval1))-(8000000/(df.mval2)))*4)/10
+            df.loc[:, 'mval1-n'] =(((8000000/(df.mval1))-(8000000/(df.mval2)))*4)/10
         else:
-            df['mval1-n'] =(((20000000/(df.mval1))-(20000000/(df.mval2)))*4)/10     
+            df.loc[:, 'mval1-n'] =(((20000000/(df.mval1))-(20000000/(df.mval2)))*4)/10     
         
         df = df.drop('mval1', axis=1, inplace=False)
         df = df.drop('mval2', axis=1, inplace=False)
-        df['mval1'] = df['mval1-n']
+        df.loc[:, 'mval1'] = df['mval1-n']
         df = df.drop('mval1-n', axis=1, inplace=False)
     
     #df = df.replace("-inf", "NAN")         
@@ -539,13 +539,13 @@ def ref_get_soms_raw(tsm_name="", from_time="", to_time="", type_num="", node_id
     
     if (df_accel.version[0] == 2):
         if (tsm_name== 'nagsa'):
-            df['mval1-n'] =(((8000000/(df.mval1))-(8000000/(df.mval2)))*4)/10
+            df.loc[:, 'mval1-n'] =(((8000000/(df.mval1))-(8000000/(df.mval2)))*4)/10
         else:
-            df['mval1-n'] =(((20000000/(df.mval1))-(20000000/(df.mval2)))*4)/10     
+            df.loc[:, 'mval1-n'] =(((20000000/(df.mval1))-(20000000/(df.mval2)))*4)/10     
         
         df = df.drop('mval1', axis=1, inplace=False)
         df = df.drop('mval2', axis=1, inplace=False)
-        df['mval1'] = df['mval1-n']
+        df.loc[:, 'mval1'] = df['mval1-n']
         df = df.drop('mval1-n', axis=1, inplace=False)
     
     #df = df.replace("-inf", "NAN")         
