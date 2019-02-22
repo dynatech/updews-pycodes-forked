@@ -56,7 +56,7 @@ def main(alert):
     return OutputFP
 
 def send_messenger(OutputFP, alert):
-    client = Client('dynaslope.test@gmail.com', 'dynaslope00')
+    client = Client('dynaslope.test@gmail.com', 'dynaslope01')
     
     message=("SANDBOX:\n"
             "As of {}\n"
