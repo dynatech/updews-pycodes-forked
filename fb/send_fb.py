@@ -25,6 +25,8 @@ def main(alert):
     
     if not os.path.exists(OutputFP):
         os.makedirs(OutputFP)
+    else:
+        return False
     
     ts_before=ts.round('4H')-td(hours=4)
     
@@ -56,7 +58,8 @@ def main(alert):
     return OutputFP
 
 def send_messenger(OutputFP, alert):
-    client = Client('dynaslope.test@gmail.com', 'dynaslope01')
+    client = Client('dynaslope.test@gmail.com', 'dynaslope02')
+#    client = Client('dum.dum.98284566', '4c4d3m1cc0nf3r3nc35')
     
     message=("SANDBOX:\n"
             "As of {}\n"
@@ -102,8 +105,10 @@ query = ("SELECT stat_id, site_code,s.site_id, trigger_source, alert_symbol, "
         "ON s.site_id = alert.site_id")
         
 smsalert=qdb.get_db_dataframe(query)
-#Output = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
 
 for i in smsalert.index:
     OutputFP=main(smsalert.loc[0])
-    send_messenger(OutputFP,smsalert.loc[0])
+    if not OutputFP:
+        print "nasend na!"
+    else:
+        send_messenger(OutputFP,smsalert.loc[0])
