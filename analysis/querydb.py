@@ -342,6 +342,68 @@ def get_raw_accel_data(tsm_id='',tsm_name = "", from_time = "", to_time = "",
         return query
 
 
+########################## SURFICIAL-RELATED QUERIES ##########################
+
+def create_marker_alerts_table():
+    """Creates the marker alerts table"""
+    
+    query =  "CREATE TABLE IF NOT EXISTS `marker_alerts` ("
+    query += "  `ma_id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT, "
+    query += "  `data_id` SMALLINT(6) UNSIGNED, "
+    query += "  `displacement` FLOAT, "
+    query += "  `time_delta` FLOAT, "
+    query += "  `alert_level` TINYINT(1), "
+    query += "  PRIMARY KEY (ma_id), "
+    query += "  INDEX `fk_marker_alerts_marker_data_idx` (`data_id` ASC), "
+    query += "  CONSTRAINT `fk_marker_alerts_marker_data` "
+    query += "    FOREIGN KEY (`data_id`) "
+    query += "    REFERENCES `marker_data` (`data_id`) "
+    query += "    ON DELETE CASCADE "
+    query += "    ON UPDATE CASCADE"    
+    
+    db.write(query)
+
+
+def get_surficial_data(site_id,ts,num_pts):
+    """
+    Retrieves the latest surficial data from marker_data 
+    and marker_observations table.
+    
+    Parameters
+    --------------
+    site_id: int
+        site_id of site of interest
+    ts: timestamp
+        latest datetime of data of interest
+    num_pts: int
+        number of observations you wish to obtain
+        
+    Returns
+    ------------
+    Dataframe
+        Dataframe containing surficial data 
+        with columns [ts, marker_id, measurement]
+    """
+
+    query = "select * from "
+    query += "  (select * "
+    query += "  from marker_data "
+    query += "  where marker_id in "
+    query += "    (select marker_id "
+    query += "    from markers "
+    query += "    where site_id = %s) " %site_id
+    query += "  ) m "
+    query += "inner join "
+    query += "  (select * "
+    query += "  from marker_observations "
+    query += "  where ts <= '%s' " %ts
+    query += "  and site_id = %s " %site_id
+    query += "  order by ts desc limit %s " %num_pts
+    query += "  ) mo "
+    query += "using (mo_id)"
+    
+    return db.df_read(query)
+
 
 ################################################################################
 

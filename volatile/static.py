@@ -233,7 +233,7 @@ def get_mobiles(table=None,host=None,reset_variables=False,resource=None):
 
         print ("Force reset user mobiles in memory")
         
-        query = "select mobile_id, sim_num, gsm_id from user_mobile group by sim_num"
+        query = "select mobile_id, sim_num, gsm_id from user_mobile"
 
         nums = dbio.read(query=query, identifier='get_mobile_sim_nums', 
             host=host, resource=resource)

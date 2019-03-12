@@ -157,10 +157,11 @@ def connect(host='', connection='', resource='' , conn_type=1):
         try:
             sc = mc.get('SERVER_CONFIG')
             dbc = dict()
-            dbc['host'] = sc['hosts'][host] 
+            dbc['host'] = sc['hosts'][host]
             dbc['user'] = sc['db']['user'] 
             dbc['password'] = sc['db']['password']
             dbc['schema'] = sc['db']['name'] 
+            
         except KeyError:
             print ("Unknown Host " + host)
     
@@ -247,6 +248,7 @@ def read(query='', identifier='', host='local',
     caller_func = str(inspect.stack()[1][3])
     db, cur = connect(host=host, connection=connection, 
         resource=resource)
+
     try:
         a = cur.execute(query)
         try:

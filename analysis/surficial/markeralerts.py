@@ -28,6 +28,7 @@ import time as mytime
 #### Import local codes
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import analysis.querydb as qdb
+import dynadb.db as db
 
 ### Determine current os
 curOS = platform.system()
@@ -83,7 +84,7 @@ def round_time(date_time):
     time_hour = int(date_time.strftime('%H'))
     time_float = float(date_time.strftime('%H')) + float(date_time.strftime('%M'))/60
 
-    quotient = time_hour / 4
+    quotient = time_hour // 4
     if quotient == 5:
         if time_float % 4 > 3.5:
             date_time = datetime.combine(date_time.date() + timedelta(1), time(4,0,0))
@@ -95,18 +96,7 @@ def round_time(date_time):
         date_time = datetime.combine(date_time.date(), time((quotient + 1)*4,0,0))
             
     return date_time
-    
-def create_marker_alerts_table():
-    """Creates the marker alerts table"""
-    db = mysqlDriver.connect(host = sc['hosts']['local'], user = sc['db']['user'], passwd = sc['db']['password'])
-    cur = db.cursor()
 
-    cur.execute("USE {}".format(sc['db']['name']))
-    
-    query = "CREATE TABLE IF NOT EXISTS marker_alerts(ma_id int AUTO_INCREMENT, ts timestamp, marker_id smallint(6) unsigned, displacement float, time_delta float, alert_level tinyint, PRIMARY KEY (ma_id), FOREIGN KEY (marker_id) REFERENCES markers(marker_id))"
-    
-    cur.execute(query)
-    db.close()
 
 def tableau_20_colors():
     """
@@ -120,30 +110,8 @@ def tableau_20_colors():
 
     for i in range(len(tableau20)):    
         r, g, b = tableau20[i]    
-        tableau20[i] = (r / 255., g / 255., b / 255.)
+        tableau20[i] = (r / 255, g / 255, b / 255)
     return tableau20
-
-
-def get_surficial_data(site_id,ts,num_pts):
-    """
-    Retrieves the latest surficial data from marker_id and marker_observations table
-    
-    Parameters
-    --------------
-    site_id: int
-        site_id of site of interest
-    ts: timestamp
-        latest datetime of data of interest
-    num_pts: int
-        number of observations you wish to obtain
-        
-    Returns
-    ------------
-    Dataframe
-        Dataframe containing surficial data with columns [ts, marker_id, measurement]
-    """
-    query = "SELECT mo1.ts, md1.marker_id, md1.measurement, COUNT(*) num FROM marker_data md1 INNER JOIN marker_data md2 INNER JOIN marker_observations mo1 INNER JOIN marker_observations mo2 ON mo1.mo_id = md1.mo_id AND mo2.mo_id = mo2.mo_id AND mo1.site_id = mo2.site_id AND md1.marker_id = md2.marker_id AND md1.data_id = md2.data_id AND mo1.ts <= mo2.ts AND mo1.ts <= '{}' AND mo2.ts <= '{}' AND md1.marker_id in (SELECT marker_id FROM marker_data INNER JOIN marker_observations ON marker_data.mo_id = marker_observations.mo_id AND site_id = {} WHERE ts = (SELECT max(ts) FROM marker_observations WHERE site_id = {} AND ts <= '{}')) GROUP BY md1.marker_id, md1.mo_id, mo1.site_id, mo1.mo_id,mo1.ts HAVING COUNT(*) <= {} ORDER by mo1.ts DESC".format(ts,ts,site_id,site_id,ts,num_pts)
-    return qdb.get_db_dataframe(query)
 
 def get_surficial_data_window(site_id,ts_start,ts_end):
     """
@@ -293,7 +261,7 @@ def compute_confidence_interval_width(velocity):
     """
     
     ### Using tcrit table and Federico 2012 values
-    return float(sc['surficial']['ci_t_crit'])*np.sqrt(1/(float(sc['surficial']['ci_n'])-2)*float(sc['surficial']['ci_sum_res_square'])*(1/float(sc['surficial']['ci_n']) + (np.log(velocity) - float(sc['surficial']['ci_v_log_mean']))**2/float(sc['surficial']['ci_var_v_log'])))
+    return float(sc['surficial']['ci_t_crit'])*np.sqrt(1/(sc['surficial']['ci_n'])-2*sc['surficial']['ci_sum_res_square']*(1/sc['surficial']['ci_n'] + (np.log(velocity) - sc['surficial']['ci_v_log_mean'])**2/sc['surficial']['ci_var_v_log']))
 
 def compute_critical_acceleration(velocity):
     """
@@ -409,7 +377,7 @@ def write_to_marker_alerts_db(marker_alerts_df):
     """
     marker_alerts_df['ts'] = map(lambda x: pd.to_datetime(x).strftime('%Y-%m-%d %H:%M'),marker_alerts_df.ts.values)
     #### Delete possible duplicates
-    delete_duplicates_marker_alerts_db(marker_alerts_df)
+#    delete_duplicates_marker_alerts_db(marker_alerts_df)
     
     ### Reset the auto increment
     reset_auto_increment()
@@ -433,7 +401,7 @@ def plot_marker_meas(marker_data_df,colors):
     """
     
     marker_name = get_marker_name(marker_data_df.marker_id.values[0])
-    plt.plot(marker_data_df.ts.values,marker_data_df.measurement.values,'o-',color = colors[marker_data_df.index[0]%(len(colors)/2)*2],label = marker_name,lw = 1.5)
+    plt.plot(marker_data_df.ts.values,marker_data_df.measurement.values,'o-',color = colors[marker_data_df.index[0]%(len(colors)//2)*2],label = marker_name,lw = 1.5)
     
     
 def plot_site_meas(surficial_data_df,site_id,ts):
@@ -849,20 +817,20 @@ def generate_surficial_alert(site_id = None,ts = None):
     num_pts = int(sc['surficial']['surficial_num_pts'])
     
     #### Get latest ground data
-    surficial_data_df = get_surficial_data(site_id,ts,num_pts)
+    surficial_data_df = qdb.get_surficial_data(site_id,ts,num_pts)
 
     #### Generate Marker alerts
     marker_data_df = surficial_data_df.groupby('marker_id',as_index = False)
     marker_alerts = marker_data_df.apply(evaluate_marker_alerts,ts)
-    
+
     #### Write to marker_alerts table    
-    write_to_marker_alerts_db(marker_alerts)
+#    write_to_marker_alerts_db(marker_alerts)
     
     #### Generate surficial alert for site
     surficial_alert = get_surficial_alert(marker_alerts,site_id)
-    
+    print (surficial_alert)
     #### Write to db
-    qdb.alert_to_db(surficial_alert,'operational_triggers')
+#    qdb.alert_to_db(surficial_alert,'operational_triggers')
     
     #### Plot current ground meas    
     if sc['surficial']['print_meas_plot']:
@@ -880,6 +848,8 @@ def generate_surficial_alert(site_id = None,ts = None):
 
 #Call the generate_surficial_alert() function
 if __name__ == "__main__":
-    generate_surficial_alert()  
+    start = datetime.now()
+    generate_surficial_alert(18, '2019-02-20 09:05')
+    print ('runtime =', datetime.now()-start)
     
     

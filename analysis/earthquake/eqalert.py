@@ -249,11 +249,11 @@ def main():
         op_trig = crits[['ts','site_id','trigger_sym_id','ts_updated']]
 
         # write to tables
-        dynadb.df_write(DataTable("operational_triggers", op_trig), resource="sensor_data")
-        dynadb.df_write(DataTable("earthquake_alerts", eq_a), resource="sensor_data")
+#        dynadb.df_write(DataTable("operational_triggers", op_trig), resource="sensor_data")
+#        dynadb.df_write(DataTable("earthquake_alerts", eq_a), resource="sensor_data")
         
         query = "update %s set processed = 1, critical_distance = %s where eq_id = %s " % (EVENTS_TABLE,critdist,i)
-        dynadb.write(query=query, resource="sensor_data")
+#        dynadb.write(query=query, resource="sensor_data")
 
         print (">> Alert iniated.\n")
         
