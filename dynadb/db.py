@@ -194,6 +194,7 @@ def write(query ='', identifier = '', last_insert=False,
         resource=resource)
 
     try:
+        a = cur.execute(query)
         db.commit()
         if last_insert:
             b = cur.execute('select last_insert_id()')
