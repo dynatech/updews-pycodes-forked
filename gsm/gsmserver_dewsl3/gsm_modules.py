@@ -23,10 +23,8 @@ class DefaultSettings:
         config["CBEWSL_DB_CREDENTIALS"]
         return config
 
-
 class ResetException(Exception):
     pass
-
 
 class GsmModem:
     defaults = None
@@ -164,7 +162,6 @@ class GsmModem:
             print("Error in pdu conversion. Skipping message sending")
             return -1
 
-        # SET CONSTANT
         temp_pdu = self.defaults['GSM_DEFAULT_SETTINGS']['PDU_HEADER']+str(pdulist[0])[
             11:]
         pdulist[0] = temp_pdu
