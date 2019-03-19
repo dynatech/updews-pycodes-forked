@@ -6,6 +6,8 @@ from gsmmodem import pdu as PduDecoder
 from datetime import datetime as dt
 from datetime import timedelta as td
 import configparser
+from pprint import pprint
+import sys
 
 
 class GsmSms:
@@ -19,7 +21,7 @@ class GsmSms:
 class DefaultSettings:
     def __new__(self):
         config = configparser.ConfigParser()
-        config.read('utils/config.cnf')
+        config.read('/home/pi/updews-pycodes/gsm/gsmserver_dewsl3/utils/config.cnf')
         config["CBEWSL_DB_CREDENTIALS"]
         return config
 
@@ -116,6 +118,9 @@ class GsmModem:
                 continue
             try:
                 smsdata = PduDecoder.decodeSmsPdu(pdu)
+                print("*************************")
+                for sms in smsdata:
+                    print(sms)
             except ValueError as e:
                 print(">> Error: conversion to pdu (cannot decode "
                       "odd-lllength)")
@@ -156,23 +161,19 @@ class GsmModem:
 
     def send_sms(self, msg, number):
         try:
-            pdulist = PduDecoder.encodeSmsSubmitPdu(number, msg, 0, None)
-            temp = pdulist[0]
-        except:
+            pdulist = PduDecoder.encodeSmsSubmitPdu(number, msg)
+        except Exception as e:
+            print(e)
             print("Error in pdu conversion. Skipping message sending")
             return -1
 
-        temp_pdu = self.defaults['GSM_DEFAULT_SETTINGS']['PDU_HEADER']+str(pdulist[0])[
-            11:]
-        pdulist[0] = temp_pdu
-
-        parts = len(str(pdulist[0])[2:])
+        parts = len(pdulist)
         count = 1
-
         for pdu in pdulist:
             a = ''
             now = time.time()
-            preamble = "AT+CMGS="+str(int(parts/2))
+            temp_pdu = self.formatPDUtoSIM800(str(pdu))
+            preamble = "AT+CMGS="+str(pdu.tpduLength)
             self.gsm.write(str.encode(preamble+"\r"))
             now = time.time()
             while (a.find('>') < 0 and a.find("ERROR") < 0 and
@@ -192,7 +193,7 @@ class GsmModem:
 
             a = ''
             now = time.time()
-            self.gsm.write(str.encode(pdu+chr(26)))
+            self.gsm.write(str.encode(str(temp_pdu)+chr(26)))
             while (a.find('OK') < 0 and a.find("ERROR") < 0 and
                    time.time() < now + int(self.defaults['GSM_DEFAULT_SETTINGS']['REPLY_TIMEOUT'])):
                 a += self.gsm.read(self.gsm.inWaiting()).decode('utf-8')
@@ -303,18 +304,33 @@ class GsmModem:
         except ValueError:
             print('>> Error deleting messages')
 
+    def reset(self):
+        print(">> Resetting GSM Module ...")
+        try:
+            GPIO.output(self.pow_pin, 0)
+            time.sleep(self.RESET_DEASSERT_DELAY)
+            try:
+                self.execute_atcmd("AT+CPOWD=1", "NORMAL POWER DOWN")
+            except ResetException:
+                print (">> Error: unable to send powerdown signal. "
+                    "Will continue with hard reset")
+            GPIO.output(self.pow_pin, 1)
+            time.sleep(self.defaults['GSM_DEFAULT_SETTINGS']['RESET_ASSERT_DELAY'])
+            GPIO.output(self.pow_pin, 0)
+            time.sleep(self.defaults['GSM_DEFAULT_SETTINGS']['RESET_DEASSERT_DELAY'])
+            GPIO.cleanup()
+            print ('done')
+        except ImportError:
+            return
 
-if __name__ == "__main__":
-    init = GsmModem()
-    print("Connection Status:", init.set_gsm_defaults())
-    # print("----------------- READING SMS-----------------")
-    # print(type(init.get_all_sms()), init.get_all_sms())
-    # print("----------------- SENDING SMS-----------------")
-    counter = 0
-    while True:
-    	init.send_sms('SPAM# :'+str(counter), '639175394337')
-    	counter = counter+1
-    # print("----------------- Counting SMS-----------------")
-    # print(init.count_sms())
-    # print("----------------- Deleting SMS-----------------")
-    # print(init.delete_sms(2))
+    def formatPDUtoSIM800(self, pdu):
+        first = str(pdu[:2])
+        second = str(pdu[2:4])
+        third = str(pdu[4:7])
+        fourth = "C813" #Constant
+        fifth =  str(pdu[11:])
+        second = int(second)-20
+        if len(str(second)) == 1:
+            second = "0"+str(second)
+        final = str(first)+str(second)+str(third)+str(fourth)+str(fifth)
+        return final

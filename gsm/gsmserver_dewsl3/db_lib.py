@@ -8,7 +8,7 @@ import sys
 class DatabaseCredentials:
 	def __new__(self):
 		config = configparser.ConfigParser()
-		config.read('utils/config.cnf')
+		config.read('/home/pi/updews-pycodes/gsm/gsmserver_dewsl3/utils/config.cnf')
 		config["CBEWSL_DB_CREDENTIALS"]
 		return config
 
@@ -173,7 +173,7 @@ class DatabaseConnection:
 			db.commit()
 			if last_insert_id:
 				b = cur.execute('select last_insert_id()')
-				b = cur.fetchall()
+				b = str(cur.fetchone()[0]) 
 				ret_val = b
 			else:
 				ret_val = a
@@ -265,100 +265,61 @@ class DatabaseConnection:
 		container = {gsm_id: gsm_dict}
 		return container
 
-	def write_outbox(self, message=None,recipients=None,gsm_id=None,table=None,
-    resource="sms_data"):
-	    """
-	        **Description:**
-	          -The write outbox message to database is a function that insert message to smsoutbox with 
-	          timestamp written,message source and mobile id.
-	         
-	        :param message: The message that will be sent to the recipients.
-	        :param recipients: The number of the recipients.
-	        :param gsm_id: The gsm id .
-	        :param table: table use of the number.
-	        :type message: str
-	        :type recipients: str
-	        :type recipients: int
-	        :type table: str
-	        :returns: N/A
-	    """
-	    # if table == '':
-	    #     print "Error: No table indicated"
-	    #     raise ValueError
-	    #     return
+	def write_outbox(self, message=None, recipients=None, table=None):
 
-	    tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
+		tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
 
-	    if not message:
-	        raise ValueError("No message specified for sending")
+		if not message:
+			print("No message specified for sending, skipping...")
+			return -1
 
-	    if not recipients:
-	        raise ValueError("No recipients specified for sending")
-	    elif type(recipients).__name__ == 'str':
-	        recipients = recipients.split(",")
+		if not recipients:
+			print("No recipients specified for sending, skipping...")
+			return -1
 
-	    if not table:
-	        table_name = check_number_in_table(recipients[0])
-	        if not table_name:
-	            print("No record for '%s" % (recipients[0]))
-	            return
-	    else:
-	        table_name = table
+		recipients = self.get_all_user_mobile(recipients[:10])
+		
+		query = ("insert into smsoutbox_%s (ts_written,sms_msg) VALUES "
+			"('%s','%s')") % (table,tsw,message)
+		outbox_id = self.write_to_db(query=query, last_insert_id=True)
 
-	    print ("table_name:", table_name)
+		query = ("INSERT INTO smsoutbox_%s_status (outbox_id,mobile_id,gsm_id)"
+				" VALUES ") % (table[:-1])
 
-	    query = ("insert into smsoutbox_%s (ts_written,sms_msg,source) VALUES "
-	        "('%s','%s','central')") % (table_name,tsw,message)
-	        
-	    outbox_id = dbio.write(query=query, identifier="womtdb", 
-	        last_insert=True, host=host, resource=resource)[0][0]
-
-	    query = ("INSERT INTO smsoutbox_%s_status (outbox_id,mobile_id,gsm_id)"
-	            " VALUES ") % (table_name[:-1])
-
-	    table_mobile = static.get_mobiles(table_name, host)
-	    # def_gsm_id = mc.get(table_name[:-1] + "_mobile_def_gsm_id")
-
-	    for r in recipients:        
-	        tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
-	        try:
-	            mobile_id = table_mobile[r]
-	            gsm_id = def_gsm_id[mobile_id]
-	            print (outbox_id, mobile_id, gsm_id)
-	            query += "(%d, %d, %d)," % (outbox_id, mobile_id, gsm_id)
-	        except KeyError:
-	            print (">> Error: Possible key error for", r)
-	            continue
-	    query = query[:-1]
-
-	    dbio.write(query=query, identifier="womtdb", last_insert=False, host=host,
-	        resource=resource)
+		for recipient in recipients:
+			tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
+			try:
+				query += "(%s, %s, %s)," % (outbox_id, recipient[0], recipient[2])
+			except KeyError:
+				print (">> Error: Possible key error for", r)
+				continue
+		query = query[:-1]
+		self.write_to_db(query=query, last_insert_id=False)
 
 	def get_inbox(self, host='local',read_status=0,table='loggers',limit=200,
-    resource="sms_data"):
-	    db, cur = dbio.connect(host=host, resource=resource)
+	resource="sms_data"):
+		db, cur = dbio.connect(host=host, resource=resource)
 
-	    if table in ['loggers','users']:
-	        tbl_contacts = '%s_mobile' % table[:-1]
-	    else:
-	        raise ValueError('Error: unknown table', table)
-	    
-	    while True:
-	        try:
-	            query = ("select inbox_id,ts_sms,sim_num,sms_msg from "
-	                "(select inbox_id,ts_sms,mobile_id,sms_msg from smsinbox_%s "
-	                "where read_status = %d order by inbox_id desc limit %d) as t1 "
-	                "inner join (select mobile_id, sim_num from %s) as t2 "
-	                "on t1.mobile_id = t2.mobile_id ") % (table, read_status, limit,
-	                tbl_contacts)
-	            # print query
-	        
-	            a = cur.execute(query)
-	            out = []
-	            if a:
-	                out = cur.fetchall()
-	            return out
+		if table in ['loggers','users']:
+			tbl_contacts = '%s_mobile' % table[:-1]
+		else:
+			raise ValueError('Error: unknown table', table)
+		
+		while True:
+			try:
+				query = ("select inbox_id,ts_sms,sim_num,sms_msg from "
+					"(select inbox_id,ts_sms,mobile_id,sms_msg from smsinbox_%s "
+					"where read_status = %d order by inbox_id desc limit %d) as t1 "
+					"inner join (select mobile_id, sim_num from %s) as t2 "
+					"on t1.mobile_id = t2.mobile_id ") % (table, read_status, limit,
+					tbl_contacts)
 
-	        except MySQLdb.OperationalError:
-	            print ('9.',)
-	            time.sleep(20)
+				a = cur.execute(query)
+				out = []
+				if a:
+					out = cur.fetchall()
+				return out
+
+			except MySQLdb.OperationalError:
+				print ('9.',)
+				time.sleep(20)

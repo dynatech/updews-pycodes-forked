@@ -161,7 +161,7 @@ if __name__ == "__main__":
 	db = dbLib.DatabaseConnection()
 	gsm_modules = db.get_gsm_info(args.gsm_id)
 	config = configparser.ConfigParser()
-	config.read('utils/config.cnf')
+	config.read('/home/pi/updews-pycodes/gsm/gsmserver_dewsl3/utils/config.cnf')
 
 	if args.gsm_id not in gsm_modules.keys():
 		print(">> Error in gsm module selection (", args.gsm_id, ")")
