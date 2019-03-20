@@ -105,27 +105,13 @@ class GsmServer:
 			return
 
 		for msg in allmsgs:
+			smsItem = modem.GsmSms(msg[0], msg[1], msg[4], '')
 			table_mobile = db.get_all_user_mobile(msg[1], mobile_id_flag=True)
-			inv_table_mobile = {mobile_id: sim_num for (mobile_id, sim_num,
-														gsm_id) in table_mobile}
-			mobile_container.append(inv_table_mobile)
+			for mobile in table_mobile:
+				smsItem = modem.GsmSms(msg[0], mobile[1], msg[4], '')
+				msglist.append([smsItem, msg[2], msg[3], msg[1]])
 			
 		today = dt.today().strftime("%Y-%m-%d %H:%M:%S")
-
-		for inv_mobile in mobile_container:
-			for stat_id, mobile_id, outbox_id, gsm_id, sms_msg in allmsgs:
-				try:
-					smsItem = modem.GsmSms(
-						stat_id, inv_mobile[mobile_id], sms_msg, '')
-					msglist.append([smsItem, gsm_id, outbox_id, mobile_id])
-				except KeyError as ke:
-					pass
-					# continue
-					
-		# if len(error_stat_list) > 0:
-		# 	print(">> Ignoring invalid messages...")
-		# 	db.update_sent_status(table, error_stat_list)
-		# 	print("done")
 
 		if len(msglist) == 0:
 			print(">> No valid message to send")
@@ -134,25 +120,27 @@ class GsmServer:
 		allmsgs = msglist
 		status_list = []
 
+		print("Pending Messages:", len(allmsgs))
 		for msg in allmsgs:
 			try:
-				num_prefix = re.match(
-					"^ *((0)|(63))9\d\d", msg[0].simnum).group()
-				num_prefix = num_prefix.strip()
-				ret = gsm.send_sms(msg[0].data, msg[0].simnum.strip())
-
-				today = dt.today().strftime("%Y-%m-%d %H:%M:%S")
-				if ret:
-					send_stat = 1
-					stat = msg[0].num, 1, today, msg[1], msg[2], msg[3]
+				if (msg[0].data != ""):
+					num_prefix = re.match(
+						"^ *((0)|(63))9\d\d", msg[0].simnum).group()
+					num_prefix = num_prefix.strip()
+					ret = gsm.send_sms(msg[0].data, msg[0].simnum.strip())
+					today = dt.today().strftime("%Y-%m-%d %H:%M:%S")
+					if ret != 0:
+						stat = msg[0].num, 1, today, msg[2], msg[1], msg[3]
+					else:
+						stat = msg[0].num, 5, today, msg[2], msg[1], msg[3]
 				else:
-					stat = msg[0].num, 5, today, msg[1], msg[2], msg[3]
-
+					stat = msg[0].num, 6, today, msg[2], msg[1], msg[3]
 				status_list.append(stat)
 			except Exception as e:
 				print('>> Error:', e)
-		db.update_sent_status(table, status_list)
-
+			print(">> Message:", msg[0].data)
+			db.update_sent_status(table, status_list)
+			status_list = []
 
 if __name__ == "__main__":
 	start_time = time.time()

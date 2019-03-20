@@ -34,7 +34,7 @@ class DatabaseConnection:
 						 "inner join (select * from smsoutbox_%s) as t2 "
 						 "on t1.outbox_id = t2.outbox_id "
 						 "where t1.send_status < %d "
-						 "and t1.send_status >= 0 "
+						 "and t1.send_status >= 0 and t1.send_status < 6 "
 						 "and t1.gsm_id = %d ") % (table[:-1], table, send_status, gsm_id)
 
 				a = cur.execute(query)
@@ -244,7 +244,6 @@ class DatabaseConnection:
 		query = query[:-1]
 		query += (" on duplicate key update stat_id=values(stat_id), "
 				  "send_status=send_status+values(send_status),ts_sent=values(ts_sent)")
-
 		self.write_to_db(query=query, last_insert_id=False)
 
 	def get_gsm_info(self, gsm_id):
@@ -295,6 +294,7 @@ class DatabaseConnection:
 				continue
 		query = query[:-1]
 		self.write_to_db(query=query, last_insert_id=False)
+		return 0
 
 	def get_inbox(self, host='local',read_status=0,table='loggers',limit=200,
 	resource="sms_data"):

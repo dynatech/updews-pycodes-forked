@@ -186,7 +186,6 @@ class GsmModem:
             if (time.time() > now + int(self.defaults['GSM_DEFAULT_SETTINGS']['SEND_INITIATE_REPLY_TIMEOUT']) or
                     a.find("ERROR") > -1):
                 print('>> Error: GSM Unresponsive at finding >')
-                print(a)
                 return-1
             else:
                 print('>', end=" ")
@@ -199,7 +198,7 @@ class GsmModem:
                 a += self.gsm.read(self.gsm.inWaiting()).decode('utf-8')
                 time.sleep(
                     float(self.defaults['GSM_DEFAULT_SETTINGS']['WAIT_FOR_BYTES_DELAY']))
-                print(':', end=" ")
+                print('-', end=" ")
 
             if time.time() - int(self.defaults['GSM_DEFAULT_SETTINGS']['SENDING_REPLY_TIMEOUT']) > now:
                 print('>> Error: timeout reached')
