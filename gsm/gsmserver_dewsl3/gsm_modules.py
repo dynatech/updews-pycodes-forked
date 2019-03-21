@@ -9,6 +9,12 @@ import configparser
 from pprint import pprint
 import sys
 
+class ClassName(object):
+    """docstring for ClassName"""
+    def __init__(self, arg):
+        super(ClassName, self).__init__()
+        self.arg = arg
+        
 
 class GsmSms:
     def __init__(self, num, sender, data, dt):
