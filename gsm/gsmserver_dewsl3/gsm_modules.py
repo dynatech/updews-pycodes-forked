@@ -109,7 +109,9 @@ class GsmModem:
         allmsgs = 'd' + self.execute_atcmd('AT+CMGL=4')
         allmsgs = re.findall("(?<=\+CMGL:).+\r\n.+(?=\n*\r\n\r\n)", allmsgs)
         msglist = []
-
+        tpdu_header = 0
+        multi_sms_construct = ""
+        print(">> Fetching inbox...")
         for msg in allmsgs:
             try:
                 pdu = re.search(r'[0-9A-F]{20,}', msg).group(0)
@@ -118,9 +120,6 @@ class GsmModem:
                 continue
             try:
                 smsdata = PduDecoder.decodeSmsPdu(pdu)
-                print("*************************")
-                for sms in smsdata:
-                    print(sms)
             except ValueError as e:
                 print(">> Error: conversion to pdu (cannot decode "
                       "odd-lllength)")
@@ -129,8 +128,6 @@ class GsmModem:
             except IndexError:
                 print(">> Error: convertion to pdu (pop from empty array)")
                 continue
-
-            # smsdata = self.manage_multi_messages(smsdata) | REFACTOR THIS
 
             if smsdata == "":
                 continue
@@ -143,20 +140,22 @@ class GsmModem:
 
             txtdatetimeStr = smsdata['time'] + td(hours=8)
             txtdatetimeStr = txtdatetimeStr.strftime('%Y-%m-%d %H:%M:%S')
-
-            try:
-                smsItem = GsmSms(txtnum, smsdata['number'].strip('+'),
-                                 str(smsdata['text']), txtdatetimeStr)
-                sms_msg = str(smsdata['text'])
-                if len(sms_msg) < 30:
-                    print("<<", sms_msg)
+            
+            if smsdata['tpdu_length'] < 159:
+                if str(int(tpdu_header)+1) in pdu and tpdu_header != 0:
+                    smsdata['text'] = multi_sms_construct + smsdata['text']
+                    tpdu_header = int(tpdu_header)+1
+                    smsItem = GsmSms(txtnum, smsdata['number'].strip('+'),
+                        str(smsdata['text']), txtdatetimeStr)
+                    msglist.append(smsItem)
                 else:
-                    print("<<",sms_msg[:10], "...", sms_msg[-20:])
-
-                msglist.append(smsItem)
-            except UnicodeEncodeError:
-                print(">> Unknown character error. Skipping message")
-                continue
+                    smsdata['text'] = smsdata['text']
+                    smsItem = GsmSms(txtnum, smsdata['number'].strip('+'),
+                                     str(smsdata['text']), txtdatetimeStr)
+                    msglist.append(smsItem)
+            else:
+                multi_sms_construct = multi_sms_construct + smsdata['text']
+                tpdu_header = pdu[54:66]
         return msglist
 
     def send_sms(self, msg, number):
@@ -210,48 +209,6 @@ class GsmModem:
                 print(">> Part %d/%d: Message sent!" % (count, parts))
                 count += 1
         return 0
-
-    def manage_multi_messages(self, smsdata):
-        if 'ref' not in smsdata:
-            return smsdata
-        sms_ref = smsdata['ref']
-        multipart_sms = mc.get("multipart_sms")
-        if multipart_sms is None:
-            multipart_sms = {}
-            print("multipart_sms in None")
-
-        if sms_ref not in multipart_sms:
-            multipart_sms[sms_ref] = {}
-            multipart_sms[sms_ref]['date'] = smsdata['date']
-            multipart_sms[sms_ref]['number'] = smsdata['number']
-            # multipart_sms[sms_ref]['cnt'] = smsdata['cnt']
-            multipart_sms[sms_ref]['seq_rec'] = 0
-
-        multipart_sms[sms_ref][smsdata['seq']] = smsdata['text']
-        print("Sequence no: %d/%d" % (smsdata['seq'], smsdata['cnt']))
-        multipart_sms[sms_ref]['seq_rec'] += 1
-
-        smsdata_complete = ""
-
-        if multipart_sms[sms_ref]['seq_rec'] == smsdata['cnt']:
-            multipart_sms[sms_ref]['text'] = ""
-            for i in range(1, smsdata['cnt']+1):
-                try:
-                    multipart_sms[sms_ref]['text'] += multipart_sms[sms_ref][i]
-                except KeyError:
-                    print(">> Error in reading multipart_sms.", )
-                    print("Text replace with empty line.")
-
-            # print multipart_sms[sms_ref]['text'] | DONT USE THIS
-
-            smsdata_complete = multipart_sms[sms_ref]
-
-            del multipart_sms[sms_ref]
-        else:
-            print("Incomplete message")
-
-        mc.set("multipart_sms", multipart_sms)
-        return smsdata_complete
 
     def count_sms(self):
         while True:
