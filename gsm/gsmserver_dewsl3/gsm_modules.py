@@ -122,7 +122,7 @@ class GsmModem:
                 smsdata = PduDecoder.decodeSmsPdu(pdu)
             except ValueError as e:
                 print(">> Error: conversion to pdu (cannot decode "
-                      "odd-lllength)")
+                      "odd-length)")
                 print(">> Error: ", e)
                 continue
             except IndexError:

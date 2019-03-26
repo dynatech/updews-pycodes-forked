@@ -2,6 +2,10 @@ import pytest
 import sys
 import pprint
 from gsm.gsmserver_dewsl3.db_lib import DatabaseConnection
+import time
+
+from random import choice
+from string import ascii_uppercase
 
 dbcon = None
 
@@ -110,9 +114,10 @@ def test_stress_test_sending_and_receiving():
 	counter = 0
 	recipients = ['639175394337']
 	while True:
-		message = "Spam #: "+str(counter)
+		message = ''.join(choice(ascii_uppercase) for i in range(1000))
+
 		for recipient in recipients:
 			insert_smsoutbox = dbcon.write_outbox(message=message, recipients=recipient, table='users')
 			assert insert_smsoutbox == 0
-			sleep(10)
+			time.sleep(10)
 		counter = counter + 1
