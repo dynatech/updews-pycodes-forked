@@ -185,5 +185,5 @@ if __name__ == "__main__":
 		initialize_gsm.run_server(initialize_gsm_modules, gsm_info, 'users')
 	except modem.ResetException:
 		print(">> Resetting system because of GSM failure")
-		gsm.reset()
+		initialize_gsm_modules.reset()
 		sys.exit()

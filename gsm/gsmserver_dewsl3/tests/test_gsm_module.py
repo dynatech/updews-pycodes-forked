@@ -114,7 +114,7 @@ def test_stress_test_sending_and_receiving():
 	counter = 0
 	recipients = ['639175394337']
 	while True:
-		message = ''.join(choice(ascii_uppercase) for i in range(1000))
+		message = ''.join(choice(ascii_uppercase) for i in range(155))
 
 		for recipient in recipients:
 			insert_smsoutbox = dbcon.write_outbox(message=message, recipients=recipient, table='users')

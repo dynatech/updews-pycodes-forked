@@ -159,6 +159,7 @@ class GsmModem:
         return msglist
 
     def send_sms(self, msg, number):
+        start_time = time.time()
         try:
             pdulist = PduDecoder.encodeSmsSubmitPdu(number, msg)
         except Exception as e:
@@ -206,6 +207,7 @@ class GsmModem:
                 print('>> Error: GSM reported ERROR in SMS reading')
                 return -1
             else:
+                print("Sending execution time:", (time.time() - start_time))
                 print(">> Part %d/%d: Message sent!" % (count, parts))
                 count += 1
         return 0
@@ -264,16 +266,16 @@ class GsmModem:
         print(">> Resetting GSM Module ...")
         try:
             GPIO.output(self.pow_pin, 0)
-            time.sleep(self.RESET_DEASSERT_DELAY)
+            time.sleep(int(self.defaults['GSM_DEFAULT_SETTINGS']['RESET_DEASSERT_DELAY']))
             try:
                 self.execute_atcmd("AT+CPOWD=1", "NORMAL POWER DOWN")
             except ResetException:
                 print (">> Error: unable to send powerdown signal. "
                     "Will continue with hard reset")
             GPIO.output(self.pow_pin, 1)
-            time.sleep(self.defaults['GSM_DEFAULT_SETTINGS']['RESET_ASSERT_DELAY'])
+            time.sleep(int(self.defaults['GSM_DEFAULT_SETTINGS']['RESET_ASSERT_DELAY']))
             GPIO.output(self.pow_pin, 0)
-            time.sleep(self.defaults['GSM_DEFAULT_SETTINGS']['RESET_DEASSERT_DELAY'])
+            time.sleep(int(self.defaults['GSM_DEFAULT_SETTINGS']['RESET_DEASSERT_DELAY']))
             GPIO.cleanup()
             print ('done')
         except ImportError:

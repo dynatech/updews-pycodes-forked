@@ -35,7 +35,7 @@ class DatabaseConnection:
 						 "on t1.outbox_id = t2.outbox_id "
 						 "where t1.send_status < %d "
 						 "and t1.send_status >= 0 and t1.send_status < 6 "
-						 "and t1.gsm_id = %d ") % (table[:-1], table, send_status, gsm_id)
+						 "and t1.gsm_id = %d LIMIT 100") % (table[:-1], table, send_status, gsm_id)
 
 				a = cur.execute(query)
 				out = []
