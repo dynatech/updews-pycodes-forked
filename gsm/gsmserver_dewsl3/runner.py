@@ -66,8 +66,10 @@ class GsmServer:
 
 				print(dt.today().strftime(
 					">> Server active as of: %A, %B %d, %Y, %X"))
-				print(">> CSQ:", gsm_mod.get_csq())
+				csq = gsm_mod.get_csq()
+				print(">> CSQ:", csq)
 				self.try_sending_messages(gsm_mod, gsm_info)
+				db.write_csq(gsm_info['gsm_id'], dt.today().strftime("%Y-%m-%d %H:%M:%S"), csq)
 			elif m == 0:
 				self.try_sending_messages(gsm_mod, gsm_info)
 				today = dt.today()
@@ -75,7 +77,9 @@ class GsmServer:
 					if checkIfActive:
 						print(dt.today().strftime(
 							">> Server active as of: %A, %B %d, %Y, %X"))
-						print(">> CSQ:", gsm_mod.get_csq())
+						csq = gsm_mod.get_csq()
+						print(">> CSQ:", csq)
+						db.write_csq(gsm_info['gsm_id'], dt.today().strftime("%Y-%m-%d %H:%M:%S"), csq)
 					checkIfActive = False
 				else:
 					checkIfActive = True
@@ -120,7 +124,9 @@ class GsmServer:
 		allmsgs = msglist
 		status_list = []
 
-		print("Pending Messages:", len(allmsgs))
+		pending_msgs = len(allmsgs)
+		print("Pending Messages:", pending_msgs)
+
 		for msg in allmsgs:
 			try:
 				if (msg[0].data != ""):
@@ -136,6 +142,8 @@ class GsmServer:
 				else:
 					stat = msg[0].num, 6, today, msg[2], msg[1], msg[3]
 				status_list.append(stat)
+				pending_msgs = pending_msgs - 1
+				print(">> ",pending_msgs," messages left flagged for sending...")
 			except Exception as e:
 				print('>> Error:', e)
 			print(">> Message:", msg[0].data)
@@ -186,4 +194,6 @@ if __name__ == "__main__":
 	except modem.ResetException:
 		print(">> Resetting system because of GSM failure")
 		initialize_gsm_modules.reset()
+		time.sleep(int(config['GSM_DEFAULT_SETTINGS']['POWER_RESET_DELAY']))
+		initialize_gsm.run_server(initialize_gsm_modules, gsm_info, 'users')
 		sys.exit()

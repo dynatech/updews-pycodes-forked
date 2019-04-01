@@ -388,9 +388,10 @@ def send_monitoringshift_reminder():
             temp = temp.replace("<AM/PM>", "7:30 PM")
         else:
             temp = temp.replace("<AM/PM>", "7:30 AM")
-            
-        smstables.write_outbox(message=temp, recipients=sim_num,
+
+        temp = smstables.write_outbox(message=temp, recipients=sim_num,
                                gsm_id=gsm_id, table='users')
+        print(temp)
 
 def main():
     desc_str = "Request information from server\n PSIR [-options]"

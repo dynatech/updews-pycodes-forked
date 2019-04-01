@@ -285,6 +285,7 @@ class DatabaseConnection:
 		query = ("INSERT INTO smsoutbox_%s_status (outbox_id,mobile_id,gsm_id)"
 				" VALUES ") % (table[:-1])
 
+
 		for recipient in recipients:
 			tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
 			try:
@@ -293,6 +294,7 @@ class DatabaseConnection:
 				print (">> Error: Possible key error for", r)
 				continue
 		query = query[:-1]
+		print(query)
 		self.write_to_db(query=query, last_insert_id=False)
 		return 0
 
@@ -323,3 +325,7 @@ class DatabaseConnection:
 			except MySQLdb.OperationalError:
 				print ('9.',)
 				time.sleep(20)
+
+	def write_csq(self, gsm_id, datetime, csq):
+		query = "INSERT INTO gsm_csq_logs VALUES (0, %d, '%s', %d)" % (gsm_id, datetime, csq)
+		self.write_to_db(query=query, last_insert_id=False)
