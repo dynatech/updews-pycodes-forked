@@ -42,24 +42,12 @@ def main(alert):
     for i in dfalert.index:
         print dfalert.tsm_name[i],dfalert.node_id[i],dfalert.ts[i]
         
-        df_node=qdb.get_raw_accel_data(tsm_id=dfalert.tsm_id[i],
-                                    from_time=dfalert.ts[i]-td(weeks=1),
-                                    to_time=dfalert.ts[i])
-        dff=fsd.apply_filters(df_node)
-        
-        raw_count = float(dff.ts[(dff.node_id==dfalert.node_id[i]) & 
-                              (dff.ts>=dfalert.ts[i]-td(days=3))].count())
-        filter_count = df_node.ts[(df_node.node_id==dfalert.node_id[i]) & 
-                                  (dff.ts>=dfalert.ts[i]-td(days=3))].count()
-        
-        percent= raw_count / filter_count * 100.0
-
-        xyz.xyzplot(dff,dfalert.tsm_id[i],dfalert.node_id[i],dfalert.ts[i],OutputFP,percent)
+        xyz.xyzplot(dfalert.tsm_id[i],dfalert.node_id[i],dfalert.ts[i],OutputFP)
     return OutputFP
 
 def send_messenger(OutputFP, alert):
     client = Client('dynaslope.test@gmail.com', 'dynaslope02')
-#    client = Client('dum.dum.98284566', '4c4d3m1cc0nf3r3nc35')
+#    client = Client('dum.dum.98284566', '4c4d3m1cc0nf3r3nc35!')
     
     message=("SANDBOX:\n"
             "As of {}\n"
@@ -90,7 +78,7 @@ query = ("SELECT stat_id, site_code,s.site_id, trigger_source, alert_symbol, "
         "(SELECT * FROM alert_status WHERE "
         "ts_set >= NOW()-interval 5 minute "
         "and ts_ack is NULL"
-#        "stat_id=806 "
+#        "stat_id=970 "
         ") AS stat "
         "INNER JOIN "
         "operational_triggers AS op "
@@ -107,8 +95,8 @@ query = ("SELECT stat_id, site_code,s.site_id, trigger_source, alert_symbol, "
 smsalert=qdb.get_db_dataframe(query)
 
 for i in smsalert.index:
-    OutputFP=main(smsalert.loc[0])
+    OutputFP=main(smsalert.loc[i])
     if not OutputFP:
         print "nasend na!"
     else:
-        send_messenger(OutputFP,smsalert.loc[0])
+        send_messenger(OutputFP,smsalert.loc[i])
