@@ -140,7 +140,6 @@ class GsmModem:
 
             txtdatetimeStr = smsdata['time'] + td(hours=8)
             txtdatetimeStr = txtdatetimeStr.strftime('%Y-%m-%d %H:%M:%S')
-
             if smsdata['tpdu_length'] < 159:
                 if tpdu_header != 0:
                     tpdu_header =self.increamentHexPDU(tpdu_header)
