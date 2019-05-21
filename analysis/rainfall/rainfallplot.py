@@ -76,7 +76,7 @@ def rain_subplot(rain_gauge_props, offsetstart, start, end, threshold,
                                  check_nd=False)
     if len(data) == 0:
         data = pd.DataFrame(columns=['ts', 'rain']).set_index('ts')
-    
+
     # 1-day cumulative rainfall
     rainfall2 = data.rolling(min_periods=1, window=48).sum()
     rainfall2 = np.round(rainfall2,4)
@@ -125,7 +125,10 @@ def rain_subplot(rain_gauge_props, offsetstart, start, end, threshold,
         b, t = cumcurax.get_ylim()
         if t > 500:
             t = 500
-        cumcurax.set_ylim([b, t + 25])
+        cumcurax.set_ylim(0, t+25)
+        top_lim = max(plot1)
+        if top_lim != 0:
+            inscurax.set_ylim(0, max(plot1))
         
     except:
         pass
@@ -162,14 +165,12 @@ def rain_stack_plot(site_code, gauges, offsetstart, start, end, tsn, threshold,
 
     # assigning axis name per subplot
     plt.xticks(rotation=70, size=5)       
-    fig=plt.figure(figsize = (15,20))
-    
+    fig = plt.figure(figsize = (15,20))
     # assigning axis name for instantaneous rainfall of each rain gauge
     ins1 = fig.add_subplot(len(gauges),2,1)
     ins2 = fig.add_subplot(len(gauges),2,3, sharex=ins1, sharey=ins1)
     ins3 = fig.add_subplot(len(gauges),2,5, sharex=ins1, sharey=ins1)
     ins4 = fig.add_subplot(len(gauges),2,7, sharex=ins1, sharey=ins1)
-
     # assigning axis name for cumulative rainfall of each rain gauge
     cum1 = fig.add_subplot(len(gauges),2,2)
     cum2 = fig.add_subplot(len(gauges),2,4, sharex=cum1)
@@ -178,6 +179,9 @@ def rain_stack_plot(site_code, gauges, offsetstart, start, end, tsn, threshold,
 
     insax = [ins1, ins2, ins3, ins4]
     cumax = [cum1, cum2, cum3, cum4]
+    # range of x and y axis
+    ins1.set_xlim([start - timedelta(hours=2), end + timedelta(hours=2)])
+    cum1.set_xlim([start - timedelta(hours=2), end + timedelta(hours=2)])
 
     rain_gauge_props = gauges.groupby('rain_id')
     
@@ -186,10 +190,6 @@ def rain_stack_plot(site_code, gauges, offsetstart, start, end, tsn, threshold,
                          end=end, threshold=threshold, insax=insax,
                          cumax=cumax, fig=fig, site_code=site_code) 
     
-    # range of x-axis
-    ins1.set_xlim([start - timedelta(hours=2), end + timedelta(hours=2)])
-    cum1.set_xlim([start - timedelta(hours=2), end + timedelta(hours=2)])
-
     # adjusts subplots
     fig.subplots_adjust(top=0.93, right=0.8, left=0.08, bottom=0.08, hspace=0.23, wspace=0.13)
     # title of plot

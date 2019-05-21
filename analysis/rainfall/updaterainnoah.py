@@ -29,7 +29,7 @@ def download_rainfall_noah(noah_id, fdate, tdate):
     offset_date = (pd.to_datetime(fdate) - timedelta(1)).strftime("%Y-%m-%d")
     
     sc = mem.server_config()
-    url = sc['rainfall']['noah_data'] % (noah_id, offset_date, tdate)
+    url = (sc['rainfall']['noah_data'] + '/%s/from/%s/to/%s') %(noah_id, offset_date, tdate)
     try:
         req = requests.get(url, auth=(sc['rainfall']['noah_user'],
                                       sc['rainfall']['noah_password']))
