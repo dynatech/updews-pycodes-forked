@@ -187,6 +187,8 @@ def get_raw_rain_data(gauge_name, from_time='2010-01-01', to_time=""):
     df = db.df_read(query)
     if df is not None:
         df.loc[:, 'ts'] = pd.to_datetime(df['ts'])
+    else:
+        df = pd.DataFrame(columns = ['ts', 'rain'])
     
     return df
 
@@ -974,9 +976,6 @@ def alert_to_db(df, table_name):
             query += "SET ts_updated = '%s' " %df['ts_updated'].values[0]
             query += "WHERE %s = %s" %(pk_id, df2[pk_id].values[0])
             db.write(query)
-
-#        data_table = sms.DataTable('rainfall_gauges', deactivated_gauges)
-#        db.df_write(data_table)
 
 
 def memcached():
