@@ -123,7 +123,7 @@ def node_inst_vel(df, roll_window_numpts, start):
 def get_last_good_data(df):
     if df.empty:
         qdb.print_out("Error: Empty dataframe inputted")
-        return
+        return pd.DataFrame()
     # groupby node_id
     dfa = df.groupby('node_id')
     # extract the latest timestamp per node_id, drop the index
