@@ -15,7 +15,7 @@ import sys
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import dynadb.db as dynadb
-from gsm.sms_data import DataTable
+from gsm.gsmserver_dewsl3.sms_data import DataTable
 from volatile.memory import server_config
 
 
