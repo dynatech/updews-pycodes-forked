@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Tue May 02 15:18:52 2017
-
-@author: LUL
-"""
-
 ##### IMPORTANT matplotlib declarations must always be FIRST
 ##### to make sure that matplotlib works with cron-based automation
 import matplotlib as mpl
@@ -21,7 +14,6 @@ import platform
 from scipy.interpolate import UnivariateSpline
 from scipy.ndimage import filters
 from scipy.signal import gaussian
-from sqlalchemy import create_engine
 import sys
 import time as mytime
 
@@ -29,6 +21,7 @@ import time as mytime
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import analysis.querydb as qdb
 import dynadb.db as db
+import gsm.smsparser2.smsclass as sms
 
 ### Determine current os
 curOS = platform.system()
@@ -294,99 +287,6 @@ def compute_critical_acceleration(velocity):
     
     return crit_acceleration,acceleration_upper_bound,acceleration_lower_bound
 
-def reset_auto_increment():
-    """
-    Reset autoincrement to maximum value after delete
-    """
-    #### Connect to db
-    db = mysqlDriver.connect(host = sc['hosts']['local'], user = sc['db']['user'], passwd = sc['db']['password'])
-    
-    #### Initialize cursor    
-    cur = db.cursor()
-    
-    #### Use default database
-    cur.execute("USE {}".format(sc['db']['name']))
-
-    ## Get the current maximum
-    cur.execute("SELECT max(ma_id) FROM marker_alerts")
-    max_id = cur.fetchone()[0]
-    
-    ## Set new id to current max plus one
-    if max_id:
-        new_id = max_id + 1
-    else:
-        new_id = 1
-    
-    ## Change the current autoincrement to max id value
-    cur.execute("ALTER TABLE marker_alerts AUTO_INCREMENT = {}".format(new_id))
-    
-    ## Commit changes
-    db.commit()
-    
-    db.close()
-    
-def delete_duplicates_marker_alerts_db(marker_alerts_df):
-    """
-    Deletes entries on the database with the same timestamp and marker id as the supplied marker alerts df
-    
-    Parameters
-    ------------------
-    marker_alerts_df: Pandas DataFrame
-        marker alerts dataframe with columns: [ts, marker_id, displacement, time_delta, alert_level]
-    
-    Returns
-    ------------------
-    None
-    """
-    #### Collect the values to be deleted
-    values_to_delete = zip(marker_alerts_df.ts.values,marker_alerts_df.marker_id.values)
-    
-    #### Connect to db
-    db = mysqlDriver.connect(host = sc['hosts']['local'], user = sc['db']['user'], passwd = sc['db']['password'])
-    
-    #### Initialize cursor    
-    cur = db.cursor()
-    
-    #### Use default database
-    cur.execute("USE {}".format(sc['db']['name']))
-    
-    #### Iterate cur.execute to delete specified values
-    for ts,marker_id in values_to_delete:
-        #### Create query
-        query = "DELETE FROM marker_alerts WHERE ts = '{}' AND marker_id = {} ".format(ts,marker_id)
-        cur.execute(query)
-    
-    #### Commit changes 
-    db.commit()
-
-    #### Close db
-    db.close()
-
-def write_to_marker_alerts_db(marker_alerts_df):
-    """
-    Writes the input marker alerts to the database, replacing any duplicate entries.
-    
-    Parameters
-    --------------------
-    marker_alerts_df: Pandas DataFrame
-        marker alerts dataframe with columns: [ts, marker_id, displacement, time_delta, alert_level]
-    
-    Returns
-    --------------------
-    None
-    """
-    marker_alerts_df['ts'] = map(lambda x: pd.to_datetime(x).strftime('%Y-%m-%d %H:%M'),marker_alerts_df.ts.values)
-    #### Delete possible duplicates
-#    delete_duplicates_marker_alerts_db(marker_alerts_df)
-    
-    ### Reset the auto increment
-    reset_auto_increment()
-    
-    #### Create engine to connect to db
-    engine=create_engine('mysql://'+sc['db']['user']+':'+sc['db']['password']+'@'+sc['hosts']['local']+':3306/'+sc['db']['name'])
-    
-    #### Insert dataframe to the database
-    marker_alerts_df.set_index('ts').to_sql(name = 'marker_alerts', con = engine, if_exists = 'append', schema = sc['db']['name'], index = True)
 
 def plot_marker_meas(marker_data_df,colors):
     """
@@ -400,8 +300,11 @@ def plot_marker_meas(marker_data_df,colors):
         Color values to be cycled
     """
     
-    marker_name = get_marker_name(marker_data_df.marker_id.values[0])
-    plt.plot(marker_data_df.ts.values,marker_data_df.measurement.values,'o-',color = colors[marker_data_df.index[0]%(len(colors)//2)*2],label = marker_name,lw = 1.5)
+    marker_name = get_marker_name(marker_data_df['marker_id'].values[0])
+    print ('marker_name', marker_name)
+    plt.plot(marker_data_df.ts, marker_data_df.measurement, 'o-',
+             color = colors[marker_data_df.index[0]%(len(colors)//2)*2],
+             label = marker_name,lw = 1.5)
     
     
 def plot_site_meas(surficial_data_df,site_id,ts):
@@ -429,6 +332,7 @@ def plot_site_meas(surficial_data_df,site_id,ts):
     
     #### Get site code
     site_code = get_site_code(site_id)
+    print ('site_code', site_code)
     
     #### Initialize figure parameters
     plt.figure(figsize = (12,9))
@@ -478,6 +382,8 @@ def plot_trending_analysis(marker_id,date_time,time,displacement,time_array,disp
     
     #### Get marker details for labels
     site_code, marker_name = get_marker_details(marker_id)
+    print ('site_code', site_code)
+    print ('marker_name', marker_name)
     
     #### Set fig title
     fig.suptitle('{} Marker {} {}'.format(site_code.upper(),marker_name,pd.to_datetime(date_time).strftime("%b %d, %Y %H:%M")),fontsize = 15)
@@ -577,17 +483,17 @@ def evaluate_trending_filter(marker_data_df,to_plot,to_json=False):
         0 -> no significant trend detected by OOA Filter
     """
     
+    data = marker_data_df.sort_values('ts')
     #### Get time data in days zeroed from starting data point
-    time = (marker_data_df.ts.values - marker_data_df.ts.values[-1])/np.timedelta64(1,'D')
-    
+    time = (data['ts'] - data['ts'].values[-1]) / np.timedelta64(1, 'D')
     #### Get marker data in cm
-    displacement = marker_data_df.measurement.values
-    
+    displacement = marker_data_df['measurement'].values
+
     #### Get variance of gaussian weighted average for interpolation
     _,var = gaussian_weighted_average(displacement)
     
     #### Compute for the spline interpolation and its derivative using the variance as weights
-    spline = UnivariateSpline(time,displacement,w = 1/np.sqrt(var))
+    spline = UnivariateSpline(time, displacement, w = 1/np.sqrt(var))
     spline_velocity = spline.derivative(n=1)
     spline_acceleration = spline.derivative(n=2)
     
@@ -596,7 +502,7 @@ def evaluate_trending_filter(marker_data_df,to_plot,to_json=False):
     if to_json == True:
         sample_num = 20
     
-    time_array = np.linspace(time[-1],time[0],sample_num)
+    time_array = np.linspace(time[-1], time[0], sample_num)
 
     #### Compute for the interpolated displacement, velocity, and acceleration for data points using the computed spline
     disp_int = spline(time_array)
@@ -620,7 +526,7 @@ def evaluate_trending_filter(marker_data_df,to_plot,to_json=False):
         plot_trending_analysis(marker_data_df.marker_id.iloc[0],marker_data_df.ts.iloc[0],time,displacement,time_array,disp_int,velocity,acceleration,velocity_data,acceleration_data)
     
     if to_json:
-        ts_list = pd.to_datetime(marker_data_df.ts.values)
+        ts_list = pd.to_datetime(marker_data_df.ts)
         time_arr = pd.to_datetime(ts_list[-1]) + np.array(map(lambda x: timedelta(days = x), time_array))
         
         velocity_data = list(reversed(velocity_data))
@@ -647,7 +553,7 @@ def evaluate_trending_filter(marker_data_df,to_plot,to_json=False):
     else:
         return trend_alert
 
-def evaluate_marker_alerts(marker_data_df,ts):
+def evaluate_marker_alerts(marker_data_df, ts):
     """
     Function used to evaluates the alerts for every marker at a specified time
     
@@ -665,11 +571,12 @@ def evaluate_marker_alerts(marker_data_df,ts):
     """
 
     #### Initialize values to zero to avoid reference before assignment error
-    displacement = 0
-    time_delta = 0
+    displacement = np.nan
+    time_delta = np.nan
+    print ('marker_data_df', marker_data_df)
     
     #### Check if data is valid for given time of alert generation
-    if round_time(marker_data_df.ts.values[0]) < round_time(ts):
+    if round_time(marker_data_df['ts'].values[0]) < round_time(ts):
         
         #### Marker alert is ND
         marker_alert = -1
@@ -685,10 +592,10 @@ def evaluate_marker_alerts(marker_data_df,ts):
         
         else:
             #### Compute for time difference in hours
-            time_delta = (marker_data_df.ts.iloc[0] - marker_data_df.ts.iloc[1])/np.timedelta64(1,'h')
+            time_delta = (marker_data_df['ts'].values[0] - marker_data_df['ts'].values[1]) / np.timedelta64(1, 'h')
             
             #### Compute for absolute displacement in cm
-            displacement = np.abs(marker_data_df.measurement.iloc[0] - marker_data_df.measurement.iloc[1])
+            displacement = np.abs(marker_data_df['measurement'].values[0] - marker_data_df['measurement'].values[1])
             
             #### Compute for velocity in cm/hour
             velocity = displacement / time_delta
@@ -716,7 +623,8 @@ def evaluate_marker_alerts(marker_data_df,ts):
                         
                     else:
                     #### Perform trending analysis
-                        trend_alert = evaluate_trending_filter(marker_data_df,sc['surficial']['print_trend_plot'])
+                        trend_alert = evaluate_trending_filter(marker_data_df,
+                                                               sc['surficial']['print_trend_plot'])
                     if velocity < float(sc['surficial']['v_alert_3']):
                         
                         #### Velocity is less than threshold for alert 3
@@ -728,21 +636,10 @@ def evaluate_marker_alerts(marker_data_df,ts):
                         #### Velocity is greater than or equal to threshold for alert 3
                         marker_alert = 3
                
-    return pd.Series({'ts':ts,'marker_id':int(marker_data_df.marker_id.iloc[0]),'displacement':displacement,'time_delta':time_delta,'alert_level':marker_alert})
-    
-#def marker_translation():
-#    query = "SELECT markers.marker_id, marker_name FROM markers INNER JOIN marker_history ON marker_history.marker_id = markers.marker_id INNER JOIN marker_names ON marker_history.history_id = marker_names.history_id WHERE markers.site_id = 27"
-#    df = q.get_db_dataframe(query)
-#    df['marker_name'] = df.marker_name.apply(lambda x:x[:1])
-#    df.replace(to_replace = {'marker_name':{'C':81,'B':82,'E':83,'D':84}},inplace = True)
-#    df.set_index('marker_id',inplace = True)
-#    df = df.to_dict()['marker_name']
-#    return df
-#    
-#def temp_fix(df):
-#    marker_translation()
-#    df['marker_id'] = df.marker_id.map(marker_translation())
-#    return df
+    return pd.Series({'marker_id': int(marker_data_df.marker_id.iloc[0]),
+                      'ts': ts, 'data_id': int(marker_data_df.data_id.iloc[0]),
+                      'displacement': displacement, 'time_delta': time_delta,
+                      'alert_level': marker_alert})
 
 def get_trigger_sym_id(alert_level):
     """
@@ -787,7 +684,7 @@ def get_surficial_alert(marker_alerts,site_id):
     """
     
     #### Get the higher perceived risk from the marker alerts
-    site_alert = max(marker_alerts.alert_level.values)
+    site_alert = max(marker_alerts.alert_level)
     
     #### Get the corresponding trigger sym id
     trigger_sym_id = get_trigger_sym_id(site_alert)
@@ -821,16 +718,16 @@ def generate_surficial_alert(site_id = None,ts = None):
 
     #### Generate Marker alerts
     marker_data_df = surficial_data_df.groupby('marker_id',as_index = False)
-    marker_alerts = marker_data_df.apply(evaluate_marker_alerts,ts)
+    marker_alerts = marker_data_df.apply(evaluate_marker_alerts, ts)
 
     #### Write to marker_alerts table    
-#    write_to_marker_alerts_db(marker_alerts)
-    
+    data_table = sms.DataTable('marker_alerts', marker_alerts)
+    db.df_write(data_table)
+
     #### Generate surficial alert for site
     surficial_alert = get_surficial_alert(marker_alerts,site_id)
-    print (surficial_alert)
     #### Write to db
-#    qdb.alert_to_db(surficial_alert,'operational_triggers')
+    qdb.alert_to_db(surficial_alert,'operational_triggers')
     
     #### Plot current ground meas    
     if sc['surficial']['print_meas_plot']:
@@ -849,7 +746,7 @@ def generate_surficial_alert(site_id = None,ts = None):
 #Call the generate_surficial_alert() function
 if __name__ == "__main__":
     start = datetime.now()
-    generate_surficial_alert(18, '2019-02-20 09:05')
+    generate_surficial_alert(18, '2017-10-20 15:10:00')
     print ('runtime =', datetime.now()-start)
     
     
