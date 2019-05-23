@@ -33,6 +33,12 @@ def set_cnf(file='', static_name=''):
             except ValueError:
                 pass
 
+            try:
+                options[opt] = cnf.getfloat(section, opt)
+                continue
+            except ValueError:
+                pass
+
             options[opt] = cnf.get(section, opt)
      
 
