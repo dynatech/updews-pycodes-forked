@@ -1,0 +1,27 @@
+PYTHONPATH=/home/dewsl/centralserver
+PATH=/home/dewsl/bin:/home/dewsl/.local/bin:/home/dewsl/miniconda2/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/dewsl/centralserver
+
+@reboot python ~/centralserver/volatile/setup.py # new memcache setup script
+
+* * * * * python ~/centralserver/gsm/dbmirror.py -m1 > ~/logs/dbmirror.txt 2>&1 # copy from dyna smsinbox to sandbox smsinbox
+* * * * * sleep 30 && date && python ~/centralserver/gsm/gsmserver.py -g1 > ~/logs/gsmserver_simulate.txt 2>&1 # copy from smsinbox to x_users and x_loggers
+
+* * * * * python ~/centralserver/gsm/smsparser.py -t loggers -l 5000 -db gsm2 > ~/logs/smsparser_loggers.txt 2>&1 # parse SMS from smsinbox_loggers
+* * * * * python ~/centralserver/gsm/smsparser.py -t users -l 1000 -db gsm2 > ~/logs/smsparser_users.txt 2>&1 # parse SMS from smsinbox_users
+* * * * * python ~/centralserver/gsm/alertgenexec.py > ~/logs/alertgenexec.txt 2>&1 # execute alertgen scripts from memory
+2-59/5 * * * * python ~/centralserver/gsm/alertmessaging.py -s # send alert messages
+
+
+@monthly python ~/centralserver/analysis/rainfall/rainfallgauges.py # update list of rainfall gauges and rain noah data used in evaluating alerts
+30 0 1 * * python ~/centralserver/analysis/rainfall/rainfallpriorities.py
+10,40 * * * * python ~/centralserver/analysis/rainfall/updaterainnoah.py
+
+11,41 * * * * python ~/centralserver/analysis/rainfall/rainfall.py # rainfall alert analysis
+1-59/5 * * * * python ~/centralserver/analysis/publicalerts.py
+2-59/5 * * * * python ~/centralserver/analysis/gsmalerts.py
+
+30 8,20 * * * python ~/workdirs/earl/googleapiinterface.py # event monitoring schedule updating
+
+*/2 * * * * python ~/centralserver/gsm/perfmon.py -t smsinbox_loggers -w -l2 # count items in smsinbox_loggers for the last 5 mins (default)
+
+0 * * * * python ~/centralserver/analysis/outputcleanup.py
