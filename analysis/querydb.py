@@ -397,7 +397,7 @@ def create_marker_alerts_table():
     db.write(query)
 
 
-def get_surficial_data(site_id,ts,num_pts):
+def get_surficial_data(site_id, start_ts, end_ts, num_pts):
     """
     Retrieves the latest surficial data from marker_data 
     and marker_observations table.
@@ -418,24 +418,61 @@ def get_surficial_data(site_id,ts,num_pts):
         with columns [ts, marker_id, measurement]
     """
 
-    query = "select * from "
-    query += "  (select * "
-    query += "  from marker_data "
-    query += "  where marker_id in "
-    query += "    (select marker_id "
-    query += "    from markers "
-    query += "    where site_id = %s) " %site_id
+    query =  "SELECT * FROM "
+    query += "  (SELECT * FROM marker_data "
+    query += "  WHERE marker_id IN ( "
+    query += "    SELECT marker_id "
+    query += "    FROM markers "
+    query += "    WHERE site_id = %s) "%site_id
     query += "  ) m "
-    query += "inner join "
-    query += "  (select * "
-    query += "  from marker_observations "
-    query += "  where ts <= '%s' " %ts
-    query += "  and site_id = %s " %site_id
-    query += "  order by ts desc limit %s " %num_pts
+    query += "INNER JOIN "
+    query += "  (SELECT * FROM marker_observations "
+    query += "  WHERE site_id = %s" %site_id 
+    query += "  AND ts <= '%s' " %end_ts
+    query += "  AND ts >= ( "
+    query += "    SELECT LEAST(MIN(ts), '%s') " %start_ts
+    query += "    FROM "
+    query += "      (SELECT ts "
+    query += "      FROM marker_observations "
+    query += "      WHERE ts <= '%s' " %end_ts
+    query += "      AND site_id = %s " %site_id
+    query += "      ORDER BY ts DESC LIMIT %s " %num_pts
+    query += "      ) start_ts) "
     query += "  ) mo "
-    query += "using (mo_id)"
+    query += "USING (mo_id) "
+    query += "INNER JOIN "
+    query += "  site_markers "
+    query += "USING (marker_id, site_id) "
+    query += "ORDER BY ts DESC"
     
     return db.df_read(query)
+
+
+def get_trigger_sym_id(alert_level):
+    """ Gets the corresponding trigger sym id given the alert level.
+    
+    Parameters
+    --------------
+    alert_level: int
+        surficial alert level
+        
+    Returns
+    ---------------
+    trigger_sym_id: int
+        generated from operational_trigger_symbols table
+        
+    """
+    
+    #### query the translation table from operational_trigger_symbols table and trigger_hierarchies table
+    query =  "SELECT trigger_sym_id, alert_level FROM "
+    query += "  operational_trigger_symbols AS op "
+    query += "INNER JOIN "
+    query += "  (SELECT source_id FROM trigger_hierarchies "
+    query += "  WHERE trigger_source = 'surficial' "
+    query += "  ) AS trig "
+    query += "USING(source_id)"
+    translation_table = db.df_read(query).set_index('alert_level').to_dict()['trigger_sym_id']
+    return translation_table[alert_level]
 
 
 ################################################################################
