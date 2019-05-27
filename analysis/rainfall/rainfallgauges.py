@@ -55,13 +55,13 @@ def main():
 
     senslope = mem.get('df_dyna_rain_gauges')
     senslope = senslope[senslope.has_rain == 1]
-    senslope['data_source'] = 'senslope'
+    senslope.loc[:, 'data_source'] = 'senslope'
     
     noah = noah_gauges()
     
     all_gauges = senslope.append(noah, sort=False)
-    all_gauges['gauge_name'] = all_gauges['gauge_name'].apply(lambda x: str(x))
-    all_gauges['date_activated'] = pd.to_datetime(all_gauges['date_activated'])
+    all_gauges.loc[:, 'gauge_name'] = all_gauges['gauge_name'].apply(lambda x: str(x))
+    all_gauges.loc[:, 'date_activated'] = pd.to_datetime(all_gauges['date_activated'])
     written_gauges = mem.get('df_rain_gauges')
     not_written = set(all_gauges['gauge_name']) \
                      - set(written_gauges['gauge_name'])
