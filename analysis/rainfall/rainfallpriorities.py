@@ -34,8 +34,8 @@ def to_mysql(df):
 
     """
     written_df = mem.get('df_rain_priorities')
-    combined = written_df.append(df, ignore_index=True)
-    combined = combined.append(written_df, ignore_index=True)
+    combined = written_df.append(df, ignore_index=True, sort=False)
+    combined = combined.append(written_df, ignore_index=True, sort=False)
     combined = combined.drop_duplicates(['site_id', 'rain_id'], keep=False)
 
     if len(combined) > 0:
