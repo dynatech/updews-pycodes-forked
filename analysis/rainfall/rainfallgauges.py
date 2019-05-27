@@ -27,16 +27,16 @@ def noah_gauges():
     noah = pd.DataFrame(r.json())
     noah = noah.loc[noah['sensor_name'].str.contains('rain', case = False)]
     noah = noah.dropna()
-    noah['dev_id'] = noah['dev_id'].apply(lambda x: int(x))
-    noah['longitude'] = noah['longitude'].apply(lambda x: np.round(float(x),6))
-    noah['latitude'] = noah['latitude'].apply(lambda x: np.round(float(x),6))
+    noah.loc[:, 'dev_id'] = noah['dev_id'].apply(lambda x: int(x))
+    noah.loc[:, 'longitude'] = noah['longitude'].apply(lambda x: np.round(float(x),6))
+    noah.loc[:, 'latitude'] = noah['latitude'].apply(lambda x: np.round(float(x),6))
     noah = noah.loc[(noah.longitude != 0) & (noah.latitude != 0) & \
                     (noah.date_installed >= str(pd.to_datetime(0)))]
     noah = noah.rename(columns = {'dev_id': 'gauge_name',
                                   'date_installed': 'date_activated'})
-    noah['data_source'] = 'noah'
-    noah['date_deactivated'] = np.nan
-    noah = noah[['gauge_name', 'data_source', 'longitude', 'latitude',
+    noah.loc[:, 'data_source'] = 'noah'
+    noah.loc[:, 'date_deactivated'] = np.nan
+    noah = noah.loc[:, ['gauge_name', 'data_source', 'longitude', 'latitude',
                  'date_activated', 'date_deactivated']]
     return noah
 
