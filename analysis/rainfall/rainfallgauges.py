@@ -59,7 +59,7 @@ def main():
     
     noah = noah_gauges()
     
-    all_gauges = senslope.append(noah)
+    all_gauges = senslope.append(noah, sort=False)
     all_gauges['gauge_name'] = all_gauges['gauge_name'].apply(lambda x: str(x))
     all_gauges['date_activated'] = pd.to_datetime(all_gauges['date_activated'])
     written_gauges = mem.get('df_rain_gauges')
