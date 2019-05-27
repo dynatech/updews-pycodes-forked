@@ -25,12 +25,12 @@ def noah_gauges():
                      auth=(sc['rainfall']['noah_user'],
                            sc['rainfall']['noah_password']))    
     noah = pd.DataFrame(r.json())
-    noah = noah[noah['sensor_name'].str.contains('rain', case = False)]
+    noah = noah.loc[:, noah['sensor_name'].str.contains('rain', case = False)]
     noah = noah.dropna()
     noah['dev_id'] = noah['dev_id'].apply(lambda x: int(x))
     noah['longitude'] = noah['longitude'].apply(lambda x: np.round(float(x),6))
     noah['latitude'] = noah['latitude'].apply(lambda x: np.round(float(x),6))
-    noah = noah.loc[(noah.longitude != 0) & (noah.latitude != 0) & \
+    noah = noah.loc[:, (noah.longitude != 0) & (noah.latitude != 0) & \
                     (noah.date_installed >= str(pd.to_datetime(0)))]
     noah = noah.rename(columns = {'dev_id': 'gauge_name',
                                   'date_installed': 'date_activated'})
