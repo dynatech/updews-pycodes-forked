@@ -81,7 +81,7 @@ def main():
                                   & (~all_gauges.gauge_name.isin(not_written))\
                                   & (~all_gauges.gauge_name.isin(deactivated))]
     date_deactivated = pd.to_datetime(deactivated_gauges['date_deactivated'])
-    deactivated_gauges['date_deactivated'] = date_deactivated
+    deactivated_gauges.loc[:, 'date_deactivated'] = date_deactivated
     deactivated_gauges = deactivated_gauges[['gauge_name', 'data_source',
                                              'longitude','latitude',
                                              'date_activated']]
