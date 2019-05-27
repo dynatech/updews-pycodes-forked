@@ -639,5 +639,5 @@ def generate_surficial_alert(site_id = None,ts = None):
 #Call the generate_surficial_alert() function
 if __name__ == "__main__":
     start = datetime.now()
-    surficial_data_df = generate_surficial_alert(18, '2017-10-20 15:10:00')
+    generate_surficial_alert()
     print ('runtime =', datetime.now()-start)
