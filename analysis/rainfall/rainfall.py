@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, date, time
 import numpy as np
 import os
+import pandas as pd
 import sys
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
@@ -77,7 +78,7 @@ def rainfall_gauges(end=datetime.now()):
 
     return gauges
 
-def main(site_code='', Print=True, end=datetime.now(), write_to_db=True):
+def main(site_code='', Print=True, end='', write_to_db=True):
     """Computes alert and plots rainfall data.
     
     Args:
@@ -97,6 +98,21 @@ def main(site_code='', Print=True, end=datetime.now(), write_to_db=True):
     start_time = datetime.now()
     qdb.print_out(start_time)
 
+    if site_code == '':
+        try:
+            site_code = sys.argv[1].lower()
+            site_code = site_code.replace(' ', '').split(',')
+        except:
+            site_code = site_code.replace(' ', '').split(',')
+            
+    if end == '':
+        try:
+            end = pd.to_datetime(sys.argv[2])
+        except:
+            end = datetime.now()
+    else:
+        end = pd.to_datetime(end)
+
     output_path = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                                                    '../../..'))
     
@@ -107,19 +123,17 @@ def main(site_code='', Print=True, end=datetime.now(), write_to_db=True):
         if not os.path.exists(output_path+sc['fileio']['rainfall_path']):
             os.makedirs(output_path+sc['fileio']['rainfall_path'])
 
-    # setting monitoring window
+        # setting monitoring window
     end, start, offsetstart = get_rt_window(float(sc['rainfall']['rt_window_length']),
                             float(sc['rainfall']['roll_window_length']), end=end)
     tsn=end.strftime("%Y-%m-%d_%H-%M-%S")
 
     # 4 nearest rain gauges of each site with threshold and distance from site
     gauges = rainfall_gauges()
-
-    if site_code != '':
+    if site_code != 'default':
         gauges = gauges[gauges.site_code.isin(site_code)]
-    
     gauges['site_id'] = gauges['site_id'].apply(lambda x: float(x))
-    
+
     trigger_symbol = mem.get('df_trigger_symbols')
     trigger_symbol = trigger_symbol[trigger_symbol.trigger_source == 'rainfall']
     trigger_symbol['trigger_sym_id'] = trigger_symbol['trigger_sym_id'].apply(lambda x: float(x))
