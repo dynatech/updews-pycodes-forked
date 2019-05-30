@@ -1,6 +1,0 @@
-[DB I/O]
-Hostdb = 127.0.0.1
-Userdb = thisisyourdbusername
-Passdb = thisisyourdbpassword
-NamedbMasync = masynckaiser
-Printtostdout = True
