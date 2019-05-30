@@ -103,7 +103,9 @@ def main(site_code='', Print=True, end='', write_to_db=True):
             site_code = sys.argv[1].lower()
             site_code = site_code.replace(' ', '').split(',')
         except:
-            site_code = site_code.replace(' ', '').split(',')
+            pass
+    else:
+        site_code = site_code.replace(' ', '').split(',')
             
     if end == '':
         try:
@@ -130,7 +132,7 @@ def main(site_code='', Print=True, end='', write_to_db=True):
 
     # 4 nearest rain gauges of each site with threshold and distance from site
     gauges = rainfall_gauges()
-    if site_code != 'default':
+    if site_code != '':
         gauges = gauges[gauges.site_code.isin(site_code)]
     gauges['site_id'] = gauges['site_id'].apply(lambda x: float(x))
 
