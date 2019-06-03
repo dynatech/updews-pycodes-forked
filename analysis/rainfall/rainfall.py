@@ -78,7 +78,8 @@ def rainfall_gauges(end=datetime.now()):
 
     return gauges
 
-def main(site_code='', Print=True, end='', write_to_db=True):
+def main(site_code='', end='', Print=True, write_to_db=True,
+         print_plot=False, save_plot=True):
     """Computes alert and plots rainfall data.
     
     Args:
@@ -143,21 +144,24 @@ def main(site_code='', Print=True, end='', write_to_db=True):
     
     summary = site_props.apply(ra.main, end=end, sc=sc,
                                 trigger_symbol=trigger_symbol, write_to_db=write_to_db)
-    summary = summary.reset_index(drop=True).set_index('site_id')[['site_code',
+    summary = summary.reset_index(drop=True)[['site_id', 'site_code',
                     '1D cml', 'half of 2yr max', '3D cml', '2yr max',
-                    'DataSource', 'alert', 'advisory']]
+                    'DataSource', 'alert']]
                     
     if Print == True:
         if sc['rainfall']['print_summary_alert']:
             summary.to_csv(output_path+sc['fileio']['rainfall_path'] +
                         'SummaryOfRainfallAlertGenerationFor'+tsn+'.csv',
-                        sep=',', mode='w')
-        
-        if sc['rainfall']['print_plot']:
-            site_props.apply(rp.main, offsetstart=offsetstart, start=start,
-                                end=end, tsn=tsn, sc=sc, output_path=output_path)
+                        sep=',', mode='w', index=False)
+        if sc['rainfall']['print_plot'] or print_plot:
+            rain_data = site_props.apply(rp.main, offsetstart=offsetstart,
+                                         tsn=tsn, save_plot=save_plot, sc=sc,
+                                         start=start, output_path=output_path,
+                                         end=end).reset_index(drop=True)
+            summary = pd.merge(summary, rain_data, on='site_id',
+                               validate='1:1')
     
-    summary_json = summary.reset_index().to_json(orient="records")
+    summary_json = summary.to_json(orient="records")
     
     qdb.print_out("runtime = %s" %(datetime.now()-start_time))
     

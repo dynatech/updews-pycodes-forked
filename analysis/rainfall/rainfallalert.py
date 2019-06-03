@@ -143,15 +143,12 @@ def summary_writer(site_id, site_code, gauge_name, rain_id, twoyrmax, halfmax,
     #threshold is reached
     if one>=halfmax or three>=twoyrmax:
         ralert=1
-        advisory='Start/Continue monitoring'
     #no data
     elif one==None or math.isnan(one):
         ralert=-1
-        advisory='---'
     #rainfall below threshold
     else:
         ralert=0
-        advisory='---'
 
     if write_alert or ralert == 1:
         if qdb.does_table_exist('rainfall_alerts') == False:
@@ -198,7 +195,7 @@ def summary_writer(site_id, site_code, gauge_name, rain_id, twoyrmax, halfmax,
                         '1D cml': [one], 'half of 2yr max': [round(halfmax,2)],
                         '3D cml': [three], '2yr max': [round(twoyrmax,2)],
                         'DataSource': [gauge_name], 'rain_id': [rain_id],
-                        'alert': [ralert], 'advisory': [advisory]})
+                        'alert': [ralert]})
     
     return summary
 
