@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import dynadb.db as dynadb
 from datetime import datetime as dt
+import datetime
 import smsclass
 
 EQ_SMS_PATTERNS = {
