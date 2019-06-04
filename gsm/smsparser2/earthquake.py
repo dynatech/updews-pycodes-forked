@@ -34,11 +34,9 @@ def eq(sms):
         search_results = EQ_SMS_PATTERNS[name].search(sms.msg)
         if search_results:
             matched_pattern = search_results.group(0)
-            try:
+            if name == 'depth':
                 int_pattern = re.compile(r"\d+", re.IGNORECASE)
-                matched_pattern = depth_pattern.search(matched_pattern).group(0)
-            except:
-                pass
+                matched_pattern = int_pattern.search(matched_pattern).group(0)
             pattern_matches[name] = matched_pattern
         else:
             if name == 'issuer':
@@ -52,14 +50,12 @@ def eq(sms):
 
     # format date
     datestr_init = pattern_matches["date"].upper()
-    pattern = ["%d%B%Y","%d%b%Y"]
     datestr = None
-    for p in pattern:
-        try:
-            datestr = dt.strptime(datestr_init, p).strftime("%Y-%m-%d")
-            break
-        except:
-            pass
+    try:
+        datestr = pd.to_datetime(datestr_init).date()
+        break
+    except:
+        pass
     if datestr == None:
         print ">> Error in datetime conversion for <%s>" % (datestr_init)
         return False
@@ -67,14 +63,14 @@ def eq(sms):
     # format time
     timestr = pattern_matches["time"].replace(" ","").replace(".",":").upper()
     try:
-        timestr = dt.strptime(timestr,"%I:%M%p").strftime("%H:%M:00")
+        timestr = dt.strptime(timestr,"%I:%M%p").time()
     except:
         print ">> Error in datetime conversion", timestr
         return False
 
     del pattern_matches["date"]
     del pattern_matches["time"]
-    pattern_matches["ts"] = "%s %s" % (datestr, timestr)
+    pattern_matches["ts"] = str(datetime.combine(datestr, timestr))
 
     out = {}
     for col_name in pattern_matches.keys():
