@@ -53,7 +53,6 @@ def eq(sms):
     datestr = None
     try:
         datestr = pd.to_datetime(datestr_init).date()
-        break
     except:
         pass
     if datestr == None:
