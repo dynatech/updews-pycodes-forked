@@ -10,7 +10,7 @@ EQ_SMS_PATTERNS = {
     "date": re.compile(r"\d{1,2}\w+201[6789]", re.IGNORECASE),
     "time": re.compile(r"\d{1,2}[:\.]\d{1,2} *[AP]M", re.IGNORECASE),
     "magnitude": re.compile(r"((?<=M[SBLVOW]\=)|(?<=M\=)|"
-        "(?<=MLV\=))\d+\.\d+(?= )", re.IGNORECASE),
+        "(?<=MLV\=)|(?<=MWP\=))\d+\.\d+(?= )", re.IGNORECASE),
     "depth": re.compile(r"((?<=D\=)|(?<=DEPTH\=))\d+((?= )|(?=K*M))", re.IGNORECASE),
     "latitude": re.compile(r"\d+\.\d+(?=N)", re.IGNORECASE),
     "longitude": re.compile(r"\d+\.\d+(?=E)", re.IGNORECASE),
