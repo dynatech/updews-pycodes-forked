@@ -11,7 +11,7 @@ EQ_SMS_PATTERNS = {
     "time": re.compile(r"\d{1,2}[:\.]\d{1,2} *[AP]M", re.IGNORECASE),
     "magnitude": re.compile(r"((?<=M[SBLVOW]\=)|(?<=M\=)|"
         "(?<=MLV\=)|(?<=MWP\=))\d+\.\d+(?= )", re.IGNORECASE),
-    "depth": re.compile(r"((?<=D\=)|(?<=DEPTH\=))\d+((?= )|(?=K*M))", re.IGNORECASE),
+    "depth": re.compile(r"(?<=D)\D+(?<=[\=\:]) *\d+((?= )|(?=K*M))", re.IGNORECASE),
     "latitude": re.compile(r"\d+\.\d+(?=N)", re.IGNORECASE),
     "longitude": re.compile(r"\d+\.\d+(?=E)", re.IGNORECASE),
     "issuer": re.compile(r"(?<=\<)[A-Z\/]+(?=\>)", re.IGNORECASE)
@@ -33,7 +33,13 @@ def eq(sms):
     for name in EQ_SMS_PATTERNS.keys():
         search_results = EQ_SMS_PATTERNS[name].search(sms.msg)
         if search_results:
-            pattern_matches[name] = search_results.group(0)
+            matched_pattern = search_results.group(0)
+            try:
+                int_pattern = re.compile(r"\d+", re.IGNORECASE)
+                matched_pattern = depth_pattern.search(matched_pattern).group(0)
+            except:
+                pass
+            pattern_matches[name] = matched_pattern
         else:
             if name == 'issuer':
                 pattern_matches['issuer'] = np.nan
