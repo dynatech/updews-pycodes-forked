@@ -128,7 +128,7 @@ def main(site_code='', end='', Print=True, write_to_db=True,
 
     # setting monitoring window
     if days != '':
-        sc['rainfall']['roll_window_length'] = days
+        sc['rainfall']['rt_window_length'] = days
     end, start, offsetstart = get_rt_window(float(sc['rainfall']['rt_window_length']),
                             float(sc['rainfall']['roll_window_length']), end=end)
     tsn=end.strftime("%Y-%m-%d_%H-%M-%S")
