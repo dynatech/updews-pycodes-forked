@@ -147,7 +147,7 @@ def rain_subplot(rain_gauge_props, offsetstart, start, end, threshold,
         cumcurax.xaxis.set_major_formatter(dfmt)
     
     data = data.reset_index()
-    data.loc[:, 'ts'] = data['ts'].apply(lambda x: x.strftime("%Y-%m-%d %H-%M"))
+    data.loc[:, 'ts'] = data['ts'].apply(lambda x: x.strftime("%Y-%m-%d %H:%M"))
     
     return pd.DataFrame({'gauge_name': [gauge_name], 'data': [data],
                          'distance': [gauge_distance]})
