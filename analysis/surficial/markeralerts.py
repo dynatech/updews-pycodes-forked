@@ -24,9 +24,10 @@ sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import analysis.querydb as qdb
 import dynadb.db as db
 import gsm.smsparser2.smsclass as sms
+import volatile.memory as mem
 
 #### Open config files
-sc = qdb.memcached()
+sc = mem.get('server_config')
 
 #### Create directory
 output_path = os.path.abspath(os.path.join(os.path.dirname(__file__),
