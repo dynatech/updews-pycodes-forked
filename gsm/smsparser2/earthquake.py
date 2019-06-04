@@ -14,7 +14,7 @@ EQ_SMS_PATTERNS = {
     "depth": re.compile(r"((?<=D\=)|(?<=DEPTH\=))\d+((?= )|(?=K*M))", re.IGNORECASE),
     "latitude": re.compile(r"\d+\.\d+(?=N)", re.IGNORECASE),
     "longitude": re.compile(r"\d+\.\d+(?=E)", re.IGNORECASE),
-    "issuer": re.compile(r"(?<=\<)[A-Z]+(?=\>)", re.IGNORECASE)
+    "issuer": re.compile(r"(?<=\<)[A-Z\/]+(?=\>)", re.IGNORECASE)
 }
 
 def eq(sms):
