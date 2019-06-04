@@ -27,6 +27,7 @@ def eq(sms):
 
     """  
     pattern_matches = {}
+    print(sms.msg)
 
     # search for matches
     for name in EQ_SMS_PATTERNS.keys():

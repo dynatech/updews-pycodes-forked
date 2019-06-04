@@ -329,11 +329,11 @@ def find_match_in_text(match_func, text):
         text_unparsed = text
         for match in match_result["match"]:
             text_unparsed = re.sub(pattern = str(match), repl = "", 
-                string = text_unparsed, flags = re.IGNORECASE)         
+                string = text_unparsed, flags = re.IGNORECASE, count=1)         
     else:
         try:
             text_unparsed = re.sub(pattern = match_result["match"], repl = "", 
-                string = text, flags = re.IGNORECASE)
+                string = text, flags = re.IGNORECASE, count=1)
         except re.error:
             print "re conversion error"
             raise ValueError(SURFICIAL_PARSER_ERROR_VALUE["re_parsing_error"])
