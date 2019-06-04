@@ -35,9 +35,12 @@ def eq(sms):
         if search_results:
             pattern_matches[name] = search_results.group(0)
         else:
-            print "No match for <%s> pattern." % (name),
-            print "Incomplete message not stored."
-            return False
+            if name == 'issuer':
+                pattern_matches['issuer'] = np.nan
+            else:
+                print "No match for <%s> pattern." % (name),
+                print "Incomplete message not stored."
+                return False
 
     print pattern_matches
 
