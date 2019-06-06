@@ -425,7 +425,7 @@ def parse_all_messages(args,allmsgs=[]):
                     print ('>> Value Error')
                     is_msg_proc_success = False
               
-            elif re.search("^[A-Z]{4,5}\*[xyabcXYABC]\*[A-F0-9]+\*[0-9]+T?$",
+            elif re.search("^[A-Z]{4,5}\*[xyabcdXYABCD]\*[A-F0-9]+\*[0-9]+T?$",
                 sms.msg):
                 try:
                     df_data = subsurface.v2(sms)
