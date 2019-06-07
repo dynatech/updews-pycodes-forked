@@ -1,15 +1,22 @@
-import volatile.memory as mem
+#import volatile.memory as mem
 import re
+import itertools
+import MySQLdb, subprocess
 from datetime import datetime as dt
-import pandas as pd
-import smsclass
+from datetime import timedelta as td
+import pandas as psql
+import numpy as np
+from dateutil.parser import parse
 from sqlalchemy import create_engine
-
-
+from time import localtime, strftime
+import pandas as pd
+import itertools
+#import smsclass
+  
 def lidar(sms):
+
     values = {}
     matches = re.findall('(?<=\*)[A-Z]{2}\:[0-9\.]*(?=\*)', sms, re.IGNORECASE)
-
     MATCH_ITEMS = {
         "LR": {"name": "dist", "fxn": float},
         "BV": {"name": "voltage", "fxn": float},
@@ -20,10 +27,10 @@ def lidar(sms):
     conversion_count = 0
 
     for ma in matches:
-        identifier, value = tuple(ma.split(":"))
+        identifier, value = ma.split(":")
 
         if identifier not in MATCH_ITEMS.keys():
-            print "Unknown identifier", identifier
+            print ("Unknown identifier", identifier)
             continue
 
         param = MATCH_ITEMS[identifier]
@@ -31,13 +38,13 @@ def lidar(sms):
         try:
             values[param["name"]] = param["fxn"](value)
         except ValueError:
-            print ">> Error: converting %s using %s" % (value, str(param["fxn"]))
+            print (">> Error: converting %s using %s" % (value, str(param["fxn"])))
             continue
 
         conversion_count += 1
 
     if conversion_count == 0:
-        print ">> Error: no successful conversion"
+        print (">> Error: no successful conversion")
         raise ValueError("No successful conversion of values")
 
     try:
@@ -50,11 +57,6 @@ def lidar(sms):
 
     df_ext_values = pd.DataFrame([values])
 
-    print df_ext_values
-
-    return df_ext_values
-
-def accel(sms):
     line = sms
     line = re.sub("(?<=\+) (?=\+)","NULL",line)
     linesplit = line.split('*')
@@ -73,20 +75,16 @@ def accel(sms):
         z = (linesplit[5])
         z = z.split(',')
         z = z[2]
+        
     except IndexError:
         raise ValueError("Incomplete data")
 
-    txtdatetime = dt.strptime(linesplit[9],
-        '%y%m%d%H%M%S').strftime('%Y-%m-%d %H:%M:%S')
 
-    df_data = [{'ts':txtdatetime,'xval':x,'yval':y,
-            'zval':z}]
+    df_ac = [{'ac_xval':x,'ac_yval':y,
+            'ac_zval':z}]
 
-    df_data = pd.DataFrame(df_data)
-    return df_data
+    df_ac = pd.DataFrame(df_ac)
 
-def mg(sms):
-    line = sms
     line = re.sub("(?<=\+) (?=\+)","NULL",line)
     linesplit = line.split('*')
 
@@ -104,20 +102,18 @@ def mg(sms):
         z = (linesplit[6])
         z = z.split(',')
         z = z[2]
+        
     except IndexError:
         raise ValueError("Incomplete data")
 
-    txtdatetime = dt.strptime(linesplit[9],
-        '%y%m%d%H%M%S').strftime('%Y-%m-%d %H:%M:%S')
+#    txtdatetime = dt.strptime(linesplit[9],
+#        '%y%m%d%H%M%S').strftime('%Y-%m-%d %H:%M:%S')
 
-    df_data = [{'ts':txtdatetime,'xval':x,'yval':y,
-            'zval':z}]
+    df_mg = [{'mg_xval':x,'mg_yval':y,
+            'mg_zval':z}]
 
-    df_data = pd.DataFrame(df_data)
-    return df_data
+    df_mg = pd.DataFrame(df_mg)
 
-def gr(sms):
-    line = sms
     line = re.sub("(?<=\+) (?=\+)","NULL",line)
     linesplit = line.split('*')
 
@@ -135,18 +131,17 @@ def gr(sms):
         z = (linesplit[7])
         z = z.split(',')
         z = z[2]
+        
     except IndexError:
         raise ValueError("Incomplete data")
 
-    txtdatetime = dt.strptime(linesplit[9],
-        '%y%m%d%H%M%S').strftime('%Y-%m-%d %H:%M:%S')
+    df_gr = [{'gr_xval':x,'gr_yval':y,
+            'gr_zval':z}]
 
-    df_data = [{'ts':txtdatetime,'xval':x,'yval':y,
-            'zval':z}]
+    df_gr = pd.DataFrame(df_gr)
+    
+    df_data = pd.concat([df_ext_values,df_ac,df_mg,df_gr], axis = 1)    
 
-    df_data = pd.DataFrame(df_data)
     return df_data
 
-
-
-## 'IMULA*L*LR:112.950*BV:8.45*BI:128.60*AC:9.5270,-0.1089,-0.3942*MG:0.0881,0.0755,-0.5267*GR:7.5512,9.0913,2.3975*TP:33.25*180807105005' ##
+## IMULA*L*LR:112.950*BV:8.45*BI:128.60*AC:9.5270,-0.1089,-0.3942*MG:0.0881,0.0755,-0.5267*GR:7.5512,9.0913,2.3975*TP:33.25*180807105005' ##
