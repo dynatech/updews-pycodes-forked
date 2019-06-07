@@ -14,6 +14,7 @@ import alertmessaging as amsg
 import dynadb.db as dbio
 import smsparser2 as parser
 import smsparser2.extensometer as extenso
+import smsparser2.lidar as lidarparser
 import smsparser2.rain as rain
 import smsparser2.smsclass as smsclass
 import smsparser2.subsurface as subsurface
@@ -404,9 +405,18 @@ def parse_all_messages(args,allmsgs=[]):
             if re.search("^[A-Z]{3}X[A-Z]{1}\*U\*",sms.msg):
                 df_data = extenso.uts(sms)
                 if df_data:
+                    print (df_data.data)
                     dbio.df_write(df_data, resource=resource)
                 else:
-                    is_msg_proc_success = True
+                    is_msg_proc_success = False
+            
+            if re.search("^[A-Z]{3}L[A-Z]{1}\*L\*",sms.msg):
+                df_data = lidarparser.lidar(sms)
+                if df_data:
+                    print (df_data.data)
+                    dbio.df_write(df_data, resource=resource)
+                else:
+                    is_msg_proc_success = False
             elif re.search("\*FF",sms.msg) or re.search("PZ\*",sms.msg):
                 is_msg_proc_success = process_piezometer(sms)
             # elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*\d+T?$",sms.msg):
@@ -430,13 +440,16 @@ def parse_all_messages(args,allmsgs=[]):
                 try:
                     df_data = subsurface.v2(sms)
                     if df_data:
-                        print (df_data.data)
-                        dbio.df_write(df_data, resource=resource)
-                        tsm_name = df_data.name.split("_")
-                        tsm_name = str(tsm_name[1])
-                        timestamp = df_data.data.reset_index()
-                        timestamp = str(timestamp['ts'][0])
-                        spawn_alert_gen(tsm_name,timestamp)
+                        try:
+                            print (df_data.data)
+                            dbio.df_write(df_data, resource=resource)
+                            tsm_name = df_data.name.split("_")
+                            tsm_name = str(tsm_name[1])
+                            timestamp = df_data.data.reset_index()
+                            timestamp = str(timestamp['ts'][0])
+                            spawn_alert_gen(tsm_name,timestamp)
+                        except:
+                            print ('>> SQL Error')
                     else:
                         print ('>> Value Error')
                         is_msg_proc_success = False

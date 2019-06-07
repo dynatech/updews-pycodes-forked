@@ -11,19 +11,20 @@ from sqlalchemy import create_engine
 from time import localtime, strftime
 import pandas as pd
 import itertools
-#import smsclass
+import smsclass
   
 def lidar(sms):
-
+    msg = sms.msg
+    print(msg)
     values = {}
-    matches = re.findall('(?<=\*)[A-Z]{2}\:[0-9\.]*(?=\*)', sms, re.IGNORECASE)
+    matches = re.findall('(?<=\*)[A-Z]{2}\:[0-9\.]*(?=\*)', msg, re.IGNORECASE)
     MATCH_ITEMS = {
         "LR": {"name": "dist", "fxn": float},
         "BV": {"name": "voltage", "fxn": float},
         "BI": {"name": "current", "fxn": float},
         "TP": {"name": "temp_val", "fxn": float}
     }
-
+    table_name = "lidar_data"
     conversion_count = 0
 
     for ma in matches:
@@ -48,7 +49,7 @@ def lidar(sms):
         raise ValueError("No successful conversion of values")
 
     try:
-        ts = re.search("(?<=\*)[0-9]{12}(?=$)",sms).group(0)
+        ts = re.search("(?<=\*)[0-9]{12}(?=$)",msg).group(0)
         ts = dt.strptime(ts,"%y%m%d%H%M%S").strftime("%Y-%m-%d %H:%M:%S")
     except AttributeError:
         raise ValueError("No valid timestamp recognized")
@@ -57,7 +58,7 @@ def lidar(sms):
 
     df_ext_values = pd.DataFrame([values])
 
-    line = sms
+    line = msg
     line = re.sub("(?<=\+) (?=\+)","NULL",line)
     linesplit = line.split('*')
 
@@ -142,6 +143,6 @@ def lidar(sms):
     
     df_data = pd.concat([df_ext_values,df_ac,df_mg,df_gr], axis = 1)    
 
-    return df_data
+    return smsclass.DataTable(table_name,df_data)
 
 ## IMULA*L*LR:112.950*BV:8.45*BI:128.60*AC:9.5270,-0.1089,-0.3942*MG:0.0881,0.0755,-0.5267*GR:7.5512,9.0913,2.3975*TP:33.25*180807105005' ##
