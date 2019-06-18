@@ -42,11 +42,11 @@ def eq(sms):
             if name == 'issuer':
                 pattern_matches['issuer'] = np.nan
             else:
-                print "No match for <%s> pattern." % (name),
-                print "Incomplete message not stored."
+                print ("No match for <%s> pattern." % (name),)
+                print ("Incomplete message not stored.")
                 return False
 
-    print pattern_matches
+    print (pattern_matches)
 
     # format date
     datestr_init = pattern_matches["date"].upper()
@@ -56,7 +56,7 @@ def eq(sms):
     except:
         pass
     if datestr == None:
-        print ">> Error in datetime conversion for <%s>" % (datestr_init)
+        print (">> Error in datetime conversion for <%s>" % (datestr_init))
         return False
 
     # format time
@@ -64,7 +64,7 @@ def eq(sms):
     try:
         timestr = dt.strptime(timestr,"%I:%M%p").time()
     except:
-        print ">> Error in datetime conversion", timestr
+        print (">> Error in datetime conversion", timestr)
         return False
 
     del pattern_matches["date"]
@@ -76,7 +76,7 @@ def eq(sms):
         out[col_name] = pattern_matches[col_name]
 
     df = pd.DataFrame([out])
-    print df
+    print (df)
     return smsclass.DataTable("earthquake_events", df)
 
 
