@@ -19,7 +19,7 @@ def main(alert):
     site = alert.site_code
     ts = alert.ts_last_retrigger
     
-    OutputFP=  os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')) #os.path.dirname(os.path.realpath(__file__))+'/{} {}/'.format(site, ts.strftime("%Y-%m-%d %H%M"))
+    OutputFP=  os.path.abspath(os.path.join(os.path.dirname(__file__), '../')) #os.path.dirname(os.path.realpath(__file__))+'/{} {}/'.format(site, ts.strftime("%Y-%m-%d %H%M"))
     OutputFP += '/node alert validation sandbox/' + '{} {}/'.format(site, ts.strftime("%Y-%m-%d %H%M")) 
     OutputFP=OutputFP.replace("\\", "/")
     
