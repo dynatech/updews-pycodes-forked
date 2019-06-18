@@ -387,4 +387,7 @@ class DatabaseConnection:
 			self.write_to_db(query=user_mobile_query)
 
 			delete_pending_account_query = "DELETE FROM pending_accounts WHERE pending_account_id = '"+str(user[0])+"'"
+
 			delete_pending_account = self.execute_commons_db(delete_pending_account_query)
+		self.write_to_db(query=query, last_insert_id=False)
+
