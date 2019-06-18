@@ -5,12 +5,12 @@ Created on Wed Jan 17 11:28:19 2018
 @author: Brainerd Cruz
 """
 
-import querydb as qdb
+import analysis.querydb as qdb
 import pandas as pd
 from datetime import timedelta as td
 import os
 import xyzrealtimeplot as xyz
-import filterdata as fsd
+import analysis.subsurface.filterdata as fsd
 from fbchat import Client
 from fbchat.models import *
 
@@ -19,12 +19,14 @@ def main(alert):
     site = alert.site_code
     ts = alert.ts_last_retrigger
     
-    OutputFP=  os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')) #os.path.dirname(os.path.realpath(__file__))+'/{} {}/'.format(site, ts.strftime("%Y-%m-%d %H%M"))
-    OutputFP += 'node alert validation sandbox/' + '{} {}/'.format(site, ts.strftime("%Y-%m-%d %H%M")) 
+    OutputFP=  os.path.abspath(os.path.join(os.path.dirname(__file__), '../')) #os.path.dirname(os.path.realpath(__file__))+'/{} {}/'.format(site, ts.strftime("%Y-%m-%d %H%M"))
+    OutputFP += '/node alert validation sandbox/' + '{} {}/'.format(site, ts.strftime("%Y-%m-%d %H%M")) 
     OutputFP=OutputFP.replace("\\", "/")
     
     if not os.path.exists(OutputFP):
         os.makedirs(OutputFP)
+    else:
+        return False
     
     ts_before=ts.round('4H')-td(hours=4)
     
@@ -38,25 +40,14 @@ def main(alert):
     dfalert=qdb.get_db_dataframe(queryalert).groupby(['tsm_id','node_id']).first().reset_index()
     
     for i in dfalert.index:
-        print dfalert.tsm_name[i],dfalert.node_id[i],dfalert.ts[i]
+        print (dfalert.tsm_name[i],dfalert.node_id[i],dfalert.ts[i])
         
-        df_node=qdb.get_raw_accel_data(tsm_id=dfalert.tsm_id[i],
-                                    from_time=dfalert.ts[i]-td(weeks=1),
-                                    to_time=dfalert.ts[i])
-        dff=fsd.apply_filters(df_node)
-        
-        raw_count = float(dff.ts[(dff.node_id==dfalert.node_id[i]) & 
-                              (dff.ts>=dfalert.ts[i]-td(days=3))].count())
-        filter_count = df_node.ts[(df_node.node_id==dfalert.node_id[i]) & 
-                                  (dff.ts>=dfalert.ts[i]-td(days=3))].count()
-        
-        percent= raw_count / filter_count * 100.0
-
-        xyz.xyzplot(dff,dfalert.tsm_id[i],dfalert.node_id[i],dfalert.ts[i],OutputFP,percent)
+        xyz.xyzplot(dfalert.tsm_id[i],dfalert.node_id[i],dfalert.ts[i],OutputFP)
     return OutputFP
 
 def send_messenger(OutputFP, alert):
-    client = Client('dynaslope.test@gmail.com', 'senslope')
+    client = Client('dynaslope.test@gmail.com', 'dynaslope05')
+#    client = Client('dum.dum.98284566', '4c4d3m1cc0nf3r3nc35!')
     
     message=("SANDBOX:\n"
             "As of {}\n"
@@ -72,7 +63,7 @@ def send_messenger(OutputFP, alert):
     
     
     for a in os.listdir(OutputFP):
-        print a
+        print (a)
         client.sendLocalImage(OutputFP + a, message=None, thread_id=thread_id, thread_type=thread_type)
     
     client.logout()
@@ -87,7 +78,7 @@ query = ("SELECT stat_id, site_code,s.site_id, trigger_source, alert_symbol, "
         "(SELECT * FROM alert_status WHERE "
         "ts_set >= NOW()-interval 5 minute "
         "and ts_ack is NULL"
-#        "stat_id=806 "
+#        "stat_id=1025 "
         ") AS stat "
         "INNER JOIN "
         "operational_triggers AS op "
@@ -102,6 +93,10 @@ query = ("SELECT stat_id, site_code,s.site_id, trigger_source, alert_symbol, "
         "ON s.site_id = alert.site_id")
         
 smsalert=qdb.get_db_dataframe(query)
+
 for i in smsalert.index:
-    OutputFP=main(smsalert.loc[0])
-    send_messenger(OutputFP,smsalert.loc[0])
+    OutputFP=main(smsalert.loc[i])
+    if not OutputFP:
+        print ("nasend na!")
+    else:
+        send_messenger(OutputFP,smsalert.loc[i])
