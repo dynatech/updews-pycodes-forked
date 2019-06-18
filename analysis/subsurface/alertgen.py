@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, time
+from datetime import datetime
 import os
 import pandas as pd
 import sys
@@ -11,49 +11,6 @@ import rtwindow as rtw
 import trendingalert as trend
 #------------------------------------------------------------------------------
 
-def RoundReleaseTime(date_time):
-    # rounds time to 4/8/12 AM/PM
-    time_hour = int(date_time.strftime('%H'))
-
-    quotient = time_hour / 4
-    if quotient == 5:
-        date_time = datetime.combine(date_time.date() + timedelta(1), time(0,0,0))
-    else:
-        date_time = datetime.combine(date_time.date(), time((quotient+1)*4,0,0))
-            
-    return date_time
-
-def writeOperationalTriggers(site_id, end):
-
-    query =  "SELECT sym.alert_level, trigger_sym_id FROM ( "
-    query += "  SELECT alert_level FROM "
-    query += "    (SELECT * FROM tsm_alerts "
-    query += "    where ts <= '%s' " %end
-    query += "    and ts_updated >= '%s' " %end
-    query += "    ) as ta "
-    query += "  INNER JOIN "
-    query += "    (SELECT tsm_id FROM tsm_sensors "
-    query += "    where site_id = %s " %site_id
-    query += "    ) as tsm "
-    query += "  on ta.tsm_id = tsm.tsm_id "
-    query += "  ) AS sub "
-    query += "INNER JOIN "
-    query += "  (SELECT trigger_sym_id, alert_level FROM "
-    query += "    operational_trigger_symbols AS op "
-    query += "  INNER JOIN "
-    query += "    (SELECT source_id FROM trigger_hierarchies "
-    query += "    WHERE trigger_source = 'subsurface' "
-    query += "    ) AS trig "
-    query += "  ON op.source_id = trig.source_id "
-    query += "  ) as sym "
-    query += "on sym.alert_level = sub.alert_level"
-    df = qdb.get_db_dataframe(query)
-    
-    trigger_sym_id = df.sort_values('alert_level', ascending=False)['trigger_sym_id'].values[0]
-        
-    operational_trigger = pd.DataFrame({'ts': [end], 'site_id': [site_id], 'trigger_sym_id': [trigger_sym_id], 'ts_updated': [end]})
-    
-    qdb.alert_to_db(operational_trigger, 'operational_triggers')
 
 def main(tsm_name='', end='', end_mon=False):
     run_start = datetime.now()
@@ -90,7 +47,7 @@ def main(tsm_name='', end='', end_mon=False):
     col_alert = pd.DataFrame({'node_id': range(1, tsm_props.nos+1), 'col_alert': [-1]*tsm_props.nos})
     node_col_alert = col_alert.groupby('node_id', as_index=False)
     node_col_alert.apply(lib.column_alert, alert=alert, num_nodes_to_check=int(sc['subsurface']['num_nodes_to_check']), k_ac_ax=float(sc['subsurface']['k_ac_ax']), vel2=float(sc['subsurface']['vel2']), vel3=float(sc['subsurface']['vel3']))
-
+    
     valid_nodes_alert = alert.loc[~alert.node_id.isin(data.inv)]
     
     if max(valid_nodes_alert['col_alert'].values) > 0:
@@ -101,9 +58,9 @@ def main(tsm_name='', end='', end_mon=False):
         
     tsm_alert = pd.DataFrame({'ts': [window.end], 'tsm_id': [tsm_props.tsm_id], 'alert_level': [site_alert], 'ts_updated': [window.end]})
 
-#    qdb.alert_to_db(tsm_alert, 'tsm_alerts')
-#    
-#    writeOperationalTriggers(tsm_props.site_id, window.end)
+    qdb.alert_to_db(tsm_alert, 'tsm_alerts')
+    
+    qdb.write_op_trig(tsm_props.site_id, window.end)
 
     qdb.print_out(tsm_alert)
     

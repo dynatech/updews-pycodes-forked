@@ -194,6 +194,7 @@ def write(query ='', identifier = '', last_insert=False,
         resource=resource)
 
     try:
+
         a = cur.execute(query)
         db.commit()
         if last_insert:
@@ -290,17 +291,12 @@ def df_write(data_table, host='local', last_insert=False ,
     """
     df = data_table.data
     df = df.drop_duplicates(subset=None, keep='first', inplace=False)
-    value_list = str(df.values.tolist())[:-1][1:]
-    value_list = value_list.replace("]",")").replace("[","(")
-    value_list = value_list.replace("nan", "NULL")
-
-    column_name_str = ""
-    for name in list(df):
-        column_name_str += name.encode('ascii','ignore') + ","
-    column_name_str = column_name_str[:-1]
-
+    tuple_list = list(df.itertuples(index=False, name=None))
+    value_list = ', '.join(list(map(str, tuple_list))).replace('nan', 'NULL')
+    
+    column_name_str = ', '.join(df.columns)
     duplicate_value_str = ", ".join(["%s = VALUES(%s)" % (name, name) 
-        for name in list(df)]) 
+        for name in df.columns]) 
     query = 'insert into %s (%s) values %s' % (data_table.name,
         column_name_str, value_list)
     query += ' on DUPLICATE key update  %s ' % (duplicate_value_str)

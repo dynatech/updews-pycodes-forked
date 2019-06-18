@@ -1,0 +1,79 @@
+[LocalDB]
+username = pysys_local
+host = 192.168.150.129
+password = NaCAhztBgYZ3HwTkvHwwGVtJn5sVMFgg
+dbname = senslopedb
+inboxname = smsinbox
+
+[GSMDB]
+username = pysys_local
+host = 192.168.150.127
+password = NaCAhztBgYZ3HwTkvHwwGVtJn5sVMFgg
+dbname = senslopedb
+inboxname = smsinbox
+
+[SandboxDB]
+username = pysys_local
+host = 192.168.150.128
+password = NaCAhztBgYZ3HwTkvHwwGVtJn5sVMFgg
+dbname = senslopedb
+inboxname = smsinbox2
+
+[Serial]
+baudrate = 57600
+sunport = COM16
+globeport = /dev/globeport
+callport = /dev/callport
+timeout = 5
+smartport = /dev/smartport
+
+[gsmio]
+resetpin = 38
+
+[SMSAlert]
+communityphonenumber = 09175048863
+sunnumbers = 
+globenumbers=09166685391,09054537225,09068386258,09178825084,09163938789,09176023735
+smartnumbers=09288263063,09984405687,09228412065,09228120490,09253120491
+serveralert = 09490307559
+
+[ReplyMessages]
+SuccessEN = Success! Thank you for sending your ground measurements.
+SuccessTAG = Ayos! Salamat sa pag text ng inyong mga sukat ng crack.
+FailDateEN = Error! There is a problem with your DATE format. Please check your SMS and try again.
+FailTimeEN = Error! There is a problem with your TIME format. Please check your SMS and try again.
+FailMeasEN = Error! There is a problem with your ground measurements format.  Please check your SMS and try again.
+FailWeaEN = Error! There is no weather information sent.  Please check your SMS and try again.
+FailObvEN = Error! You did not put your name on the text message.  Please check your SMS and try again.
+FailOobEN = Error! Your date or time value is either too late or too early. Please check your SMS and try again.
+
+[FileIO]
+serverdir = /home/dyna/server/updews-pycodes/
+logsdir = /home/dyna/server/logs/
+monitoringoutputdir = /home/dyna/server/logs/
+allalertsfile = monitoringoutput/GSMAlert.txt
+eqprocfile = Analysis/eq_alert_gen.py
+querylatestreportoutput = query_latest_report_output.txt
+alertgenscript = Analysis/alertgen.py
+alertanalysisscript = Analysis/AlertAnalysis.py
+masyncscript = client/bin/invoke-masync-CtoS-single.py
+masynclogs = masync_on_receive.txt
+websocketdir = Experimental Versions/pythonSockets
+gndalert1 = Data\ Analysis/GroundAlert/GenerateGroundAlert.py
+gndalert2 = Data\ Analysis/GroundAlert/GenerateGroundAlertWithTrendingNewAlerts.py
+gndalert3 = Data\ Analysis/GroundAlert/GenerateGroundAlertWithTrending.py
+pythonpath = ~/miniconda2/bin/python
+
+
+[simprefix]
+smart = 00,07,08,09,10,11,12,14,18,19,20,21,22,23,24,25,28,29,30,31,32,33,34,38,39,40,42,43,44,46,47,48,49,50,89,98,99
+globe = 05,06,15,16,17,25,26,27,35,36,37,45,55,56,75,77,78,79,94,95,96,97 
+
+[mode]
+script_mode = procmsg
+
+[io]
+proc_limit = 10
+active_lgr_limit = 40
+enable_masync = True
+enable_alertgen = True

@@ -315,6 +315,26 @@ def v2(sms):
         name_df = 'soms_'+tsm_name.lower()  
         # for piece in outl:
         #     print piece
+    elif dtype == 'D':
+        # do parsing for datatype 'D' TEMPERATURE
+        outl = []
+        n=8
+        sd = [datastr[i:i+n] for i in range(0,len(datastr),n)]
+        for piece in sd:
+            try:
+                # print piece
+                ID = int(piece[0:2],16)
+                msgID = int(piece[2:4],16)
+                temp = int(piece[4:8],16)
+                line = {"ts":timestamp, "node_id":ID, "type_num":msgID,
+                        "temp_val":temp}
+                outl.append(line)
+            except:
+                return False
+            
+            name_df = 'temp_'+tsm_name.lower()  
+    
+    
     else:
         raise IndexError("Undefined data format " + dtype )
     
@@ -596,6 +616,24 @@ def b64Parser(sms):
                     soms = b64_to_dec(piece[1:4])
                     line = {"ts":timestamp, "node_id":ID, "type_num":msgID,
                     "mval1":soms, "mval2":0}
+                    outl.append(line)
+                except ValueError:
+                    print (">> b64 Value Error detected.", piece,)
+                    print ("Piece of data to be ignored")
+                    return
+		        
+        #for temp
+        elif dtype == 22: 
+            name_df = 'temp_'+tsm_name.lower() 
+            n = 3
+            sd = [datastr[i:i+n] for i in range(0,len(datastr),n)]
+            for piece in sd:
+                try:
+                    ID = b64_to_dec(piece[0])
+                    msgID = dtype
+                    temp = b64_to_dec(piece[1:3])
+                    line = {"ts":timestamp, "node_id":ID, "type_num":msgID,
+                    "temp_val":temp}
                     outl.append(line)
                 except ValueError:
                     print (">> b64 Value Error detected.", piece,)

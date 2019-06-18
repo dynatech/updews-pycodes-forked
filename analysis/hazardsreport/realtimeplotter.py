@@ -1,10 +1,10 @@
 from datetime import date, time, datetime, timedelta
-import matplotlib.pyplot as plt
 import os
 import pandas as pd
 import sys
 
-plt.ion()
+from pandas.plotting import register_matplotlib_converters
+register_matplotlib_converters()
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import analysis.querydb as qdb
@@ -184,7 +184,8 @@ def main():
 
     # asks which point to fix in column position plots
     while True:
-        input_text = 'column fix for colpos (top/bottom); '
+        input_text = 'column fix for colpos (top/bottom). '
+        input_text += 'press enter to skip; '
         input_text += 'default for monitoring is fix bottom: '
         column_fix = input(input_text).lower()
         if column_fix in ['top', 'bottom', '']:
