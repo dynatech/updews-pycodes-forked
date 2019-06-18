@@ -1,4 +1,5 @@
 from datetime import datetime as dt
+import numpy as np
 import os
 import pandas as pd
 import re
@@ -12,11 +13,11 @@ EQ_SMS_PATTERNS = {
     "date": re.compile(r"\d{1,2}\w+201[6789]", re.IGNORECASE),
     "time": re.compile(r"\d{1,2}[:\.]\d{1,2} *[AP]M", re.IGNORECASE),
     "magnitude": re.compile(r"((?<=M[SBLVOW]\=)|(?<=M\=)|"
-        "(?<=MLV\=))\d+\.\d+(?= )", re.IGNORECASE),
-    "depth": re.compile(r"(?<=D\=)\d+(?=K*M)", re.IGNORECASE),
+        "(?<=MLV\=)|(?<=MWP\=))\d+\.\d+(?= )", re.IGNORECASE),
+    "depth": re.compile(r"(?<=D)\D+(?<=[\=\:]) *\d+((?= )|(?=K*M))", re.IGNORECASE),
     "latitude": re.compile(r"\d+\.\d+(?=N)", re.IGNORECASE),
     "longitude": re.compile(r"\d+\.\d+(?=E)", re.IGNORECASE),
-    "issuer": re.compile(r"(?<=\<)[A-Z]+(?=\>)", re.IGNORECASE)
+    "issuer": re.compile(r"(?<=\<)[A-Z\/]+(?=\>)", re.IGNORECASE)
 }
 
 def eq(sms):
@@ -34,24 +35,28 @@ def eq(sms):
     for name in EQ_SMS_PATTERNS.keys():
         search_results = EQ_SMS_PATTERNS[name].search(sms.msg)
         if search_results:
-            pattern_matches[name] = search_results.group(0)
+            matched_pattern = search_results.group(0)
+            if name == 'depth':
+                int_pattern = re.compile(r"\d+", re.IGNORECASE)
+                matched_pattern = int_pattern.search(matched_pattern).group(0)
+            pattern_matches[name] = matched_pattern
         else:
-            print ("No match for <%s> pattern." % (name),)
-            print ("Incomplete message not stored.")
-            return False
+            if name == 'issuer':
+                pattern_matches['issuer'] = np.nan
+            else:
+                print ("No match for <%s> pattern." % (name),)
+                print ("Incomplete message not stored.")
+                return False
 
     print (pattern_matches)
 
     # format date
     datestr_init = pattern_matches["date"].upper()
-    pattern = ["%d%B%Y","%d%b%Y"]
     datestr = None
-    for p in pattern:
-        try:
-            datestr = dt.strptime(datestr_init, p).strftime("%Y-%m-%d")
-            break
-        except:
-            pass
+    try:
+        datestr = pd.to_datetime(datestr_init).date()
+    except:
+        pass
     if datestr == None:
         print (">> Error in datetime conversion for <%s>" % (datestr_init))
         return False
@@ -66,7 +71,7 @@ def eq(sms):
 
     del pattern_matches["date"]
     del pattern_matches["time"]
-    pattern_matches["ts"] = "%s %s" % (datestr, timestr)
+    pattern_matches["ts"] = str(dt.combine(datestr, timestr))
 
     out = {}
     for col_name in pattern_matches.keys():
