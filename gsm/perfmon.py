@@ -1,8 +1,7 @@
-import dynadb.db as dbio
+import senslopedbio as dbio
 from datetime import datetime as dt
 from datetime import timedelta as td
 import argparse
-import volatile.memory as mem
 
 def count_items(ts_end = None, ts_start = None, table = None, stat_col = None,
 	stat = None, pq = False, write_to_db = False, timelag = 5, 
@@ -10,32 +9,24 @@ def count_items(ts_end = None, ts_start = None, table = None, stat_col = None,
 
 	if table is None:
 		raise ValueError("No table given")
-	else:
-		if table.find("outbox") > 0:
-			index = "outbox_id"
-		elif table.find("inbox") > 0:
-			index = "inbox_id"
-		else:
-			raise ValueError("Unknown table %s" % table)
 
 	if ts_end is None:
 		ts = dt.now()
-		ts_end = ts - td(minutes = ts.minute % timelag, seconds = ts.second, 
+		ts_end = ts - td(minutes = ts.minute % 5, seconds = ts.second, 
 			microseconds = ts.microsecond)
 		
 		if ts_start is None:
-			ts_start = ts_end - td(minutes = timelag)
+			ts_start = ts_end - td(minutes = 5)
 	
 		ts_start = ts_start.strftime("%Y-%m-%d %H:%M:%S")
 		ts_end = ts_end.strftime("%Y-%m-%d %H:%M:%S")
 
 	print "Count %s items from %s to %s:" % (table, ts_start, ts_end)
 
-	query = ("select count(%s) from %s "
-		"where %s > (select max(%s) - %d from %s) "
-		"and ts_stored >= '%s' "
-		"and ts_stored < '%s' " ) % (index, table, index, index, backtrack, 
-		table, ts_start, ts_end)
+	query = ("select count(sms_id) from %s "
+		"where sms_id > (select max(sms_id) - %d from %s) "
+		"and timestamp > '%s' "
+		"and timestamp < '%s' " ) % (table, backtrack, table, ts_start, ts_end)
 
 	if stat_col is not None:
 		if stat is None:
@@ -49,11 +40,7 @@ def count_items(ts_end = None, ts_start = None, table = None, stat_col = None,
 	if pq:
 		print "Count query:", query
 
-	mc = mem.get_handle()
-	sc = mc.get("server_config")
-	smsdb_host = sc['resource']['smsdb']
-
-	rs = dbio.read(query, "ci", smsdb_host)
+	rs = dbio.querydatabase(query, "ci", "gsm")
 
 	try:
 		item_count = rs[0][0]
@@ -68,22 +55,20 @@ def count_items(ts_end = None, ts_start = None, table = None, stat_col = None,
 	# return item_count
 
 	if write_to_db:
-		table_dict = {"smsinbox_loggers": 1, "smsoutbox_loggers": 2,
-			"smsinbox_users": 3, "smsoutbox_users": 4}
+		table_dict = {"smsinbox": 1, "smsoutbox": 2}
 		stat_dict = {"undefined": 0, "read": 1, "unread": 2, "sent": 3, 
 			"unsent": 4, "fatal error": 5, "read-fail": 6, "read-success": 7}
 		col_dict = {"undefined": 0, "read_status": 1, "send_status": 2}
 
 		query = ("insert into item_count_logs (`table`, `ts_end`, `ts_start`, "
 			"`stat`, `stat_col`, `count`) values (%d, '%s', '%s', %d, %d, "
-			"%d) on duplicate key update `count` = values(`count`)" % ( 
-				table_dict[table], ts_end, ts_start, stat_dict[stat], 
+			"%d)" % (table_dict[table],	ts_end, ts_start, stat_dict[stat], 
 				col_dict[stat_col], item_count))
 
 		if pq:
 			print "Write query:", query
 
-		dbio.write(query, 'item_count', dbinstance)
+		dbio.commitToDb(query, 'item_count', dbinstance)
 
 def get_arguments():
     parser = argparse.ArgumentParser(description=("Run performance "
@@ -103,11 +88,8 @@ def get_arguments():
     parser.add_argument("-w", "--write_to_db", 
         help="write result to db", action="store_true")
     parser.add_argument("-q", "--print_query", 
-        help="print query", action="store_true")
-    parser.add_argument("-l", "--time_lag", 
-        help="time (mins) from ts_end to count items",
-        type=int)
-
+        help="print query", action="store_true")    
+    
     try:
         args = parser.parse_args()
 
@@ -127,7 +109,7 @@ def main():
 	args = get_arguments()
 
 	count_items(args.ts_end, args.ts_start, args.table, args.stat_col, 
-		args.stat, args.print_query, args.write_to_db, args.time_lag)
+		args.stat, args.print_query, args.write_to_db)
 
 if __name__ == "__main__":
     main()

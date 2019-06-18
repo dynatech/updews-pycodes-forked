@@ -133,7 +133,7 @@ def xyzplot(tsm_id,nid,time, OutputFP=''):
             axb1.axhline(accel.voltage_min[accel.node_id == nid_up].values[0],color='black', linestyle='--', linewidth=1)
             plt.title('batt', color='green',fontsize=8,verticalalignment='top')
         except:
-            print "v1"
+            print ("v1")
         
         plt.xlim([from_time,to_time])
         
@@ -175,7 +175,7 @@ def xyzplot(tsm_id,nid,time, OutputFP=''):
             axb2.axhline(accel.voltage_min[accel.node_id == nid].values[0],color='black', linestyle='--', linewidth=1)
             plt.title('batt', color='blue',fontsize=8,verticalalignment='top')
         except:
-            print "v1"
+            print ("v1")
         
         plt.xlim([from_time,to_time])
         
@@ -218,7 +218,7 @@ def xyzplot(tsm_id,nid,time, OutputFP=''):
             axb3.axhline(accel.voltage_min[accel.node_id == nid_down].values[0],color='black', linestyle='--', linewidth=1)
             plt.title('batt', color='red',fontsize=8,verticalalignment='top')
         except:
-            print "v1"
+            print ("v1")
         plt.xlim([from_time,to_time])
         
 #        for t in time:

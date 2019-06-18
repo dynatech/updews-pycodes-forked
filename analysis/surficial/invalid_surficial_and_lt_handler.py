@@ -1,7 +1,12 @@
 from datetime import datetime, timedelta
+import os
 import pandas as pd
+import sys
+
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
+from analysis.publicalerts import round_data_ts
 import analysis.querydb as qdb
-from publicalerts import round_data_ts
+
 
 def insert_l2_operational_trigger(ts, site_id):
     query = "INSERT INTO operational_triggers "
@@ -32,9 +37,8 @@ def delete_invalid_public_alert_entry(site_id, public_ts_start):
     query += "  ts = '%s' " %(public_ts_start)
     query += "  AND site_id = %s " %(site_id)
 #    query += "  AND pub_sym_id = %s " %(pub_sym_id)
-    result = qdb.execute_query(query)
-    
-    return result
+    qdb.execute_query(query)
+
 
 def get_valid_cotriggers(site_id, public_ts_start):
     query =  "SELECT "
@@ -128,7 +132,7 @@ def main(end_ts=datetime.now()):
                 qdb.print_out("=================");
                 qdb.print_out("Deleting public alert for site " + \
                               "%s (%s) at %s" %(site_code.upper(), site_id, public_ts_start))
-                public_alert = delete_invalid_public_alert_entry(site_id, public_ts_start)
+                delete_invalid_public_alert_entry(site_id, public_ts_start)
                 
                 # update ts_updated of latest entry for that site to current time
                 # using round_data_ts(datetime.now())
@@ -137,7 +141,7 @@ def main(end_ts=datetime.now()):
     qdb.print_out("=================");
     qdb.print_out('runtime = %s' %(datetime.now() - start_time))
     
-################################################################################
+###############################################################################
     
 if __name__ == "__main__":
     df = main()

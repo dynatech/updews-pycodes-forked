@@ -1,6 +1,11 @@
+import os
+import sys
 import unittest
+
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 from gsm import smsparser2
 import smsclass
+#------------------------------------------------------------------------------
 
 class TestModule(unittest.TestCase):
     sms = smsclass.SmsInbox(inbox_id=12345,msg="",
@@ -124,7 +129,7 @@ class TestModule(unittest.TestCase):
         with self.assertRaises(ValueError) as err_val:
             smsparser2.rain.rain_arq(self.sms)
 
-        print err_val.exception
+        print (err_val.exception)
 
         self.assertTrue("Number not registered" in err_val.exception)
 
@@ -135,7 +140,7 @@ class TestModule(unittest.TestCase):
         with self.assertRaises(ValueError) as err_val:
             smsparser2.rain.rain_arq(self.sms)
 
-        print err_val.exception
+        print (err_val.exception)
 
         self.assertTrue("Incomplete data" in err_val.exception)
 

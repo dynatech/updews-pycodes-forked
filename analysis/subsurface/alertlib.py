@@ -1,6 +1,7 @@
-import pandas as pd
-import numpy as np
 from datetime import timedelta
+import numpy as np
+import pandas as pd
+
 
 def round_time(date_time):
     # rounds time to 4/8/12 AM/PM
@@ -44,12 +45,15 @@ def validity_check(adj_node_ind, alert, i, vel2, vel3):
     #OUTPUT:
     #col_alert, col_node                             
 
-    if alert[alert.node_id == i]['disp_alert'].values[0] == alert[alert.node_id == i]['vel_alert'].values[0] or alert[alert.node_id == i]['vel_alert'].values[0] <= 0:
+    if alert[alert.node_id == i]['vel_alert'].values[0] <= 0:
         alert.loc[alert.node_id == i, 'col_alert'] = alert[alert.node_id == i]['node_alert'].values[0]
 
     else:
         for j in adj_node_ind:
             if alert[alert.node_id == j]['ND'].values[0]==0:
+                if j==adj_node_ind[-1]:
+                    alert.loc[alert.node_id == i, 'col_alert'] = -1
+                    break
                 continue
             else:
                 #comparing current adjacent node velocity with current node velocity
@@ -74,8 +78,6 @@ def validity_check(adj_node_ind, alert, i, vel2, vel3):
                     alert.loc[alert.node_id == i, 'col_alert'] = 0
                     break
 
-            if j==adj_node_ind[-1]:
-                alert.loc[alert.node_id == i, 'col_alert'] = -1
     
 def node_alert(disp_vel, colname, num_nodes, disp, vel2, vel3, k_ac_ax, lastgooddata, window, sc):
     valid_data = pd.to_datetime(window.end - timedelta(hours=3))

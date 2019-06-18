@@ -1,8 +1,9 @@
 from datetime import datetime, timedelta, time
-import numpy as np
 import os
 import pandas as pd
+import sys
 
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import querydb as qdb
 import techinfomaker as tech_info_maker
 

@@ -19,7 +19,7 @@ def main(alert):
     site = alert.site_code
     ts = alert.ts_last_retrigger
     
-    OutputFP=  os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')) #os.path.dirname(os.path.realpath(__file__))+'/{} {}/'.format(site, ts.strftime("%Y-%m-%d %H%M"))
+    OutputFP=  os.path.abspath(os.path.join(os.path.dirname(__file__), '../')) #os.path.dirname(os.path.realpath(__file__))+'/{} {}/'.format(site, ts.strftime("%Y-%m-%d %H%M"))
     OutputFP += '/node alert validation sandbox/' + '{} {}/'.format(site, ts.strftime("%Y-%m-%d %H%M")) 
     OutputFP=OutputFP.replace("\\", "/")
     
@@ -40,7 +40,7 @@ def main(alert):
     dfalert=qdb.get_db_dataframe(queryalert).groupby(['tsm_id','node_id']).first().reset_index()
     
     for i in dfalert.index:
-        print dfalert.tsm_name[i],dfalert.node_id[i],dfalert.ts[i]
+        print (dfalert.tsm_name[i],dfalert.node_id[i],dfalert.ts[i])
         
         xyz.xyzplot(dfalert.tsm_id[i],dfalert.node_id[i],dfalert.ts[i],OutputFP)
     return OutputFP
@@ -63,7 +63,7 @@ def send_messenger(OutputFP, alert):
     
     
     for a in os.listdir(OutputFP):
-        print a
+        print (a)
         client.sendLocalImage(OutputFP + a, message=None, thread_id=thread_id, thread_type=thread_type)
     
     client.logout()
@@ -78,7 +78,6 @@ query = ("SELECT stat_id, site_code,s.site_id, trigger_source, alert_symbol, "
         "(SELECT * FROM alert_status WHERE "
         "ts_set >= NOW()-interval 5 minute "
         "and ts_ack is NULL"
-#        "stat_id=970 "
         ") AS stat "
         "INNER JOIN "
         "operational_triggers AS op "
@@ -97,6 +96,6 @@ smsalert=qdb.get_db_dataframe(query)
 for i in smsalert.index:
     OutputFP=main(smsalert.loc[i])
     if not OutputFP:
-        print "nasend na!"
+        print ("nasend na!")
     else:
         send_messenger(OutputFP,smsalert.loc[i])

@@ -4,18 +4,19 @@ mpl.use('Agg')
 import matplotlib.pyplot as plt
 plt.ioff()
 
+import argparse
+from datetime import datetime
+import matplotlib.pyplot as plt
+from mpl_toolkits.basemap import Basemap
 import numpy as np
+import os
 import pandas as pd
 import sys
-from datetime import datetime
-from sqlalchemy import create_engine
-from mpl_toolkits.basemap import Basemap
-import matplotlib.pyplot as plt
-import os
+
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import dynadb.db as dynadb
-from gsm.smsparser2.smsclass import DataTable
+from gsm.gsmserver_dewsl3.sms_data import DataTable
 from volatile.memory import server_config
-import argparse
 
 
 def plot_basemap(ax,mag,eq_lat,eq_lon,plotsites,critdist):
@@ -137,7 +138,7 @@ def plot_map(output_path,sites,crits,mag, eq_lat, eq_lon,ts,critdist):
     critlons.append(critlons[-1])
     critlats.append(critlats[-1])
     
-    critlabels = pd.Series.tolist(plotcrits.site_code)
+#    critlabels = pd.Series.tolist(plotcrits.site_code)
     
     
     fig,ax = plt.subplots(1)
@@ -181,9 +182,9 @@ def get_arguments():
         args = parser.parse_args()
         return args        
     except IndexError:
-        print '>> Error in parsing arguments'
+        print ('>> Error in parsing arguments')
         error = parser.format_help()
-        print error
+        print (error)
         sys.exit()
 
     
@@ -212,12 +213,12 @@ def main():
             continue
          
         if mag < 4:
-            print "> Magnitude too small: %d" % (mag)
+            print ("> Magnitude too small: %d" % (mag))
             query = "update %s set processed = 1 where eq_id = %s " % (EVENTS_TABLE,i)
             dynadb.write(query=query, resource="sensor_data")
             continue
         else:
-            print "> Magnitude reached threshold: %d" % (mag)
+            print ("> Magnitude reached threshold: %d" % (mag))
 
         # magnitude is big enough to consider
         sites = dfg.apply(get_distance_to_eq,eq_lat=eq_lat,eq_lon=eq_lon)
@@ -229,13 +230,13 @@ def main():
         crits = sites[sites.dist<=critdist]
             
         if len(crits.site_id.values) < 1: 
-            print "> No affected sites. "
+            print ("> No affected sites. ")
             query = "update %s set processed = 1, critical_distance = %s where eq_id = %s" % (EVENTS_TABLE,critdist,i)
             dynadb.write(query=query, resource="sensor_data")
             continue
         else:
             #merong may trigger
-            print ">> Possible sites affected: %d" % (len(crits.site_id.values))
+            print (">> Possible sites affected: %d" % (len(crits.site_id.values)))
 
         crits['ts']  = ts
         crits['source'] = 'earthquake'
@@ -248,13 +249,13 @@ def main():
         op_trig = crits[['ts','site_id','trigger_sym_id','ts_updated']]
 
         # write to tables
-        dynadb.df_write(DataTable("operational_triggers", op_trig), resource="sensor_data")
-        dynadb.df_write(DataTable("earthquake_alerts", eq_a), resource="sensor_data")
+#        dynadb.df_write(DataTable("operational_triggers", op_trig), resource="sensor_data")
+#        dynadb.df_write(DataTable("earthquake_alerts", eq_a), resource="sensor_data")
         
         query = "update %s set processed = 1, critical_distance = %s where eq_id = %s " % (EVENTS_TABLE,critdist,i)
-        dynadb.write(query=query, resource="sensor_data")
+#        dynadb.write(query=query, resource="sensor_data")
 
-        print ">> Alert iniated.\n"
+        print (">> Alert iniated.\n")
         
         if not args.to_plot:
             # plot not enabled
@@ -269,4 +270,4 @@ def main():
                     
 if __name__ == "__main__":
     main()
-    print datetime.now()
+    print (datetime.now())

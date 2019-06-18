@@ -1,10 +1,13 @@
-import sys
-import re
-import pandas as pd
-import numpy as np
-import dynadb.db as dynadb
 from datetime import datetime as dt
+import numpy as np
+import os
+import pandas as pd
+import re
+import sys
+
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import smsclass
+#------------------------------------------------------------------------------
 
 EQ_SMS_PATTERNS = {
     "date": re.compile(r"\d{1,2}\w+201[6789]", re.IGNORECASE),

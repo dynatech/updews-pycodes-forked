@@ -114,7 +114,7 @@ def drift_detection(acc_id="",f_time=pd.to_datetime(dt.now()-td(weeks=12))):
     
     
     if days>=td(days=28):
-        print acc_id,dfw.ts[week-1]
+        print (acc_id,dfw.ts[week-1])
 
 #    df['mag'].plot()
 #    plt.savefig(OutputFP+col+nids+a+"-mag")
@@ -139,7 +139,7 @@ def main():
     for i in dfa.accel_id:
         try:
             drift_detection(acc_id=i)
-            print i
+            print (i)
         except TypeError:
             pass
         
@@ -150,4 +150,4 @@ def main():
 if __name__ == "__main__":
     start = dt.now()
     main()
-    print dt.now()-start
+    print (dt.now()-start)

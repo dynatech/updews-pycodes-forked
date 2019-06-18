@@ -1,7 +1,9 @@
-import memory
-from datetime import datetime as dt
+import configparser
 import os
-import ConfigParser
+import sys
+
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
+import volatile.memory as memory
 
 
 def set_cnf(file='', static_name=''):
@@ -11,7 +13,7 @@ def set_cnf(file='', static_name=''):
     if not os.path.isfile(cfile):
         raise ValueError("File does not exist: %s" % (cfile))
 
-    cnf = ConfigParser.ConfigParser()
+    cnf = configparser.ConfigParser(inline_comment_prefixes=';')
     cnf.read(cfile)
 
     config_dict = dict()
@@ -27,6 +29,12 @@ def set_cnf(file='', static_name=''):
 
             try:
                 options[opt] = cnf.getint(section, opt)
+                continue
+            except ValueError:
+                pass
+
+            try:
+                options[opt] = cnf.getfloat(section, opt)
                 continue
             except ValueError:
                 pass

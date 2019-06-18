@@ -2,15 +2,11 @@ from datetime import timedelta
 import numpy as np
 import os
 import pandas as pd
-import sys
+import sys 
 
-#include the path of outer folder for the python scripts searching
-path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-if not path in sys.path:
-    sys.path.insert(1,path)
-del path   
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
+import analysis.querydb as qdb
 
-import querydb as qdb
 
 def create_node_alerts():   
     query = "CREATE TABLE `node_alerts` ("

@@ -104,10 +104,7 @@ def main():
         "iompct = values(iompct), oomps = values(oomps), "
         "oompmt = values(oompmt), oompct = values(iompct)")
 
-    print(query)
-    db.write(query, "shiftsync", False, "local")
-    query2 = query.replace("ts,", "timestamp,")
-    db.write(query2, "shiftsync", False, "dynaslope")
+    db.write(query=query, resource="sensor_data")
 
 if __name__ == '__main__':
     main()

@@ -1,9 +1,13 @@
-import sys,re
-import pandas as pd
-import smsclass
 from datetime import datetime as dt
-import dynadb.db as dynadb
+import os
+import pandas as pd
+import re
+import sys
 
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
+import dynadb.db as dynadb
+import smsclass
+#------------------------------------------------------------------------------
 
 def check_number_in_users(num):
     """
@@ -102,7 +106,7 @@ def rain_arq(sms):
     line = sms.msg
     sender = sms.sim_num[-10:]
 
-    print 'ARQ Weather data: ' + line
+    print ('ARQ Weather data: ' + line)
 
     line = re.sub("(?<=\+) (?=\+)","NULL",line)
 
@@ -112,8 +116,8 @@ def rain_arq(sms):
     msgname = check_name_of_number(sender)
     if msgname:
         msgname = msgname.lower()
-        print ">> Number registered as", msgname
-        msgname_contact = msgname
+        print (">> Number registered as", msgname)
+#        msgname_contact = msgname
     else:
         raise ValueError("Number not registered {}".format(sender))
 
@@ -131,7 +135,7 @@ def rain_arq(sms):
     try:
         temp = linesplit[10]
         hum = linesplit[11]
-        flashp = linesplit[12]
+#        flashp = linesplit[12]
     except IndexError:
         raise ValueError("Incomplete data")
     txtdatetime = dt.strptime(linesplit[13],
@@ -150,7 +154,7 @@ def rain_arq(sms):
         df_data = smsclass.DataTable('rain_'+msgname,df_data)
         return df_data
     except ValueError:
-        print '>> Error writing query string.', 
+        print ('>> Error writing query string.', )
         return None
 
 
@@ -179,20 +183,20 @@ def v3(sms):
     #msg = message
     line = re.sub("[^A-Z0-9,\/:\.\-]","",line)
 
-    print 'Weather data: ' + line
+    print ('Weather data: ' + line)
     
     if len(line.split(',')) > 9:
         line = re.sub(",(?=$)","",line)
     line = re.sub("(?<=,)(?=(,|$))","NULL",line)
     line = re.sub("(?<=,)NULL(?=,)","0.0",line)
     # line = re.sub("(?<=,).*$","NULL",line)
-    print "line:", line
+    print ("line:", line)
 
     try:
     
         logger_name = check_name_of_number(sender)
         logger_model = check_logger_model(logger_name)
-        print logger_name,logger_model
+        print (logger_name,logger_model)
         if logger_model in [23,24,25,26]:
             msgtable = logger_name
         else:
@@ -207,21 +211,21 @@ def v3(sms):
         
         # data = items.group(3)
         rain = line.split(",")[6]
-        print line
+        print (line)
 
         csq = line.split(",")[8]
 
 
     except (IndexError, AttributeError) as e:
-        print '\n>> Error: Rain message format is not recognized'
-        print line
+        print ('\n>> Error: Rain message format is not recognized')
+        print (line)
         return False
     except ValueError:
-        print '\n>> Error: One of the values not correct'
-        print line
+        print ('\n>> Error: One of the values not correct')
+        print (line)
         return False
     except KeyboardInterrupt:
-        print '\n>>Error: Weather message format unknown ' + line
+        print ('\n>>Error: Weather message format unknown ' + line)
         return False
 
     try:
@@ -238,6 +242,6 @@ def v3(sms):
             ,df_data)
         return df_data         
     except:
-        print '>> Error writing weather data to database. ' +  line
+        print ('>> Error writing weather data to database. ' +  line)
         return
     

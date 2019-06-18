@@ -1,6 +1,10 @@
+import os
+import sys
+
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import unittest
-from volatile import config
-from volatile import memory
+import config
+import memory
 
 class TestModule(unittest.TestCase):
 

@@ -2,25 +2,25 @@
 end-of-event report plotting tools
 """
 
-##### IMPORTANT matplotlib declarations must always be FIRST to make sure that
-##### matplotlib works with cron-based automation
-import matplotlib as mpl
-mpl.use('Agg')
-import matplotlib.pyplot as plt
-import matplotlib.dates as pltdates
-
 from datetime import timedelta
+import matplotlib as mpl
+import matplotlib.dates as pltdates
+import matplotlib.pyplot as plt
 import numpy as np
+import os
 import pandas as pd
 #import seaborn
+import sys
 
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import dynadb.db as db
-import analysis.subsurface.plotterlib as plotter
-import analysis.subsurface.proc as proc
 import analysis.querydb as qdb
 import analysis.rainfall.rainfall as rm
 import analysis.rainfall.rainfallalert as ra
+import analysis.subsurface.plotterlib as plotter
+import analysis.subsurface.proc as proc
 import analysis.subsurface.rtwindow as rtw
+
 
 plt.ion()
 

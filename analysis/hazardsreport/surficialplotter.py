@@ -5,11 +5,11 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as md
 plt.ion()
 
+import matplotlib.lines as mlines
+from mpl_toolkits.axes_grid.anchored_artists import AnchoredText
+import numpy as np
 import os
 import pandas as pd
-import numpy as np
-from mpl_toolkits.axes_grid.anchored_artists import AnchoredText
-import matplotlib.lines as mlines
 import time
 
 #### Global Parameters
@@ -65,8 +65,8 @@ def onpress(event):
         color = tableau20[6]
     elif event.key == 'q':
         marker_history_edits = RemoveDuplicatesAndNone(marker_history_edits)
-        print "\nCurrent edits:\n"
-        print marker_history_edits
+        print ("\nCurrent edits:\n")
+        print (marker_history_edits)
     elif event.key == 'r':
         for axes in ax.figure.get_axes():
             for line in axes.get_lines():
@@ -74,7 +74,7 @@ def onpress(event):
                     line.remove()
         marker_history_edits = pd.DataFrame(columns = ['ts','site_code','marker_name','operation','data_source'])
         ax.figure.canvas.draw()
-        print "\nEDITS have been CLEARED"
+        print ("\nEDITS have been CLEARED")
     elif event.key == 'enter':
         cur_history = pd.read_csv(data_path + '/'+history_csv_file +'.csv')
         cur_history = RemoveDuplicatesAndNone(cur_history)
@@ -83,14 +83,14 @@ def onpress(event):
                 cur_history = RemoveDuplicatesAndNone(cur_history)
                 marker_history_edits = RemoveDuplicatesAndNone(marker_history_edits)
                 cur_history = cur_history.append(marker_history_edits)
-                print "\n\n"
-                print marker_history_edits
+                print ("\n\n")
+                print (marker_history_edits)
                 cur_history[['ts','site_code','marker_name','operation','data_source','previous_name']].to_csv(mhcsv, header = True,index = False)
                 mhcsv.close()
             marker_history_edits = pd.DataFrame(columns = ['ts','site_code','marker_name','operation','data_source'])
-            print "^^^ the edits above have been successfuly saved!"
+            print ("^^^ the edits above have been successfuly saved!")
         except:
-            print "\n\nError in saving edits, check csv file."
+            print ("\n\nError in saving edits, check csv file.")
     elif event.key == 'd':
         operation = 'discard'
         color = tableau20[14]
@@ -134,20 +134,20 @@ def onclick(event):
     
     ### Print current operation
     if operation == 'mute':
-        print "\nMUTE data point"
+        print ("\nMUTE data point")
     elif operation == 'reposition':
-        print "\nREPOSITION data point"
+        print ("\nREPOSITION data point")
     elif operation == 'discard':
-        print "\nDELETE edits for data point"
+        print ("\nDELETE edits for data point")
 #    elif operation == 'l2':
 #        print "\nSET L2 alert for data point"
 #    elif operation == 'l3':
 #        print "\nSET L3 alert for data point"
     else:
-        print "\nData point"      
+        print ("\nData point"      )
     
     ### Print data point of interest
-    print '\ntimestamp: {}\nsite code: {}\nmarker name: {}\ndata source: {}\n\n'.format(pd.to_datetime(xdata[ind][0]).strftime('%m/%d/%Y %H:%M:%S'),label[4:7],label[8:],label[:3])
+    print ('\ntimestamp: {}\nsite code: {}\nmarker name: {}\ndata source: {}\n\n'.format(pd.to_datetime(xdata[ind][0]).strftime('%m/%d/%Y %H:%M:%S'),label[4:7],label[8:],label[:3]))
     
     ### Write operation to marker history edits queue
     if operation in ['mute','reposition','discard']:
@@ -201,8 +201,8 @@ def onpress_edit(event):
         color = tableau20[6]
     elif event.key == 'q':
         marker_history_edits = RemoveDuplicatesAndNone(marker_history_edits)
-        print "\nCurrent edits:\n"
-        print marker_history_edits
+        print ("\nCurrent edits:\n")
+        print (marker_history_edits)
     elif event.key == 'r':
         for axes in ax.figure.get_axes():
             for line in axes.get_lines():
@@ -210,7 +210,7 @@ def onpress_edit(event):
                     line.remove()
         marker_history_edits = pd.DataFrame(columns = ['ts','site_code','marker_name','operation','data_source'])
         ax.figure.canvas.draw()
-        print "\nEDITS have been CLEARED"
+        print ("\nEDITS have been CLEARED")
     elif event.key == 'enter':
         cur_history = pd.read_csv(data_path + '/'+history_csv_file +'.csv')
         cur_history = RemoveDuplicatesAndNone(cur_history)
@@ -220,14 +220,14 @@ def onpress_edit(event):
                 cur_history = cur_history.append(marker_history_edits,ignore_index = True)
                 cur_history = RemoveDuplicatesAndNone(cur_history)
                 cur_history = cur_history[cur_history.operation != 'delete']
-                print "\n\n"
-                print marker_history_edits
+                print ("\n\n")
+                print (marker_history_edits)
                 cur_history[['ts','site_code','marker_name','operation','data_source','previous_name']].to_csv(mhcsv, header = True,index = False)
                 mhcsv.close()
             marker_history_edits = pd.DataFrame(columns = ['ts','site_code','marker_name','operation','data_source'])
-            print "^^^ the edits above have been successfully saved."
+            print ("^^^ the edits above have been successfully saved.")
         except:
-            print "\n\nError in saving edits, check csv file."
+            print ("\n\nError in saving edits, check csv file.")
     elif event.key == 'delete':
         operation = 'delete'
         color = tableau20[14]
@@ -261,17 +261,17 @@ def onclick_edit(event):
     
     
     if operation == 'mute':
-        print "\nMUTE data point"
+        print ("\nMUTE data point")
     elif operation == 'reposition':
-        print "\nREPOSITION data point"
+        print ("\nREPOSITION data point")
     elif operation == 'delete':
-        print "\nDELETE history for data point"
+        print ("\nDELETE history for data point")
     elif operation == 'discard':
-        print "\nDISCARD edits for data point"
+        print ("\nDISCARD edits for data point")
     else:
-        print "\nData point"    
+        print ("\nData point")
     
-    print '\ntimestamp: {}\nsite code: {}\nmarker name: {}\ndata source: {}\n\n'.format(pd.to_datetime(xdata[ind][0]).strftime('%m/%d/%Y %H:%M:%S'),label[4:7],label[8:-1],label[:3])
+    print ('\ntimestamp: {}\nsite code: {}\nmarker name: {}\ndata source: {}\n\n'.format(pd.to_datetime(xdata[ind][0]).strftime('%m/%d/%Y %H:%M:%S'),label[4:7],label[8:-1],label[:3]))
 
     marker_history_edits.loc[index,['ts']] = pd.to_datetime(xdata[ind][0])
     marker_history_edits.loc[index,['data_source']] = label[0:3]
@@ -347,8 +347,8 @@ def onpress_cumdisp(event):
         color = cur_color
     elif event.key == 'q':
         marker_history_edits = RemoveDuplicatesAndNone(marker_history_edits)
-        print "\nCurrent edits:\n"
-        print marker_history_edits
+        print ("\nCurrent edits:\n")
+        print (marker_history_edits)
     elif event.key == 'r':
         #### Remove dummy points
         for axes in ax.figure.get_axes():
@@ -365,7 +365,7 @@ def onpress_cumdisp(event):
                     
         marker_history_edits = pd.DataFrame(columns = ['ts','site_code','marker_name','operation','data_source'])
         ax.figure.canvas.draw()
-        print "\nEDITS have been CLEARED"
+        print ("\nEDITS have been CLEARED")
     elif event.key == 'enter':
         cur_history = pd.read_csv(data_path + '/'+history_csv_file +'.csv')
         cur_history = RemoveDuplicatesAndNone(cur_history)
@@ -377,14 +377,14 @@ def onpress_cumdisp(event):
                 cur_history = cur_history.append(marker_history_edits,ignore_index = True)
                 cur_history = RemoveDuplicatesAndNone(cur_history)
                 cur_history = cur_history[cur_history.operation != 'delete']
-                print "\n\n"
-                print marker_history_edits
+                print ("\n\n")
+                print (marker_history_edits)
                 cur_history[['ts','site_code','marker_name','operation','data_source','previous_name']].to_csv(mhcsv, header = True,index = False)
                 mhcsv.close()
             marker_history_edits = pd.DataFrame(columns = ['ts','site_code','marker_name','operation','data_source'])
-            print "^^^the edits above have been successfully saved!"
+            print ("^^^the edits above have been successfully saved!")
         except:
-            print "\n\nError in saving, check csv file."
+            print ("\n\nError in saving, check csv file.")
     elif event.key == 'z':
         operation = 'l2'
         color = tableau20[(tableau20.index(cur_color) + 12)%20]
@@ -425,22 +425,22 @@ def onclick_cumdisp(event):
     
     ### Print the operation to be performed
     if operation == 'mute':
-        print "\nMUTE data point"
+        print ("\nMUTE data point")
     elif operation == 'reposition':
-        print "\nREPOSITION data point"
+        print ("\nREPOSITION data point")
     elif operation == 'discard':
-        print "\nDISCARD edits for data point"
+        print ("\nDISCARD edits for data point")
     elif operation == 'delete':
-        print "\nDELETE history for data point"
+        print ("\nDELETE history for data point")
     elif operation == 'l2':
-        print "\nSET L2 history for data point"
+        print ("\nSET L2 history for data point")
     elif operation == 'l3':
-        print "\nSET L3 history for data point"
+        print ("\nSET L3 history for data point")
     else:
-        print "\nData point"
+        print ("\nData point")
     
     ### Print target data point
-    print '\ntimestamp: {}\nsite code: {}\nmarker name: {}\ndata source: {}\n\n'.format(pd.to_datetime(xdata[ind][0]).strftime('%m/%d/%Y %H:%M:%S'),label[4:7],label[8:],label[:3])
+    print ('\ntimestamp: {}\nsite code: {}\nmarker name: {}\ndata source: {}\n\n'.format(pd.to_datetime(xdata[ind][0]).strftime('%m/%d/%Y %H:%M:%S'),label[4:7],label[8:],label[:3]))
     
     ### Insert history to markerhistory file queue
     if operation in ['mute','reposition','discard','l2','l3','delete']:
@@ -557,11 +557,11 @@ def SurficialDataPlot(surficial_csv_file,history_csv_file,mute = True):
     sites_to_plot = np.unique(surficial_data.site_code.values)
     markers_to_plot = []
     
-    print "Plotting {} site/s: {}\n".format(len(sites_to_plot),', '.join(sites_to_plot))    
+    print ("Plotting {} site/s: {}\n".format(len(sites_to_plot),', '.join(sites_to_plot))    )
     
     for site in sites_to_plot:
         markers = np.unique(surficial_data.loc[surficial_data.site_code == site,['marker_name']].values)
-        print "Plotting {} marker/s for site {}: {}".format(len(markers),site,', '.join(markers))
+        print ("Plotting {} marker/s for site {}: {}".format(len(markers),site,', '.join(markers)))
         markers_to_plot.append(markers)
     
     #### Set the number of plots per page
@@ -675,11 +675,11 @@ def CumulativeDisplacementPlot(surficial_csv_file,history_csv_file,reposition = 
     sites_to_plot = np.unique(surficial_data.site_code.values)
     markers_to_plot = []
     
-    print "Plotting {} site/s: {}\n".format(len(sites_to_plot),', '.join(sites_to_plot))    
+    print ("Plotting {} site/s: {}\n".format(len(sites_to_plot),', '.join(sites_to_plot))    )
     
     for site in sites_to_plot:
         markers = np.unique(surficial_data.loc[surficial_data.site_code == site,['marker_name']].values)
-        print "Plotting {} marker/s for site {}: {}".format(len(markers),site,', '.join(markers))
+        print ("Plotting {} marker/s for site {}: {}".format(len(markers),site,', '.join(markers)))
         markers_to_plot.append(markers)
     
     #### Set the number of plots per page
@@ -839,11 +839,11 @@ def ViewHistory(surficial_csv_file,history_csv_file):
     sites_to_plot = np.unique(surficial_data.site_code.values)
     markers_to_plot = []
     
-    print "Plotting {} site/s: {}\n".format(len(sites_to_plot),', '.join(sites_to_plot))    
+    print ("Plotting {} site/s: {}\n".format(len(sites_to_plot),', '.join(sites_to_plot))    )
     
     for site in sites_to_plot:
         markers = np.unique(surficial_data.loc[surficial_data.site_code == site,['marker_name']].values)
-        print "Plotting {} marker/s for site {}: {}".format(len(markers),site,', '.join(markers))
+        print ("Plotting {} marker/s for site {}: {}".format(len(markers),site,', '.join(markers)))
         markers_to_plot.append(markers)
     
     #### Set the number of plots per page
@@ -979,11 +979,11 @@ def PrintCumulativeDisplacementPlot(surficial_csv_file,history_csv_file,fig_heig
     sites_to_plot = np.unique(surficial_data.site_code.values)
     markers_to_plot = []
     
-    print "Plotting {} site/s: {}\n".format(len(sites_to_plot),', '.join(sites_to_plot))    
+    print ("Plotting {} site/s: {}\n".format(len(sites_to_plot),', '.join(sites_to_plot))    )
     
     for site in sites_to_plot:
         markers = np.unique(surficial_data.loc[surficial_data.site_code == site,['marker_name']].values)
-        print "Plotting {} marker/s for site {}: {}".format(len(markers),site,', '.join(markers))
+        print ("Plotting {} marker/s for site {}: {}".format(len(markers),site,', '.join(markers)))
         markers_to_plot.append(markers)
         
     
@@ -1170,8 +1170,8 @@ def PrintCumulativeDisplacementPlot(surficial_csv_file,history_csv_file,fig_heig
                 #### Save fig
                 plt.savefig('{}/CDP plot for {} page {} {} by {}.png'.format(data_path,site,fig_num,fig_width,fig_height),dpi=320, facecolor='w', edgecolor='w',orientation='landscape',mode='w')
                 
-                print "\n\nSUCCESS!"
-                print "Plot saved as: {}/CDP plot for {} page {} {} by {}.png".format(data_path,site,fig_num,fig_width,fig_height)
+                print ("\n\nSUCCESS!")
+                print ("Plot saved as: {}/CDP plot for {} page {} {} by {}.png".format(data_path,site,fig_num,fig_width,fig_height))
                 
                 if marker != markers[-1]:
                     fig_num += 1
@@ -1234,12 +1234,12 @@ def PrintCumulativeDisplacementPlot(surficial_csv_file,history_csv_file,fig_heig
 #####################################
 ############    MAIN    #############
 #####################################
-print "\n\n########################################################################"
-print "##      Surficial Marker Measurements Plotter and History Writer      ##"
-print "########################################################################\n"
+print ("\n\n########################################################################")
+print ("##      Surficial Marker Measurements Plotter and History Writer      ##")
+print ("########################################################################\n")
 
 while True:
-    sur_input = raw_input("Input surficial data csv filename: ")
+    sur_input = input("Input surficial data csv filename: ")
     
     if sur_input[-4:] == '.csv':
         surficial_csv_file = sur_input[:-4]
@@ -1253,10 +1253,10 @@ while True:
         df = pd.read_csv(data_path + '/'+surficial_csv_file +'.csv')
         break
     except:
-        print "Error in the filename/directory."
+        print ("Error in the filename/directory.")
 
 while True:
-    his_input = raw_input("Input marker history data csv filename: ")
+    his_input = input("Input marker history data csv filename: ")
     
     if his_input[-4:] == '.csv':
         history_csv_file = his_input[:-4]
@@ -1269,29 +1269,29 @@ while True:
         df = pd.read_csv(data_path + '/'+history_csv_file +'.csv')
         break
     except:
-        print "Error in the filename/directory."
+        print ("Error in the filename/directory.")
 
 while True:
     
-    print "\n\n#################################################"
-    print "#####   Choose among the following modes:   #####"
-    print "#################################################"
-    print "\n\nSMP (Surficial Measurements Plot) - marker measurements plotted versus timestamp, SMS & DRS data are discriminated.\n"
-    print "CDP (Cumulative Displacement Plot) - cumulative displacement plotted versus timestamp."
-    print "\nMHP (Marker History Plot) - marker measurements plotted versus timestamp, SMS & DRS as well as historical data points are discriminated."
-    print "\nPCDP (Print Cumulative Displacement Plot) - print the finished cumulative displacement plot.\n\n"
+    print ("\n\n#################################################")
+    print ("#####   Choose among the following modes:   #####")
+    print ("#################################################")
+    print ("\n\nSMP (Surficial Measurements Plot) - marker measurements plotted versus timestamp, SMS & DRS data are discriminated.\n")
+    print ("CDP (Cumulative Displacement Plot) - cumulative displacement plotted versus timestamp.")
+    print ("\nMHP (Marker History Plot) - marker measurements plotted versus timestamp, SMS & DRS as well as historical data points are discriminated.")
+    print ("\nPCDP (Print Cumulative Displacement Plot) - print the finished cumulative displacement plot.\n\n")
     
-    mode = raw_input("(SMP, CDP, MHP, PCDP):")
+    mode = input("(SMP, CDP, MHP, PCDP):")
     mode = mode.upper()
     
     if mode in ['SMP','CDP','MHP','PCDP']:
         break
     else:
-        print "Choose from the following options (SMP, CDP, MHP,PCDP):"
+        print ("Choose from the following options (SMP, CDP, MHP,PCDP):")
         continue
 
 if mode == 'SMP' or mode == 'CDP':
-    mute = raw_input("Hide muted points (Y/N)? (default is Y):")
+    mute = input("Hide muted points (Y/N)? (default is Y):")
     if mute.upper() == 'Y':
         mute = True
     elif mute.upper() == 'N':
@@ -1300,7 +1300,7 @@ if mode == 'SMP' or mode == 'CDP':
         mute = True
 
     if mode == 'CDP':
-        reposition = raw_input("Set displacement to zero for repositioned points (Y/N)? (default is Y):")
+        reposition = input("Set displacement to zero for repositioned points (Y/N)? (default is Y):")
         if reposition.upper() == 'Y':
             reposition = True
         elif reposition.upper() == 'N':
@@ -1310,30 +1310,30 @@ if mode == 'SMP' or mode == 'CDP':
             
 if mode == 'PCDP':
     
-    fig_height = raw_input("Input desired fig height (Recommended ~ 11 inches):")
+    fig_height = input("Input desired fig height (Recommended ~ 11 inches):")
     
     try:
         fig_height = float(fig_height)
     except:
         fig_height = 11
     
-    fig_width = raw_input("Input desired fig height (Recommended ~ 8.5 inches):")
+    fig_width = input("Input desired fig height (Recommended ~ 8.5 inches):")
     
     try:
         fig_width = float(fig_width)
     except:
         fig_width = 8.50
     
-    num_plots_per_page = raw_input("Input desired number of plots per page (Recommended ~ 6 plots per page):")
+    num_plots_per_page = input("Input desired number of plots per page (Recommended ~ 6 plots per page):")
     
     try:
         num_plots_per_page = int(num_plots_per_page)
     except:
         num_plots_per_page = 6
     
-print "\n\nEntering {} mode".format(mode)
+print ("\n\nEntering {} mode".format(mode))
 for i in range(10):
-    print "."
+    print (".")
     time.sleep(0.1)
 
 if mode == 'SMP':
@@ -1346,21 +1346,21 @@ elif mode == 'PCDP':
     PrintCumulativeDisplacementPlot(surficial_csv_file,history_csv_file,fig_height,fig_width,num_plots_per_page)
 
 if mode != 'PCDP':
-    print "\n\n----------------------------------------------------------"
-    print "General commands while in interactive mode:\n"
-    print "Alt + Click: Propose to MUTE the datapoint"
-    print "Ctrl + Click: Propose to REPOSITION the datapoint"
+    print ("\n\n----------------------------------------------------------")
+    print ("General commands while in interactive mode:\n")
+    print ("Alt + Click: Propose to MUTE the datapoint")
+    print ("Ctrl + Click: Propose to REPOSITION the datapoint")
     if mode == 'MHP' or mode == 'CDP':
-        print "Delete + Click: Propose to DELETE history of the data point"
+        print ("Delete + Click: Propose to DELETE history of the data point")
         if mode == 'CDP':
-            print "Z + Click: Propose to SET L2 as history of the data point"
-            print "X + CLick: Propose to SET L3 as history of the data point"
-    print "D + Click: UNDO any edit to the datapoint"
-    print "R: Refresh all proposed history"
-    print "Q: View all pending edits"
-    print "C: Reset view"
-    print "S: Save figure (current view)"
-    print "Enter: Save & write edits to history csv file"
-    print "----------------------------------------------------------"
+            print ("Z + Click: Propose to SET L2 as history of the data point")
+            print ("X + CLick: Propose to SET L3 as history of the data point")
+    print ("D + Click: UNDO any edit to the datapoint")
+    print ("R: Refresh all proposed history")
+    print ("Q: View all pending edits")
+    print ("C: Reset view")
+    print ("S: Save figure (current view)")
+    print ("Enter: Save & write edits to history csv file")
+    print ("----------------------------------------------------------")
     
     

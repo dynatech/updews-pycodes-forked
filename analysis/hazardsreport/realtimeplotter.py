@@ -1,23 +1,23 @@
-##### IMPORTANT matplotlib declarations must always be FIRST
-##### to make sure that matplotlib works with cron-based automation
-import matplotlib as mpl
-mpl.use('Agg')
-import matplotlib.pyplot as plt
-plt.ion()
-
-import pandas as pd
 from datetime import date, time, datetime, timedelta
+import os
+import pandas as pd
+import sys
 
-import analysis.subsurface.rtwindow as rtw
+from pandas.plotting import register_matplotlib_converters
+register_matplotlib_converters()
+
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import analysis.querydb as qdb
-import analysis.subsurface.proc as proc
 import analysis.subsurface.plotterlib as plotter
+import analysis.subsurface.proc as proc
+import analysis.subsurface.rtwindow as rtw
+
 
 def main():
 
     # asks for tsm name
     while True:
-        props = qdb.get_tsm_list(raw_input('sensor name: '))
+        props = qdb.get_tsm_list(input('sensor name: '))
         if len(props) == 1:
             break
         else:
@@ -29,7 +29,7 @@ def main():
     # asks if to plot from date activated (or oldest data) to most recent data
     while True:
         input_text = 'plot from start to end of data? (Y/N): '
-        plot_all_data = raw_input(input_text).lower()
+        plot_all_data = input(input_text).lower()
         if plot_all_data == 'y' or plot_all_data == 'n':
             break
 
@@ -37,7 +37,7 @@ def main():
     if plot_all_data == 'n':
         while True:
             input_text = 'specify end timestamp of monitoring window? (Y/N): '
-            test_specific_time = raw_input(input_text).lower()
+            test_specific_time = input(input_text).lower()
             if test_specific_time == 'y' or test_specific_time == 'n':
                 break
 
@@ -46,10 +46,10 @@ def main():
             while True:
                 try:
                     input_text = 'plot end timestamp (format: 2016-12-31 23:30): '
-                    end = pd.to_datetime(raw_input(input_text))
+                    end = pd.to_datetime(input(input_text))
                     break
                 except:
-                    print 'invalid datetime format'
+                    print ('invalid datetime format')
                     continue
         else:
             end = datetime.now()
@@ -60,7 +60,7 @@ def main():
         # asks if to plot with 3-day monitoring window
         while True:
             input_text = 'plot with 3-day monitoring window? (Y/N): '
-            three_day_window = raw_input(input_text).lower()
+            three_day_window = input(input_text).lower()
             if three_day_window == 'y' or three_day_window == 'n':
                 break
         
@@ -69,7 +69,7 @@ def main():
             while True:
                 input_text = 'start of monitoring window (in days) '
                 input_text += 'or datetime (format: 2016-12-31 23:30): '
-                start = raw_input(input_text)
+                start = input(input_text)
                 try:
                     window.start = window.end - timedelta(int(start))
                     break
@@ -78,7 +78,7 @@ def main():
                         window.start = pd.to_datetime(start)
                         break
                     except:
-                        print 'datetime format or integer only'
+                        print ('datetime format or integer only')
                         continue
                     
             # computes offsetstart from given start timestamp
@@ -129,7 +129,7 @@ def main():
         while True:
             try:
                 input_text = 'interval between column position plots, in days: '
-                col_pos_interval = int(raw_input(input_text))
+                col_pos_interval = int(input(input_text))
                 break
             except:
                 qdb.print_out('enter an integer')
@@ -143,7 +143,7 @@ def main():
         # asks if to plot all legends
         while True:
             input_text = 'show all legends in column position plot? (Y/N): '
-            show_all_legend = raw_input(input_text).lower()
+            show_all_legend = input(input_text).lower()
             if show_all_legend == 'y' or show_all_legend == 'n':        
                 break
 
@@ -153,7 +153,7 @@ def main():
         elif show_all_legend == 'n':
             while True:
                 try:
-                    show_part_legend = int(raw_input('every nth legend to show: '))
+                    show_part_legend = int(input('every nth legend to show: '))
                     if show_part_legend <= sc['subsurface']['num_col_pos']:
                         break
                     else:
@@ -167,7 +167,7 @@ def main():
                     continue
                 
         while True:
-            plotvel = raw_input('plot velocity? (Y/N): ').lower()
+            plotvel = input('plot velocity? (Y/N): ').lower()
             if plotvel == 'y' or plotvel == 'n':        
                 break
             
@@ -184,9 +184,10 @@ def main():
 
     # asks which point to fix in column position plots
     while True:
-        input_text = 'column fix for colpos (top/bottom); '
+        input_text = 'column fix for colpos (top/bottom). '
+        input_text += 'press enter to skip; '
         input_text += 'default for monitoring is fix bottom: '
-        column_fix = raw_input(input_text).lower()
+        column_fix = input(input_text).lower()
         if column_fix in ['top', 'bottom', '']:
             break
         
@@ -197,17 +198,17 @@ def main():
     # mirror xz and/or xy colpos
     while True:
         try:
-            mirror_xz = bool(int(raw_input('mirror image of xz colpos? (0/1): ')))
+            mirror_xz = bool(int(input('mirror image of xz colpos? (0/1): ')))
             break
         except:
-            print 'Invalid. 1 for mirror image of xz colpos else 0'
+            print ('Invalid. 1 for mirror image of xz colpos else 0')
             continue
     while True:
         try:
-            mirror_xy = bool(int(raw_input('mirror image of xy colpos? (0/1): ')))
+            mirror_xy = bool(int(input('mirror image of xy colpos? (0/1): ')))
             break
         except:
-            print 'Invalid. 1 for mirror image of xy colpos else 0'
+            print ('Invalid. 1 for mirror image of xy colpos else 0')
             continue
 
     data = proc.proc_data(tsm_props, window, sc, realtime=True, comp_vel=plotvel)
@@ -220,4 +221,4 @@ def main():
 if __name__ == "__main__":
     start = datetime.now()
     main()
-    print 'runtime =', str(datetime.now() - start)
+    print ('runtime =', str(datetime.now() - start))

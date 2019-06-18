@@ -31,13 +31,8 @@ from datetime import datetime, date, time, timedelta
 import os
 import sys
 
-#include the path of "Analysis" folder for the python scripts searching
-path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-if not path in sys.path:
-    sys.path.insert(1,path)
-del path
-
-import querydb as qdb
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
+import analysis.querydb as qdb
 
 
 class RTWindow:

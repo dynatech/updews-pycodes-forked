@@ -1,9 +1,11 @@
 from datetime import datetime, timedelta
 import memcache
+import os
 import pandas.io.sql as psql
 import pandas as pd
 import platform
 from sqlalchemy import create_engine
+import sys
 
 curOS = platform.system()
 
@@ -12,10 +14,12 @@ if curOS == "Windows":
 elif curOS == "Linux":
     import pymysql as mysqlDriver
 
-import dynadb.db as db
-import gsm.smsparser2.smsclass as sms
-import volatile.memory as mem
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 
+import dynadb.db as db
+import gsm.gsmserver_dewsl3.sms_data as sms
+import volatile.memory as mem
+#------------------------------------------------------------------------------
 
 def print_out(line):
     """Prints line.
@@ -24,7 +28,7 @@ def print_out(line):
     
     sc = mem.server_config()
     if sc['print']['print_stdout']:
-        print line
+        print (line)
 
 
 def does_table_exist(table_name, hostdb='local'):
@@ -183,7 +187,9 @@ def get_raw_rain_data(gauge_name, from_time='2010-01-01', to_time=""):
 
     df = db.df_read(query)
     if df is not None:
-        df['ts'] = pd.to_datetime(df['ts'])
+        df.loc[:, 'ts'] = pd.to_datetime(df['ts'])
+    else:
+        df = pd.DataFrame(columns = ['ts', 'rain'])
     
     return df
 
@@ -338,6 +344,136 @@ def get_raw_accel_data(tsm_id='',tsm_name = "", from_time = "", to_time = "",
     else:
         return query
 
+def write_op_trig(site_id, end):
+
+    query =  "SELECT sym.alert_level, trigger_sym_id FROM ( "
+    query += "  SELECT alert_level FROM "
+    query += "    (SELECT * FROM tsm_alerts "
+    query += "    where ts <= '%s' " %end
+    query += "    and ts_updated >= '%s' " %end
+    query += "    ) as ta "
+    query += "  INNER JOIN "
+    query += "    (SELECT tsm_id FROM tsm_sensors "
+    query += "    where site_id = %s " %site_id
+    query += "    ) as tsm "
+    query += "  on ta.tsm_id = tsm.tsm_id "
+    query += "  ) AS sub "
+    query += "INNER JOIN "
+    query += "  (SELECT trigger_sym_id, alert_level FROM "
+    query += "    operational_trigger_symbols AS op "
+    query += "  INNER JOIN "
+    query += "    (SELECT source_id FROM trigger_hierarchies "
+    query += "    WHERE trigger_source = 'subsurface' "
+    query += "    ) AS trig "
+    query += "  ON op.source_id = trig.source_id "
+    query += "  ) as sym "
+    query += "on sym.alert_level = sub.alert_level"
+    df = db.df_read(query)
+    
+    trigger_sym_id = df.sort_values('alert_level', ascending=False)['trigger_sym_id'].values[0]
+        
+    operational_trigger = pd.DataFrame({'ts': [end], 'site_id': [site_id], 'trigger_sym_id': [trigger_sym_id], 'ts_updated': [end]})
+    
+    alert_to_db(operational_trigger, 'operational_triggers')
+
+########################## SURFICIAL-RELATED QUERIES ##########################
+
+def create_marker_alerts_table():
+    """Creates the marker alerts table"""
+    
+    query =  "CREATE TABLE IF NOT EXISTS `marker_alerts` ("
+    query += "  `ma_id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT, "
+    query += "  `data_id` SMALLINT(6) UNSIGNED, "
+    query += "  `displacement` FLOAT, "
+    query += "  `time_delta` FLOAT, "
+    query += "  `alert_level` TINYINT(1), "
+    query += "  PRIMARY KEY (ma_id), "
+    query += "  INDEX `fk_marker_alerts_marker_data_idx` (`data_id` ASC), "
+    query += "  CONSTRAINT `fk_marker_alerts_marker_data` "
+    query += "    FOREIGN KEY (`data_id`) "
+    query += "    REFERENCES `marker_data` (`data_id`) "
+    query += "    ON DELETE CASCADE "
+    query += "    ON UPDATE CASCADE"    
+    
+    db.write(query)
+
+
+def get_surficial_data(site_id, start_ts, end_ts, num_pts):
+    """
+    Retrieves the latest surficial data from marker_data 
+    and marker_observations table.
+    
+    Parameters
+    --------------
+    site_id: int
+        site_id of site of interest
+    ts: timestamp
+        latest datetime of data of interest
+    num_pts: int
+        number of observations you wish to obtain
+        
+    Returns
+    ------------
+    Dataframe
+        Dataframe containing surficial data 
+        with columns [ts, marker_id, measurement]
+    """
+
+    query =  "SELECT * FROM "
+    query += "  (SELECT * FROM marker_data "
+    query += "  WHERE marker_id IN ( "
+    query += "    SELECT marker_id "
+    query += "    FROM markers "
+    query += "    WHERE site_id = %s) "%site_id
+    query += "  ) m "
+    query += "INNER JOIN "
+    query += "  (SELECT * FROM marker_observations "
+    query += "  WHERE site_id = %s" %site_id 
+    query += "  AND ts <= '%s' " %end_ts
+    query += "  AND ts >= ( "
+    query += "    SELECT LEAST(MIN(ts), '%s') " %start_ts
+    query += "    FROM "
+    query += "      (SELECT ts "
+    query += "      FROM marker_observations "
+    query += "      WHERE ts <= '%s' " %end_ts
+    query += "      AND site_id = %s " %site_id
+    query += "      ORDER BY ts DESC LIMIT %s " %num_pts
+    query += "      ) start_ts) "
+    query += "  ) mo "
+    query += "USING (mo_id) "
+    query += "INNER JOIN "
+    query += "  site_markers "
+    query += "USING (marker_id, site_id) "
+    query += "ORDER BY ts DESC"
+    
+    return db.df_read(query)
+
+
+def get_trigger_sym_id(alert_level):
+    """ Gets the corresponding trigger sym id given the alert level.
+    
+    Parameters
+    --------------
+    alert_level: int
+        surficial alert level
+        
+    Returns
+    ---------------
+    trigger_sym_id: int
+        generated from operational_trigger_symbols table
+        
+    """
+    
+    #### query the translation table from operational_trigger_symbols table and trigger_hierarchies table
+    query =  "SELECT trigger_sym_id, alert_level FROM "
+    query += "  operational_trigger_symbols AS op "
+    query += "INNER JOIN "
+    query += "  (SELECT source_id FROM trigger_hierarchies "
+    query += "  WHERE trigger_source = 'surficial' "
+    query += "  ) AS trig "
+    query += "USING(source_id)"
+    translation_table = db.df_read(query).set_index('alert_level').to_dict()['trigger_sym_id']
+    return translation_table[alert_level]
 
 
 ################################################################################
@@ -466,13 +602,13 @@ def get_soms_raw(tsm_name = "", from_time = "", to_time = "", type_num="", node_
     
     if ((df_accel.version[0] == 2) and (type_num == 111)):
         if (tsm_name== 'nagsa'):
-            df['mval1-n'] =(((8000000/(df.mval1))-(8000000/(df.mval2)))*4)/10
+            df.loc[:, 'mval1-n'] =(((8000000/(df.mval1))-(8000000/(df.mval2)))*4)/10
         else:
-            df['mval1-n'] =(((20000000/(df.mval1))-(20000000/(df.mval2)))*4)/10     
+            df.loc[:, 'mval1-n'] =(((20000000/(df.mval1))-(20000000/(df.mval2)))*4)/10     
         
         df = df.drop('mval1', axis=1, inplace=False)
         df = df.drop('mval2', axis=1, inplace=False)
-        df['mval1'] = df['mval1-n']
+        df.loc[:, 'mval1'] = df['mval1-n']
         df = df.drop('mval1-n', axis=1, inplace=False)
     
     #df = df.replace("-inf", "NAN")         
@@ -536,13 +672,13 @@ def ref_get_soms_raw(tsm_name="", from_time="", to_time="", type_num="", node_id
     
     if (df_accel.version[0] == 2):
         if (tsm_name== 'nagsa'):
-            df['mval1-n'] =(((8000000/(df.mval1))-(8000000/(df.mval2)))*4)/10
+            df.loc[:, 'mval1-n'] =(((8000000/(df.mval1))-(8000000/(df.mval2)))*4)/10
         else:
-            df['mval1-n'] =(((20000000/(df.mval1))-(20000000/(df.mval2)))*4)/10     
+            df.loc[:, 'mval1-n'] =(((20000000/(df.mval1))-(20000000/(df.mval2)))*4)/10     
         
         df = df.drop('mval1', axis=1, inplace=False)
         df = df.drop('mval2', axis=1, inplace=False)
-        df['mval1'] = df['mval1-n']
+        df.loc[:, 'mval1'] = df['mval1-n']
         df = df.drop('mval1-n', axis=1, inplace=False)
     
     #df = df.replace("-inf", "NAN")         
@@ -909,9 +1045,6 @@ def alert_to_db(df, table_name):
             query += "SET ts_updated = '%s' " %df['ts_updated'].values[0]
             query += "WHERE %s = %s" %(pk_id, df2[pk_id].values[0])
             db.write(query)
-
-#        data_table = sms.DataTable('rainfall_gauges', deactivated_gauges)
-#        db.df_write(data_table)
 
 
 def memcached():

@@ -2,19 +2,14 @@ from datetime import timedelta
 import numpy as np
 import os
 import pandas as pd
-from pandas.stats.api import ols
+from pyfinance.ols import PandasRollingOLS
 import sys
 
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
+import analysis.querydb as qdb
 import filterdata as filt
 import erroranalysis as err
-
-#include the path of "Analysis" folder for the python scripts searching
-path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-if not path in sys.path:
-    sys.path.insert(1,path)
-del path   
-
-import querydb as qdb
+#------------------------------------------------------------------------------
 
 class ProcData:
     def __init__ (self, invalid_nodes, tilt, lgd, max_min_df, max_min_cml):
@@ -28,12 +23,12 @@ def resample_node(df, window):
     blank_df = pd.DataFrame({'ts': [window.end, window.offsetstart],
                     'node_id': [df['node_id'].values[0]]*2,
                     'tsm_name': [df['tsm_name'].values[0]]*2}).set_index('ts')
-    df = df.append(blank_df)
+    df = df.append(blank_df, sort=False)
     df = df.reset_index().drop_duplicates(['ts', 'node_id']).set_index('ts')
     df.index = pd.to_datetime(df.index)
     df = df.sort_index(ascending = True)
     df = df.resample('30Min').pad()
-    df = df.reset_index(level=1)
+    df = df.reset_index()
     return df
       
 def no_initial_data(df, num_nodes, offsetstart):
@@ -70,9 +65,9 @@ def accel_to_lin_xz_xy(monitoring, seg_len):
     theta_xy = np.arctan(ya / (np.sqrt(xa**2 + za**2)))
     xz = seg_len * np.sin(theta_xz)
     xy = seg_len * np.sin(theta_xy)
-    
-    monitoring['xz'] = np.round(xz,4)
-    monitoring['xy'] = np.round(xy,4)
+
+    monitoring.loc[:, 'xz'] = np.round(xz,4)
+    monitoring.loc[:, 'xy'] = np.round(xy,4)
     
     return monitoring
 
@@ -86,41 +81,34 @@ def fill_smooth(df, offsetstart, end, roll_window_numpts, to_smooth, to_fill):
             for n in ['xz', 'xy']:
                 if df[n].isnull().values.all():
 #                    node NaN all values
-                    df[n] = 0
+                    df.loc[:, n] = 0
                 elif np.isnan(df[n].values[0]):
 #                    node NaN 1st value
-                    df[n] = df[n].fillna(method='bfill')
+                    df.loc[:, n] = df[n].fillna(method='bfill')
 
     #dropping rows outside monitoring window
     df=df[(df.index >= offsetstart) & (df.index <= end)]
     
     if to_smooth and len(df)>1:
-        df = df.rolling(window=roll_window_numpts, min_periods=1).mean()
-        df = df[roll_window_numpts-1:]
-        return np.round(df, 4)
-    else:
-        return df
+        df.loc[:, ['xz', 'xy']] = df[['xz', 'xy']].rolling(window=roll_window_numpts, min_periods=1).mean()
+        df = np.round(df[roll_window_numpts-1:], 4)
+           
+    return df
         
-def node_inst_vel(filled_smoothened, roll_window_numpts, start):
-    try:          
-        lr_xz = ols(y=filled_smoothened.xz, x=filled_smoothened.td,
-                    window=roll_window_numpts, intercept=True)
-        lr_xy = ols(y=filled_smoothened.xy, x=filled_smoothened.td,
-                    window=roll_window_numpts, intercept=True)
-                
-        filled_smoothened = filled_smoothened.loc[filled_smoothened.ts >= start]
+def node_inst_vel(df, roll_window_numpts, start):         
+    lr_xz = PandasRollingOLS(y=df.xz, x=df.td,
+                window=roll_window_numpts).beta
+    lr_xy = PandasRollingOLS(y=df.xy, x=df.td,
+                window=roll_window_numpts).beta
+            
+    df = df.loc[df.index >= start]
+
+    vel_xz = lr_xz[lr_xz.index >= start]['feature1'].values
+    vel_xy = lr_xy[lr_xy.index >= start]['feature1'].values
+    df.loc[:, 'vel_xz'] = np.round(vel_xz, 4)
+    df.loc[:, 'vel_xy'] = np.round(vel_xy, 4)
         
-        vel_xz = lr_xz.beta.x.values[0:len(filled_smoothened)]
-        vel_xy = lr_xy.beta.x.values[0:len(filled_smoothened)]
-        filled_smoothened['vel_xz'] = np.round(vel_xz, 4)
-        filled_smoothened['vel_xy'] = np.round(vel_xy, 4)
-    
-    except:
-        qdb.print_out("ERROR in computing velocity")
-        filled_smoothened['vel_xz'] = np.zeros(len(filled_smoothened))
-        filled_smoothened['vel_xy'] = np.zeros(len(filled_smoothened))
-    
-    return filled_smoothened
+    return df
 
 #get_last_good_data(df):
 #    evaluates the last good data from the input df
@@ -164,7 +152,7 @@ def proc_data(tsm_props, window, sc, realtime=False, comp_vel=True,
         lgdpm = filt.apply_filters(lgdpm)
         lgdpm = lgdpm.sort_index(ascending = False).drop_duplicates('node_id')
         
-        monitoring=monitoring.append(lgdpm)
+        monitoring=monitoring.append(lgdpm, sort=False)
 
     invalid_nodes = qdb.get_node_status(tsm_props.tsm_id, ts=window.offsetstart)
     monitoring = monitoring.loc[~monitoring.node_id.isin(invalid_nodes)]
@@ -187,16 +175,14 @@ def proc_data(tsm_props, window, sc, realtime=False, comp_vel=True,
                         'xz': [np.nan]*len(nodes_noval),
                          'ts': [window.offsetstart]*len(nodes_noval)})
     nodes_nodata = nodes_nodata.set_index('ts')
-    monitoring = monitoring.append(nodes_nodata)
+    monitoring = monitoring.append(nodes_nodata, sort=False)
     
     max_min_df, max_min_cml = err.cml_noise_profiling(monitoring, sc, tsm_props.nos)
-        
+
     #resamples xz and xy values per node using forward fill
-    monitoring = monitoring.groupby('node_id').apply(resample_node,
-                         window = window).reset_index(level=1).set_index('ts')
-    
-    nodal_proc_monitoring = monitoring.groupby('node_id')
-    
+    monitoring = monitoring.groupby('node_id', as_index=False).apply(resample_node,
+                         window = window).reset_index(drop=True).set_index('ts')
+
     if not realtime:
         to_smooth = int(sc['subsurface']['to_smooth'])
         to_fill = int(sc['subsurface']['to_fill'])
@@ -204,28 +190,24 @@ def proc_data(tsm_props, window, sc, realtime=False, comp_vel=True,
         to_smooth = int(sc['subsurface']['rt_to_smooth'])
         to_fill = int(sc['subsurface']['rt_to_fill'])
     
-    filled_smoothened = nodal_proc_monitoring.apply(fill_smooth,
+    tilt = monitoring.groupby('node_id', as_index=False).apply(fill_smooth,
                             offsetstart=window.offsetstart, end=window.end,
                             roll_window_numpts=window.numpts, to_smooth=to_smooth,
-                            to_fill=to_fill)
-    filled_smoothened = filled_smoothened[['xz', 'xy','tsm_name']].reset_index()
-       
+                            to_fill=to_fill).reset_index(level='ts').set_index('ts')
+
     if comp_vel == True:
-        filled_smoothened['td'] = filled_smoothened.ts.values - \
-                                            filled_smoothened.ts.values[0]
-        filled_smoothened['td'] = filled_smoothened['td'].apply(lambda x: x / \
+        tilt.loc[:, 'td'] = tilt.index.values - \
+                                            monitoring.index.values[0]
+        tilt.loc[:, 'td'] = tilt['td'].apply(lambda x: x / \
                                             np.timedelta64(1,'D'))
         
-        nodal_filled_smoothened = filled_smoothened.groupby('node_id') 
+        nodal_filled_smoothened = tilt.groupby('node_id', as_index=False) 
         
         tilt = nodal_filled_smoothened.apply(node_inst_vel,
                                             roll_window_numpts=window.numpts,
                                             start=window.start)
-        tilt = tilt.reset_index(drop=True)
         tilt = tilt.drop(['td'], axis=1)
-        tilt = tilt.set_index('ts')
         tilt = tilt.sort_values('node_id', ascending=True)
-    else:
-        tilt = filled_smoothened.set_index('ts')
+        tilt = tilt.reset_index(level='ts').set_index('ts')
     
     return ProcData(invalid_nodes,tilt.sort_index(),lgd,max_min_df,max_min_cml)

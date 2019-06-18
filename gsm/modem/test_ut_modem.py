@@ -1,9 +1,14 @@
+import argparse
+import os
+import serial
+import sys
+import warnings
 import unittest
+
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 from gsm.modem import modem
 from volatile import memory as mem
-import argparse
-import warnings
-import serial
+
 
 class TestModule(unittest.TestCase):
 
@@ -43,9 +48,9 @@ def get_arguments():
 
         return args        
     except IndexError:
-        print '>> Error in parsing arguments'
+        print ('>> Error in parsing arguments')
         error = parser.format_help()
-        print error
+        print (error)
         sys.exit()
 
 def main():

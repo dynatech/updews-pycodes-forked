@@ -1,3 +1,7 @@
+import os
+import sys
+
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import unittest
 from gsm import smstables
 from dynadb import db as dbio
@@ -18,7 +22,7 @@ class TestDb(unittest.TestCase):
         status = dbio.connect(host="local")
         self.assertIsNotNone(status)
 
-    def test_connect_use_host_local_exp_success(self):
+    def test_connect_use_host_sb_local_exp_success(self):
 
         status = dbio.connect(connection="sb_local")
         self.assertIsNotNone(status)

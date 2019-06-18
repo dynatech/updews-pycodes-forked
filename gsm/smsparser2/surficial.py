@@ -1,10 +1,11 @@
-import sys,re
-import pandas as pd
-import numpy as np
-import dynadb.db as dynadb
 from datetime import datetime as dt
-import smsclass
+import os
+import re
+import sys
+
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import volatile.memory as mem
+#------------------------------------------------------------------------------
 
 SURFICIAL_PARSER_ERROR_VALUE = {
     "obv_type": 1,
@@ -76,7 +77,7 @@ def get_site_code(text):
     try:
         site_id = sites_dict['site_id'][site_code]
     except KeyError:
-        print "No site_code record for %s" % (site_code)
+        print ("No site_code record for %s" % (site_code))
         err_val = SURFICIAL_PARSER_ERROR_VALUE["site_code"]
 
     return {"value": site_id, "match": str(site_code_match), "err_val": err_val}
@@ -214,7 +215,7 @@ def get_time(text):
         time_val = dt.strptime(time_str, TIME_FORMAT_STD).time()
         if (time_val > dt.strptime("18:00:00","%H:%M:%S").time() or time_val < 
             dt.strptime("05:00:00","%H:%M:%S").time()):
-            print 'Time out of bounds. Unrealizable time to measure' 
+            print ('Time out of bounds. Unrealizable time to measure' )
             err_val = SURFICIAL_PARSER_ERROR_VALUE["time_out_of_bounds"]
 
     return {"value": str(time_str), "match": str(match_time_str), 
@@ -322,7 +323,7 @@ def find_match_in_text(match_func, text):
     match_result = match_func(text)
 
     if match_result["err_val"] > 0 or match_result["match"] is None:
-        print "Error: %d" % match_result["err_val"]
+        print ("Error: %d" % match_result["err_val"])
         raise ValueError(match_result["err_val"])
 
     if type(match_result["match"]).__name__ == 'list':
@@ -335,7 +336,7 @@ def find_match_in_text(match_func, text):
             text_unparsed = re.sub(pattern = match_result["match"], repl = "", 
                 string = text, flags = re.IGNORECASE, count=1)
         except re.error:
-            print "re conversion error"
+            print ("re conversion error")
             raise ValueError(SURFICIAL_PARSER_ERROR_VALUE["re_parsing_error"])
 
     return match_result["value"], text_unparsed.lstrip()

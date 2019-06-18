@@ -1,6 +1,11 @@
 from datetime import datetime, timedelta, time
+import os
 import pandas as pd
+import sys
+
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import querydb as qdb
+
 
 def release_time(date_time):
     """Rounds time to 4/8/12 AM/PM.

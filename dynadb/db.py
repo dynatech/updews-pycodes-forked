@@ -1,12 +1,12 @@
-import memcache
-import MySQLdb, time 
-import pandas as pd
-import pandas.io.sql as psql
-import  sqlalchemy.exc
-from sqlalchemy import MetaData
-from sqlalchemy import Table
-from sqlalchemy import create_engine
 import inspect
+import memcache
+import MySQLdb
+import pandas.io.sql as psql
+import sqlalchemy.exc
+from sqlalchemy import create_engine
+import sys
+import time 
+
 
 mc = memcache.Client(['127.0.0.1:11211'],debug=0)
 
@@ -38,7 +38,7 @@ def get_connector(dbc='',conn_type=''):
         if dbc_output:
             return dbc_output
         else:
-            print 'Connection Fail'
+            print ('Connection Fail')
             continue
     return False
     
@@ -63,10 +63,10 @@ def get_msqldb_connect(dbc):
         cur = db.cursor()
         return db, cur
     except TypeError:
-        print 'Error Connection Value'
+        print ('Error Connection Value')
         return False
     except MySQLdb.OperationalError:
-        print '6.',
+        print ('6.',)
         time.sleep(2)
         return False
     except (MySQLdb.Error, MySQLdb.Warning) as e:
@@ -94,7 +94,7 @@ def get_create_engine(dbc):
             dbc['host'] +':3306/' + dbc['schema'])
         return engine
     except sqlalchemy.exc.OperationalError:
-        print ">> Error in connetion"
+        print (">> Error in connetion")
         return False
 
 
@@ -117,7 +117,7 @@ def get_connection_info(connection_name):
         dbc = conn_dict[connection_name]
         return dbc
     except TypeError:
-        print 'Unknown DICT_DB_CONNECTIONS '
+        print ('Unknown DICT_DB_CONNECTIONS ')
         return None
 
 
@@ -151,23 +151,24 @@ def connect(host='', connection='', resource='' , conn_type=1):
             for connection in resource_dict:
                 dbc.append(get_connection_info(connection))
         except KeyError:
-            print 'Unknown Resource ' + resource
+            print ('Unknown Resource ' + resource)
     elif host:
         dbc = None 
         try:
             sc = mc.get('SERVER_CONFIG')
             dbc = dict()
-            dbc['host'] = sc['hosts'][host] 
+            dbc['host'] = sc['hosts'][host]
             dbc['user'] = sc['db']['user'] 
             dbc['password'] = sc['db']['password']
             dbc['schema'] = sc['db']['name'] 
+            
         except KeyError:
-            print "Unknown Host " + host
+            print ("Unknown Host " + host)
     
     if dbc:
         return get_connector(dbc=dbc, conn_type=conn_type)
     else:    
-        print 'Cannot Connect to Database Connection'
+        print ('Cannot Connect to Database Connection')
         return False
 
 
@@ -193,6 +194,7 @@ def write(query ='', identifier = '', last_insert=False,
         resource=resource)
 
     try:
+
         a = cur.execute(query)
         db.commit()
         if last_insert:
@@ -201,14 +203,14 @@ def write(query ='', identifier = '', last_insert=False,
             ret_val = b
 
     except IndexError:
-        print "IndexError on ",
-        print str(inspect.stack()[1][3])
+        print ("IndexError on ",)
+        print (str(inspect.stack()[1][3]))
     except (MySQLdb.Error, MySQLdb.Warning) as e:
         print (">> MySQL error/warning: %s" % e)
         print ("Last calls:") 
         for i in range(1,6):
             try:
-                print "%s," % str(inspect.stack()[i][3]),
+                print ("%s," % str(inspect.stack()[i][3]),)
             except IndexError:
                 continue
         print ("\n")
@@ -248,6 +250,7 @@ def read(query='', identifier='', host='local',
     caller_func = str(inspect.stack()[1][3])
     db, cur = connect(host=host, connection=connection, 
         resource=resource)
+
     try:
         a = cur.execute(query)
         try:
@@ -256,15 +259,15 @@ def read(query='', identifier='', host='local',
         except ValueError:
             ret_val = None
     except MySQLdb.OperationalError:
-        print "MySQLdb.OperationalError on ",
-        print caller_func
+        print ("MySQLdb.OperationalError on ",)
+        print (caller_func)
     except (MySQLdb.Error, MySQLdb.Warning) as e:
-        print ">> MySQL Error or warning: ", 
-        print e, "from", 
-        print caller_func
+        print (">> MySQL Error or warning: ", )
+        print (e, "from", )
+        print (caller_func)
     except KeyError:
-        print "KeyError on ",
-        print caller_func
+        print ("KeyError on ",)
+        print (caller_func)
     finally:
         db.close()
         return ret_val
@@ -288,17 +291,12 @@ def df_write(data_table, host='local', last_insert=False ,
     """
     df = data_table.data
     df = df.drop_duplicates(subset=None, keep='first', inplace=False)
-    value_list = str(df.values.tolist())[:-1][1:]
-    value_list = value_list.replace("]",")").replace("[","(")
-    value_list = value_list.replace("nan", "NULL")
-
-    column_name_str = ""
-    for name in list(df):
-        column_name_str += name.encode('ascii','ignore') + ","
-    column_name_str = column_name_str[:-1]
-
+    tuple_list = list(df.itertuples(index=False, name=None))
+    value_list = ', '.join(list(map(str, tuple_list))).replace('nan', 'NULL')
+    
+    column_name_str = ', '.join(df.columns)
     duplicate_value_str = ", ".join(["%s = VALUES(%s)" % (name, name) 
-        for name in list(df)]) 
+        for name in df.columns]) 
     query = 'insert into %s (%s) values %s' % (data_table.name,
         column_name_str, value_list)
     query += ' on DUPLICATE key update  %s ' % (duplicate_value_str)
@@ -314,11 +312,11 @@ def df_write(data_table, host='local', last_insert=False ,
         return last_insert_id
 
     except IndexError:
-        print '\n\n>> Error: Possible data type error'
+        print ('\n\n>> Error: Possible data type error')
     except ValueError:
-        print '>> Value error detected'   
+        print ('>> Value error detected'   )
     except AttributeError:
-        print ">> Value error in data pass"       
+        print (">> Value error in data pass"       )
 
 
 def df_read(query='', host='local', connection='', resource=''):
@@ -339,13 +337,13 @@ def df_read(query='', host='local', connection='', resource=''):
         resource=resource, conn_type=0)
     ret_val = None
     try:
-        df = psql.read_sql(query, db)
+        df = psql.read_sql_query(query, db)
         ret_val = df
     except KeyboardInterrupt:
-        print 'Exception detected in accessing database'
+        print ('Exception detected in accessing database')
         sys.exit()
     except psql.DatabaseError:
-        print 'Error getting query %s' % (query)
+        print ('Error getting query %s' % (query))
         ret_val = None
     finally:
         return ret_val

@@ -1,12 +1,15 @@
 from datetime import timedelta
 import math
 import numpy as np
+import os
 import pandas as pd
+import sys
 
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import analysis.publicalerts as pub
 import analysis.querydb as qdb
 import dynadb.db as db
-import gsm.smsparser2.smsclass as sms
+import gsm.gsmserver_dewsl3.sms_data as sms
 
 def get_resampled_data(gauge_name, offsetstart, start, end, check_nd=True, is_realtime=True):
     """Resample retrieved data of gauge_name from offsetstart to end.
@@ -45,7 +48,7 @@ def get_resampled_data(gauge_name, offsetstart, start, end, check_nd=True, is_re
     nan_replace = len(rainfall) == 0
     #add data to start and end of monitoring
     blankdf = pd.DataFrame({'ts': [end, offsetstart], 'rain': [np.nan, np.nan]})
-    rainfall = rainfall.append(blankdf)
+    rainfall = rainfall.append(blankdf, sort=False)
     rainfall = rainfall.sort_values('ts')
     
     #data resampled to 30mins
@@ -140,15 +143,12 @@ def summary_writer(site_id, site_code, gauge_name, rain_id, twoyrmax, halfmax,
     #threshold is reached
     if one>=halfmax or three>=twoyrmax:
         ralert=1
-        advisory='Start/Continue monitoring'
     #no data
     elif one==None or math.isnan(one):
         ralert=-1
-        advisory='---'
     #rainfall below threshold
     else:
         ralert=0
-        advisory='---'
 
     if write_alert or ralert == 1:
         if qdb.does_table_exist('rainfall_alerts') == False:
@@ -166,17 +166,17 @@ def summary_writer(site_id, site_code, gauge_name, rain_id, twoyrmax, halfmax,
             else:
                 temp_df = pd.Series([False, np.nan, np.nan], index=columns)
             
-            alerts = alerts.append(temp_df, ignore_index=True)
+            alerts = alerts.append(temp_df, ignore_index=True, sort=False)
         else:
             if one >= halfmax:
                 temp_df = pd.Series(['a', one, halfmax], index=columns)
-                alerts = alerts.append(temp_df, ignore_index=True)
+                alerts = alerts.append(temp_df, ignore_index=True, sort=False)
             if three >= twoyrmax:
                 temp_df = pd.Series(['b', three, twoyrmax], index=columns)
-                alerts = alerts.append(temp_df, ignore_index=True) 
+                alerts = alerts.append(temp_df, ignore_index=True, sort=False) 
             if ralert == -1:
                 temp_df = pd.Series([False, np.nan, np.nan], index=columns)
-                alerts = alerts.append(temp_df, ignore_index=True)
+                alerts = alerts.append(temp_df, ignore_index=True, sort=False)
                 
         if alerts['rain_alert'][0] != False:
             for index, row in alerts.iterrows():
@@ -195,7 +195,7 @@ def summary_writer(site_id, site_code, gauge_name, rain_id, twoyrmax, halfmax,
                         '1D cml': [one], 'half of 2yr max': [round(halfmax,2)],
                         '3D cml': [three], '2yr max': [round(twoyrmax,2)],
                         'DataSource': [gauge_name], 'rain_id': [rain_id],
-                        'alert': [ralert], 'advisory': [advisory]})
+                        'alert': [ralert]})
     
     return summary
 

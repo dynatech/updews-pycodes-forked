@@ -1,12 +1,14 @@
-import serial
-import time
-import re
-from messaging.sms import SmsDeliver as smsdeliver
-from messaging.sms import SmsSubmit as smssubmit
-import volatile.memory as mem
-from datetime import datetime as dt
 from datetime import timedelta as td
+import os
+import re
+import serial
+import sys
+import time
 import warnings
+
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
+from gsmmodem import pdu as PduDecoder
+import volatile.memory as mem
 
 try:
     import RPi.GPIO as GPIO
@@ -71,16 +73,16 @@ class GsmModem:
                     "from GSM module reset")
                 raise ResetException(except_str)
             elif a.find('ERROR') >= 0:
-                print "Modem: ERROR"
+                print ("Modem: ERROR")
                 return False
             else:
                 return a
         except serial.SerialException:
-            print "NO SERIAL COMMUNICATION (gsm_cmd)"
+            print ("NO SERIAL COMMUNICATION (gsm_cmd)")
             # RunSenslopeServer(gsm_network)
 
     def init_serial(self):
-        print 'Connecting to GSM modem at', self.ser_port
+        print ('Connecting to GSM modem at', self.ser_port)
 
         gsm = serial.Serial()
         gsm.port = self.ser_port
@@ -101,15 +103,14 @@ class GsmModem:
             for i in range(0,4):
                 self.gsm.write('AT\r\n')
                 time.sleep(0.5)
-            print "Switching to no-echo mode",
-            print self.at_cmd('ATE0').strip('\r\n')
-            print "Switching to PDU mode" 
-            print self.at_cmd('AT+CMGF=0').rstrip('\r\n')
-            print "Disabling unsolicited CMTI",
-            print self.at_cmd('AT+CNMI=2,0,0,0,0').rstrip('\r\n')
+            print ("Switching to no-echo mode",)
+            print (self.at_cmd('ATE0').strip('\r\n'))
+            print ("Switching to PDU mode" )
+            print (self.at_cmd('AT+CMGF=0').rstrip('\r\n'))
+            print ("Disabling unsolicited CMTI",)
+            print (self.at_cmd('AT+CNMI=2,0,0,0,0').rstrip('\r\n'))
             return True
         except AttributeError:
-            print ""
             return None
 
     def get_all_sms(self, network):
@@ -127,17 +128,17 @@ class GsmModem:
                 pdu = re.search(r'[0-9A-F]{20,}',msg).group(0)
             except AttributeError:
                 # particular msg may be some extra strip of string 
-                print ">> Error: cannot find pdu text", msg
+                print (">> Error: cannot find pdu text", msg)
                 # log_error("wrong construction\n"+msg[0])
                 continue
 
             try:
-                smsdata = smsdeliver(pdu).data
+                smsdata = PduDecoder.decodeSmsPdu(pdu)
             except ValueError:
-                print ">> Error: conversion to pdu (cannot decode odd-length)"
+                print (">> Error: conversion to pdu (cannot decode odd-length)")
                 continue
             except IndexError:
-                print ">> Error: convertion to pdu (pop from empty array)"
+                print (">> Error: convertion to pdu (pop from empty array)")
                 continue
 
             smsdata = self.manage_multi_messages(smsdata)
@@ -148,7 +149,7 @@ class GsmModem:
                 txtnum = re.search(r'(?<= )[0-9]{1,2}(?=,)',msg).group(0)
             except AttributeError:
                 # particular msg may be some extra strip of string 
-                print ">> Error: message may not have correct construction", msg
+                print (">> Error: message may not have correct construction", msg)
                 # log_error("wrong construction\n"+msg[0])
                 continue
             
@@ -163,13 +164,13 @@ class GsmModem:
 
                 sms_msg = str(smsdata['text'])
                 if len(sms_msg) < 30:
-                    print sms_msg
+                    print (sms_msg)
                 else:
-                    print sms_msg[:10], "...", sms_msg[-20:]
+                    print (sms_msg[:10], "...", sms_msg[-20:])
 
                 msglist.append(smsItem)
             except UnicodeEncodeError:
-                print ">> Unknown character error. Skipping message"
+                print (">> Unknown character error. Skipping message")
                 continue
 
         return msglist
@@ -182,7 +183,7 @@ class GsmModem:
             :parameters: N/A
             :returns: N/A
         """
-        print "\n>> Deleting all read messages"
+        print ("\n>> Deleting all read messages")
         try:
             if module == 1:
                 self.at_cmd("AT+CMGD=0,2").strip()
@@ -191,9 +192,9 @@ class GsmModem:
             else:
                 raise ValueError("Unknown module type")
             
-            print 'OK'
+            print ('OK')
         except ValueError:
-            print '>> Error deleting messages'
+            print ('>> Error deleting messages')
 
     def csq(self):
         csq_reply = self.at_cmd("AT+CSQ")
@@ -205,7 +206,7 @@ class GsmModem:
             raise ResetException
 
     def reset(self):
-        print ">> Resetting GSM Module ...",
+        print (">> Resetting GSM Module ...",)
 
         try:
             # make sure that power is ON
@@ -229,7 +230,7 @@ class GsmModem:
 
             GPIO.cleanup()
 
-            print 'done'
+            print ('done')
         except ImportError:
             return
 
@@ -244,7 +245,7 @@ class GsmModem:
         multipart_sms = mc.get("multipart_sms")
         if multipart_sms is None:
             multipart_sms = {}
-            print "multipart_sms in None"
+            print ("multipart_sms in None")
 
         if sms_ref not in multipart_sms:
             multipart_sms[sms_ref] = {}
@@ -254,7 +255,7 @@ class GsmModem:
             multipart_sms[sms_ref]['seq_rec'] = 0
         
         multipart_sms[sms_ref][smsdata['seq']] = smsdata['text']
-        print "Sequence no: %d/%d" % (smsdata['seq'],smsdata['cnt'])
+        print ("Sequence no: %d/%d" % (smsdata['seq'],smsdata['cnt']))
         multipart_sms[sms_ref]['seq_rec'] += 1
 
         smsdata_complete = ""
@@ -265,8 +266,8 @@ class GsmModem:
                 try:
                     multipart_sms[sms_ref]['text'] += multipart_sms[sms_ref][i]
                 except KeyError:
-                    print ">> Error in reading multipart_sms.", 
-                    print "Text replace with empty line."
+                    print (">> Error in reading multipart_sms.", )
+                    print ("Text replace with empty line.")
 
             # print multipart_sms[sms_ref]['text']
 
@@ -274,7 +275,7 @@ class GsmModem:
 
             del multipart_sms[sms_ref]
         else:
-            print "Incomplete message"
+            print ("Incomplete message")
 
         mc.set("multipart_sms", multipart_sms)
         return smsdata_complete
@@ -291,10 +292,10 @@ class GsmModem:
             
             try:
                 c = int(b.split(',')[1])
-                print '\n>> Received', c, 'message/s; CSQ:', self.csq()
+                print ('\n>> Received', c, 'message/s; CSQ:', self.csq())
                 return c
             except IndexError:
-                print 'count_msg b = ',b
+                print ('count_msg b = ',b)
                 # log_error(b)
                 if b:
                     return 0                
@@ -303,12 +304,12 @@ class GsmModem:
                     
                 ##if GSM sent blank data maybe GSM is inactive
             except (ValueError, AttributeError):
-                print '>> ValueError:'
-                print b
-                print '>> Retryring message reading'
+                print ('>> ValueError:')
+                print (b)
+                print ('>> Retryring message reading')
                 # return -2
             except TypeError:
-                print ">> TypeError"
+                print (">> TypeError")
                 return -2
 
     def send_msg(self, msg, number, simulate=False):
@@ -321,20 +322,18 @@ class GsmModem:
         # return
         # simulate sending success
         # False => sucess
-        if simulate:
-            return random() < 0.15
-
         try:
-            pdulist = smssubmit(number,msg.decode('latin')).to_pdu()
+            pdulist = PduDecoder.encodeSmsSubmitPdu(number, msg, 0, None)
+            temp = pdulist[0]
         except:
-            print "Error in pdu conversion. Skipping message sending"
+            print("Error in pdu conversion. Skipping message sending")
             return -1
 
-        # print "pdulen", len(pdulist)
-        print "\nMSG:", msg 
-        print "NUM:", number
+        temp_pdu = "0001000C813"+str(pdulist[0])[
+            11:]
+        pdulist[0] = temp_pdu
 
-        parts = len(pdulist)
+        parts = len(str(pdulist[0])[2:])
         count = 1
                 
         for pdu in pdulist:
@@ -348,15 +347,15 @@ class GsmModem:
                 time.time() < now + self.SEND_INITIATE_REPLY_TIMEOUT):
                 a += self.gsm.read(self.gsm.inWaiting())
                 time.sleep(self.WAIT_FOR_BYTES_DELAY)
-                print '.',
+                print ('.',)
 
             if (time.time() > now + self.SEND_INITIATE_REPLY_TIMEOUT or 
                 a.find("ERROR") > -1):  
-                print '>> Error: GSM Unresponsive at finding >'
-                print a
+                print ('>> Error: GSM Unresponsive at finding >')
+                print (a)
                 return -1
             else:
-                print '>',
+                print ('>',)
             
             a = ''
             now = time.time()
@@ -365,16 +364,16 @@ class GsmModem:
                 time.time() < now + self.REPLY_TIMEOUT):
                     a += self.gsm.read(self.gsm.inWaiting())
                     time.sleep(self.WAIT_FOR_BYTES_DELAY)
-                    print ':',
+                    print (':',)
 
             if time.time() - self.SENDING_REPLY_TIMEOUT > now:
-                print '>> Error: timeout reached'
+                print ('>> Error: timeout reached')
                 return -1
             elif a.find('ERROR') > -1:
-                print '>> Error: GSM reported ERROR in SMS reading'
+                print ('>> Error: GSM reported ERROR in SMS reading')
                 return -1
             else:
-                print ">> Part %d/%d: Message sent!" % (count,parts)
+                print (">> Part %d/%d: Message sent!" % (count,parts))
                 count += 1
                     
         return 0

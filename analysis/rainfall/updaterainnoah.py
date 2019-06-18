@@ -1,7 +1,10 @@
 from datetime import datetime, timedelta
+import os
 import pandas as pd
 import requests
+import sys
 
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import analysis.querydb as qdb
 import dynadb.db as db
 import gsm.smsparser2.smsclass as sms
@@ -26,7 +29,7 @@ def download_rainfall_noah(noah_id, fdate, tdate):
     offset_date = (pd.to_datetime(fdate) - timedelta(1)).strftime("%Y-%m-%d")
     
     sc = mem.server_config()
-    url = sc['rainfall']['noah_data'] % (noah_id, offset_date, tdate)
+    url = (sc['rainfall']['noah_data'] + '/%s/from/%s/to/%s') %(noah_id, offset_date, tdate)
     try:
         req = requests.get(url, auth=(sc['rainfall']['noah_user'],
                                       sc['rainfall']['noah_password']))

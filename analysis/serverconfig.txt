@@ -42,9 +42,9 @@ eq_plots_path = /Documents/MonitoringOutput/EQPlots/
 #############################
 ###    ALERT CONSTANTS    ###
 #############################
-T_disp = 0.05 			;Treshold displacement value for alert 1 (in meters)
-T_velL2 = 0.032			;Treshold velocity value for alert level 1 (in meters/day)
-T_velL3 = 0.5 			;Treshold velocity value for alert level 2 (in meters/day)
+T_disp = 0.05 			;Treshold displacement value for alert 2 (in meters)
+T_velL2 = 0.032			;Treshold velocity value for alert level 2 (in meters/day)
+T_velL3 = 0.5 			;Treshold velocity value for alert level 3 (in meters/day)
 k_ac_ax = 0.1			;minimum value velocity of axis across maximum velocity to consider movement as valid (in percent)
 num_nodes_to_check = 2	;number of nodes to check before calling column alert level 2 or 3
  
