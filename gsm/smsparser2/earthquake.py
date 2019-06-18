@@ -30,6 +30,7 @@ def eq(sms):
 
     """  
     pattern_matches = {}
+    print(sms.msg)
 
     # search for matches
     for name in EQ_SMS_PATTERNS.keys():
@@ -64,7 +65,7 @@ def eq(sms):
     # format time
     timestr = pattern_matches["time"].replace(" ","").replace(".",":").upper()
     try:
-        timestr = dt.strptime(timestr,"%I:%M%p").strftime("%H:%M:00")
+        timestr = dt.strptime(timestr,"%I:%M%p").time()
     except:
         print (">> Error in datetime conversion", timestr)
         return False
