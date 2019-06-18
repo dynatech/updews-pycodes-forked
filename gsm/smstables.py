@@ -314,11 +314,9 @@ def write_outbox(message=None,recipients=None,gsm_id=None,table=None,
     else:
         table_name = table
 
-    print ("table_name:", table_name)
-
     query = ("insert into smsoutbox_%s (ts_written,sms_msg,source) VALUES "
         "('%s','%s','central')") % (table_name,tsw,message)
-        
+    
     outbox_id = dbio.write(query=query, identifier="womtdb", 
         last_insert=True, host=host, resource=resource)[0][0]
 
@@ -333,7 +331,6 @@ def write_outbox(message=None,recipients=None,gsm_id=None,table=None,
         try:
             mobile_id = table_mobile[r]
             gsm_id = def_gsm_id[mobile_id]
-            print (outbox_id, mobile_id, gsm_id)
             query += "(%d, %d, %d)," % (outbox_id, mobile_id, gsm_id)
         except KeyError:
             print (">> Error: Possible key error for", r)

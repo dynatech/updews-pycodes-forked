@@ -1,0 +1,42 @@
+[GSM_DEFAULT_SETTINGS]
+REPLY_TIMEOUT = 15
+SEND_INITIATE_REPLY_TIMEOUT = 15
+SENDING_REPLY_TIMEOUT = 15
+WAIT_FOR_BYTES_DELAY = 1
+POWER_ON_DELAY = 2
+BAUDRATE = 56700
+RESET_ASSERT_DELAY = 2
+RESET_DEASSERT_DELAY = 1
+POWER_RESET_DELAY = 30
+
+[MASTER_DB_CREDENTIALS]
+host = 192.168.150.75
+user = pysys_localconf
+password = NaCAhztBgYZ3HwTkvHwwGVtJn5sVMFgg
+db_comms = comms_db
+db_senslope = senslopedb
+db_commons = commons_db
+
+[SLAVE_READ_DB_CREDENTIALS]
+host = 192.168.150.77
+user = root
+password = senslope
+db_comms = comms_db
+db_senslope = senslopedb
+db_commons = commons_db
+
+[SLAVE_WRITE_DB_CREDENTIALS]
+host = 192.168.150.78
+user = root
+password = senslope
+db_comms = comms_db
+db_senslope = senslopedb
+db_commons = commons_db
+
+[CBEWSL_DB_CREDENTIALS]
+host = 192.168.150.253
+user = root
+password = senslope
+db_comms = comms_db
+db_senslope = senslopedb
+db_commons = commons_db

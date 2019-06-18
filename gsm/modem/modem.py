@@ -7,8 +7,7 @@ import time
 import warnings
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
-from messaging.sms import SmsDeliver as smsdeliver
-from messaging.sms import SmsSubmit as smssubmit
+from gsmmodem import pdu as PduDecoder
 import volatile.memory as mem
 
 try:
@@ -134,7 +133,7 @@ class GsmModem:
                 continue
 
             try:
-                smsdata = smsdeliver(pdu).data
+                smsdata = PduDecoder.decodeSmsPdu(pdu)
             except ValueError:
                 print (">> Error: conversion to pdu (cannot decode odd-length)")
                 continue
@@ -323,20 +322,18 @@ class GsmModem:
         # return
         # simulate sending success
         # False => sucess
-        if simulate:
-            return random() < 0.15
-
         try:
-            pdulist = smssubmit(number,msg.decode('latin')).to_pdu()
+            pdulist = PduDecoder.encodeSmsSubmitPdu(number, msg, 0, None)
+            temp = pdulist[0]
         except:
-            print ("Error in pdu conversion. Skipping message sending")
+            print("Error in pdu conversion. Skipping message sending")
             return -1
 
-        # print "pdulen", len(pdulist)
-        print ("\nMSG:", msg )
-        print ("NUM:", number)
+        temp_pdu = "0001000C813"+str(pdulist[0])[
+            11:]
+        pdulist[0] = temp_pdu
 
-        parts = len(pdulist)
+        parts = len(str(pdulist[0])[2:])
         count = 1
                 
         for pdu in pdulist:

@@ -15,8 +15,9 @@ elif curOS == "Linux":
     import pymysql as mysqlDriver
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
+
 import dynadb.db as db
-import gsm.smsparser2.smsclass as sms
+import gsm.gsmserver_dewsl3.sms_data as sms
 import volatile.memory as mem
 #------------------------------------------------------------------------------
 
