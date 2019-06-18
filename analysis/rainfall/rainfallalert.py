@@ -9,7 +9,7 @@ sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import analysis.publicalerts as pub
 import analysis.querydb as qdb
 import dynadb.db as db
-import gsm.sms_data as sms
+import gsm.gsmserver_dewsl3.sms_data as sms
 
 def get_resampled_data(gauge_name, offsetstart, start, end, check_nd=True, is_realtime=True):
     """Resample retrieved data of gauge_name from offsetstart to end.

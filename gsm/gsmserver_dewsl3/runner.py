@@ -66,8 +66,10 @@ class GsmServer:
 
 				print(dt.today().strftime(
 					">> Server active as of: %A, %B %d, %Y, %X"))
-				print(">> CSQ:", gsm_mod.get_csq())
+				csq = gsm_mod.get_csq()
+				print(">> CSQ:", csq)
 				self.try_sending_messages(gsm_mod, gsm_info)
+				db.write_csq(gsm_info['gsm_id'], dt.today().strftime("%Y-%m-%d %H:%M:%S"), csq)
 			elif m == 0:
 				self.try_sending_messages(gsm_mod, gsm_info)
 				today = dt.today()
@@ -75,7 +77,9 @@ class GsmServer:
 					if checkIfActive:
 						print(dt.today().strftime(
 							">> Server active as of: %A, %B %d, %Y, %X"))
-						print(">> CSQ:", gsm_mod.get_csq())
+						csq = gsm_mod.get_csq()
+						print(">> CSQ:", csq)
+						db.write_csq(gsm_info['gsm_id'], dt.today().strftime("%Y-%m-%d %H:%M:%S"), csq)
 					checkIfActive = False
 				else:
 					checkIfActive = True
@@ -105,27 +109,13 @@ class GsmServer:
 			return
 
 		for msg in allmsgs:
+			smsItem = modem.GsmSms(msg[0], msg[1], msg[4], '')
 			table_mobile = db.get_all_user_mobile(msg[1], mobile_id_flag=True)
-			inv_table_mobile = {mobile_id: sim_num for (mobile_id, sim_num,
-														gsm_id) in table_mobile}
-			mobile_container.append(inv_table_mobile)
+			for mobile in table_mobile:
+				smsItem = modem.GsmSms(msg[0], mobile[1], msg[4], '')
+				msglist.append([smsItem, msg[2], msg[3], msg[1]])
 			
 		today = dt.today().strftime("%Y-%m-%d %H:%M:%S")
-
-		for inv_mobile in mobile_container:
-			for stat_id, mobile_id, outbox_id, gsm_id, sms_msg in allmsgs:
-				try:
-					smsItem = modem.GsmSms(
-						stat_id, inv_mobile[mobile_id], sms_msg, '')
-					msglist.append([smsItem, gsm_id, outbox_id, mobile_id])
-				except KeyError as ke:
-					pass
-					# continue
-					
-		# if len(error_stat_list) > 0:
-		# 	print(">> Ignoring invalid messages...")
-		# 	db.update_sent_status(table, error_stat_list)
-		# 	print("done")
 
 		if len(msglist) == 0:
 			print(">> No valid message to send")
@@ -134,25 +124,31 @@ class GsmServer:
 		allmsgs = msglist
 		status_list = []
 
+		pending_msgs = len(allmsgs)
+		print("Pending Messages:", pending_msgs)
+
 		for msg in allmsgs:
 			try:
-				num_prefix = re.match(
-					"^ *((0)|(63))9\d\d", msg[0].simnum).group()
-				num_prefix = num_prefix.strip()
-				ret = gsm.send_sms(msg[0].data, msg[0].simnum.strip())
-
-				today = dt.today().strftime("%Y-%m-%d %H:%M:%S")
-				if ret:
-					send_stat = 1
-					stat = msg[0].num, 1, today, msg[1], msg[2], msg[3]
+				if (msg[0].data != ""):
+					num_prefix = re.match(
+						"^ *((0)|(63))9\d\d", msg[0].simnum).group()
+					num_prefix = num_prefix.strip()
+					ret = gsm.send_sms(msg[0].data, msg[0].simnum.strip())
+					today = dt.today().strftime("%Y-%m-%d %H:%M:%S")
+					if ret != 0:
+						stat = msg[0].num, 1, today, msg[2], msg[1], msg[3]
+					else:
+						stat = msg[0].num, 5, today, msg[2], msg[1], msg[3]
 				else:
-					stat = msg[0].num, 5, today, msg[1], msg[2], msg[3]
-
+					stat = msg[0].num, 6, today, msg[2], msg[1], msg[3]
 				status_list.append(stat)
+				pending_msgs = pending_msgs - 1
+				print(">> ",pending_msgs," messages left flagged for sending...")
 			except Exception as e:
 				print('>> Error:', e)
-		db.update_sent_status(table, status_list)
-
+			print(">> Message:", msg[0].data)
+			db.update_sent_status(table, status_list)
+			status_list = []
 
 if __name__ == "__main__":
 	start_time = time.time()
@@ -161,7 +157,7 @@ if __name__ == "__main__":
 	db = dbLib.DatabaseConnection()
 	gsm_modules = db.get_gsm_info(args.gsm_id)
 	config = configparser.ConfigParser()
-	config.read('utils/config.cnf')
+	config.read('/home/pi/updews-pycodes/gsm/gsmserver_dewsl3/utils/config.cnf')
 
 	if args.gsm_id not in gsm_modules.keys():
 		print(">> Error in gsm module selection (", args.gsm_id, ")")
@@ -197,5 +193,7 @@ if __name__ == "__main__":
 		initialize_gsm.run_server(initialize_gsm_modules, gsm_info, 'users')
 	except modem.ResetException:
 		print(">> Resetting system because of GSM failure")
-		gsm.reset()
+		initialize_gsm_modules.reset()
+		time.sleep(int(config['GSM_DEFAULT_SETTINGS']['POWER_RESET_DELAY']))
+		initialize_gsm.run_server(initialize_gsm_modules, gsm_info, 'users')
 		sys.exit()

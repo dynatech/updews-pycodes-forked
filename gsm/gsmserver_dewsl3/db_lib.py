@@ -4,11 +4,14 @@ from datetime import datetime as dt
 from datetime import timedelta as td
 from pprint import pprint
 import sys
+import re
+import time
+import hashlib
 
 class DatabaseCredentials:
 	def __new__(self):
 		config = configparser.ConfigParser()
-		config.read('utils/config.cnf')
+		config.read('/home/pi/updews-pycodes/gsm/gsmserver_dewsl3/utils/config.cnf')
 		config["CBEWSL_DB_CREDENTIALS"]
 		return config
 
@@ -34,8 +37,8 @@ class DatabaseConnection:
 						 "inner join (select * from smsoutbox_%s) as t2 "
 						 "on t1.outbox_id = t2.outbox_id "
 						 "where t1.send_status < %d "
-						 "and t1.send_status >= 0 "
-						 "and t1.gsm_id = %d ") % (table[:-1], table, send_status, gsm_id)
+						 "and t1.send_status >= 0 and t1.send_status < 6 "
+						 "and t1.gsm_id = %d LIMIT 100") % (table[:-1], table, send_status, gsm_id)
 
 				a = cur.execute(query)
 				out = []
@@ -116,10 +119,12 @@ class DatabaseConnection:
 			ts_sms = msg.dt
 			sms_msg = msg.data
 			read_status = 0
-
-			query_loggers = self.write_logger_sms(msg, gsm_id, ts_sms, ts_stored, sms_msg)
-			if (query_loggers == -1):
-				query_users = self.write_users_sms(msg, gsm_id, ts_sms, ts_stored, sms_msg)
+			if (self.validateCBEWSLAccount(sms_msg) == True):
+				self.insertNewAccountCBEWS(sms_msg)
+			else:
+				query_loggers = self.write_logger_sms(msg, gsm_id, ts_sms, ts_stored, sms_msg)
+				if (query_loggers == -1):
+					query_users = self.write_users_sms(msg, gsm_id, ts_sms, ts_stored, sms_msg)
 		
 
 	def write_logger_sms(self, msg, gsm_id, ts_sms, ts_stored, sms_msg):
@@ -173,7 +178,7 @@ class DatabaseConnection:
 			db.commit()
 			if last_insert_id:
 				b = cur.execute('select last_insert_id()')
-				b = cur.fetchall()
+				b = str(cur.fetchone()[0]) 
 				ret_val = b
 			else:
 				ret_val = a
@@ -244,12 +249,11 @@ class DatabaseConnection:
 		query = query[:-1]
 		query += (" on duplicate key update stat_id=values(stat_id), "
 				  "send_status=send_status+values(send_status),ts_sent=values(ts_sent)")
-
 		self.write_to_db(query=query, last_insert_id=False)
 
 	def get_gsm_info(self, gsm_id):
 		gsm_dict = {}
-		query = "SELECT * FROM comms_db.gsm_modules where gsm_id = '" + \
+		query = "SELECT * FROM gsm_modules where gsm_id = '" + \
 			str(gsm_id)+"';"
 		gsm_info = self.read_db(query)  # Refactor this
 		for gsm_id, gsm_server_id, gsm_name, sim_num, network, port, pwr, rng, module_type in gsm_info:
@@ -265,100 +269,122 @@ class DatabaseConnection:
 		container = {gsm_id: gsm_dict}
 		return container
 
-	def write_outbox(self, message=None,recipients=None,gsm_id=None,table=None,
-    resource="sms_data"):
-	    """
-	        **Description:**
-	          -The write outbox message to database is a function that insert message to smsoutbox with 
-	          timestamp written,message source and mobile id.
-	         
-	        :param message: The message that will be sent to the recipients.
-	        :param recipients: The number of the recipients.
-	        :param gsm_id: The gsm id .
-	        :param table: table use of the number.
-	        :type message: str
-	        :type recipients: str
-	        :type recipients: int
-	        :type table: str
-	        :returns: N/A
-	    """
-	    # if table == '':
-	    #     print "Error: No table indicated"
-	    #     raise ValueError
-	    #     return
+	def write_outbox(self, message=None, recipients=None, table=None):
 
-	    tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
+		tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
 
-	    if not message:
-	        raise ValueError("No message specified for sending")
+		if not message:
+			print("No message specified for sending, skipping...")
+			return -1
 
-	    if not recipients:
-	        raise ValueError("No recipients specified for sending")
-	    elif type(recipients).__name__ == 'str':
-	        recipients = recipients.split(",")
+		if not recipients:
+			print("No recipients specified for sending, skipping...")
+			return -1
 
-	    if not table:
-	        table_name = check_number_in_table(recipients[0])
-	        if not table_name:
-	            print("No record for '%s" % (recipients[0]))
-	            return
-	    else:
-	        table_name = table
+		recipients = self.get_all_user_mobile(recipients[:10])
+		
+		query = ("insert into smsoutbox_%s (ts_written,sms_msg) VALUES "
+			"('%s','%s')") % (table,tsw,message)
+		outbox_id = self.write_to_db(query=query, last_insert_id=True)
 
-	    print ("table_name:", table_name)
+		query = ("INSERT INTO smsoutbox_%s_status (outbox_id,mobile_id,gsm_id)"
+				" VALUES ") % (table[:-1])
 
-	    query = ("insert into smsoutbox_%s (ts_written,sms_msg,source) VALUES "
-	        "('%s','%s','central')") % (table_name,tsw,message)
-	        
-	    outbox_id = dbio.write(query=query, identifier="womtdb", 
-	        last_insert=True, host=host, resource=resource)[0][0]
 
-	    query = ("INSERT INTO smsoutbox_%s_status (outbox_id,mobile_id,gsm_id)"
-	            " VALUES ") % (table_name[:-1])
-
-	    table_mobile = static.get_mobiles(table_name, host)
-	    # def_gsm_id = mc.get(table_name[:-1] + "_mobile_def_gsm_id")
-
-	    for r in recipients:        
-	        tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
-	        try:
-	            mobile_id = table_mobile[r]
-	            gsm_id = def_gsm_id[mobile_id]
-	            print (outbox_id, mobile_id, gsm_id)
-	            query += "(%d, %d, %d)," % (outbox_id, mobile_id, gsm_id)
-	        except KeyError:
-	            print (">> Error: Possible key error for", r)
-	            continue
-	    query = query[:-1]
-
-	    dbio.write(query=query, identifier="womtdb", last_insert=False, host=host,
-	        resource=resource)
+		for recipient in recipients:
+			tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
+			try:
+				query += "(%s, %s, %s)," % (outbox_id, recipient[0], recipient[2])
+			except KeyError:
+				print (">> Error: Possible key error for", r)
+				continue
+		query = query[:-1]
+		print(query)
+		self.write_to_db(query=query, last_insert_id=False)
+		return 0
 
 	def get_inbox(self, host='local',read_status=0,table='loggers',limit=200,
-    resource="sms_data"):
-	    db, cur = dbio.connect(host=host, resource=resource)
+	resource="sms_data"):
+		db, cur = dbio.connect(host=host, resource=resource)
 
-	    if table in ['loggers','users']:
-	        tbl_contacts = '%s_mobile' % table[:-1]
-	    else:
-	        raise ValueError('Error: unknown table', table)
-	    
-	    while True:
-	        try:
-	            query = ("select inbox_id,ts_sms,sim_num,sms_msg from "
-	                "(select inbox_id,ts_sms,mobile_id,sms_msg from smsinbox_%s "
-	                "where read_status = %d order by inbox_id desc limit %d) as t1 "
-	                "inner join (select mobile_id, sim_num from %s) as t2 "
-	                "on t1.mobile_id = t2.mobile_id ") % (table, read_status, limit,
-	                tbl_contacts)
-	            # print query
-	        
-	            a = cur.execute(query)
-	            out = []
-	            if a:
-	                out = cur.fetchall()
-	            return out
+		if table in ['loggers','users']:
+			tbl_contacts = '%s_mobile' % table[:-1]
+		else:
+			raise ValueError('Error: unknown table', table)
+		
+		while True:
+			try:
+				query = ("select inbox_id,ts_sms,sim_num,sms_msg from "
+					"(select inbox_id,ts_sms,mobile_id,sms_msg from smsinbox_%s "
+					"where read_status = %d order by inbox_id desc limit %d) as t1 "
+					"inner join (select mobile_id, sim_num from %s) as t2 "
+					"on t1.mobile_id = t2.mobile_id ") % (table, read_status, limit,
+					tbl_contacts)
 
-	        except MySQLdb.OperationalError:
-	            print ('9.',)
-	            time.sleep(20)
+				a = cur.execute(query)
+				out = []
+				if a:
+					out = cur.fetchall()
+				return out
+
+			except MySQLdb.OperationalError:
+				print ('9.',)
+				time.sleep(20)
+
+	def write_csq(self, gsm_id, datetime, csq):
+		query = "INSERT INTO gsm_csq_logs VALUES (0, %d, '%s', %d)" % (gsm_id, datetime, csq)
+		self.write_to_db(query=query, last_insert_id=False)
+
+	def validateCBEWSLAccount(self, msg):
+		status = False
+		if re.search("validate", str(msg), re.IGNORECASE) and len(str(msg)) == 15:
+			explode = msg.split(' ')
+			if len(explode) == 3:
+				status = True
+
+		return status
+
+	def execute_commons_db(self, query, last_insert_id = False):
+		try:
+			db, cur = self.db_connect(
+				self.db_cred['CBEWSL_DB_CREDENTIALS']['db_commons'])
+			a = cur.execute(query)
+			result = []
+			db.commit()
+			if last_insert_id:
+				b = cur.execute('select last_insert_id()')
+				b = str(cur.fetchone()[0]) 
+				result = b
+			else:
+				if a:
+					result = cur.fetchall()
+			
+			db.close()
+			return result
+		except MySQLdb.OperationalError as mysqle:
+			print("MySQLdb OP Error:", mysqle)
+			time.sleep(20)
+
+	def insertNewAccountCBEWS(self, msg):
+		# Needs validation
+		parts = msg.split(' ')
+		query = "SELECT * FROM pending_accounts WHERE validation_code = '"+parts[1]+"'"
+		pending_account = self.execute_commons_db(query)
+
+		for user in pending_account:
+			user_query = "INSERT INTO users VALUES (0, 'NA', '%s', 'NA', '%s', 'NA', '%s', '%s', 1)" % (user[3], user[4], user[5], user[6])
+			last_insert_user_id = self.execute_commons_db(user_query, last_insert_id=True)
+
+			encode_password = str.encode(user[2])
+			hash_object = hashlib.sha512(encode_password)
+			hex_digest_password = hash_object.hexdigest()
+			password = str(hex_digest_password)
+
+			user_account_query = "INSERT INTO user_accounts VALUES (0, '%s', '%s', '%s', 1, '')" % (last_insert_user_id, user[1], password)
+			insert_new_user_account = self.execute_commons_db(user_account_query)
+
+			user_mobile_query = "INSERT INTO user_mobile VALUES (0, '%s', '%s', 1, 1, 1)" % (last_insert_user_id, user[8])
+			self.write_to_db(query=user_mobile_query)
+
+			delete_pending_account_query = "DELETE FROM pending_accounts WHERE pending_account_id = '"+str(user[0])+"'"
+			delete_pending_account = self.execute_commons_db(delete_pending_account_query)

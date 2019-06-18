@@ -6,6 +6,8 @@ from gsmmodem import pdu as PduDecoder
 from datetime import datetime as dt
 from datetime import timedelta as td
 import configparser
+from pprint import pprint
+import sys
 
 
 class GsmSms:
@@ -19,14 +21,12 @@ class GsmSms:
 class DefaultSettings:
     def __new__(self):
         config = configparser.ConfigParser()
-        config.read('utils/config.cnf')
+        config.read('/home/pi/updews-pycodes/gsm/gsmserver_dewsl3/utils/config.cnf')
         config["CBEWSL_DB_CREDENTIALS"]
         return config
 
-
 class ResetException(Exception):
     pass
-
 
 class GsmModem:
     defaults = None
@@ -109,7 +109,9 @@ class GsmModem:
         allmsgs = 'd' + self.execute_atcmd('AT+CMGL=4')
         allmsgs = re.findall("(?<=\+CMGL:).+\r\n.+(?=\n*\r\n\r\n)", allmsgs)
         msglist = []
-
+        tpdu_header = 0
+        multi_sms_construct = ""
+        print(">> Fetching inbox...")
         for msg in allmsgs:
             try:
                 pdu = re.search(r'[0-9A-F]{20,}', msg).group(0)
@@ -120,14 +122,12 @@ class GsmModem:
                 smsdata = PduDecoder.decodeSmsPdu(pdu)
             except ValueError as e:
                 print(">> Error: conversion to pdu (cannot decode "
-                      "odd-lllength)")
+                      "odd-length)")
                 print(">> Error: ", e)
                 continue
             except IndexError:
                 print(">> Error: convertion to pdu (pop from empty array)")
                 continue
-
-            # smsdata = self.manage_multi_messages(smsdata) | REFACTOR THIS
 
             if smsdata == "":
                 continue
@@ -141,41 +141,48 @@ class GsmModem:
             txtdatetimeStr = smsdata['time'] + td(hours=8)
             txtdatetimeStr = txtdatetimeStr.strftime('%Y-%m-%d %H:%M:%S')
 
-            try:
-                smsItem = GsmSms(txtnum, smsdata['number'].strip('+'),
-                                 str(smsdata['text']), txtdatetimeStr)
-                sms_msg = str(smsdata['text'])
-                if len(sms_msg) < 30:
-                    print("<<", sms_msg)
+            if smsdata['tpdu_length'] < 159:
+                if tpdu_header != 0:
+                    tpdu_header =self.increamentHexPDU(tpdu_header)
+                    if (tpdu_header in pdu):
+                        smsdata['text'] = multi_sms_construct + smsdata['text']
+                        tpdu_header = self.increamentHexPDU(tpdu_header)
+                        smsItem = GsmSms(txtnum, smsdata['number'].strip('+'),
+                            str(smsdata['text']), txtdatetimeStr)
+                        msglist.append(smsItem)
                 else:
-                    print("<<",sms_msg[:10], "...", sms_msg[-20:])
-
-                msglist.append(smsItem)
-            except UnicodeEncodeError:
-                print(">> Unknown character error. Skipping message")
-                continue
+                    smsdata['text'] = smsdata['text']
+                    smsItem = GsmSms(txtnum, smsdata['number'].strip('+'),
+                                     str(smsdata['text']), txtdatetimeStr)
+                    msglist.append(smsItem)
+            else:
+                multi_sms_construct = multi_sms_construct + smsdata['text']
+                tpdu_header = pdu[54:66]
         return msglist
 
+    def increamentHexPDU(self, pdu):
+        tpdu_parts = int(str(pdu[-4:]), 16) + 1
+        tpdu_parts = hex(tpdu_parts)[2:]
+        isolated_part = str(pdu[:-3])
+        increamented_tpdu = str(isolated_part)+str(tpdu_parts)
+        return increamented_tpdu
+
     def send_sms(self, msg, number):
+        start_time = time.time()
         try:
-            pdulist = PduDecoder.encodeSmsSubmitPdu(number, msg, 0, None)
-            temp = pdulist[0]
-        except:
+            pdulist = PduDecoder.encodeSmsSubmitPdu(number, msg)
+        except Exception as e:
+            print(e)
             print("Error in pdu conversion. Skipping message sending")
             return -1
 
-        # SET CONSTANT
-        temp_pdu = self.defaults['GSM_DEFAULT_SETTINGS']['PDU_HEADER']+str(pdulist[0])[
-            11:]
-        pdulist[0] = temp_pdu
-
-        parts = len(str(pdulist[0])[2:])
+        parts = len(pdulist)
         count = 1
-
         for pdu in pdulist:
             a = ''
             now = time.time()
-            preamble = "AT+CMGS="+str(int(parts/2))
+            temp_pdu = self.formatPDUtoSIM800(str(pdu))
+            preamble = "AT+CMGS="+str(pdu.tpduLength)
             self.gsm.write(str.encode(preamble+"\r"))
             now = time.time()
             while (a.find('>') < 0 and a.find("ERROR") < 0 and
@@ -188,20 +195,19 @@ class GsmModem:
             if (time.time() > now + int(self.defaults['GSM_DEFAULT_SETTINGS']['SEND_INITIATE_REPLY_TIMEOUT']) or
                     a.find("ERROR") > -1):
                 print('>> Error: GSM Unresponsive at finding >')
-                print(a)
                 return-1
             else:
                 print('>', end=" ")
 
             a = ''
             now = time.time()
-            self.gsm.write(str.encode(pdu+chr(26)))
+            self.gsm.write(str.encode(str(temp_pdu)+chr(26)))
             while (a.find('OK') < 0 and a.find("ERROR") < 0 and
                    time.time() < now + int(self.defaults['GSM_DEFAULT_SETTINGS']['REPLY_TIMEOUT'])):
                 a += self.gsm.read(self.gsm.inWaiting()).decode('utf-8')
                 time.sleep(
                     float(self.defaults['GSM_DEFAULT_SETTINGS']['WAIT_FOR_BYTES_DELAY']))
-                print(':', end=" ")
+                print('-', end=" ")
 
             if time.time() - int(self.defaults['GSM_DEFAULT_SETTINGS']['SENDING_REPLY_TIMEOUT']) > now:
                 print('>> Error: timeout reached')
@@ -210,51 +216,10 @@ class GsmModem:
                 print('>> Error: GSM reported ERROR in SMS reading')
                 return -1
             else:
+                print("Sending execution time:", (time.time() - start_time))
                 print(">> Part %d/%d: Message sent!" % (count, parts))
                 count += 1
         return 0
-
-    def manage_multi_messages(self, smsdata):
-        if 'ref' not in smsdata:
-            return smsdata
-        sms_ref = smsdata['ref']
-        multipart_sms = mc.get("multipart_sms")
-        if multipart_sms is None:
-            multipart_sms = {}
-            print("multipart_sms in None")
-
-        if sms_ref not in multipart_sms:
-            multipart_sms[sms_ref] = {}
-            multipart_sms[sms_ref]['date'] = smsdata['date']
-            multipart_sms[sms_ref]['number'] = smsdata['number']
-            # multipart_sms[sms_ref]['cnt'] = smsdata['cnt']
-            multipart_sms[sms_ref]['seq_rec'] = 0
-
-        multipart_sms[sms_ref][smsdata['seq']] = smsdata['text']
-        print("Sequence no: %d/%d" % (smsdata['seq'], smsdata['cnt']))
-        multipart_sms[sms_ref]['seq_rec'] += 1
-
-        smsdata_complete = ""
-
-        if multipart_sms[sms_ref]['seq_rec'] == smsdata['cnt']:
-            multipart_sms[sms_ref]['text'] = ""
-            for i in range(1, smsdata['cnt']+1):
-                try:
-                    multipart_sms[sms_ref]['text'] += multipart_sms[sms_ref][i]
-                except KeyError:
-                    print(">> Error in reading multipart_sms.", )
-                    print("Text replace with empty line.")
-
-            # print multipart_sms[sms_ref]['text'] | DONT USE THIS
-
-            smsdata_complete = multipart_sms[sms_ref]
-
-            del multipart_sms[sms_ref]
-        else:
-            print("Incomplete message")
-
-        mc.set("multipart_sms", multipart_sms)
-        return smsdata_complete
 
     def count_sms(self):
         while True:
@@ -306,18 +271,33 @@ class GsmModem:
         except ValueError:
             print('>> Error deleting messages')
 
+    def reset(self):
+        print(">> Resetting GSM Module ...")
+        try:
+            GPIO.output(self.pow_pin, 0)
+            time.sleep(int(self.defaults['GSM_DEFAULT_SETTINGS']['RESET_DEASSERT_DELAY']))
+            try:
+                self.execute_atcmd("AT+CPOWD=1", "NORMAL POWER DOWN")
+            except ResetException:
+                print (">> Error: unable to send powerdown signal. "
+                    "Will continue with hard reset")
+            GPIO.output(self.pow_pin, 1)
+            time.sleep(int(self.defaults['GSM_DEFAULT_SETTINGS']['RESET_ASSERT_DELAY']))
+            GPIO.output(self.pow_pin, 0)
+            time.sleep(int(self.defaults['GSM_DEFAULT_SETTINGS']['RESET_DEASSERT_DELAY']))
+            GPIO.cleanup()
+            print ('done')
+        except ImportError:
+            return
 
-if __name__ == "__main__":
-    init = GsmModem()
-    print("Connection Status:", init.set_gsm_defaults())
-    # print("----------------- READING SMS-----------------")
-    # print(type(init.get_all_sms()), init.get_all_sms())
-    # print("----------------- SENDING SMS-----------------")
-    counter = 0
-    while True:
-    	init.send_sms('SPAM# :'+str(counter), '639175394337')
-    	counter = counter+1
-    # print("----------------- Counting SMS-----------------")
-    # print(init.count_sms())
-    # print("----------------- Deleting SMS-----------------")
-    # print(init.delete_sms(2))
+    def formatPDUtoSIM800(self, pdu):
+        first = str(pdu[:2])
+        second = str(pdu[2:4])
+        third = str(pdu[4:7])
+        fourth = "C813" #Constant
+        fifth =  str(pdu[11:])
+        second = int(second)-20
+        if len(str(second)) == 1:
+            second = "0"+str(second)
+        final = str(first)+str(second)+str(third)+str(fourth)+str(fifth)
+        return final
