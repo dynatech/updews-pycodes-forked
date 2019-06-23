@@ -7,6 +7,7 @@ import sys
 import re
 import time
 import hashlib
+import psutil
 
 class DatabaseCredentials:
 	def __new__(self):
@@ -39,7 +40,6 @@ class DatabaseConnection:
 						 "where t1.send_status < %d "
 						 "and t1.send_status >= 0 and t1.send_status < 6 "
 						 "and t1.gsm_id = %d LIMIT 100") % (table[:-1], table, send_status, gsm_id)
-
 				a = cur.execute(query)
 				out = []
 				if a:
@@ -98,7 +98,7 @@ class DatabaseConnection:
 			print("MySQLdb OP Error:", mysqle)
 			time.sleep(20)
 
-	def write_inbox(self, msglist='', gsm_info=''):
+	def write_inbox(self, msglist='', gsm_info='', csq=0):
 		if not msglist:
 			raise ValueError("No msglist definition")
 
@@ -109,7 +109,6 @@ class DatabaseConnection:
 
 		gsm_id = gsm_info['id']
 
-
 		sms_id_ok = []
 		sms_id_unk = []
 		ts_sms = 0
@@ -119,12 +118,15 @@ class DatabaseConnection:
 			ts_sms = msg.dt
 			sms_msg = msg.data
 			read_status = 0
-			if (self.validateCBEWSLAccount(sms_msg) == True):
-				self.insertNewAccountCBEWS(sms_msg)
+			if ("GSM RQ DATA: G" in sms_msg):
+				self.send_gsm_csq_data(msg, csq)
 			else:
-				query_loggers = self.write_logger_sms(msg, gsm_id, ts_sms, ts_stored, sms_msg)
-				if (query_loggers == -1):
-					query_users = self.write_users_sms(msg, gsm_id, ts_sms, ts_stored, sms_msg)
+				if (self.validateCBEWSLAccount(sms_msg) == True):
+					self.insertNewAccountCBEWS(sms_msg)
+				else:
+					query_loggers = self.write_logger_sms(msg, gsm_id, ts_sms, ts_stored, sms_msg)
+					if (query_loggers == -1):
+						query_users = self.write_users_sms(msg, gsm_id, ts_sms, ts_stored, sms_msg)
 		
 
 	def write_logger_sms(self, msg, gsm_id, ts_sms, ts_stored, sms_msg):
@@ -390,4 +392,22 @@ class DatabaseConnection:
 
 			delete_pending_account = self.execute_commons_db(delete_pending_account_query)
 		self.write_to_db(query=query, last_insert_id=False)
+	
+	def send_gsm_csq_data(self, msg, csq):
+		current_date =  dt.today().strftime("%Y-%m-%d %H:%M:%S")
+		sender = msg.simnum
+		gsm_server_id = msg.num
+		cpu_percentage = psutil.cpu_percent()
+		rom_percentage = psutil.virtual_memory()[2]
+		time_format = '%Y-%m-%d %H:%M:%S'
+		difference = dt.strptime(current_date, time_format) - dt.strptime(msg.dt, time_format)
+		td(0, 8, 562000)
+		execution_time = divmod(difference.days * 86400 + difference.seconds, 60)
+		message = "GSM Server ID: "+gsm_server_id+"\n" \
+			"Sender: "+sender+"\n" \
+			"CPU Usage (%): "+str(cpu_percentage)+"\n" \
+			"ROM Usage (%): "+str(rom_percentage)+"\n" \
+			"Execution time: "+str(str(execution_time[0]))+" minute(s), "+str(execution_time[1])+" seconds."
+		self.write_outbox(message=message, recipients=sender, table='users')
+
 
