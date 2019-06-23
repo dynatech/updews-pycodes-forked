@@ -57,7 +57,7 @@ class GsmServer:
 			if m > 0:
 				allmsgs = gsm_mod.get_all_sms()
 				try:
-					db.write_inbox(allmsgs, gsm_info)
+					db.write_inbox(allmsgs, gsm_info, gsm_mod.get_csq())
 					print(">> Writing SMS to Database...")
 				except KeyboardInterrupt:
 					print(">> Error: May be an empty line.. skipping message storing")
@@ -104,7 +104,6 @@ class GsmServer:
 		mobile_container = []
 		msglist = []
 		error_stat_list = []
-
 		if len(allmsgs) <= 0:
 			return
 

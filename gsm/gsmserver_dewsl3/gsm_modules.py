@@ -47,7 +47,7 @@ class GsmModem:
 
     def initialize_serial(self):
         print('Connecting to GSM modem at', self.ser_port)
-
+        
         gsm = serial.Serial()
         gsm.port = self.ser_port
         gsm.baudrate = self.ser_baud
@@ -138,7 +138,7 @@ class GsmModem:
                       "construction", msg)
                 continue
 
-            txtdatetimeStr = smsdata['time'] + td(hours=8)
+            txtdatetimeStr = smsdata['time']
             txtdatetimeStr = txtdatetimeStr.strftime('%Y-%m-%d %H:%M:%S')
 
             if smsdata['tpdu_length'] < 159:
