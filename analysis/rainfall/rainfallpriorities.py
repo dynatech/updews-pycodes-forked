@@ -83,7 +83,7 @@ def get_distance(site_coord, rg_coord):
     
     return nearest_rg
 
-def main():
+def main(site_code=''):
     """Writes in rainfall_priorities information on nearest rain gauges
     from the project sites for rainfall alert analysis
 
@@ -91,8 +91,21 @@ def main():
 
     start = datetime.now()
     qdb.print_out(start)
-
+    
     coord = all_site_coord()
+    if site_code == '':
+        try:
+            site_code = sys.argv[1].lower()
+            site_code = site_code.replace(' ', '').split(',')
+        except:
+            pass
+    else:
+        site_code = site_code.replace(' ', '').split(',')
+    if site_code != '':
+        sites = mem.get('df_sites')
+        site_id = sites.loc[sites.site_code.isin(site_code), 'site_id']
+        coord = coord.loc[coord.site_id.isin(site_id), :]
+
     rg_coord = mem.get('df_rain_gauges')
     rg_coord = rg_coord[rg_coord.date_deactivated.isnull()]
     site_coord = coord.groupby('site_id', as_index=False)
