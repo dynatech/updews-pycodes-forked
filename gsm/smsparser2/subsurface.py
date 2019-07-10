@@ -238,9 +238,9 @@ def v2(sms):
             dtypestr = "x"
         elif dtype == "21" or dtype == "0C":
             dtypestr = "y"
-        elif dtype == "6F" or dtype == "15":
+        elif dtype == "6F" or dtype == "15" or dtype == "0A":
             dtypestr = "b"
-        elif dtype == "70" or dtype == "1A":
+        elif dtype == "70" or dtype == "1A" or dtype == "0D":
             dtypestr = "c"
         else:
             raise ValueError(">> Data type" + dtype + "not recognized")
@@ -421,14 +421,14 @@ def soms_parser(msgline,mode,div,err):
     rawdata2=0
     if mode == 1: #if raw
         '''use following'''
-        nodecommands = [110, 111, 21]
+        nodecommands = [110, 111, 21,10]
         maxnode= 13
     if mode == 2: #if calib
         '''use following'''
-        nodecommands = [112, 113, 26]
+        nodecommands = [112, 113, 26,13]
         maxnode = 19
     if mode == 3:
-        nodecommands = [110, 111, 21, 112, 113, 26 ]
+        nodecommands = [110, 111, 21, 112, 113, 26 ,10,13]
         maxnode = 9
         
     r = msgline.split('*')
@@ -448,6 +448,10 @@ def soms_parser(msgline,mode,div,err):
    #if msgdata is broken (without nodeid at start)   
     try:
         firsttwo = int('0x'+data[:2],base=0)
+#        check msgid. if msgid is 13, new msg format
+        msgid = int('0x'+data[2:4],base=0)
+        if msgid == 13:
+            div = 10
     except:
         firsttwo = data[:2]
         log_errors(10,msgline,dt) 
