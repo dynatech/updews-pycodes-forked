@@ -122,7 +122,15 @@ class DatabaseConnection:
 				self.send_gsm_csq_data(msg, csq)
 			else:
 				if (self.validateCBEWSLAccount(sms_msg) == True):
-					self.insertNewAccountCBEWS(sms_msg)
+					ret, id = self.insertNewAccountCBEWS(sms_msg)
+					if ret == True:
+						print("<< Sending registration compelete msg...")
+						message = "CBEWS-L Registration: \n" \
+							"Your account has been Approved."
+						self.write_outbox(message=message, recipients=id, table='users')
+					else:
+						print("<< Sending error report to devs...")
+						print(id)
 				else:
 					query_loggers = self.write_logger_sms(msg, gsm_id, ts_sms, ts_stored, sms_msg)
 					if (query_loggers == -1):
@@ -368,30 +376,33 @@ class DatabaseConnection:
 			time.sleep(20)
 
 	def insertNewAccountCBEWS(self, msg):
-		# Needs validation
+		status = False
+		id = 0
 		parts = msg.split(' ')
-		query = "SELECT * FROM pending_accounts WHERE validation_code = '"+parts[1]+"'"
-		pending_account = self.execute_commons_db(query)
+		try:
+			query = "SELECT * FROM commons_db.pending_accounts WHERE validation_code = '"+parts[1]+"'"
+			pending_account = self.execute_commons_db(query)
+			for user in pending_account:
+				user_query = "INSERT INTO users VALUES (0, 'NA', '%s', 'NA', '%s', 'NA', '%s', '%s', 1)" % (user[3], user[4], user[5], user[6])
+				last_insert_user_id = self.execute_commons_db(user_query, last_insert_id=True)
 
-		for user in pending_account:
-			user_query = "INSERT INTO users VALUES (0, 'NA', '%s', 'NA', '%s', 'NA', '%s', '%s', 1)" % (user[3], user[4], user[5], user[6])
-			last_insert_user_id = self.execute_commons_db(user_query, last_insert_id=True)
+				encode_password = str.encode(user[2])
+				hash_object = hashlib.sha512(encode_password)
+				hex_digest_password = hash_object.hexdigest()
+				password = str(hex_digest_password)
 
-			encode_password = str.encode(user[2])
-			hash_object = hashlib.sha512(encode_password)
-			hex_digest_password = hash_object.hexdigest()
-			password = str(hex_digest_password)
-
-			user_account_query = "INSERT INTO user_accounts VALUES (0, '%s', '%s', '%s', 1, '')" % (last_insert_user_id, user[1], password)
-			insert_new_user_account = self.execute_commons_db(user_account_query)
-
-			user_mobile_query = "INSERT INTO user_mobile VALUES (0, '%s', '%s', 1, 1, 1)" % (last_insert_user_id, user[8])
-			self.write_to_db(query=user_mobile_query)
-
-			delete_pending_account_query = "DELETE FROM pending_accounts WHERE pending_account_id = '"+str(user[0])+"'"
-
-			delete_pending_account = self.execute_commons_db(delete_pending_account_query)
-		self.write_to_db(query=query, last_insert_id=False)
+				user_account_query = "INSERT INTO user_accounts VALUES (0, '%s', '%s', '%s', 1, '', %s)" % (last_insert_user_id, user[1], password, parts[2])
+				insert_new_user_account = self.execute_commons_db(user_account_query)
+				user_mobile_query = "INSERT INTO user_mobile VALUES (0, '%s', '%s', 1, 1, 1)" % (last_insert_user_id, "63"+user[8][-10:])
+				user_mobile = self.write_to_db(query=user_mobile_query, last_insert_id = True)
+				id = "63"+user[8][-10:]
+				delete_pending_account_query = "DELETE FROM pending_accounts WHERE pending_account_id = '"+str(user[0])+"'"
+				delete_pending_account = self.execute_commons_db(delete_pending_account_query)
+				status = True
+		except Exception as e:
+			print(e)
+		finally:
+			return status,id
 	
 	def send_gsm_csq_data(self, msg, csq):
 		current_date =  dt.today().strftime("%Y-%m-%d %H:%M:%S")
