@@ -1,32 +1,32 @@
 [sb_local]
-host = 127.0.0.1
+host = 192.168.150.10
 port = 3306
-user = pysys_local
-password = NaCAhztBgYZ3HwTkvHwwGVtJn5sVMFgg
+user = root
+password = senslope
 schema = senslopedb
 
 
 [sb_remote]
-host = 192.168.150.128
+host = 192.168.150.10
 port = 3306
-user = pysys_local
-password = NaCAhztBgYZ3HwTkvHwwGVtJn5sVMFgg
+user = root
+password = senslope
 schema = senslopedb
 
 
 [gsm_pi]
-host = 192.168.150.75
+host = 192.168.150.10
 port = 3306
-user = pysys_local
-password = NaCAhztBgYZ3HwTkvHwwGVtJn5sVMFgg
+user = root
+password = senslope
 schema = comms_db
 
 
 [ubuntu75_pysys_local]
-host = 192.168.150.75
+host = 192.168.150.10
 port = 3306
-user = pysys_local
-password = NaCAhztBgYZ3HwTkvHwwGVtJn5sVMFgg
+user = root
+password = senslope
 schema = senslopedb
 
 [staff1]
@@ -37,8 +37,8 @@ password = accelerometer
 schema = senslopedb
 
 [smsdb_remote]
-host = 192.168.150.90
+host = 192.168.150.10
 port = 3306
-user = pysys_local
-password = NaCAhztBgYZ3HwTkvHwwGVtJn5sVMFgg
+user = root
+password = senslope
 schema = senslopedb

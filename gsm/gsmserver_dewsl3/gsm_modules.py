@@ -175,14 +175,15 @@ class GsmModem:
             print(e)
             print("Error in pdu conversion. Skipping message sending")
             return -1
-
         parts = len(pdulist)
         count = 1
         for pdu in pdulist:
             a = ''
             now = time.time()
             temp_pdu = self.formatPDUtoSIM800(str(pdu))
+            print("-----")
             preamble = "AT+CMGS="+str(pdu.tpduLength)
+            print(preamble)
             self.gsm.write(str.encode(preamble+"\r"))
             now = time.time()
             while (a.find('>') < 0 and a.find("ERROR") < 0 and
@@ -202,6 +203,7 @@ class GsmModem:
             a = ''
             now = time.time()
             self.gsm.write(str.encode(str(temp_pdu)+chr(26)))
+            print(str.encode(str(temp_pdu)+chr(26)))
             while (a.find('OK') < 0 and a.find("ERROR") < 0 and
                    time.time() < now + int(self.defaults['GSM_DEFAULT_SETTINGS']['REPLY_TIMEOUT'])):
                 a += self.gsm.read(self.gsm.inWaiting()).decode('utf-8')
@@ -287,6 +289,7 @@ class GsmModem:
             time.sleep(int(self.defaults['GSM_DEFAULT_SETTINGS']['RESET_DEASSERT_DELAY']))
             GPIO.cleanup()
             print ('done')
+            sys.exit(0)
         except ImportError:
             return
 

@@ -9,6 +9,7 @@ import memcache
 import argparse
 import gsm_modules as modem
 import db_lib as dbLib
+import raw_sync_parser as raw_parser
 from pprint import pprint
 
 
@@ -42,7 +43,7 @@ class GsmServer:
 		self.send_messages_from_db(gsm_mod, table='users', send_status=5,
 								   gsm_info=gsm_info)
 
-	def run_server(self, gsm_mod, gsm_info, table='users'):
+	def run_server(self, gsm_mod, data_parser, gsm_info, table='users'):
 		minute_of_last_alert = dt.now().minute
 		timetosend = 0
 		lastAlertMsgSent = ''
@@ -53,11 +54,15 @@ class GsmServer:
 		print(">> Initialization duration:",
 			  (time.time() - start_time), " seconds")
 		while True:
+			print(">> Waiting...")
 			m = gsm_mod.count_sms()
 			if m > 0:
 				allmsgs = gsm_mod.get_all_sms()
 				try:
-					db.write_inbox(allmsgs, gsm_info, gsm_mod.get_csq())
+					parsed_data = data_parser.parse_raw_data(allmsgs)
+					if parsed_data != True:
+						db.write_inbox(allmsgs, gsm_info, gsm_mod.get_csq())
+
 					print(">> Writing SMS to Database...")
 				except KeyboardInterrupt:
 					print(">> Error: May be an empty line.. skipping message storing")
@@ -176,6 +181,7 @@ if __name__ == "__main__":
 	gsm_info["module"] = gsm_modules[args.gsm_id]['module_type']
 
 	try:
+		pprint(gsm_info)
 		initialize_gsm_modules = modem.GsmModem(gsm_info['port'], gsm_info["baudrate"],
 												gsm_info["pwr_on_pin"], gsm_info["ring_pin"])
 	except serial.SerialException:
@@ -189,10 +195,11 @@ if __name__ == "__main__":
 		print(e)
 		print(">> Error: initializing default settings.")
 	try:
-		initialize_gsm.run_server(initialize_gsm_modules, gsm_info, 'users')
+		initialize_data_parser = raw_parser.Parser()
+		initialize_gsm.run_server(initialize_gsm_modules, initialize_data_parser, gsm_info, 'users')
 	except modem.ResetException:
 		print(">> Resetting system because of GSM failure")
 		initialize_gsm_modules.reset()
 		time.sleep(int(config['GSM_DEFAULT_SETTINGS']['POWER_RESET_DELAY']))
-		initialize_gsm.run_server(initialize_gsm_modules, gsm_info, 'users')
+		initialize_gsm.run_server(initialize_gsm_modules, initialize_data_parser, gsm_info, 'users')
 		sys.exit()

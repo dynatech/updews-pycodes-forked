@@ -290,16 +290,14 @@ class DatabaseConnection:
 		if not recipients:
 			print("No recipients specified for sending, skipping...")
 			return -1
-
+		
 		recipients = self.get_all_user_mobile(recipients[:10])
 		
-		query = ("insert into smsoutbox_%s (ts_written,sms_msg) VALUES "
-			"('%s','%s')") % (table,tsw,message)
+		query = ('insert into smsoutbox_%s (ts_written,sms_msg) VALUES '
+			'("%s","%s")') % (table,tsw,message)
 		outbox_id = self.write_to_db(query=query, last_insert_id=True)
-
 		query = ("INSERT INTO smsoutbox_%s_status (outbox_id,mobile_id,gsm_id)"
 				" VALUES ") % (table[:-1])
-
 
 		for recipient in recipients:
 			tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
@@ -309,7 +307,6 @@ class DatabaseConnection:
 				print (">> Error: Possible key error for", r)
 				continue
 		query = query[:-1]
-		print(query)
 		self.write_to_db(query=query, last_insert_id=False)
 		return 0
 
@@ -381,6 +378,7 @@ class DatabaseConnection:
 		parts = msg.split(' ')
 		try:
 			query = "SELECT * FROM commons_db.pending_accounts WHERE validation_code = '"+parts[1]+"'"
+			print(query)
 			pending_account = self.execute_commons_db(query)
 			for user in pending_account:
 				user_query = "INSERT INTO users VALUES (0, 'NA', '%s', 'NA', '%s', 'NA', '%s', '%s', 1)" % (user[3], user[4], user[5], user[6])
@@ -421,4 +419,168 @@ class DatabaseConnection:
 			"Execution time: "+str(str(execution_time[0]))+" minute(s), "+str(execution_time[1])+" seconds."
 		self.write_outbox(message=message, recipients=sender, table='users')
 
+	def get_user_data(self, sim_num):
+		try:
+			db, cur = self.db_connect(
+				self.db_cred['CBEWSL_DB_CREDENTIALS']['db_comms'])
 
+			query = "SELECT users.user_id, account_id, first_name, last_name from commons_db.users" \
+			" INNER JOIN comms_db.user_mobile ON users.user_id = user_mobile.user_id " \
+			"INNER JOIN commons_db.user_accounts ON users.user_id = user_accounts.user_fk_id WHERE user_mobile.sim_num like '%"+sim_num[-10:]+"%'"
+			a = cur.execute(query)
+			out = []
+			if a:
+				out = cur.fetchall()
+				db.close()
+			return out
+
+		except MySQLdb.OperationalError as mysqle:
+			print("MySQLdb OP Error:", mysqle)
+			time.sleep(20)
+	
+	def execute_syncing(self, table_reference = '', data=[]):
+		result = None
+		for entry in data:
+			if '1' in entry[2]:
+				result = self.sync_new_data(table_reference, entry)
+			elif '2' in entry[2]:
+				result = self.sync_modified_data(table_reference, entry)
+			else:
+				print(">> Old data. Ignoring...")
+		return result
+	
+	def get_sync_acknowledgement_recipients(self):
+		query = "SELECT sim_num FROM user_accounts INNER JOIN comms_db.user_mobile ON  user_fk_id = user_id WHERE role <> 1"
+		result = self.execute_commons_db(query)
+		return result
+
+	def sync_new_data(self, table='', data=[]):
+		value_container = ""
+		counter = 0
+		del data[2]
+		del data[1]
+		for values in data:
+			if counter == 0:
+				value_container = "'"+values+"'"
+				counter += 1
+			else:
+				value_container = value_container+",'"+values+"'"
+
+		if (table != "ground_measurement"):
+			query = "INSERT INTO %s VALUES (%s)" % (table, value_container)
+		else:
+			print("GROUND MEASUREMENT")
+		print(query)
+		return self.execute_commons_db(query)
+
+	def sync_modified_data(self, table='', data=[]):
+		update_set = ""
+		counter = 0
+		data_counter = 1
+
+		del data[2]
+		del data[1]
+		
+		fetch_columns = self.get_column_names(table)
+		column_names = self.get_column_names(table)
+		
+		set_id = column_names[0]
+		del column_names[0]
+
+		for column in column_names:
+			if counter == 0:
+				update_set = ("SET %s='%s'") % (column, data[data_counter])
+				counter += 1
+			else:
+				update_set = update_set+", %s='%s'" % (column, data[data_counter])
+			data_counter +=1
+
+		query = "UPDATE %s %s WHERE %s = %s" % (table, update_set, set_id, data[0])
+		return self.execute_commons_db(query)
+	
+	def get_column_names(self, table=''):
+		column_names = []
+		query = "SHOW columns FROM %s;" % table
+		column_details = self.execute_commons_db(query)
+		for column in column_details:
+			column_names.append(column[0])
+		return column_names
+	
+	def insert_MoMs_entry_via_sms(self, feature, feature_name, description, tos):
+		query = "INSERT INTO manifestations_of_movements " \
+			"(type_of_feature, description, name_of_feature, date) VALUES ('%s','%s','%s','%s')" % (feature, description, feature_name, tos)
+		status = self.execute_commons_db(query, True)
+		return status
+
+	# def write_inbox(self, msglist='', gsm_info=''):
+	# 	if not msglist:
+	# 		raise ValueError("No msglist definition")
+
+	# 	if not gsm_info:
+	# 		raise ValueError("No gsm_info definition")
+
+	# 	ts_stored = dt.today().strftime("%Y-%m-%d %H:%M:%S")
+
+	# 	gsm_id = gsm_info['id']
+
+
+	# 	sms_id_ok = []
+	# 	sms_id_unk = []
+	# 	ts_sms = 0
+
+	# 	for msg in msglist:
+	# 		ts_sms = msg.dt
+	# 		sms_msg = msg.data
+	# 		query_users = self.write_raw_data(msg, gsm_id, ts_sms, ts_stored, sms_msg)
+
+	def write_raw_data(self, msg, gsm_id, ts_sms, ts_stored, sms_msg):
+		users_count = 0
+		query_raw = ("insert into raw_data_received (raw_data, ts_received, ts_stored, mobile_id, parsed) values ")
+		user_mobile_sim_nums = self.get_all_user_mobile(msg.simnum[:10])
+
+		if len(user_mobile_sim_nums) != 0:
+			user_mobile_sim_nums = {sim_num: mobile_id for (mobile_id, sim_num,
+									gsm_id) in user_mobile_sim_nums}
+
+			if msg.simnum in user_mobile_sim_nums.keys():
+				query_raw += "('%s','%s','%s',%d, 0)," % (sms_msg, ts_sms, ts_stored, user_mobile_sim_nums[msg.simnum])
+				users_count += 1
+			
+			query_raw = query_raw[:-1]
+			print(">> Raw data received...")
+			result = self.write_raw_to_db(query=query_raw)
+			return result
+		else:
+			return -1
+
+	def write_raw_to_db(self, query, last_insert_id=False):
+		ret_val = None
+		db, cur = self.db_connect(
+			self.db_cred['CBEWSL_DB_CREDENTIALS']['db_cbewsl_raw'])
+
+		try:
+			a = cur.execute(query)
+			db.commit()
+			if last_insert_id:
+				b = cur.execute('select last_insert_id()')
+				b = str(cur.fetchone()[0]) 
+				ret_val = b
+			else:
+				ret_val = a
+
+		except IndexError:
+			print("IndexError on ")
+			print(str(inspect.stack()[1][3]))
+		except (MySQLdb.Error, MySQLdb.Warning) as e:
+			print(">> MySQL error/warning: %s" % e)
+			print("Last calls:")
+			for i in range(1, 6):
+				try:
+					print("%s," % str(inspect.stack()[i][3]),)
+				except IndexError:
+					continue
+			print("\n")
+
+		finally:
+			db.close()
+			return ret_val
