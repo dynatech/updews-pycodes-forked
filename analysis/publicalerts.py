@@ -152,7 +152,7 @@ def event_start(site_id, end):
             if pd.to_datetime(prev_pub_alerts['ts'].values[1]) - \
                     pd.to_datetime(prev_pub_alerts['ts_updated'].values[2]) \
                     <= timedelta(hours=0.5):
-                start_monitor = pd.to_datetime(prev_pub_alerts['timestamp']\
+                start_monitor = pd.to_datetime(prev_pub_alerts['ts']\
                         .values[2])
             # one event with two previous positive alert
             else:
