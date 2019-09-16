@@ -557,7 +557,7 @@ def soms_parser(msgline,mode,div,err):
     return rawlist
 
 def b64Parser(sms):
-    msg = sms#.msg
+    msg = sms.msg
     print (msg)
     if len(msg.split("*")) == 4:
         msgsplit = msg.split('*')
