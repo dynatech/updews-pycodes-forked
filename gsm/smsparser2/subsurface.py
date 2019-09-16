@@ -238,9 +238,9 @@ def v2(sms):
             dtypestr = "x"
         elif dtype == "21" or dtype == "0C":
             dtypestr = "y"
-        elif dtype == "6F" or dtype == "15" or dtype == "0A":
+        elif dtype == "6F" or dtype == "15":
             dtypestr = "b"
-        elif dtype == "70" or dtype == "1A" or dtype == "0D":
+        elif dtype == "70" or dtype == "1A":
             dtypestr = "c"
         else:
             raise ValueError(">> Data type" + dtype + "not recognized")
@@ -466,6 +466,7 @@ def soms_parser(msgline,mode,div,err):
             tempbuff[a] = msgline
             return []
 
+
     #parsing msgdata
     for i in range (0, int(len(data)/div)):
         try:
@@ -589,7 +590,7 @@ def b64Parser(sms):
                 print ("Error: wrong timestamp format", ts, "for pattern", pattern)
 
         outl = []
-        if dtype in [11,12,32,33]:
+        if dtype in [11,12,32,33,41,42]:
             name_df = 'tilt_'+tsm_name.lower()
             n = 9 # 9 chars per node
             sd = [datastr[i:i+n] for i in range(0,len(datastr),n)]
@@ -600,7 +601,7 @@ def b64Parser(sms):
                     xd = b64_twos_comp(b64_to_dec(piece[1:3]))
                     yd = b64_twos_comp(b64_to_dec(piece[3:5]))
                     zd = b64_twos_comp(b64_to_dec(piece[5:7]))
-                    bd = b64_twos_comp(b64_to_dec(piece[7:9]))
+                    bd = (b64_twos_comp(b64_to_dec(piece[7:9])) + 200) /100.0
                     line = {"ts":timestamp, "node_id":ID, "type_num":msgID,
                     "xval":xd, "yval":yd, "zval":zd, "batt":bd}
                     outl.append(line)
