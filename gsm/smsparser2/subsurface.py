@@ -601,7 +601,7 @@ def b64Parser(sms):
                     xd = b64_twos_comp(b64_to_dec(piece[1:3]))
                     yd = b64_twos_comp(b64_to_dec(piece[3:5]))
                     zd = b64_twos_comp(b64_to_dec(piece[5:7]))
-                    bd = (b64_twos_comp(b64_to_dec(piece[7:9])) + 200) /100
+                    bd = (b64_twos_comp(b64_to_dec(piece[7:9])) + 200) /100.0
                     line = {"ts":timestamp, "node_id":ID, "type_num":msgID,
                     "xval":xd, "yval":yd, "zval":zd, "batt":bd}
                     outl.append(line)
