@@ -612,7 +612,7 @@ def evaluate_trending_filter(marker_data_df,to_plot,to_json=False):
         1 -> passes the OOA Filter
         0 -> no significant trend detected by OOA Filter
     """
-    
+    marker_data_df = marker_data_df.sort_values('ts')
     #### Get time data in days zeroed from starting data point
     time = (marker_data_df.ts.values - marker_data_df.ts.values[-1])/np.timedelta64(1,'D')
     
