@@ -15,7 +15,7 @@ def all_site_coord():
     """
     
     df = mem.get('df_dyna_rain_gauges')
-    df = df.loc[df.has_rain != 'gateway', ['site_id', 'latitude', 'longitude']]
+    df = df.loc[df.logger_type != 'gateway', ['site_id', 'latitude', 'longitude']]
     df = df.dropna()
     df = df.drop_duplicates('site_id')
     df = df.sort_values('site_id')
