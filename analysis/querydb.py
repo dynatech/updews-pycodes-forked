@@ -277,7 +277,7 @@ def get_raw_accel_data(tsm_id='',tsm_name = "", from_time = "", to_time = "",
 
     query = ("SELECT ts,'%s' as 'tsm_name',times.node_id,xval,yval,zval,batt,"
              " times.accel_number,accel_id, in_use from (select *, if(type_num"
-             " in (32,11) or type_num is NULL, 1,if(type_num in (33,12),2,0)) "
+             " in (32,11,41) or type_num is NULL, 1,if(type_num in (33,12,42),2,0)) "
              " as 'accel_number' from tilt_%s" %(tsm_name,tsm_name))
 
     query += " WHERE ts >= '%s'" %from_time
