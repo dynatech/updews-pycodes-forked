@@ -72,7 +72,7 @@ def main():
     query = "SELECT trigger_id, ts, site_id, trigger_source, "
     query += "alert_level, ts_updated FROM "
     query += "  (SELECT * FROM operational_triggers "
-    query += "  WHERE ts <= '%s' " %ts
+    query += "  WHERE ts <= '%s' " %(ts + timedelta(hours=0.5))
     query += "  AND ts_updated >= '%s' " %(ts - timedelta(1))
     query += "  ) AS op "
     query += "INNER JOIN " 
@@ -87,7 +87,7 @@ def main():
     query += "ON op.trigger_sym_id = sym.trigger_sym_id "
     query += "ORDER BY ts_updated DESC"
     curr_trig = qdb.get_db_dataframe(query)
-
+    
     if len(curr_trig) == 0:
         qdb.print_out('no new trigger')
         return
