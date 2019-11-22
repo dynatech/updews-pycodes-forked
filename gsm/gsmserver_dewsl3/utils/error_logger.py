@@ -15,7 +15,7 @@ class ErrorLogger():
             "Timestamp: %s \n" \
             "GSM ID#: %s \n" \
             "Module: %s\n\n") % (ts, gsm_id, mod)
-        f = open("./logs/error_logs.txt", "a")
+        f = open(os.path.abspath('./gsm_logs/error_logs.txt'), "a")
         self.hangups.send_notification(message)
         f.write(message)
         f.close()
@@ -28,7 +28,7 @@ class ErrorLogger():
             ">> GSM ID#: %s \n" \
             ">> Module: %s\n" \
             ">> Error Log: %s") % (ts, gsm_id, mod, error_message)
-        f = open("./logs/error_logs.txt", "a")
+        f = open(os.path.abspath('./gsm_logs/error_logs.txt'), "a")
         self.hangups.send_notification(message)
         f.write(message)
         f.close()

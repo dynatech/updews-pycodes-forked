@@ -42,6 +42,7 @@ if __name__ == "__main__":
 	start_time = time.time()
 	initialize_gsm = GsmServer()
 	args = initialize_gsm.get_arguments()
+	os.makedirs(os.path.abspath('./gsm_logs/'), exist_ok=True)
 	if args.dbhost is not None:
 		dbhost = args.dbhost
 	else:
