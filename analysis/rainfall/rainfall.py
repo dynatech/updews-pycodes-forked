@@ -78,6 +78,41 @@ def rainfall_gauges(end=datetime.now()):
 
     return gauges
 
+def web_plotter(site_code, end, days):
+    """
+    Created by Kevin
+    For integration and refactoring in the future
+    """
+
+    start_time = datetime.now()
+    qdb.print_out(start_time)
+
+    site_code = [site_code]
+    dt_end = pd.to_datetime(end)
+    sc = mem.server_config()
+    rtw = sc['rainfall']['roll_window_length']
+    ts_end, start, offsetstart = get_rt_window(
+        float(days), float(rtw), end=dt_end)
+
+    gauges = rainfall_gauges()
+    if site_code != '':
+        gauges = gauges[gauges.site_code.isin(site_code)]
+
+    gauges['site_id'] = gauges['site_id'].apply(lambda x: float(x))
+    site_props = gauges.groupby('site_id')
+
+    plot_data = site_props.apply(rp.main, offsetstart=offsetstart,
+                                 tsn=end, save_plot=False, sc=sc,
+                                 start=start, output_path="",
+                                 end=ts_end).reset_index(drop=True)
+
+    json_plot_data = plot_data.to_json(orient="records")
+
+    qdb.print_out("runtime = %s" % (datetime.now() - start_time))
+
+    return json_plot_data
+    
+
 def main(site_code='', end='', Print=True, write_to_db=True,
          print_plot=False, save_plot=True, days=''):
     """Computes alert and plots rainfall data.
