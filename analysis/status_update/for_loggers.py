@@ -11,10 +11,8 @@ import os
 #sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 sys.path.append('C:\\Users\\DELL\\Documents\\updews-pycodes\\trunk\\')
 
-import dynadb.db as db
-#import gsm.gsmserver_dewsl3.sms_data as sms
 import analysis.querydb as qdb
-import volatile.memory as mem
+
 
 columns = ['health_id', 'tsm_id', 'data_presence', 'last_data', 'ts_updated']
 #index = np.arange(111)
