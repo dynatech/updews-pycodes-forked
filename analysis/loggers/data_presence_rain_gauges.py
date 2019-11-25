@@ -19,6 +19,7 @@ import itertools
 import os
 from sqlalchemy import create_engine
 from dateutil.parser import parse
+import analysis.querydb as qdb
 
 
 columns = ['rain_id', 'presence', 'last_data', 'ts_updated', 'diff_days']
@@ -29,13 +30,16 @@ def get_rain_gauges():
     localdf=0
     db = MySQLdb.connect(host = '192.168.150.253', user = 'root', passwd = 'senslope', db = 'senslopedb')
     query = "select gauge_name, rain_id from senslopedb.rainfall_gauges where data_source = 'senslope' and date_deactivated is null"
-    localdf = psql.read_sql(query,db)
+    localdf = psql.read_sql(query, db)
+#    localdf = qdb.get_db_dataframe(query)
     return localdf
 
 def get_data(lgrname):
     db = MySQLdb.connect(host = '192.168.150.253', user = 'root', passwd = 'senslope', db = 'senslopedb')
     query= "SELECT max(ts) FROM "+ 'rain_' + lgrname + "  where ts > '2010-01-01' and '2019-01-01' order by ts desc limit 1 "
-    localdf = psql.read_sql(query,db)
+    localdf = psql.read_sql(query, db)
+#    localdf = qdb.get_db_dataframe(query)
+    
     print (localdf)
     return localdf
 
@@ -64,7 +68,7 @@ def dftosql(df):
     df.loc[(df['diff_days'] > -1) & (df['diff_days'] < 3), 'presence'] = 'active' 
     df['presence'] = df['diff_days'].apply(lambda x: '1' if x <= 3 else '0') 
     print (df) 
-    engine=create_engine('mysql+mysqlconnector://root:senslope@192.168.150.253:3306/analysis_db', echo = False)
+    engine=create_engine('mysql+mysqlconnector://root:senslope@192.168.150.253:3306/senslopedb', echo = False)
 #    df.to_csv('loggers2.csv')
 #    engine=create_engine('mysql+mysqlconnector://root:senslope@127.0.0.1:3306/senslopedb', echo = False)
 

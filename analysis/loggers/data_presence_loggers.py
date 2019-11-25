@@ -19,6 +19,7 @@ import itertools
 import os
 from sqlalchemy import create_engine
 from dateutil.parser import parse
+import analysis.querydb as qdb
 
 
 columns = ['logger_id', 'presence', 'last_data', 'ts_updated', 'diff_days']
@@ -27,7 +28,7 @@ df = pd.DataFrame(columns=columns)
 
 def get_loggers_v2():
     localdf=0
-    db = MySQLdb.connect(host = '192.168.150.253', user = 'root', passwd = 'senslope', db = 'analysis_db')
+    db = MySQLdb.connect(host = '192.168.150.253', user = 'root', passwd = 'senslope', db = 'senslopedb')
     query = """select lg.logger_name, lg.logger_id
     from (select * from loggers) as lg
     inner join senslopedb.logger_models as lm
@@ -37,13 +38,13 @@ def get_loggers_v2():
     logger_name like '%___t_%'
     or
     logger_name like '%___s_%'"""
-    
-    localdf = psql.read_sql(query,db)
+    localdf = psql.read_sql(query, db)
+#    localdf = qdb.get_db_dataframe(query)
     return localdf
 
 def get_loggers_v3():
     localdf=0
-    db = MySQLdb.connect(host = '192.168.150.253', user = 'root', passwd = 'senslope', db = 'analysis_db')
+    db = MySQLdb.connect(host = '192.168.150.253', user = 'root', passwd = 'senslope', db = 'senslopedb')
     query = """select lg.logger_name, lg.logger_id
     from (select * from loggers) as lg
     inner join senslopedb.logger_models as lm
@@ -54,27 +55,25 @@ def get_loggers_v3():
     or 
     logger_name like '%___g%' """
     
-    localdf = psql.read_sql(query,db)
+    localdf = psql.read_sql(query, db)
+#    localdf = qdb.get_db_dataframe(query)
     return localdf
 
 def get_data_rain(lgrname):
     db = MySQLdb.connect(host = '192.168.150.253', user = 'root', passwd = 'senslope', db = 'senslopedb')
     query= "SELECT max(ts) FROM " + 'rain_' + lgrname + "  where ts > '2010-01-01' and '2019-01-01' order by ts desc limit 1 "
-    localdf = psql.read_sql(query,db)
+    localdf = psql.read_sql(query, db)
+#    localdf = qdb.get_db_dataframe(query)
     print (localdf)
     return localdf
 
 def get_data_tsm(lgrname):
     db = MySQLdb.connect(host = '192.168.150.253', user = 'root', passwd = 'senslope', db = 'senslopedb')
     query= "SELECT max(ts) FROM " + 'tilt_' + lgrname + "  where ts > '2010-01-01' and '2019-01-01' order by ts desc limit 1 "
-    localdf = psql.read_sql(query,db)
+    localdf = psql.read_sql(query, db)
+#    localdf = qdb.get_db_dataframe(query)
     print (localdf)
     return localdf
-
-
-
-
-
 
 
 
@@ -111,7 +110,7 @@ def dftosql(df):
     df['presence'] = df['diff_days'].apply(lambda x: '1' if x <= 3 else '0') 
     print (df) 
 
-    engine=create_engine('mysql+mysqlconnector://root:senslope@192.168.150.253:3306/analysis_db', echo = False)
+    engine=create_engine('mysql+mysqlconnector://root:senslope@192.168.150.253:3306/senslopedb', echo = False)
 #    df.to_csv('loggers2.csv')
 #    engine=create_engine('mysql+mysqlconnector://root:senslope@127.0.0.1:3306/senslopedb', echo = False)
 
