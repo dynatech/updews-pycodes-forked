@@ -8,8 +8,8 @@ import sys
 import os
 
 
-#sys.path.append(os.path.dirname(os.path.realpath(__file__)))
-sys.path.append('C:\\Users\\DELL\\Documents\\updews-pycodes\\trunk\\')
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
+#sys.path.append('C:\\Users\\DELL\\Documents\\updews-pycodes\\trunk\\')
 
 import analysis.querydb as qdb
 
