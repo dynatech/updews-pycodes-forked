@@ -19,6 +19,7 @@ import itertools
 import os
 from sqlalchemy import create_engine
 from dateutil.parser import parse
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import analysis.querydb as qdb
 
 
@@ -28,17 +29,17 @@ df = pd.DataFrame(columns=columns)
 
 def get_rain_gauges():
     localdf=0
-    db = MySQLdb.connect(host = '192.168.150.253', user = 'root', passwd = 'senslope', db = 'senslopedb')
+#    db = MySQLdb.connect(host = '192.168.150.253', user = 'root', passwd = 'senslope', db = 'senslopedb')
     query = "select gauge_name, rain_id from senslopedb.rainfall_gauges where data_source = 'senslope' and date_deactivated is null"
-    localdf = psql.read_sql(query, db)
-#    localdf = qdb.get_db_dataframe(query)
+#    localdf = psql.read_sql(query, db)
+    localdf = qdb.get_db_dataframe(query)
     return localdf
 
 def get_data(lgrname):
-    db = MySQLdb.connect(host = '192.168.150.253', user = 'root', passwd = 'senslope', db = 'senslopedb')
+#    db = MySQLdb.connect(host = '192.168.150.253', user = 'root', passwd = 'senslope', db = 'senslopedb')
     query= "SELECT max(ts) FROM "+ 'rain_' + lgrname + "  where ts > '2010-01-01' and '2019-01-01' order by ts desc limit 1 "
-    localdf = psql.read_sql(query, db)
-#    localdf = qdb.get_db_dataframe(query)
+#    localdf = psql.read_sql(query, db)
+    localdf = qdb.get_db_dataframe(query)
     
     print (localdf)
     return localdf

@@ -19,6 +19,8 @@ import itertools
 import os
 from sqlalchemy import create_engine
 from dateutil.parser import parse
+
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import analysis.querydb as qdb
 
 
@@ -28,7 +30,7 @@ df = pd.DataFrame(columns=columns)
 
 def get_loggers_v2():
     localdf=0
-    db = MySQLdb.connect(host = '192.168.150.253', user = 'root', passwd = 'senslope', db = 'senslopedb')
+    #db = MySQLdb.connect(host = '192.168.150.253', user = 'root', passwd = 'senslope', db = 'senslopedb')
     query = """select lg.logger_name, lg.logger_id
     from (select * from loggers) as lg
     inner join senslopedb.logger_models as lm
@@ -38,13 +40,13 @@ def get_loggers_v2():
     logger_name like '%___t_%'
     or
     logger_name like '%___s_%'"""
-    localdf = psql.read_sql(query, db)
-#    localdf = qdb.get_db_dataframe(query)
+#    localdf = psql.read_sql(query, qdb)
+    localdf = qdb.get_db_dataframe(query)
     return localdf
 
 def get_loggers_v3():
     localdf=0
-    db = MySQLdb.connect(host = '192.168.150.253', user = 'root', passwd = 'senslope', db = 'senslopedb')
+#    db = MySQLdb.connect(host = '192.168.150.253', user = 'root', passwd = 'senslope', db = 'senslopedb')
     query = """select lg.logger_name, lg.logger_id
     from (select * from loggers) as lg
     inner join senslopedb.logger_models as lm
@@ -55,23 +57,23 @@ def get_loggers_v3():
     or 
     logger_name like '%___g%' """
     
-    localdf = psql.read_sql(query, db)
-#    localdf = qdb.get_db_dataframe(query)
+#    localdf = psql.read_sql(query, db)
+    localdf = qdb.get_db_dataframe(query)
     return localdf
 
 def get_data_rain(lgrname):
-    db = MySQLdb.connect(host = '192.168.150.253', user = 'root', passwd = 'senslope', db = 'senslopedb')
+#    db = MySQLdb.connect(host = '192.168.150.253', user = 'root', passwd = 'senslope', db = 'senslopedb')
     query= "SELECT max(ts) FROM " + 'rain_' + lgrname + "  where ts > '2010-01-01' and '2019-01-01' order by ts desc limit 1 "
-    localdf = psql.read_sql(query, db)
-#    localdf = qdb.get_db_dataframe(query)
+#    localdf = psql.read_sql(query, db)
+    localdf = qdb.get_db_dataframe(query)
     print (localdf)
     return localdf
 
 def get_data_tsm(lgrname):
-    db = MySQLdb.connect(host = '192.168.150.253', user = 'root', passwd = 'senslope', db = 'senslopedb')
+#    db = MySQLdb.connect(host = '192.168.150.253', user = 'root', passwd = 'senslope', db = 'senslopedb')
     query= "SELECT max(ts) FROM " + 'tilt_' + lgrname + "  where ts > '2010-01-01' and '2019-01-01' order by ts desc limit 1 "
-    localdf = psql.read_sql(query, db)
-#    localdf = qdb.get_db_dataframe(query)
+#    localdf = psql.read_sql(query, db)
+    localdf = qdb.get_db_dataframe(query)
     print (localdf)
     return localdf
 
