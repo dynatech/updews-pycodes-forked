@@ -191,8 +191,11 @@ def rain_stack_plot(site_code, gauges, offsetstart, start, end, tsn, threshold,
     insax = [ins1, ins2, ins3, ins4]
     cumax = [cum1, cum2, cum3, cum4]
     # range of x and y axis
-    ins1.set_xlim([start - timedelta(hours=2), end + timedelta(hours=2)])
-    cum1.set_xlim([start - timedelta(hours=2), end + timedelta(hours=2)])
+    try:
+        ins1.set_xlim([start - timedelta(hours=2), end + timedelta(hours=2)])
+        cum1.set_xlim([start - timedelta(hours=2), end + timedelta(hours=2)])
+    except:
+        pass
 
     rain_gauge_props = gauges.groupby('rain_id')
     
