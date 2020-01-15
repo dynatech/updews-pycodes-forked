@@ -114,7 +114,7 @@ def web_plotter(site_code, end, days):
     
 
 def main(site_code='', end='', Print=True, write_to_db=True,
-         print_plot=False, save_plot=True, days=''):
+         print_plot=False, save_plot=True, days='', is_command_line_run=True):
     """Computes alert and plots rainfall data.
     
     Args:
@@ -135,11 +135,9 @@ def main(site_code='', end='', Print=True, write_to_db=True,
     qdb.print_out(start_time)
 
     if site_code == '':
-        try:
+        if is_command_line_run:
             site_code = sys.argv[1].lower()
             site_code = site_code.replace(' ', '').split(',')
-        except:
-            pass
     else:
         site_code = site_code.replace(' ', '').split(',')
             
