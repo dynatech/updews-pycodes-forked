@@ -22,6 +22,8 @@ from dateutil.parser import parse
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import analysis.querydb as qdb
+import dynadb.db as db
+import gsm.gsmserver_dewsl3.sms_data as sms
 
 
 columns = ['logger_id', 'presence', 'last_data', 'ts_updated', 'diff_days']
@@ -113,13 +115,14 @@ def dftosql(df):
     df['presence'] = df['diff_days'].apply(lambda x: '1' if x <= 3 else '0') 
     print (df) 
 
-    engine=create_engine('mysql+mysqlconnector://root:senslope@192.168.150.253:3306/senslopedb', echo = False)
+#    engine=create_engine('mysql+mysqlconnector://root:senslope@192.168.150.253:3306/senslopedb', echo = False)
 #    df.to_csv('loggers2.csv')
 #    engine=create_engine('mysql+mysqlconnector://root:senslope@127.0.0.1:3306/senslopedb', echo = False)
 
-    df.to_sql(name = 'data_presence_loggers', con = engine, if_exists = 'replace', index = False)
+#    df.to_sql(name = 'data_presence_loggers', con = engine, if_exists = 'replace', index = False)
     return df
 
 
 dftosql(df)
-
+data_table = sms.DataTable('data_presence_loggers', dftosql(df))
+db.df_write(data_table)
