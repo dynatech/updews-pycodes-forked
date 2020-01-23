@@ -22,13 +22,14 @@ from dateutil.parser import parse
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import analysis.querydb as qdb
-import dynadb.db as db
+import volatile.memory as mem
 import gsm.gsmserver_dewsl3.sms_data as sms
 
 
 
 columns = ['tsm_id', 'presence', 'last_data', 'ts_updated', 'diff_days']
 df = pd.DataFrame(columns=columns)
+sc = mem.server_config()
 
 
 def get_tsm_sensors():
