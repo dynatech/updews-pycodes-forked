@@ -76,6 +76,6 @@ def dftosql(df):
     df.to_sql(name = 'data_presence_loggers', con = engine, if_exists = 'append', index = False)
     return df
 
-query = "DELETE FROM data_presence_loggers"
+query = "DELETE FROM data_presence_rain_gauges"
 qdb.execute_query(query, hostdb='local')
 dftosql(df)
