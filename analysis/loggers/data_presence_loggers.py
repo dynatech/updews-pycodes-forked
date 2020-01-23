@@ -52,7 +52,7 @@ def get_loggers_v3():
     inner join senslopedb.logger_models as lm
     on lg.model_id = lm.model_id
     where lm.logger_type in ('gateway','arq')
-    and lm.logger_name not in ('madg')
+    and lg.logger_name not in ('madg')
     and
     logger_name like '%___r_%'
     or 
