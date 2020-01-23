@@ -79,7 +79,6 @@ def dftosql(df):
     engine = create_engine('mysql+pymysql://' + sc['db']['user']  + ':'+ sc['db']['password'] + '@' + sc['hosts']['local'] +':3306/' + sc['db']['name'])
     df.to_sql(name = 'data_presence_loggers', con = engine, if_exists = 'append', index = False)
     return df
-    return df
 
 
 dftosql(df)
