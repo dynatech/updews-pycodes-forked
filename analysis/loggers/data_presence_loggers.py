@@ -121,7 +121,7 @@ def dftosql(df):
 #    df.to_csv('loggers2.csv')
 #    engine=create_engine('mysql+mysqlconnector://root:senslope@127.0.0.1:3306/senslopedb', echo = False)
     engine = create_engine('mysql+pymysql://' + sc['db']['user']  + ':'+ sc['db']['password'] + '@' + sc['hosts']['local'] +':3306/' + sc['db']['name'])
-    df.to_sql(name = 'data_presence_loggers', con = engine, if_exists = 'replace', index = False)
+    df.to_sql(name = 'data_presence_loggers', con = engine, if_exists = 'append', index = False)
     return df
 
 
