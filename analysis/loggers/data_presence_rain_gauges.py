@@ -76,10 +76,10 @@ def dftosql(df):
 #    engine=create_engine('mysql+mysqlconnector://root:senslope@127.0.0.1:3306/senslopedb', echo = False)
 
 #    df.to_sql(name = 'data_presence_rain_gauges', con = engine, if_exists = 'replace', index = False)
+    engine = create_engine('mysql+pymysql://' + sc['db']['user']  + ':'+ sc['db']['password'] + '@' + sc['hosts']['local'] +':3306/' + sc['db']['name'])
+    df.to_sql(name = 'data_presence_loggers', con = engine, if_exists = 'append', index = False)
+    return df
     return df
 
 
 dftosql(df)
-data_table = sms.DataTable('data_presence_loggers', dftosql(df))
-db.df_write(data_table)
-
