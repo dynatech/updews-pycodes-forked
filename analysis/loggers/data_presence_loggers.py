@@ -28,6 +28,8 @@ import volatile.memory as mem
 
 columns = ['logger_id', 'presence', 'last_data', 'ts_updated', 'diff_days']
 df = pd.DataFrame(columns=columns)
+sc = mem.server_config()
+
 
 
 def get_loggers_v2():
