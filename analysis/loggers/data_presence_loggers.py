@@ -124,5 +124,6 @@ def dftosql(df):
     df.to_sql(name = 'data_presence_loggers', con = engine, if_exists = 'append', index = False)
     return df
 
-
+query = "DELETE FROM data_presence_loggers"
+execute_delete = qdb.get_db_dataframe(query)
 dftosql(df)
