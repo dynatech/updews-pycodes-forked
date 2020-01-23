@@ -52,11 +52,11 @@ def get_loggers_v3():
     inner join senslopedb.logger_models as lm
     on lg.model_id = lm.model_id
     where lm.logger_type in ('gateway','arq')
-    and lg.logger_name not in ('madg')
     and
     logger_name like '%___r_%'
     or 
-    logger_name like '%___g%' """
+    logger_name like '%___g%' 
+    and lg.logger_name not in ("madg")"""
     
 #    localdf = psql.read_sql(query, db)
     localdf = qdb.get_db_dataframe(query)
