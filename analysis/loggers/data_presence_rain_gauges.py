@@ -27,7 +27,7 @@ import volatile.memory as mem
 
 
 
-columns = ['tsm_id', 'presence', 'last_data', 'ts_updated', 'diff_days']
+columns = ['rain_id', 'presence', 'last_data', 'ts_updated', 'diff_days']
 df = pd.DataFrame(columns=columns)
 sc = mem.server_config()
 
