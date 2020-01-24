@@ -23,7 +23,7 @@ from dateutil.parser import parse
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import analysis.querydb as qdb
 import volatile.memory as mem
-import gsm.gsmserver_dewsl3.sms_data as sms
+
 
 
 
