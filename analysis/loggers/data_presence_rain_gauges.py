@@ -76,7 +76,7 @@ def dftosql(df):
     print (df) 
 #    engine=create_engine('mysql+mysqlconnector://root:senslope@192.168.150.253:3306/senslopedb', echo = False)
     engine = create_engine('mysql+pymysql://' + sc['db']['user']  + ':'+ sc['db']['password'] + '@' + sc['hosts']['local'] +':3306/' + sc['db']['name'])
-    df.to_sql(name = 'data_presence_loggers', con = engine, if_exists = 'append', index = False)
+    df.to_sql(name = 'data_presence_rain_gauges', con = engine, if_exists = 'append', index = False)
     return df
 
 query = "DELETE FROM data_presence_rain_gauges"
