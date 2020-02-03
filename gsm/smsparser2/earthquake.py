@@ -7,7 +7,7 @@ from datetime import datetime as dt
 import smsclass
 
 EQ_SMS_PATTERNS = {
-    "date": re.compile(r"\d{1,2}\w+201[6789]", re.IGNORECASE),
+    "date": re.compile(r"\d{1,2}\w+20[12][1234567890]", re.IGNORECASE),
     "time": re.compile(r"\d{1,2}[:\.]\d{1,2} *[AP]M", re.IGNORECASE),
     "magnitude": re.compile(r"((?<=M[SBLVOW]\=)|(?<=M\=)|"
         "(?<=MLV\=)|(?<=MWP\=))\d+\.\d+(?= )", re.IGNORECASE),
