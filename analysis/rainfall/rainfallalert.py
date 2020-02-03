@@ -29,6 +29,11 @@ def get_resampled_data(gauge_name, offsetstart, start, end, check_nd=True, is_re
         rainfall = qdb.get_raw_rain_data(gauge_name, from_time=offsetstart)
     else:
         rainfall = qdb.get_raw_rain_data(gauge_name, from_time=offsetstart, to_time=end)
+
+    try:
+        rainfall = rainfall[rainfall.rain >= 0 ]
+    except:
+        pass
     
     try:
         latest_ts = pd.to_datetime(rainfall['ts'].values[-1])
@@ -39,8 +44,6 @@ def get_resampled_data(gauge_name, offsetstart, start, end, check_nd=True, is_re
     #returns blank dataframe if no data within the past hour
     if check_nd and time_checker:
         return pd.DataFrame()
-    
-    rainfall = rainfall[rainfall.rain >= 0 ]
 
     nan_replace = len(rainfall) == 0
     #add data to start and end of monitoring
