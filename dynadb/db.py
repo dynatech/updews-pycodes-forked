@@ -337,7 +337,7 @@ def df_read(query='', host='local', connection='', resource=''):
     """ 
     db = connect(host=host, connection=connection, 
         resource=resource, conn_type=0)
-    ret_val = None
+    ret_val = pd.DataFrame()
     try:
         df = psql.read_sql(query, db)
         ret_val = df
@@ -346,6 +346,6 @@ def df_read(query='', host='local', connection='', resource=''):
         sys.exit()
     except psql.DatabaseError:
         print 'Error getting query %s' % (query)
-        ret_val = None
+        ret_val = pd.DataFrame()
     finally:
         return ret_val
