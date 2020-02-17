@@ -283,7 +283,11 @@ def v2(sms):
        print ('>> Error in time value format: ')
        return
     
-    ts_patterns = ['%y%m%d%H%M%S', '%Y-%m-%d %H:%M:%S']
+    if tsm_name == "SINSA":    
+        if ts =="000000000000":
+            ts = sms.ts
+			
+    ts_patterns = ['%y%m%d%H%M%S', '%Y-%m-%d %H:%M:%S','%Y%m%d%H%M%S']
     timestamp = ''
     ts = re.sub("[^0-9]","",ts)
     for pattern in ts_patterns:
@@ -305,13 +309,13 @@ def v2(sms):
        sd = [datastr[i:i+n] for i in range(0,len(datastr),n)]
     elif dtype == 'B':
         # do parsing for datatype 'B' (SOMS RAW)
-        outl = soms_parser(msg,1,10,0)    
+        outl = soms_parser(msg,1,10,0,timestamp)    
         name_df = 'soms_'+tsm_name.lower()   
         # for piece in outl:
         #     print piece
     elif dtype == 'C':
         # do parsing for datatype 'C' (SOMS CALIB/NORMALIZED)
-        outl = soms_parser(msg,2,7,0)
+        outl = soms_parser(msg,2,7,0,timestamp)
         name_df = 'soms_'+tsm_name.lower()  
         # for piece in outl:
         #     print piece
@@ -390,7 +394,7 @@ def log_errors(errortype, line, dt):
     text_file.write(error)
     text_file.close()
 
-def soms_parser(msgline,mode,div,err):
+def soms_parser(msgline,mode,div,err, dt):
     """
     - The process of parsing soms data of version 2 and 3.
 
@@ -438,12 +442,12 @@ def soms_parser(msgline,mode,div,err):
         a = siteptr[site]
     else:
         a = 2
-    try:      
-        dt=pd.to_datetime(r[3][:12],format='%y%m%d%H%M%S') #uses datetime from end of msg 
-    except:
-        dt='0000-00-00 00:00:00'
-        log_errors(4,msgline,dt)
-        return rawlist   
+#    try:      
+#        dt=pd.to_datetime(r[3][:12],format='%y%m%d%H%M%S') #uses datetime from end of msg 
+#    except:
+#        dt='0000-00-00 00:00:00'
+#        log_errors(4,msgline,dt)
+#        return rawlist   
    
    #if msgdata is broken (without nodeid at start)   
     try:
@@ -495,13 +499,13 @@ def soms_parser(msgline,mode,div,err):
                 if err == 0: # err0: 'b' gives calib data
                     if CMD in [112,113,26]:
                         log_errors(0, msgline, dt)
-                        return soms_parser(msgline,2,7,1)
+                        return soms_parser(msgline,2,7,1,dt)
                     else:
                         log_errors(1,msgline,dt)
-                        return soms_parser(msgline,1,12,2)   #if CMD cannot be distinguished try 12 chars
+                        return soms_parser(msgline,1,12,2,dt)   #if CMD cannot be distinguished try 12 chars
                 elif err == 1:
                     log_errors(1,msgline,dt)
-                    return soms_parser(msgline,1,12,2)   # err: if data has 2 extra zeros
+                    return soms_parser(msgline,1,12,2,dt)   # err: if data has 2 extra zeros
                 elif err == 2:
                     log_errors(2,msgline,dt)
                     return rawlist
@@ -513,14 +517,14 @@ def soms_parser(msgline,mode,div,err):
                 if err == 0: #if c gives raw data
                     if CMD in [110, 111, 21]:
                         log_errors(0,msgline,dt)
-                        return soms_parser(msgline,1,10,1) #if c gives raw data
+                        return soms_parser(msgline,1,10,1,dt) #if c gives raw data
                     else:
                         log_errors(1,msgline,dt)
                         #print "div=6!"
-                        return soms_parser(msgline,2,6,2)    #wrong node division
+                        return soms_parser(msgline,2,6,2,dt)    #wrong node division
                 elif err == 1:
                     log_errors(1,msgline,dt)
-                    return soms_parser(msgline,2,6,2)    #if CMD cannot be distinguished
+                    return soms_parser(msgline,2,6,2,dt)    #if CMD cannot be distinguished
                 elif err == 2:
                     log_errors(2,msgline,dt)
                     return rawlist
@@ -589,7 +593,7 @@ def b64Parser(sms):
                 print ("Error: wrong timestamp format", ts, "for pattern", pattern)
 
         outl = []
-        if dtype in [11,12,32,33]:
+        if dtype in [11,12,32,33,41,42]:
             name_df = 'tilt_'+tsm_name.lower()
             n = 9 # 9 chars per node
             sd = [datastr[i:i+n] for i in range(0,len(datastr),n)]
@@ -600,7 +604,7 @@ def b64Parser(sms):
                     xd = b64_twos_comp(b64_to_dec(piece[1:3]))
                     yd = b64_twos_comp(b64_to_dec(piece[3:5]))
                     zd = b64_twos_comp(b64_to_dec(piece[5:7]))
-                    bd = b64_twos_comp(b64_to_dec(piece[7:9]))
+                    bd = (b64_twos_comp(b64_to_dec(piece[7:9])) + 200) /100.0
                     line = {"ts":timestamp, "node_id":ID, "type_num":msgID,
                     "xval":xd, "yval":yd, "zval":zd, "batt":bd}
                     outl.append(line)
