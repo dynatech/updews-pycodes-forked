@@ -43,6 +43,7 @@ def get_mobile():
     query += "inner join comms_db.user_mobile "
     query += "using (user_id) "
     query += "where status = 1 "
+    query += "and mobile_status = 1 "
     query += "and team_code in ('admin', 'CT', 'MT') "
     query += "order by last_name"
     df = db.df_read(query)
