@@ -1,110 +1,38 @@
-from __future__ import print_function
-import httplib2
-import os
-
-from apiclient import discovery
-from oauth2client import client
-from oauth2client import tools
-from oauth2client.file import Storage
+from datetime import datetime, timedelta
+import pandas as pd
 
 import dynadb.db as db
-
-try:
-    import argparse
-    flags = argparse.ArgumentParser(parents=[tools.argparser]).parse_args()
-except ImportError:
-    flags = None
-
-# If modifying these scopes, delete your previously saved credentials
-# at ~/.credentials/sheets.googleapis.com-python-quickstart.json
-SCOPES = 'https://www.googleapis.com/auth/spreadsheets.readonly'
-CLIENT_SECRET_FILE = 'key-auth.json'
-APPLICATION_NAME = 'Google Sheets API Python Quickstart'
+import gsm.smsparser2.smsclass as sms
 
 
-def get_credentials():
-    """Gets valid user credentials from storage.
+def get_sheet(key, sheet_name):
+    url = 'https://docs.google.com/spreadsheets/d/{key}/gviz/tq?tqx=out:csv&sheet={sheet_name}&headers=1'.format(
+        key=key, sheet_name=sheet_name.replace(' ', '%20'))
+    df = pd.read_csv(url)
+    df = df.drop([col for col in df.columns if col.startswith('Unnamed')], axis=1)
+    return df
 
-    If nothing has been stored, or if the stored credentials are invalid,
-    the OAuth2 flow is completed to obtain the new credentials.
+def get_shift(key, sheet_name):
+    df = get_sheet(key, sheet_name)
+    df = df.drop([col for col in df.columns if col.startswith('Unnamed')], axis=1)
+    df.loc[:, 'Date'] = pd.to_datetime(df.loc[:, 'Date'].ffill())
+    df.loc[:, 'Shift'] = pd.to_timedelta(df.loc[:, 'Shift'].map({'AM': timedelta(hours=8), 'PM': timedelta(hours=20)}))
+    df.loc[:, 'ts'] = pd.to_datetime(df.loc[:, 'Date'] + df.loc[:, 'Shift'])
+    df = df.rename(columns={'IOMP-MT': 'iompmt', 'IOMP-CT': 'iompct'})
+    return df.loc[:, ['ts', 'iompmt', 'iompct']]
 
-    Returns:
-        Credentials, the obtained credential.
-    """
-    home_dir = os.path.expanduser('~')
-    credential_dir = os.path.join(home_dir, '.credentials')
-    # print credential_dir
-    if not os.path.exists(credential_dir):
-        os.makedirs(credential_dir)
-    credential_path = os.path.join(credential_dir,
-                                   'sheets.googleapis.com-python-quickstart.json')
-
-    store = Storage(credential_path)
-    credentials = store.get()
-    if not credentials or credentials.invalid:
-        flow = client.flow_from_clientsecrets(CLIENT_SECRET_FILE, SCOPES)
-        flow.user_agent = APPLICATION_NAME
-        if flags:
-            credentials = tools.run_flow(flow, store, flags)
-        else: # Needed only for compatibility with Python 2.6
-            credentials = tools.run(flow, store)
-        print('Storing credentials to ' + credential_path)
-    return credentials
-
-# def main():
-def get_values(sheet_name):
-    """Shows basic usage of the Sheets API.
-
-    Creates a Sheets API service object and prints the names and majors of
-    students in a sample spreadsheet:
-    """
-    credentials = get_credentials()
-    http = credentials.authorize(httplib2.Http())
-    discoveryUrl = ('https://sheets.googleapis.com/$discovery/rest?'
-                    'version=v4')
-    service = discovery.build('sheets', 'v4', http=http,
-                              discoveryServiceUrl=discoveryUrl)
-
-    spreadsheetId = '1UylXLwDv1W1ukT4YNoUGgHCHF-W8e3F8-pIg1E024ho'
-    rangeName = '%s!A2:F63' % (sheet_name)
-    result = service.spreadsheets().values().get(
-        spreadsheetId=spreadsheetId, range=rangeName).execute()
-    values = result.get('values', [])
-
-    if not values:
-        print('No data found.')
-#     else:
-# #         print('Name, Major:')
-#         for row in values:
-#             # Print columns A and E, which correspond to indices 0 and 4.
-#             print('%s' % (row))
-
-    return values
-
-def main():
-    this_month = get_values("local_server_interface")
-    next_month = get_values("local_server_interface_2")
-
-    query = ("insert into monshiftsched (ts, iompmt, iompct, oomps, "
-        "oompmt,oompct) values ")
-
-    for row in this_month + next_month:
-        query += "("
-        for item in row:
-            if item == '-':
-                query += "NULL,"
-            else:
-                query += "'%s'," % (item)
-        query = query[:-1]
-        query += "),"
-
-    query = query[:-1]
-
-    query += (" on duplicate key update iompmt = values(iompmt), "
-        "iompct = values(iompct), oomps = values(oomps), "
-        "oompmt = values(oompmt), oompct = values(iompct)")
-
-    db.write(query=query, resource="sensor_data")
+def main(key):
+    ts = datetime.now()
+    sheet_name = ts.strftime('%B %Y')
+    shift_sched = get_shift(key, sheet_name)
+    try:
+        sheet_name = (ts+timedelta(weeks=2)).strftime('%B %Y')
+        shift_sched = shift_sched.append(get_shift(key, sheet_name))
+    except:
+        print("no shift schedule for next month")
+    data_table = sms.DataTable('monshiftsched', shift_sched)
+    db.df_write(data_table)
 
 if __name__ == '__main__':
-    main()
+    key = "1UylXLwDv1W1ukT4YNoUGgHCHF-W8e3F8-pIg1E024ho"
+    main(key)
