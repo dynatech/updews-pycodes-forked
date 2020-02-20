@@ -72,18 +72,17 @@ def send_reminder(ts = datetime.now()):
                 "for {}").format(greeting, name, IOMP, sched)
         print(sms_msg, '\n')
         outbox = pd.DataFrame({'sms_msg': [sms_msg], 'source': ['central']})
-        try:
-            mobile_id = IOMP_num.loc[IOMP_num.nickname == name, 'mobile_id'].values
-            gsm_id = IOMP_num.loc[IOMP_num.nickname == name, 'gsm_id'].values
-        except:
+        mobile_id = IOMP_num.loc[IOMP_num.nickname == name, 'mobile_id'].values
+        gsm_id = IOMP_num.loc[IOMP_num.nickname == name, 'gsm_id'].values
+        if len(mobile_id) != 0 and len(gsm_id) != 0:
+            data_table = sms.DataTable('smsoutbox_users', outbox)
+            outbox_id = db.df_write(data_table, resource='sms_data', last_insert=True)[0][0]
+            status = pd.DataFrame({'outbox_id': [outbox_id]*len(mobile_id), 'mobile_id': mobile_id,
+                                   'gsm_id': gsm_id})
+            data_table = sms.DataTable('smsoutbox_user_status', status)
+            db.df_write(data_table, resource='sms_data')
+        else:
             print("No mobile number")
-            continue
-        data_table = sms.DataTable('smsoutbox_users', outbox)
-        outbox_id = db.df_write(data_table, resource='sms_data', last_insert=True)[0][0]
-        status = pd.DataFrame({'outbox_id': [outbox_id]*len(mobile_id), 'mobile_id': mobile_id,
-                               'gsm_id': gsm_id})
-        data_table = sms.DataTable('smsoutbox_user_status', status)
-        db.df_write(data_table, resource='sms_data')
         
 if __name__ == "__main__":
     send_reminder()
