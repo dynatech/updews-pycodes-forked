@@ -233,6 +233,7 @@ def plot_site_meas(surficial_data_df, ts):
                 pd.to_datetime(ts).strftime("%Y-%m-%d_%H-%M")), dpi=160,
                 facecolor='w', edgecolor='w', orientation='landscape', mode='w',
                 bbox_inches = 'tight')
+    plt.close()
 
 
 def plot_trending_analysis(site_code, marker_name, date_time, zeroed_time,
@@ -345,6 +346,7 @@ def plot_trending_analysis(site_code, marker_name, date_time, zeroed_time,
     #### Save fig
     plt.savefig(plot_path+filename, facecolor='w', edgecolor='w',
                 orientation='landscape', mode='w', bbox_inches = 'tight')
+    plt.close()
 
 
 def get_logspace_and_filter_nan(df):
@@ -463,14 +465,15 @@ def evaluate_trending_filter(marker_data_df, to_plot, to_json=False):
                        'vat': {'v_n':list(velocity),
                                'a_n':list(acceleration),
                                'ts_n':list(time_arr)
-                              }
+                              },
+                       'trend_alert': trend_alert
                       }
         return return_json
     else:
         return trend_alert
 
 
-def evaluate_marker_alerts(marker_data_df, ts):
+def evaluate_marker_alerts(marker_data_df, ts, to_json):
     """ Function used to evaluates the alerts for every marker
     at a specified time.
     
@@ -492,7 +495,7 @@ def evaluate_marker_alerts(marker_data_df, ts):
     #### Initialize values to zero to avoid reference before assignment error
     displacement = np.nan
     time_delta = np.nan
-    
+
     #### Check if data is valid for given time of alert generation
     if round_time(marker_data_df['ts'].values[0]) < round_time(ts):
         
@@ -537,18 +540,19 @@ def evaluate_marker_alerts(marker_data_df, ts):
                     #### Check if there is enough data for trending analysis
                     if len(marker_data_df) < int(sc['surficial']['surficial_num_pts']):
                         #### Not enough data points for trending analysis
-                        trend_alert = 1
+                        trend_alert = {'trend_alert': 1}
                         
                     else:
                     #### Perform trending analysis
                         trend_alert = evaluate_trending_filter(marker_data_df,
-                                                               sc['surficial']['print_trend_plot'])
+                                                               sc['surficial']['print_trend_plot'],
+                                                               to_json)
                     if velocity < float(sc['surficial']['v_alert_3']):
                         
                         #### Velocity is less than threshold for alert 3
                         ### If trend alert = 1, marker_alert = 2 -> L2 alert
                         ### If trend alert = 0, marker_alert = 1 -> L0t alert
-                        marker_alert = 1 * trend_alert + 1
+                        marker_alert = 1 * trend_alert['trend_alert'] + 1
                     
                     else:
                         #### Velocity is greater than or equal to threshold for alert 3
@@ -557,7 +561,8 @@ def evaluate_marker_alerts(marker_data_df, ts):
     return pd.Series({'marker_id': int(marker_data_df.marker_id.iloc[0]),
                       'ts': ts, 'data_id': int(marker_data_df.data_id.iloc[0]),
                       'displacement': np.round(displacement, 1),
-                      'time_delta': time_delta, 'alert_level': marker_alert})
+                      'time_delta': time_delta, 'alert_level': marker_alert,
+                      'trend_alert': trend_alert})
     
 
 def get_surficial_alert(marker_alerts, site_id):
@@ -588,7 +593,8 @@ def get_surficial_alert(marker_alerts, site_id):
                          'ts_updated':marker_alerts.ts.iloc[0]}, index = [0])
 
 
-def generate_surficial_alert(site_id = None,ts = None):
+def generate_surficial_alert(site_id = None, ts = None, marker_id = None,
+                             to_json=False):
     """
     Main alert generating function for surificial alert for a site at specified time
     
@@ -606,20 +612,23 @@ def generate_surficial_alert(site_id = None,ts = None):
     #### Obtain system arguments from command prompt
     if site_id == None and ts == None:
         site_id, ts = sys.argv[1].lower(),sys.argv[2].lower()
-    
+    ts = pd.to_datetime(ts)
     #### Config variables
     num_pts = int(sc['surficial']['surficial_num_pts'])
     ts_start = pd.to_datetime(ts) - timedelta(sc['surficial']['meas_plot_window'])
 
     #### Get latest ground data
     surficial_data_df = qdb.get_surficial_data(site_id, ts_start, ts, num_pts)
-    
+    surficial_data_df.loc[:, 'ts'] = surficial_data_df.loc[:, 'ts'].apply(lambda x: pd.to_datetime(x))
     #### Generate Marker alerts
+    if marker_id != None:
+        surficial_data_df = surficial_data_df.loc[surficial_data_df.marker_id == marker_id, :]
     marker_data_df = surficial_data_df.groupby('marker_id',as_index = False)
-    marker_alerts = marker_data_df.apply(evaluate_marker_alerts, ts)
-
+    marker_alerts = marker_data_df.apply(evaluate_marker_alerts, ts, to_json)
     #### Write to marker_alerts table    
-    data_table = sms.DataTable('marker_alerts', marker_alerts)
+    data_table = sms.DataTable('marker_alerts',
+                               marker_alerts[['data_id', 'displacement',
+                                              'time_delta', 'alert_level']])
     db.df_write(data_table)
 
     #### Generate surficial alert for site
@@ -633,6 +642,9 @@ def generate_surficial_alert(site_id = None,ts = None):
         surficial_data_to_plot = surficial_data_df.loc[surficial_data_df.ts >= ts_start, :]
         ### Plot the surficial data
         plot_site_meas(surficial_data_to_plot, ts)
+        
+    if to_json:
+        return marker_alerts
     
     return surficial_data_df
 
