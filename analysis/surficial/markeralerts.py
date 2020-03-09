@@ -211,7 +211,7 @@ def plot_site_meas(surficial_data_df, ts):
     marker_data_group = surficial_data_df.groupby('marker_id')
 
     #### Plot the measurement data of each marker
-    marker_data_group.agg(plot_marker_meas, tableau20)
+    marker_data_group.apply(plot_marker_meas, tableau20)
     
     #### Rearrange legend handles
     handles,labels = plt.gca().get_legend_handles_labels()
@@ -644,7 +644,7 @@ def generate_surficial_alert(site_id = None, ts = None, marker_id = None,
         plot_site_meas(surficial_data_to_plot, ts)
         
     if to_json:
-        return marker_alerts['trend_alert']
+        return marker_alerts['trend_alert'][0]
     
     return surficial_data_df
 
