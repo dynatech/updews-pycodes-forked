@@ -495,6 +495,7 @@ def evaluate_marker_alerts(marker_data_df, ts, to_json):
     #### Initialize values to zero to avoid reference before assignment error
     displacement = np.nan
     time_delta = np.nan
+    trend_alert = {'trend_alert': 0}
 
     #### Check if data is valid for given time of alert generation
     if round_time(marker_data_df['ts'].values[0]) < round_time(ts):
