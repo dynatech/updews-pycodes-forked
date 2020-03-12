@@ -36,11 +36,11 @@ def get_eq_events(ts=datetime.now()):
                 ts_re = r"(?<=Date and Time:)[ \:\-\w\d]*[AP]M"
                 ts_fmt = "%d %b %Y - %I:%M %p"
                 match = re.search(ts_re, text).group(0).strip()
-                ts = pd.to_datetime(datetime.strptime(match, ts_fmt))
+                ts = str(datetime.strptime(match, ts_fmt))
         
                 # magnitude
                 mag_re = r"(?<=Magnitude =)[ \d\.]*"
-                mag = re.search(mag_re, text).group(0).strip()
+                mag = float(re.search(mag_re, text).group(0).strip())
         
                 # depth
                 depth_re = r"(?<=Depth =)[ \d\.]*(?=kilometers)"
@@ -54,7 +54,7 @@ def get_eq_events(ts=datetime.now()):
                 
                 # province
                 prov_re = r"(?<=Location =)([ \d\.\w\,\-\°]*)\(([ \w\)\(]*)(?=\))"
-                prov = re.search(prov_re, text).group(2).split('(')[-1].strip()
+                prov = str(re.search(prov_re, text).group(2).split('(')[-1].strip())
                 
                 df = df.append(pd.DataFrame({'ts': [ts], 'magnitude': [mag],
                                              'depth': [depth],
