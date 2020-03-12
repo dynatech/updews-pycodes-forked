@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 ### IMPORTANT matplotlib declarations must always be FIRST 
 ### to make sure that matplotlib works with cron-based automation
 import platform
