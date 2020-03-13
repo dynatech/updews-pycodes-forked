@@ -17,7 +17,7 @@ def get_shift(key, sheet_name):
     df = df.drop([col for col in df.columns if col.startswith('Unnamed')], axis=1)
     df.loc[:, 'Date'] = pd.to_datetime(df.loc[:, 'Date'].ffill())
     df.loc[:, 'Shift'] = df.loc[:, 'Shift'].map({'AM': 8, 'PM': 20})
-    df.loc[:, 'ts'] = df.loc[:, ['Date', 'Shift']].apply(lambda row: row.Date + timedelta(row.Shift), axis=1)
+    df.loc[:, 'ts'] = df.loc[:, ['Date', 'Shift']].apply(lambda row: row.Date + timedelta(hours=row.Shift), axis=1)
     df = df.rename(columns={'IOMP-MT': 'iompmt', 'IOMP-CT': 'iompct'})
     return df.loc[:, ['ts', 'iompmt', 'iompct']]
 
