@@ -546,9 +546,10 @@ def df_add_offset_col(df, offset, num_nodes):
     
 def main(data, tsm_props, window, sc, plotvel=True, show_part_legend = False,
          realtime=True, plot_inc=True, three_day_window=True,
-         mirror_xz=False, mirror_xy=False):
-
-    output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
+         mirror_xz=False, mirror_xy=False, output_path = ''):
+	
+	if not output_path:
+		output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
 
     if realtime:
         plot_path = sc['fileio']['realtime_path']
