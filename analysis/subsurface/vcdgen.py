@@ -1,14 +1,10 @@
-from datetime import date, time, datetime, timedelta
-import os
 import pandas as pd
-import sys
+from datetime import date, time, datetime, timedelta
 
-sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import rtwindow as rtw
-import analysis.querydb as qdb
+import querydb as qdb
 import proc
 import plotterlib as plotter
-
 
 def proc_data(tsm_name, endTS, startTS, sc, hour_interval, fixpoint):
     tsm_props = qdb.get_tsm_list(tsm_name)[0]
@@ -57,13 +53,18 @@ def proc_data(tsm_name, endTS, startTS, sc, hour_interval, fixpoint):
 
     data = proc.proc_data(tsm_props, window, sc)
 
+    num_nodes = tsm_props.nos
+    seg_len = tsm_props.seglen
+    
     tilt = data.tilt[window.start:window.end]
     tilt = tilt.reset_index().sort_values('ts',ascending=True)
     tilt = tilt[['ts', 'node_id', 'xz', 'xy', 'vel_xz', 'vel_xy']]
 
     return tilt, window, sc, tsm_props
 
-def colpos(tilt, window, sc, tsm_props):
+def colpos(tilt, window, sc, tsm_props, col_pos_interval=""):
+    if col_pos_interval != "":
+        sc['subsurface']['col_pos_interval'] = col_pos_interval
     # compute column position
     colposdf = plotter.compute_colpos(window, sc, tilt, tsm_props)
     colposdf = colposdf.rename(columns = {'cs_xz': 'downslope', 'cs_xy': 'latslope', 'x': 'depth'})
@@ -118,14 +119,16 @@ def displacement(tilt, window, sc, num_nodes):
 
     return dispdf
 
-def vcdgen(tsm_name, endTS='', startTS='', hour_interval='', fixpoint='bottom'):
+def vcdgen(tsm_name, endTS='', startTS='', hour_interval='', fixpoint='bottom',
+          col_pos_interval=""):
     
     sc = qdb.memcached()
     
     tilt, window, sc, tsm_props = proc_data(tsm_name, endTS, startTS, sc, hour_interval, fixpoint)    
 
     dispdf = displacement(tilt, window, sc, tsm_props.nos)
-    colposdf = colpos(tilt, window, sc, tsm_props)
+    colposdf = colpos(tilt, window, sc, tsm_props,
+                     col_pos_interval=col_pos_interval)
     
     # Clip velocity start to 3 hours from endTS
     window.start = window.end - timedelta(hours=3)
