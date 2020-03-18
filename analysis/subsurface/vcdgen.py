@@ -62,7 +62,9 @@ def proc_data(tsm_name, endTS, startTS, sc, hour_interval, fixpoint):
 
     return tilt, window, sc, tsm_props
 
-def colpos(tilt, window, sc, tsm_props):
+def colpos(tilt, window, sc, tsm_props, col_pos_interval=""):
+    if col_pos_interval != "":
+        sc['subsurface']['col_pos_interval'] = col_pos_interval
     # compute column position
     colposdf = plotter.compute_colpos(window, sc, tilt, tsm_props)
     colposdf = colposdf.rename(columns = {'cs_xz': 'downslope', 'cs_xy': 'latslope', 'x': 'depth'})
@@ -117,14 +119,16 @@ def displacement(tilt, window, sc, num_nodes):
 
     return dispdf
 
-def vcdgen(tsm_name, endTS='', startTS='', hour_interval='', fixpoint='bottom'):
+def vcdgen(tsm_name, endTS='', startTS='', hour_interval='', fixpoint='bottom',
+          col_pos_interval=""):
     
     sc = qdb.memcached()
     
     tilt, window, sc, tsm_props = proc_data(tsm_name, endTS, startTS, sc, hour_interval, fixpoint)    
 
     dispdf = displacement(tilt, window, sc, tsm_props.nos)
-    colposdf = colpos(tilt, window, sc, tsm_props)
+    colposdf = colpos(tilt, window, sc, tsm_props,
+                     col_pos_interval=col_pos_interval)
     
     # Clip velocity start to 3 hours from endTS
     window.start = window.end - timedelta(hours=3)
