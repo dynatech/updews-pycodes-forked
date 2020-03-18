@@ -22,7 +22,7 @@ import gsm.smsparser2.smsclass as sms
 
 
 def get_eq_events(ts=datetime.now()):
-    tweets = query_tweets("#EarthquakePH", begindate=(ts-timedelta(1)).date(),
+    tweets = query_tweets("@phivolcs_dost", begindate=(ts-timedelta(1)).date(),
                           enddate=(ts+timedelta(1)).date())
     
     df = pd.DataFrame()
