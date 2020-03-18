@@ -4,13 +4,20 @@ Created on Fri Nov 18 13:58:05 2016
 
 @author: Brainerd D. Cruz
 """
+##### IMPORTANT matplotlib declarations must always be FIRST to make sure that
+##### matplotlib works with cron-based automation
+import matplotlib as mpl
+mpl.use('Agg')
+import matplotlib.pyplot as plt
+import matplotlib.dates as md
+plt.ion()
 
 import pandas as pd
 #import numpy as np
 from datetime import timedelta as td
 from datetime import datetime as dt
 import analysis.querydb as qdb
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import analysis.subsurface.filterdata as fsd
 import memcache
 import numpy as np

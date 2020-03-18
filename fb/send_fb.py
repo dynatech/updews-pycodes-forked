@@ -46,7 +46,7 @@ def main(alert):
     return OutputFP
 
 def send_messenger(OutputFP, alert):
-    client = Client('dynaslope.test@gmail.com', 'dynaslope05')
+    client = Client('dynaslope.test@gmail.com', 'dynaslope06')
 #    client = Client('dum.dum.98284566', '4c4d3m1cc0nf3r3nc35!')
     
     message=("SANDBOX:\n"
@@ -78,6 +78,7 @@ query = ("SELECT stat_id, site_code,s.site_id, trigger_source, alert_symbol, "
         "(SELECT * FROM alert_status WHERE "
         "ts_set >= NOW()-interval 5 minute "
         "and ts_ack is NULL"
+#        "stat_id=1025 "
         ") AS stat "
         "INNER JOIN "
         "operational_triggers AS op "
