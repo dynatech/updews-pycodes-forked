@@ -68,8 +68,8 @@ def dftosql(df):
     diff = df['ts_updated'] - df['last_data']
     tdta = diff
     fdta = tdta.astype('timedelta64[D]')
-    days = fdta.astype(int)
-    df['diff_days'] = days
+    #days = fdta.astype(int)
+    df['diff_days'] = fdta
 
     df.loc[(df['diff_days'] > -1) & (df['diff_days'] < 3), 'presence'] = 'active' 
     df['presence'] = df['diff_days'].apply(lambda x: '1' if x <= 3 else '0') 
