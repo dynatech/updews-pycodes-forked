@@ -1,9 +1,12 @@
+from datetime import date, time, datetime, timedelta	
+import os	
 import pandas as pd
-from datetime import date, time, datetime, timedelta
+import sys
 
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))	
 import rtwindow as rtw
-import querydb as qdb
-import proc
+import analysis.querydb as qdb
+import proc	import proc
 import plotterlib as plotter
 
 def proc_data(tsm_name, endTS, startTS, sc, hour_interval, fixpoint):
