@@ -300,7 +300,7 @@ def process_ack_to_alert(sms):
         return True
 
     alert_status_dict = {"validating": 0, "valid": 1, "invalid": -1}
-
+    remarks = remarks.replace("'", r"\'").replace('"', r'\"')
     query = ("update alert_status set user_id = %d, alert_status = %d, "
         "ts_ack = '%s', remarks = '%s' where stat_id = %s") % (user_id,
         alert_status_dict[alert_status.lower()], sms.ts, remarks, stat_id)
