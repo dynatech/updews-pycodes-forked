@@ -110,11 +110,14 @@ def dftosql(df):
     tdta = diff
     fdta = tdta.astype('timedelta64[D]')
     fdta = fdta.fillna(0)
-    days = fdta.astype(int)
-    df['diff_days'] = days
+    df.loc[df['last_data'].notnull(), 'days'] = (pd.to_datetime('now') - df['last_data']).dt.days
+    #days = fdta.astype(int)
+    df['diff_days'] = df.days
+    
     
     df.loc[(df['diff_days'] > -1) & (df['diff_days'] < 3), 'presence'] = 'active' 
     df['presence'] = df['diff_days'].apply(lambda x: '1' if x <= 3 else '0') 
+    df = df.drop(columns=['days'])
     print (df) 
 
 #    engine=create_engine('mysql+mysqlconnector://root:local@'+sc["hosts"]["local"]+':3306/'+sc['db']['name'], echo = False)
