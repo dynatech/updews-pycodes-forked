@@ -6,7 +6,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))	
 import rtwindow as rtw
 import analysis.querydb as qdb
-import proc	import proc
+import proc
 import plotterlib as plotter
 
 def proc_data(tsm_name, endTS, startTS, sc, hour_interval, fixpoint):
