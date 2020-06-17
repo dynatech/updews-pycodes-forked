@@ -112,7 +112,7 @@ def dftosql(df):
     fdta = fdta.fillna(0)
     df.loc[df['last_data'].notnull(), 'days'] = (pd.to_datetime('now') - df['last_data']).dt.days
     #days = fdta.astype(int)
-    df['diff_days'] = df.days
+    df['diff_days'] = fdta
     
     
     df.loc[(df['diff_days'] > -1) & (df['diff_days'] < 3), 'presence'] = 'active' 
