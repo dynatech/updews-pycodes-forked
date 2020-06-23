@@ -146,7 +146,7 @@ def get_surficial_data(site_id,ts,num_pts):
     Dataframe
         Dataframe containing surficial data with columns [ts, marker_id, measurement]
     """
-    query = "SELECT mo1.ts, md1.marker_id, md1.measurement, COUNT(*) num FROM marker_data md1 INNER JOIN marker_data md2 INNER JOIN marker_observations mo1 INNER JOIN marker_observations mo2 ON mo1.mo_id = md1.mo_id AND mo2.mo_id = mo2.mo_id AND mo1.site_id = mo2.site_id AND md1.marker_id = md2.marker_id AND md1.data_id = md2.data_id AND mo1.ts <= mo2.ts AND mo1.ts <= '{}' AND mo2.ts <= '{}' AND md1.marker_id in (SELECT marker_id FROM marker_data INNER JOIN marker_observations ON marker_data.mo_id = marker_observations.mo_id AND site_id = {} WHERE ts = (SELECT max(ts) FROM marker_observations WHERE site_id = {} AND ts <= '{}')) GROUP BY md1.marker_id, md1.mo_id, mo1.site_id, mo1.mo_id,mo1.ts HAVING COUNT(*) <= {} ORDER by mo1.ts DESC".format(ts,ts,site_id,site_id,ts,num_pts)
+    query = "SELECT md1.data_id, mo1.ts, md1.marker_id, md1.measurement, COUNT(*) num FROM marker_data md1 INNER JOIN marker_data md2 INNER JOIN marker_observations mo1 INNER JOIN marker_observations mo2 ON mo1.mo_id = md1.mo_id AND mo2.mo_id = mo2.mo_id AND mo1.site_id = mo2.site_id AND md1.marker_id = md2.marker_id AND md1.data_id = md2.data_id AND mo1.ts <= mo2.ts AND mo1.ts <= '{}' AND mo2.ts <= '{}' AND md1.marker_id in (SELECT marker_id FROM marker_data INNER JOIN marker_observations ON marker_data.mo_id = marker_observations.mo_id AND site_id = {} WHERE ts = (SELECT max(ts) FROM marker_observations WHERE site_id = {} AND ts <= '{}')) GROUP BY md1.marker_id, md1.mo_id, mo1.site_id, mo1.mo_id,mo1.ts HAVING COUNT(*) <= {} ORDER by mo1.ts DESC".format(ts,ts,site_id,site_id,ts,num_pts)
     return qdb.get_db_dataframe(query)
 
 def get_surficial_data_window(site_id,ts_start,ts_end):
@@ -764,7 +764,7 @@ def evaluate_marker_alerts(marker_data_df,ts):
                         #### Velocity is greater than or equal to threshold for alert 3
                         marker_alert = 3
                
-    return pd.Series({'ts':ts,'marker_id':int(marker_data_df.marker_id.iloc[0]),'displacement':displacement,'time_delta':time_delta,'alert_level':marker_alert})
+    return pd.Series({'data_id': int(marker_data_df.marker_id.iloc[0]), 'ts':ts,'marker_id':int(marker_data_df.marker_id.iloc[0]),'displacement':displacement,'time_delta':time_delta,'alert_level':marker_alert})
     
 #def marker_translation():
 #    query = "SELECT markers.marker_id, marker_name FROM markers INNER JOIN marker_history ON marker_history.marker_id = markers.marker_id INNER JOIN marker_names ON marker_history.history_id = marker_names.history_id WHERE markers.site_id = 27"
