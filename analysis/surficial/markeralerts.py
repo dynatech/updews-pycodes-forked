@@ -764,7 +764,7 @@ def evaluate_marker_alerts(marker_data_df,ts):
                         #### Velocity is greater than or equal to threshold for alert 3
                         marker_alert = 3
                
-    return pd.Series({'data_id': int(marker_data_df.marker_id.iloc[0]), 'ts':ts,'marker_id':int(marker_data_df.marker_id.iloc[0]),'displacement':displacement,'time_delta':time_delta,'alert_level':marker_alert})
+    return pd.Series({'data_id': int(marker_data_df.data_id.iloc[0]), 'ts':ts,'marker_id':int(marker_data_df.marker_id.iloc[0]),'displacement':displacement,'time_delta':time_delta,'alert_level':marker_alert})
     
 #def marker_translation():
 #    query = "SELECT markers.marker_id, marker_name FROM markers INNER JOIN marker_history ON marker_history.marker_id = markers.marker_id INNER JOIN marker_names ON marker_history.history_id = marker_names.history_id WHERE markers.site_id = 27"
