@@ -41,7 +41,7 @@ def get_tsm_sensors():
     return localdf
 
 def get_data(lgrname):
-    db = MySQLdb.connect(host = '192.168.150.253', user = 'root', passwd = 'senslope', db = 'senslopedb')
+    # db = MySQLdb.connect(host = '192.168.150.253', user = 'root', passwd = 'senslope', db = 'senslopedb')
     query= "SELECT max(ts) FROM "+ 'tilt_' + lgrname + "  where ts > '2010-01-01' and '2019-01-01' order by ts desc limit 1 "
 #    localdf = psql.read_sql(query, db)
     localdf = qdb.get_db_dataframe(query)
