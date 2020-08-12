@@ -645,7 +645,9 @@ def generate_surficial_alert(site_id = None, ts = None, marker_id = None,
         plot_site_meas(surficial_data_to_plot, ts)
         
     if to_json:
-        return marker_alerts['trend_alert'][0]
+        plot_trend_alert = -1 * (marker_alerts['trend_alert'][0]['trend_alert'] - 1)
+        return {'trend_alert': plot_trend_alert}
+
     
     return surficial_data_df
 
