@@ -34,13 +34,14 @@ def get_eq_events(text):
     province.
     """
 
+    # timestamp
     ts_re = r"(?<=Date and Time:)[ \:\-\w\d]*[AP]M"
     ts_fmt = "%d %b %Y - %I:%M %p"
     match = re.search(ts_re, text).group(0).strip()
     ts = str(datetime.strptime(match, ts_fmt))
     # magnitude
     mag_re = r"(?<=Magnitude =)[ \d\.]*"
-    mag = re.search(mag_re, text).group(0).strip()
+    mag = str(re.search(mag_re, text).group(0).strip())
     # depth
     depth_re = r"(?<=Depth =)[ \d\.]*(?=kilometers)"
     depth = str(float(re.search(depth_re, text).group(0).strip()))
