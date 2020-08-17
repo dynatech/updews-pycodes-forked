@@ -52,7 +52,7 @@ def get_eq_events(text):
     lon = str(float(match.group(2)))
     # province
     prov_re = r"(?<=Location =)([ \d\.\w\,\-\°]*)\(([ \w\)\(]*)(?=\))"
-    prov = re.search(prov_re, text).group(2).split('(')[-1].strip()
+    prov = str(re.search(prov_re, text).group(2).split('(')[-1].strip())
     # consolidate into table
     df = pd.DataFrame({'ts': [ts], 'magnitude': [mag], 'depth': [depth],
                        'latitude': [lat], 'longitude': [lon],
