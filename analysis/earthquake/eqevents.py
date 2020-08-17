@@ -38,18 +38,18 @@ def get_eq_events(text):
     ts_re = r"(?<=Date and Time:)[ \:\-\w\d]*[AP]M"
     ts_fmt = "%d %b %Y - %I:%M %p"
     match = re.search(ts_re, text).group(0).strip()
-    ts = pd.to_datetime(datetime.strptime(match, ts_fmt))
+    ts = str(datetime.strptime(match, ts_fmt))
     # magnitude
     mag_re = r"(?<=Magnitude =)[ \d\.]*"
-    mag = re.search(mag_re, text).group(0).strip()
+    mag = str(re.search(mag_re, text).group(0).strip())
     # depth
     depth_re = r"(?<=Depth =)[ \d\.]*(?=kilometers)"
-    depth = float(re.search(depth_re, text).group(0).strip())
+    depth = str(float(re.search(depth_re, text).group(0).strip()))
     # latitude and longitude
     coord_re = r"(?<=Location =)([ \d\.]*)N[ \,]*([ \d\.]*)(?=E)"
     match = re.search(coord_re, text)
-    lat = float(match.group(1))
-    lon = float(match.group(2))
+    lat = str(float(match.group(1)))
+    lon = str(float(match.group(2)))
     # province
     prov_re = r"(?<=Location =)([ \d\.\w\,\-\°]*)\(([ \w\)\(]*)(?=\))"
     prov = re.search(prov_re, text).group(2).split('(')[-1].strip()
