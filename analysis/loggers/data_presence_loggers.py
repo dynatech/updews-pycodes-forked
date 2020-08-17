@@ -1,7 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue Jun  4 14:27:21 2019
+Created on Mon Aug 17 16:07:27 2020
 
+@author: Dynaslope
+"""
+
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Jun  4 14:27:21 2019
 @author: DELL
 """
 
@@ -39,11 +45,15 @@ def get_loggers_v2():
     from (select * from loggers) as lg
     inner join senslopedb.logger_models as lm
     on lg.model_id = lm.model_id
-    where lm.logger_type in ('arq', 'regular', 'router')
+    where lg.date_deactivated is NULL
     and
-    logger_name like '%___t_%'
-    or
-    logger_name like '%___s_%'"""
+    lm.logger_type in ('arq', 'regular', 'router')
+	and
+    logger_name not in ('testa', 'testb', 'testc')
+    and 
+    logger_name not like '%___r_%' and 
+    logger_name not like '%___pz%' and 
+    logger_name not like '%___x_%'"""
 #    localdf = psql.read_sql(query, qdb)
     localdf = qdb.get_db_dataframe(query)
     return localdf
@@ -68,7 +78,7 @@ def get_loggers_v3():
 
 def get_data_rain(lgrname):
 #    db = MySQLdb.connect(host = '192.168.150.253', user = 'root', passwd = 'senslope', db = 'senslopedb')
-    query= "SELECT max(ts) FROM " + 'rain_' + lgrname + "  where ts > '2010-01-01' and '2019-01-01' order by ts desc limit 1 "
+    query= "SELECT max(ts) FROM " + 'rain_' + lgrname + "  where ts >= '2010-01-01' and '2019-01-01' order by ts desc limit 1 "
 #    localdf = psql.read_sql(query, db)
     localdf = qdb.get_db_dataframe(query)
     print (localdf)
@@ -76,7 +86,7 @@ def get_data_rain(lgrname):
 
 def get_data_tsm(lgrname):
 #    db = MySQLdb.connect(host = '192.168.150.253', user = 'root', passwd = 'senslope', db = 'senslopedb')
-    query= "SELECT max(ts) FROM " + 'tilt_' + lgrname + "  where ts > '2010-01-01' and '2019-01-01' order by ts desc limit 1 "
+    query= "SELECT max(ts) FROM " + 'tilt_' + lgrname + "  where ts >= '2010-01-01' and '2019-01-01' order by ts desc limit 1 "
 #    localdf = psql.read_sql(query, db)
     localdf = qdb.get_db_dataframe(query)
     print (localdf)
@@ -109,18 +119,14 @@ def dftosql(df):
     diff = df['ts_updated'] - df['last_data']
     tdta = diff
     fdta = tdta.astype('timedelta64[D]')
-    fdta = fdta.fillna(0)
-    df.loc[df['last_data'].notnull(), 'days'] = (pd.to_datetime('now') - df['last_data']).dt.days
-    #days = fdta.astype(int)
     df['diff_days'] = fdta
     
     
     df.loc[(df['diff_days'] > -1) & (df['diff_days'] < 3), 'presence'] = 'active' 
     df['presence'] = df['diff_days'].apply(lambda x: '1' if x <= 3 else '0') 
-    df = df.drop(columns=['days'])
     print (df) 
 
-#    engine=create_engine('mysql+mysqlconnector://root:local@'+sc["hosts"]["local"]+':3306/'+sc['db']['name'], echo = False)
+    engine=create_engine('mysql+mysqlconnector://root:local@'+sc["hosts"]["local"]+':3306/'+sc['db']['name'], echo = False)
     engine = create_engine('mysql+pymysql://' + sc['db']['user']  + ':'+ sc['db']['password'] + '@' + sc['hosts']['local'] +':3306/' + sc['db']['name'])
     df.to_sql(name = 'data_presence_loggers', con = engine, if_exists = 'append', index = False)
   
