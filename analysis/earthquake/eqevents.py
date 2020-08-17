@@ -60,10 +60,10 @@ def get_eq_events(text):
     return df
 
 
-def main(days=1):
+def main(hours=0.5):
     auth_api = get_auth()
     username = 'phivolcs_dost'
-    end_date = datetime.utcnow() - timedelta(days)
+    end_date = datetime.utcnow() - timedelta(hours=0.25)
 
     for status in Cursor(auth_api.user_timeline, id=username).items():
         text = auth_api.get_status(status.id, tweet_mode="extended").full_text
