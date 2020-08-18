@@ -126,7 +126,7 @@ def dftosql(df):
     df['presence'] = df['diff_days'].apply(lambda x: '1' if x <= 3 else '0') 
     print (df) 
 
-    engine=create_engine('mysql+mysqlconnector://root:local@'+sc["hosts"]["local"]+':3306/'+sc['db']['name'], echo = False)
+    # engine=create_engine('mysql+mysqlconnector://root:local@'+sc["hosts"]["local"]+':3306/'+sc['db']['name'], echo = False)
     engine = create_engine('mysql+pymysql://' + sc['db']['user']  + ':'+ sc['db']['password'] + '@' + sc['hosts']['local'] +':3306/' + sc['db']['name'])
     df.to_sql(name = 'data_presence_loggers', con = engine, if_exists = 'append', index = False)
   
