@@ -6,7 +6,7 @@ import sys
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import dynadb.db as dynadb
-from gsm.gsmserver_dewsl3.sms_data import DataTable
+import gsm.smsparser2.smsclass as sms
 
 
 def get_radius(km):
@@ -141,10 +141,12 @@ def main():
         op_trig = crits.loc[:, ['ts','site_id','trigger_sym_id','ts_updated']]
 
         # write to tables
-        dynadb.df_write(DataTable("operational_triggers", op_trig), resource="sensor_data")
-        dynadb.df_write(DataTable("earthquake_alerts", eq_a), resource="sensor_data")
+        data_table = sms.DataTable("operational_triggers", op_trig)
+        dynadb.df_write(data_table)
+        data_table = sms.DataTable("earthquake_alerts", eq_a)
+        dynadb.df_write(data_table)
         
-        query = "update %s set processed = 1, critical_distance = %s where eq_id = %s " % (EVENTS_TABLE,critdist,i)
+        query = "UPDATE %s SET processed = 1, critical_distance = %s where eq_id = %s " % (EVENTS_TABLE,critdist,i)
         dynadb.write(query=query, resource="sensor_data")
 
         print (">> Alert iniated.\n")
