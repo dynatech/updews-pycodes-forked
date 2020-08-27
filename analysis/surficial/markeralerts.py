@@ -146,7 +146,6 @@ def compute_critical_acceleration(velocity):
         upper bound for acceleration
     acceleration_lower_bound: array-like
         lower bound for acceleration
-
     """
     
     #### Compute for critical acceleration from computed slope and intercept from critical values
@@ -466,7 +465,9 @@ def evaluate_trending_filter(marker_data_df, to_plot, to_json=False):
                                'a_n':list(acceleration),
                                'ts_n':list(time_arr)
                               },
-                       'trend_alert': trend_alert
+                       'trend_alert': trend_alert,
+                       'plot_trend': 1
+
                       }
         return return_json
     else:
@@ -541,7 +542,7 @@ def evaluate_marker_alerts(marker_data_df, ts, to_json):
                     #### Check if there is enough data for trending analysis
                     if len(marker_data_df) < int(sc['surficial']['surficial_num_pts']):
                         #### Not enough data points for trending analysis
-                        trend_alert = {'trend_alert': 1}
+                        trend_alert = {'trend_alert': 1, 'plot_trend': 0}
                         
                     else:
                     #### Perform trending analysis
@@ -645,15 +646,29 @@ def generate_surficial_alert(site_id = None, ts = None, marker_id = None,
         plot_site_meas(surficial_data_to_plot, ts)
         
     if to_json:
-        plot_trend_alert = -1 * (marker_alerts['trend_alert'][0]['trend_alert'] - 1)
-        return {'trend_alert': plot_trend_alert}
-
+        return marker_alerts['trend_alert'][0]
     
     return surficial_data_df
-
+        
 
 #Call the generate_surficial_alert() function
 if __name__ == "__main__":
     start = datetime.now()
+    
+#    # test l0t: 
+#    site_id = 27, 
+#    ts = '2019-11-20 08:00'
+#    marker_id = 89
+#    data = generate_surficial_alert(site_id=site_id, ts=ts,
+#                                    marker_id=marker_id, to_json=True)
+
+#    # test l2: 
+#    site_id = 18
+#    ts = '2019-11-07 15:15:00'
+#    marker_id = 190
+#    data = generate_surficial_alert(site_id=site_id, ts=ts,
+#                                    marker_id=marker_id, to_json=True)
+
     generate_surficial_alert()
+    
     print ('runtime =', datetime.now()-start)
