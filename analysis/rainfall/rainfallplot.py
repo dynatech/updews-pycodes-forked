@@ -71,9 +71,10 @@ def rain_subplot(rain_gauge_props, offsetstart, start, end, threshold,
     """
 
     gauge_name = rain_gauge_props['gauge_name'].values[0]
+    rain_id = rain_gauge_props['rain_id'].values[0]
     gauge_distance = rain_gauge_props['distance'].values[0]
     # resampled data
-    data = ra.get_resampled_data(gauge_name, offsetstart, start, end,
+    data = ra.get_resampled_data(rain_id, gauge_name, offsetstart, start, end,
                                  check_nd=False)
     if len(data) == 0:
         data = pd.DataFrame(columns=['ts', 'rain']).set_index('ts')

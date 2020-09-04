@@ -134,13 +134,9 @@ def main(site_code='', end='', Print=True, write_to_db=True,
     start_time = datetime.now()
     qdb.print_out(start_time)
 
-    if site_code == '':
-        if is_command_line_run:
-            site_code = sys.argv[1].lower()
-            site_code = site_code.replace(' ', '').split(',')
-    else:
-        site_code = site_code.replace(' ', '').split(',')
-            
+    if is_command_line_run and len(sys.argv) > 1:
+        site_code = sys.argv[1].lower()
+        
     if end == '':
         try:
             end = pd.to_datetime(sys.argv[2])
@@ -169,13 +165,14 @@ def main(site_code='', end='', Print=True, write_to_db=True,
     # 4 nearest rain gauges of each site with threshold and distance from site
     gauges = rainfall_gauges()
     if site_code != '':
+        site_code = site_code.replace(' ', '').split(',')
         gauges = gauges[gauges.site_code.isin(site_code)]
     gauges['site_id'] = gauges['site_id'].apply(lambda x: float(x))
 
     trigger_symbol = mem.get('df_trigger_symbols')
     trigger_symbol = trigger_symbol[trigger_symbol.trigger_source == 'rainfall']
     trigger_symbol['trigger_sym_id'] = trigger_symbol['trigger_sym_id'].apply(lambda x: float(x))
-    site_props = gauges.groupby('site_id')
+    site_props = gauges.groupby('site_id', as_index=False)
     
     summary = site_props.apply(ra.main, end=end, sc=sc,
                                 trigger_symbol=trigger_symbol, write_to_db=write_to_db)

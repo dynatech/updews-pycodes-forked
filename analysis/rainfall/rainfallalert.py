@@ -11,7 +11,9 @@ import analysis.querydb as qdb
 import dynadb.db as db
 import gsm.gsmserver_dewsl3.sms_data as sms
 
-def get_resampled_data(gauge_name, offsetstart, start, end, check_nd=True, is_realtime=True):
+
+def get_resampled_data(rain_id, gauge_name, offsetstart, start, end,
+                       check_nd=True, is_realtime=True):
     """Resample retrieved data of gauge_name from offsetstart to end.
     
     Args:
@@ -29,9 +31,11 @@ def get_resampled_data(gauge_name, offsetstart, start, end, check_nd=True, is_re
     """
     
     if is_realtime:
-        rainfall = qdb.get_raw_rain_data(gauge_name, from_time=offsetstart)
+        rainfall = qdb.get_raw_rain_data(rain_id, gauge_name,
+                                         from_time=offsetstart)
     else:
-        rainfall = qdb.get_raw_rain_data(gauge_name, from_time=offsetstart, to_time=end)
+        rainfall = qdb.get_raw_rain_data(rain_id, gauge_name,
+                                         from_time=offsetstart, to_time=end)
     
     try:
         latest_ts = pd.to_datetime(rainfall['ts'].values[-1])
@@ -83,7 +87,7 @@ def get_unempty_rg_data(rain_props, offsetstart, start, end):
         if i != '':
             gauge_name = rain_props[rain_props.index == i]['gauge_name'].values[0]
             rain_id = rain_props[rain_props.index == i]['rain_id'].values[0]
-            data = get_resampled_data(gauge_name, offsetstart, start, end)
+            data = get_resampled_data(rain_id, gauge_name, offsetstart, start, end)
             if len(data) != 0:
                 break
         else:
