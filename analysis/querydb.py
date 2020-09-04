@@ -164,7 +164,32 @@ def create_NOAH_table(gauge_name):
     db.write(query)
 
 
-def get_raw_rain_data(gauge_name, from_time='2010-01-01', to_time=""):
+def get_rain_tag(rain_id, from_time, to_time):
+    """Retrieves faulty rain gauge tag from the database.
+    
+    Args:
+        rain_id (str): ID of rain gauge.
+        from_time (str): Start of data tag.
+        to_time (str): End of data tag.
+
+    Returns:
+        dataframe: Rainfall data tag of rain_id from from_time to to_time.
+    
+    """    
+    
+    query = "select * from senslopedb.rainfall_data_tags "
+    query += "where rain_id = {} ".format(rain_id)
+    query += "and ts_start <= {}".format(to_time)
+    query += "and (ts_end is null or ts_end >= {})".format(from_time)
+    df = db.df_read(query)
+    if df:
+        df.loc[df.ts_end.isnull(), 'ts_end'] = df.loc[df.ts_end.isnull(), 'ts_start'].apply(lambda x: pd.to_datetime(x) + timedelta(1))
+    else:
+        df = pd.DataFrame()
+    return df
+
+
+def get_raw_rain_data(rain_id, gauge_name, from_time='2010-01-01', to_time=""):
     """Retrieves rain gauge data from the database.
     
     Args:
@@ -188,6 +213,10 @@ def get_raw_rain_data(gauge_name, from_time='2010-01-01', to_time=""):
     df = db.df_read(query)
     if df is not None:
         df.loc[:, 'ts'] = pd.to_datetime(df['ts'])
+        tag = get_rain_tag(rain_id, from_time, to_time)
+        for index in tag.index:
+            start, end = tag.loc[tag.index == index, ['ts_start', 'ts_end']].values[0]
+            df = df.loc[(df.ts <= start) | (df.ts >= end)]
     else:
         df = pd.DataFrame(columns = ['ts', 'rain'])
     
