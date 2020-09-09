@@ -10,6 +10,7 @@ import pandas as pd
 
 import dynadb.db as db
 import gsm.smsparser2.smsclass as sms
+import volatile.memory as mem
 
 
 def release_time(date_time):
@@ -33,20 +34,23 @@ def release_time(date_time):
     return date_time
 
 def get_mobile():
-    query =  "SELECT mobile_id, nickname, gsm_id FROM commons_db.users "
-    query += "inner join commons_db.user_accounts ua "
-    query += "on ua.user_fk_id = users.user_id "
-    query += "inner join commons_db.user_team_members "
-    query += "using (user_id) "
-    query += "inner join commons_db.user_teams "
-    query += "using (team_id) "
-    query += "inner join comms_db.user_mobile "
-    query += "using (user_id) "
-    query += "where status = 1 "
-    query += "and mobile_status = 1 "
-    query += "and team_code in ('admin', 'CT', 'MT') "
-    query += "order by last_name"
-    df = db.df_read(query)
+    conn = mem.get('DICT_DB_CONNECTIONS')
+    query  = "SELECT mobile_id, nickname, gsm_id FROM "
+    query += "  (SELECT user_id, nickname FROM {}.users ".format(conn['common']['schema'])
+    query += "  WHERE status = 1) u "
+    query += "INNER JOIN "
+    query += "  (SELECT user_id, team_code FROM "
+    query += "  {}.user_team_members ".format(conn['common']['schema'])
+    query += "  INNER JOIN {}.user_teams ".format(conn['common']['schema'])
+    query += "  USING (team_id) "
+    query += "  WHERE team_code IN ('admin', 'CT', 'MT') "
+    query += "  ) team "
+    query += "USING (user_id) "
+    query += "INNER JOIN {}.user_mobiles ".format(conn['gsm_pi3']['schema'])
+    query += "USING (user_id) "
+    query += "INNER JOIN {}.mobile_numbers ".format(conn['gsm_pi3']['schema'])
+    query += "USING (mobile_id)"
+    df = db.df_read(query, resource='sms_analysis')
     return df
 
 def send_reminder(ts = datetime.now()):
