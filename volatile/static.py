@@ -77,7 +77,7 @@ def set_static_variable(name=""):
         query += " where name = '%s'" % (name)
 
     try:
-        variables = dbio.read(query=query,resource='sensor_data')
+        variables = dbio.read(query=query, resource='common_data')
     except MySQLdb.ProgrammingError:
         print (">> static_variables table does not exist on host")
         return
@@ -108,11 +108,11 @@ def set_static_variable(name=""):
             query_ts_update = ("UPDATE static_variables SET "
                 " ts_updated ='%s' WHERE name ='%s'") % (date, 
                     variable_info.name)
-            dbio.write(query=query_ts_update, resource="sensor_data")
+            dbio.write(query=query_ts_update, resource='common_data')
             print (variable_info.name, "success")
 
 
-def get_db_dataframe(query):
+def get_db_dataframe(query, host='local'):
     """
     - Description.
 
@@ -127,13 +127,7 @@ def get_db_dataframe(query):
 
     """ 
     try:
-        db, cur = dbio.connect(host='local')
-        df = psql.read_sql_query(query, db)
-        # df.columns = ['ts','id','x','y','z','m']
-        # change ts column to datetime
-        # df.ts = pd.to_datetime(df.ts)
-
-        db.close()
+        df = dbio.df_read(query, host=host)
         return df
     except KeyboardInterrupt:
         print ("Exception detected in accessing database")
@@ -233,7 +227,7 @@ def get_mobiles(table=None,host=None,reset_variables=False,resource=None):
 
         print ("Force reset user mobiles in memory")
         
-        query = "select mobile_id, sim_num, gsm_id from user_mobile"
+        query = "select mobile_id, sim_num, gsm_id from mobile_numbers"
 
         nums = dbio.read(query=query, identifier='get_mobile_sim_nums', 
             host=host, resource=resource)
@@ -333,7 +327,6 @@ def set_variables_old(reset_variables):
 
     print (dt.today().strftime('%Y-%m-%d %H:%M:%S'))
     mc = memory.get_handle()
-    sc = memory.server_config()
 
     print ("Reset alergenexec",)
     mc.set("alertgenexec", False)

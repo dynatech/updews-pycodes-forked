@@ -1,31 +1,31 @@
 [Hosts]
 local = 192.168.150.75
-senslope = 192.168.150.124
-dynaslope = 192.168.150.129
-gsm = 192.168.150.127
-gsm2 = 192.168.150.75
+gsm = 192.168.150.75
 sandbox = 192.168.150.75
 
 
 [Resource]
-smsdb = gsm2
+smsdb = gsm
 datadb = sandbox
 sms_mirror_db = sandbox
-mobile_nums_db = gsm2
-smsdb2 = dynaslope
+mobile_nums_db = gsm
+smsdb2 = sandbox
 
 
 [resource_connection]
-sensor_data = ubuntu75_pysys_local
-sms_data = gsm_pi
-resources3 = sb_rack_local_1,sb_remote,sb_rack_remote_1,staff1
-resources4 = sb_remote,sb_rack_remote_1,sb_local
+sensor_data = analysis
+sms_data = gsm_pi3
+common_data = common
+sensor_analysis = common,analysis
+sms_analysis = common,gsm_pi3
+ops = common,analysis,gsm_pi3,website
 
 
 [Db]
 password = NaCAhztBgYZ3HwTkvHwwGVtJn5sVMFgg
 name = senslopedb
 user = pysys_local
+
 
 [Serial]
 baudrate = 57600
@@ -39,12 +39,6 @@ resetpin = 38
 simulate_gsm = false
 server_id = 1
 
-[SMSAlert]
-communityphonenumber = 639175048863
-sunnumbers = 
-globenumbers=09166685391,09054537225,09178825084,09163938789
-smartnumbers=09288263063,09984405687,09228412065,09228120490,09253120491,09496960870
-serveralert = 09490307559
 
 [ReplyMessages]
 SuccessEN = Success! Thank you for sending your ground measurements.
