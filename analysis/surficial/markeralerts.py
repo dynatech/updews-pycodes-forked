@@ -22,8 +22,6 @@ import time as mytime
 #### Import local codes
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import analysis.querydb as qdb
-import dynadb.db as db
-import gsm.smsparser2.smsclass as sms
 import volatile.memory as mem
 
 #### Open config files
@@ -588,11 +586,11 @@ def get_surficial_alert(marker_alerts, site_id):
     site_alert = max(marker_alerts.alert_level)
     
     #### Get the corresponding trigger sym id
-    trigger_sym_id = qdb.get_trigger_sym_id(site_alert)
+    trigger_sym_id = qdb.get_trigger_sym_id(site_alert, 'surficial')
     
-    return pd.DataFrame({'ts':marker_alerts.ts.iloc[0], 'site_id':site_id,
-                         'trigger_sym_id':trigger_sym_id,
-                         'ts_updated':marker_alerts.ts.iloc[0]}, index = [0])
+    return pd.DataFrame({'ts': marker_alerts.ts.iloc[0], 'site_id': site_id,
+                         'trigger_sym_id': trigger_sym_id,
+                         'ts_updated': marker_alerts.ts.iloc[0]}, index = [0])
 
 
 def generate_surficial_alert(site_id = None, ts = None, marker_id = None,
@@ -628,10 +626,8 @@ def generate_surficial_alert(site_id = None, ts = None, marker_id = None,
     marker_data_df = surficial_data_df.groupby('marker_id',as_index = False)
     marker_alerts = marker_data_df.apply(evaluate_marker_alerts, ts, to_json)
     #### Write to marker_alerts table    
-    data_table = sms.DataTable('marker_alerts',
-                               marker_alerts[['data_id', 'displacement',
+    qdb.write_marker_alerts(marker_alerts[['data_id', 'displacement',
                                               'time_delta', 'alert_level']])
-    db.df_write(data_table)
 
     #### Generate surficial alert for site
     surficial_alert = get_surficial_alert(marker_alerts,site_id)

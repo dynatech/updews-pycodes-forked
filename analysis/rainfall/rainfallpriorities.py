@@ -5,8 +5,6 @@ import sys
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import analysis.querydb as qdb
-import dynadb.db as db
-import gsm.smsparser2.smsclass as sms
 import volatile.memory as mem
 
 
@@ -39,8 +37,7 @@ def to_mysql(df):
     combined = combined.drop_duplicates(['site_id', 'rain_id'], keep=False)
 
     if len(combined) > 0:
-        data_table = sms.DataTable('rainfall_priorities', combined)
-        db.df_write(data_table)
+        qdb.write_rain_priorities(combined)
 
     
 def get_distance(site_coord, rg_coord):

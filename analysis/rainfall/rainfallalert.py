@@ -8,8 +8,6 @@ import sys
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import analysis.publicalerts as pub
 import analysis.querydb as qdb
-import dynadb.db as db
-import gsm.gsmserver_dewsl3.sms_data as sms
 
 
 def get_resampled_data(rain_id, gauge_name, offsetstart, start, end,
@@ -155,9 +153,8 @@ def summary_writer(site_id, site_code, gauge_name, rain_id, twoyrmax, halfmax,
         ralert=0
 
     if write_alert or ralert == 1:
-        if qdb.does_table_exist('rainfall_alerts') == False:
-            #Create a site_alerts table if it doesn't exist yet
-            qdb.create_rainfall_alerts()
+        #Create a site_alerts table if it doesn't exist yet
+        qdb.create_rainfall_alerts()
 
         columns = ['rain_alert', 'cumulative', 'threshold']
         alerts = pd.DataFrame(columns=columns)
@@ -191,8 +188,7 @@ def summary_writer(site_id, site_code, gauge_name, rain_id, twoyrmax, halfmax,
                     df = pd.DataFrame({'ts': [end], 'site_id': [site_id],
                                        'rain_id': [rain_id], 'rain_alert': [rain_alert],
                                        'cumulative': [cumulative], 'threshold': [threshold]})
-                    data_table = sms.DataTable('rainfall_alerts', df)
-                    db.df_write(data_table)
+                    qdb.write_rain_alert(df)
 
 
     summary = pd.DataFrame({'site_id': [site_id], 'site_code': [site_code],

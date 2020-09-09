@@ -6,8 +6,6 @@ import sys
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import analysis.querydb as qdb
-import dynadb.db as db
-import gsm.smsparser2.smsclass as sms
 import volatile.memory as mem
 
 
@@ -84,13 +82,11 @@ def update_table_data(noah_id, gauge_name, fdate, tdate, noah_gauges):
         #-1 values should not be included in computation of cml rainfall
         if pd.to_datetime(tdate) <= cur_ts:
             place_holder_data = pd.DataFrame({"ts": [tdate], "rain": [-1.0]})
-            data_table = sms.DataTable(gauge_name, place_holder_data)
-            db.df_write(data_table)
+            qdb.write_rain_data(gauge_name, place_holder_data)
             
     else:        
         #Insert the new data on the noahid table
-        data_table = sms.DataTable(gauge_name, noah_data)
-        db.df_write(data_table)
+        qdb.write_rain_data(gauge_name, noah_data)
         
     #The table is already up to date
     if pd.to_datetime(tdate) > cur_ts:
