@@ -345,9 +345,9 @@ def update_shift_tags():
     today = dt.today().strftime("%Y-%m-%d %H:%M:%S")
     print('Updating shift tags for', today)
 
-    query = ("update senslopedb.dewslcontacts set grouptags = "
+    query = ("update dewslcontacts set grouptags = "
              "replace(grouptags,',alert-mon','') where grouptags like '%alert-mon%'")
-    dbio.write(query, 'update_shift_tags')
+    dbio.write(query, 'update_shift_tags', connection='analysis')
 
     # update the tags of current shifts
     query = (
@@ -363,35 +363,8 @@ def update_shift_tags():
         "t1.nickname = t2.oompmt or"
         "t1.nickname = t2.oompct"
     ) % (today)
-    dbio.write(query, 'update_shift_tags')
+    dbio.write(query, 'update_shift_tags', connection='analysis')
 
-
-def send_monitoringshift_reminder():
-    tomorrow = dt.now() + td(days=1)
-    tomorrow = tomorrow.strftime("%Y-%m-%d")
-    query = "SELECT ts, iompmt, iompct, comms_db.users.user_id, sim_num, gsm_id FROM " \
-    "senslopedb.monshiftsched INNER JOIN " \
-    "comms_db.users ON monshiftsched.iompmt = comms_db.users.nickname " \
-    "OR monshiftsched.iompct = comms_db.users.nickname " \
-    "INNER JOIN comms_db.user_mobile " \
-    "ON comms_db.users.user_id = comms_db.user_mobile.user_id " \
-    "WHERE ts LIKE '%"+tomorrow+"%'"
-
-    message = "Monitoring shift reminder. Good Afternoon <NICKNAME>, " \
-    "you are assigned to be the IOMPMT and IOMPCT respectively for <Date Time> <AM/PM>"
-    recipients = dbio.read(query=query, resource="sensor_data")
-
-    for ts, iompmt, iompct, user_id, sim_num, gsm_id in recipients:
-        temp = message.replace("<NICKNAME>", iompmt+" and "+iompct)
-        temp = temp.replace("<Date Time>", tomorrow)
-        if "20:00:00" in str(ts):
-            temp = temp.replace("<AM/PM>", "7:30 PM")
-        else:
-            temp = temp.replace("<AM/PM>", "7:30 AM")
-
-        temp = smstables.write_outbox(message=temp, recipients=sim_num,
-                               gsm_id=gsm_id, table='users')
-        print(temp)
 
 def main():
     desc_str = "Request information from server\n PSIR [-options]"
@@ -425,8 +398,6 @@ def main():
         update_shift_tags()
     if args.check_alerts:
         check_alerts()
-    if args.monitoring_shift:
-        send_monitoringshift_reminder()
 
 
 if __name__ == "__main__":
