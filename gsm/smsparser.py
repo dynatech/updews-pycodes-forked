@@ -546,7 +546,7 @@ def parse_all_messages(args,allmsgs=[]):
                     dbio.df_write(data_table, resource=resource)
                 else:
                     is_msg_proc_success = False
-            elif re.search("^SANDBOX ACK \d+ .+",sms.msg.upper()):
+            elif re.search("^ACK \d+ .+",sms.msg.upper()):
                 is_msg_proc_success = amsg.process_ack_to_alert(sms)   
             elif re.search("^ *(R(O|0)*U*TI*N*E )|(EVE*NT )", sms.msg.upper()):
                 is_msg_proc_success = process_surficial_observation(sms)                  

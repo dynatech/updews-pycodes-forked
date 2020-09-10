@@ -207,15 +207,14 @@ def send_alert_message():
     for (stat_id, site_id, site_code, trigger_source, alert_symbol,
          ts_last_retrigger) in alert_msgs:
         tlr_str = ts_last_retrigger.strftime("%Y-%m-%d %H:%M:%S")
-        message = ("SANDBOX:\n"
-                   "As of %s\n"
+        message = ("As of %s\n"
                    "Alert ID %d:\n"
                    "%s:%s:%s") % (tlr_str, stat_id, site_code,
                                   alert_symbol, trigger_source)
 
         message += alert_details(site_id, trigger_source, ts_last_retrigger)
 
-        message += "\n\nText\nSandbox ACK <alert_id> <validity> <remarks>"
+        message += "\n\nText\nACK <alert_id> <validity> <remarks>"
 
         # send to alert staff
         recipients_list = ""
