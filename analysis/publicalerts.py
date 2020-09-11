@@ -21,7 +21,7 @@ def release_time(date_time):
 
     time_hour = int(date_time.strftime('%H'))
 
-    quotient = time_hour / 4
+    quotient = int(time_hour / 4)
 
     if quotient == 5:
         date_time = datetime.combine(date_time.date()+timedelta(1), time(0,0))
