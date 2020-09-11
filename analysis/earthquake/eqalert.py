@@ -32,7 +32,7 @@ def get_distance_to_eq(df, eq_lat, eq_lon):
 
 def get_unprocessed():
     query = "select * from earthquake_events where processed = 0"
-    df = dynadb.df_read(query=query, resource="sensor_data")
+    df = dynadb.df_read(query=query, resource="common_data")
     df = df.set_index('eq_id')
     return df
 
