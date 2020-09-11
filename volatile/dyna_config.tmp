@@ -23,7 +23,7 @@ ops = common,analysis,gsm_pi,website
 
 [Db]
 password = NaCAhztBgYZ3HwTkvHwwGVtJn5sVMFgg
-name = senslopedb
+name = analysis_db
 user = pysys_local
 
 
