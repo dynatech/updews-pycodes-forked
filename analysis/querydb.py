@@ -98,7 +98,7 @@ def create_rainfall_gauges(connection='analysis'):
     rainfall alert analysis.
 
     """
-    if not does_table_exist('rainfall_alerts'):
+    if not does_table_exist('rainfall_alerts', connection=connection):
         query = "CREATE TABLE `rainfall_gauges` ("
         query += "  `rain_id` SMALLINT(5) UNSIGNED NOT NULL AUTO_INCREMENT,"
         query += "  `gauge_name` VARCHAR(5) NOT NULL,"
@@ -119,53 +119,82 @@ def create_rainfall_priorities(connection='analysis'):
 
     """
 
-    query = "CREATE TABLE `rainfall_priorities` ("
-    query += "  `priority_id` SMALLINT(5) UNSIGNED NOT NULL AUTO_INCREMENT,"
-    query += "  `rain_id` SMALLINT(5) UNSIGNED NOT NULL,"
-    query += "  `site_id` TINYINT(3) UNSIGNED NOT NULL,"
-    query += "  `distance` DECIMAL(5,2) UNSIGNED NOT NULL,"
-    query += "  PRIMARY KEY (`priority_id`),"
-    query += "  INDEX `fk_rainfall_priorities_sites1_idx` (`site_id` ASC),"
-    query += "  INDEX `fk_rainfall_priorities_rain_gauges1_idx` (`rain_id` ASC),"
-    query += "  UNIQUE INDEX `uq_rainfall_priorities` (`site_id` ASC, `rain_id` ASC),"
-    query += "  CONSTRAINT `fk_rainfall_priorities_sites1`"
-    query += "    FOREIGN KEY (`site_id`)"
-    query += "    REFERENCES `sites` (`site_id`)"
-    query += "    ON DELETE CASCADE"
-    query += "    ON UPDATE CASCADE,"
-    query += "  CONSTRAINT `fk_rainfall_priorities_rain_gauges1`"
-    query += "    FOREIGN KEY (`rain_id`)"
-    query += "    REFERENCES `rainfall_gauges` (`rain_id`)"
-    query += "    ON DELETE CASCADE"
-    query += "    ON UPDATE CASCADE)"
-    
-    db.write(query, connection=connection)
+    if not does_table_exist('rainfall_priorities', connection=connection):
+        query = "CREATE TABLE `rainfall_priorities` ("
+        query += "  `priority_id` SMALLINT(5) UNSIGNED NOT NULL AUTO_INCREMENT,"
+        query += "  `rain_id` SMALLINT(5) UNSIGNED NOT NULL,"
+        query += "  `site_id` TINYINT(3) UNSIGNED NOT NULL,"
+        query += "  `distance` DECIMAL(5,2) UNSIGNED NOT NULL,"
+        query += "  PRIMARY KEY (`priority_id`),"
+        query += "  INDEX `fk_rainfall_priorities_sites1_idx` (`site_id` ASC),"
+        query += "  INDEX `fk_rainfall_priorities_rain_gauges1_idx` (`rain_id` ASC),"
+        query += "  UNIQUE INDEX `uq_rainfall_priorities` (`site_id` ASC, `rain_id` ASC),"
+        query += "  CONSTRAINT `fk_rainfall_priorities_sites1`"
+        query += "    FOREIGN KEY (`site_id`)"
+        query += "    REFERENCES `sites` (`site_id`)"
+        query += "    ON DELETE CASCADE"
+        query += "    ON UPDATE CASCADE,"
+        query += "  CONSTRAINT `fk_rainfall_priorities_rain_gauges1`"
+        query += "    FOREIGN KEY (`rain_id`)"
+        query += "    REFERENCES `rainfall_gauges` (`rain_id`)"
+        query += "    ON DELETE CASCADE"
+        query += "    ON UPDATE CASCADE)"
+
+        db.write(query, connection=connection)
 
 
 def create_NOAH_table(gauge_name, connection='analysis'):
     """Create table for gauge_name.
     
     """
+    if not does_table_exist(gauge_name, connection=connection):
+        query = "CREATE TABLE `{}` (".format(gauge_name)
+        query += "  `data_id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,"
+        query += "  `ts` TIMESTAMP NOT NULL,"
+        query += "  `rain` DECIMAL(4,1) NOT NULL,"
+        query += "  `temperature` DECIMAL(3,1) NULL DEFAULT NULL,"
+        query += "  `humidity` DECIMAL(3,1) NULL DEFAULT NULL,"
+        query += "  `battery1` DECIMAL(4,3) NULL DEFAULT NULL,"
+        query += "  `battery2` DECIMAL(4,3) NULL DEFAULT NULL,"
+        query += "  `csq` TINYINT(3) NULL DEFAULT NULL,"
+        query += "  PRIMARY KEY (`data_id`),"
+        query += "  UNIQUE INDEX `ts_UNIQUE` (`ts` ASC))"
+        query += " ENGINE = InnoDB"
+        query += " DEFAULT CHARACTER SET = utf8;"
+
+        print_out("Creating table: {}...".format(gauge_name))
+
+        db.write(query, connection=connection)
+
+def create_rainfall_alerts(connection='analysis'):
+    """Create table for rainfall_alerts.
+    """
     
-    query = "CREATE TABLE `{}` (".format(gauge_name)
-    query += "  `data_id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,"
-    query += "  `ts` TIMESTAMP NOT NULL,"
-    query += "  `rain` DECIMAL(4,1) NOT NULL,"
-    query += "  `temperature` DECIMAL(3,1) NULL DEFAULT NULL,"
-    query += "  `humidity` DECIMAL(3,1) NULL DEFAULT NULL,"
-    query += "  `battery1` DECIMAL(4,3) NULL DEFAULT NULL,"
-    query += "  `battery2` DECIMAL(4,3) NULL DEFAULT NULL,"
-    query += "  `csq` TINYINT(3) NULL DEFAULT NULL,"
-    query += "  PRIMARY KEY (`data_id`),"
-    query += "  UNIQUE INDEX `ts_UNIQUE` (`ts` ASC))"
-    query += " ENGINE = InnoDB"
-    query += " DEFAULT CHARACTER SET = utf8;"
-
-    print_out("Creating table: {}...".format(gauge_name))
-
-    db.write(query, connection=connection)
-
-
+    if not does_table_exist('rainfall_alerts', connection=connection):
+        query = "CREATE TABLE `rainfall_alerts` ("	
+        query += "  `ra_id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,"	
+        query += "  `ts` TIMESTAMP NULL,"	
+        query += "  `site_id` TINYINT(3) UNSIGNED NOT NULL,"	
+        query += "  `rain_id` SMALLINT(5) UNSIGNED NOT NULL,"	
+        query += "  `rain_alert` CHAR(1) NOT NULL,"	
+        query += "  `cumulative` DECIMAL(5,2) UNSIGNED NULL,"	
+        query += "  `threshold` DECIMAL(5,2) UNSIGNED NULL,"	
+        query += "  PRIMARY KEY (`ra_id`),"	
+        query += "  INDEX `fk_sites1_idx` (`site_id` ASC),"	
+        query += "  INDEX `fk_rainfall_gauges1_idx` (`rain_id` ASC),"	
+        query += "  UNIQUE INDEX `uq_rainfall_alerts` (`ts` ASC, `site_id` ASC, `rain_alert` ASC),"	
+        query += "  CONSTRAINT `fk_sites1`"	
+        query += "    FOREIGN KEY (`site_id`)"	
+        query += "    REFERENCES `sites` (`site_id`)"	
+        query += "    ON DELETE CASCADE"	
+        query += "    ON UPDATE CASCADE,"	
+        query += "  CONSTRAINT `fk_rainfall_gauges1`"	
+        query += "    FOREIGN KEY (`rain_id`)"	
+        query += "    REFERENCES `rainfall_gauges` (`rain_id`)"	
+        query += "    ON DELETE CASCADE"	
+        query += "    ON UPDATE CASCADE)"
+        db.write(query, connection=connection)
+    
 def get_rain_tag(rain_id, from_time, to_time, connection='analysis'):
     """Retrieves faulty rain gauge tag from the database.
     
