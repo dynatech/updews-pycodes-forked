@@ -3,8 +3,10 @@ import os
 import sys
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
+import dynadb.db as db
 import querydb as qdb
 import publicalerts as pub
+import gsm.gsmserver_dewsl3.sms_data as sms
 
 def site_alerts(curr_trig, ts, release_data_ts):
     site_id = curr_trig['site_id'].values[0]
@@ -33,7 +35,7 @@ def site_alerts(curr_trig, ts, release_data_ts):
     query = "SELECT * FROM alert_status"
     query += " WHERE trigger_id in (%s)" %(','.join(map(lambda x: str(x), \
                                          set(curr_trig['trigger_id'].values))))
-    written = qdb.get_db_dataframe(query)
+    written = db.df_read(query)
 
     site_curr_trig = curr_trig[~curr_trig.trigger_id.isin(written.trigger_id)]
     site_curr_trig = site_curr_trig.sort_values('alert_level', ascending=False)
@@ -60,7 +62,8 @@ def site_alerts(curr_trig, ts, release_data_ts):
     alert_status = alert_status.rename(columns = {'ts': 
             'ts_last_retrigger'})
     alert_status['ts_set'] = datetime.now()
-    qdb.push_db_dataframe(alert_status, 'alert_status', index=False)
+    data_table = sms.DataTable('alert_status', alert_status)
+    db.df_write(data_table)
 
 def main():
     start_time = datetime.now()
@@ -89,7 +92,7 @@ def main():
     query += "  ) AS sym "
     query += "ON op.trigger_sym_id = sym.trigger_sym_id "
     query += "ORDER BY ts_updated DESC"
-    curr_trig = qdb.get_db_dataframe(query)
+    curr_trig = db.df_read(query)
 
     if len(curr_trig) == 0:
         qdb.print_out('no new trigger')
