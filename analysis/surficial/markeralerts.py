@@ -469,7 +469,7 @@ def evaluate_trending_filter(marker_data_df, to_plot, to_json=False):
                       }
         return return_json
     else:
-        return trend_alert
+        return {'trend_alert': trend_alert}
 
 
 def evaluate_marker_alerts(marker_data_df, ts, to_json):
