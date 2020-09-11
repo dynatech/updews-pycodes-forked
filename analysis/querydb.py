@@ -7,7 +7,7 @@ import platform
 from sqlalchemy import create_engine
 import sys
 
-sys.setrecursionlimit(100000)
+sys.setrecursionlimit(10000)
 
 curOS = platform.system()
 
