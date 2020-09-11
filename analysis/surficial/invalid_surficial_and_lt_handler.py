@@ -64,6 +64,9 @@ if __name__ == "__main__":
     start_time = datetime.now()
     qdb.print_out(start_time)
 
-    main(pd.to_datetime('2020-05-17 15:00'))
+    main()
+    
+    # test: valit lt of INA
+    # pd.to_datetime('2020-05-17 15:00')
     
     qdb.print_out('runtime = %s' %(datetime.now() - start_time))
