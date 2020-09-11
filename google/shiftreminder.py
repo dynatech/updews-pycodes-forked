@@ -46,9 +46,9 @@ def get_mobile():
     query += "  WHERE team_code IN ('admin', 'CT', 'MT') "
     query += "  ) team "
     query += "USING (user_id) "
-    query += "INNER JOIN {}.user_mobiles ".format(conn['gsm_pi3']['schema'])
+    query += "INNER JOIN {}.user_mobiles ".format(conn['gsm_pi']['schema'])
     query += "USING (user_id) "
-    query += "INNER JOIN {}.mobile_numbers ".format(conn['gsm_pi3']['schema'])
+    query += "INNER JOIN {}.mobile_numbers ".format(conn['gsm_pi']['schema'])
     query += "USING (mobile_id)"
     df = db.df_read(query, resource='sms_analysis')
     return df
