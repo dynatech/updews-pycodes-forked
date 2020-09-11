@@ -32,14 +32,14 @@ def get_distance_to_eq(df, eq_lat, eq_lon):
 
 def get_unprocessed():
     query = "select * from earthquake_events where processed = 0"
-    df = dynadb.df_read(query=query, resource="common_data")
+    df = dynadb.df_read(query=query, resource="sensor_data")
     df = df.set_index('eq_id')
     return df
 
 def get_sites():
     query = ("SELECT s.site_id, site_code, latitude, longitude FROM "
         "loggers as l left join sites as s on s.site_id = l.site_id ")
-    df = dynadb.df_read(query=query, resource="sensor_data")
+    df = dynadb.df_read(query=query, resource="common_data")
     df = df.drop_duplicates('site_id',keep='last').dropna()
     return df
     
