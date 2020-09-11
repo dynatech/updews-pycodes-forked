@@ -7,6 +7,8 @@ import platform
 from sqlalchemy import create_engine
 import sys
 
+sys.setrecursionlimit(3000)
+
 curOS = platform.system()
 
 if curOS == "Windows":
