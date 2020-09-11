@@ -20,7 +20,7 @@ def get_auth():
     """
     
     # Load credentials from json file
-    with open("twitter_credentials.json", "r") as file:
+    with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "twitter_credentials.json"), "r") as file:
     		creds = json.load(file)
     # auth
     auth = OAuthHandler(creds['consumer_key'], creds['consumer_secret'])
