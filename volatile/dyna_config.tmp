@@ -51,11 +51,11 @@ FailObvEN = Error! You did not put your name on the text message. Please check y
 FailOobEN = Error! Your date or time value is either too late or too early. Please check your SMS and try again.
 
 [FileIO]
-querylatestreportoutput = /home/ubuntu/Desktop/query_latest_report_output.txt
-alertgenscript = /home/ubuntu/centralserver/analysis/subsurface/alertgen.py
-gndalert1 = /home/ubuntu/centralserver/analysis/surficial/markeralerts.py
-surficialscript = /home/ubuntu/centralserver/analysis/surficial/markeralerts.py
-surfscriptlogs = /home/ubuntu/logs/marker_alerts.txt
+querylatestreportoutput = /home/analysis-server/Desktop/query_latest_report_output.txt
+alertgenscript = /home/analysis-server/updews-pycodes/analysis/subsurface/alertgen.py
+gndalert1 = /home/analysis-server/updews-pycodes/analysis/surficial/markeralerts.py
+surficialscript = /home/analysis-server/updews-pycodes/analysis/surficial/markeralerts.py
+surfscriptlogs = /home/analysis-server/logs/marker_alerts.txt
 output_path = /Documents/monitoringoutput/
 realtime_path = /Documents/monitoringoutput/realtime/
 rainfall_path = /Documents/monitoringoutput/rainfall/
