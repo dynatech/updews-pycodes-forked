@@ -7,7 +7,7 @@ schema = analysis_db
 
 
 [gsm_pi]
-host = 192.168.150.75
+host = 192.168.150.112
 port = 3306
 user = pysys_local
 password = NaCAhztBgYZ3HwTkvHwwGVtJn5sVMFgg
@@ -15,7 +15,7 @@ schema = comms_db
 
 
 [analysis]
-host = 192.168.150.75
+host = 192.168.150.112
 port = 3306
 user = pysys_local
 password = NaCAhztBgYZ3HwTkvHwwGVtJn5sVMFgg
@@ -23,7 +23,7 @@ schema = analysis_db
 
 
 [website]
-host = 192.168.150.75
+host = 192.168.150.112
 port = 3306
 user = pysys_local
 password = NaCAhztBgYZ3HwTkvHwwGVtJn5sVMFgg
@@ -31,7 +31,7 @@ schema = ewi_db
 
 
 [common]
-host = 192.168.150.75
+host = 192.168.150.112
 port = 3306
 user = pysys_local
 password = NaCAhztBgYZ3HwTkvHwwGVtJn5sVMFgg
