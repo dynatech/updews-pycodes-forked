@@ -18,7 +18,7 @@ def get_alert_staff_numbers():
     query = "select user_id, sim_num, gsm_id from {}.user_alert_info ".format(conn['common']['schema'])
     query += "inner join {}.user_mobiles using (user_id) ".format(conn['gsm_pi']['schema'])
     query += "inner join {}.mobile_numbers using (mobile_id) ".format(conn['gsm_pi']['schema'])
-    query += "where t1.send_alert = 1"
+    query += "where send_alert = 1"
     print(query)
     dev_contacts = dbio.read(query=query, resource="sms_analysis")
 
@@ -239,35 +239,38 @@ def send_alert_message():
 
 
 def check_alerts():
+    conn = mem.get('DICT_DB_CONNECTIONS')
     ts_now = dt.now().strftime("%Y-%m-%d %H:%M:%S")
+    common = conn['common']['schema']
+    analysis = conn['analysis']['schema']
     query = ("SELECT stat_id, site_id, site_code, trigger_source, "
              "alert_symbol, ts_last_retrigger FROM "
              "(SELECT stat_id, ts_last_retrigger, site_id, "
              "trigger_source, alert_symbol FROM "
              "(SELECT stat_id, ts_last_retrigger, site_id, "
              "trigger_sym_id FROM "
-             "(SELECT * FROM alert_status "
-             "WHERE ts_set < '%s' "
+             "(SELECT * FROM {}.alert_status "
+             "WHERE ts_set < '{}' "
              "and ts_ack is NULL "
              ") AS stat "
              "INNER JOIN "
-             "operational_triggers AS op "
+             "{}.operational_triggers AS op "
              "USING (trigger_id) "
              ") AS trig "
              "INNER JOIN "
              "(SELECT trigger_sym_id, trigger_source, "
              "alert_level, alert_symbol FROM "
-             "operational_trigger_symbols "
+             "{}.operational_trigger_symbols "
              "INNER JOIN "
-             "trigger_hierarchies "
+             "{}.trigger_hierarchies "
              "USING (source_id) "
              ") as sym "
              "USING (trigger_sym_id)) AS alert "
              "INNER JOIN "
-             "sites "
-             "USING (site_id)") % (ts_now)
+             "{}.sites "
+             "USING (site_id)").format(analysis,ts_now,analysis,analysis,analysis,common)
 
-    alert_msgs = dbio.read(query=query, resource="sensor_data")
+    alert_msgs = dbio.read(query=query, resource="sensor_analysis")
 
     print("alert messages:", alert_msgs)
 
