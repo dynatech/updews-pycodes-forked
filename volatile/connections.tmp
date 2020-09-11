@@ -3,7 +3,7 @@ host = 127.0.0.1
 port = 3306
 user = pysys_local
 password = NaCAhztBgYZ3HwTkvHwwGVtJn5sVMFgg
-schema = senslopedb
+schema = analysis_db
 
 
 [gsm_pi]
@@ -14,20 +14,12 @@ password = NaCAhztBgYZ3HwTkvHwwGVtJn5sVMFgg
 schema = comms_db
 
 
-[gsm_pi3]
-host = 192.168.150.75
-port = 3306
-user = pysys_local
-password = NaCAhztBgYZ3HwTkvHwwGVtJn5sVMFgg
-schema = comms_db_3
-
-
 [analysis]
 host = 192.168.150.75
 port = 3306
 user = pysys_local
 password = NaCAhztBgYZ3HwTkvHwwGVtJn5sVMFgg
-schema = senslopedb
+schema = analysis_db
 
 
 [website]
@@ -43,4 +35,4 @@ host = 192.168.150.75
 port = 3306
 user = pysys_local
 password = NaCAhztBgYZ3HwTkvHwwGVtJn5sVMFgg
-schema = senslopedb
+schema = commons_db
