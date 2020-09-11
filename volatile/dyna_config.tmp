@@ -1,5 +1,5 @@
 [Hosts]
-local = 192.168.150.75
+local = 127.0.0.1
 gsm = 192.168.150.75
 sandbox = 192.168.150.75
 
@@ -14,11 +14,11 @@ smsdb2 = sandbox
 
 [resource_connection]
 sensor_data = analysis
-sms_data = gsm_pi3
+sms_data = gsm_pi
 common_data = common
 sensor_analysis = common,analysis
-sms_analysis = common,gsm_pi3
-ops = common,analysis,gsm_pi3,website
+sms_analysis = common,gsm_pi
+ops = common,analysis,gsm_pi,website
 
 
 [Db]
