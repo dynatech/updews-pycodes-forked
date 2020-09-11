@@ -228,7 +228,7 @@ def plot_site_meas(surficial_data_df, ts):
     
     plt.savefig(plot_path+"{} {} meas plot".format(site_code,
                 pd.to_datetime(ts).strftime("%Y-%m-%d_%H-%M")), dpi=160,
-                facecolor='w', edgecolor='w', orientation='landscape', mode='w',
+                facecolor='w', edgecolor='w', orientation='landscape', 
                 bbox_inches = 'tight')
     plt.close()
 
@@ -342,7 +342,7 @@ def plot_trending_analysis(site_code, marker_name, date_time, zeroed_time,
     
     #### Save fig
     plt.savefig(plot_path+filename, facecolor='w', edgecolor='w',
-                orientation='landscape', mode='w', bbox_inches = 'tight')
+                orientation='landscape', bbox_inches = 'tight')
     plt.close()
 
 
