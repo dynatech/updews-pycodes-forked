@@ -11,88 +11,50 @@ Created on Tue Jun  4 14:27:21 2019
 @author: DELL
 """
 
-import time,serial,re,sys,traceback
-import MySQLdb, subprocess
 from datetime import datetime
-from datetime import timedelta as td
-import pandas as psql
-import numpy as np
-import MySQLdb, time 
-from time import localtime, strftime
-import pandas as pd
-#import __init__
-import itertools
 import os
-from sqlalchemy import create_engine
-from dateutil.parser import parse
+import pandas as pd
+import sys
+
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
-import analysis.querydb as qdb
-import volatile.memory as mem
-
-
-
-columns = ['logger_id', 'presence', 'last_data', 'ts_updated', 'diff_days']
-df = pd.DataFrame(columns=columns)
-sc = mem.server_config()
-
+import dynadb.db as db
+import gsm.gsmserver_dewsl3.sms_data as sms
 
 
 def get_loggers_v2():
-    localdf=0
-    #db = MySQLdb.connect(host = '192.168.150.253', user = 'root', passwd = 'senslope', db = 'senslopedb')
-    query = """select lg.logger_name, lg.logger_id
-    from (select * from loggers) as lg
-    inner join senslopedb.logger_models as lm
-    on lg.model_id = lm.model_id
-    where lg.date_deactivated is NULL
-    and
-    lm.logger_type in ('arq', 'regular', 'router')
-	and
-    logger_name not in ('testa', 'testb', 'testc')
-    and 
-    logger_name not like '%___r_%' and 
-    logger_name not like '%___pz%' and 
-    logger_name not like '%___x_%'"""
-#    localdf = psql.read_sql(query, qdb)
-    localdf = qdb.get_db_dataframe(query)
+    localdf = 0
+    query = """select logger_name, logger_id from loggers as lg
+    inner join logger_models using (model_id)
+    where date_deactivated is NULL
+    and logger_type in ('arq', 'regular', 'router')
+	and logger_name not in ('testa', 'testb', 'testc')
+    and logger_name not like '%___r_%' 
+    and logger_name not like '%___pz%' 
+    and logger_name not like '%___x_%'"""
+    localdf = db.df_read(query, connection='common')
     return localdf
 
 def get_loggers_v3():
     localdf=0
-#    db = MySQLdb.connect(host = '192.168.150.253', user = 'root', passwd = 'senslope', db = 'senslopedb')
-    query = """select lg.logger_name, lg.logger_id
-    from (select * from loggers) as lg
-    inner join senslopedb.logger_models as lm
-    on lg.model_id = lm.model_id
-    where lm.logger_type in ('gateway','arq')
-    and
-    logger_name like '%___r_%'
-    or 
-    logger_name like '%___g%' 
+    query = """select logger_name, logger_id from loggers
+    inner join logger_models using (model_id)
+    where logger_type in ('gateway','arq')
+    and logger_name like '%___r_%'
+    or logger_name like '%___g%' 
     and lg.logger_name not in ("madg")"""
-    
-#    localdf = psql.read_sql(query, db)
-    localdf = qdb.get_db_dataframe(query)
+    localdf = db.df_read(query, connection='common')
     return localdf
 
 def get_data_rain(lgrname):
-#    db = MySQLdb.connect(host = '192.168.150.253', user = 'root', passwd = 'senslope', db = 'senslopedb')
-    query= "SELECT max(ts) FROM " + 'rain_' + lgrname + "  where ts >= '2010-01-01' and '2019-01-01' order by ts desc limit 1 "
-#    localdf = psql.read_sql(query, db)
-    localdf = qdb.get_db_dataframe(query)
-    print (localdf)
+    query= "SELECT max(ts) FROM " + 'rain_' + lgrname + "  where ts >= '2010-01-01' order by ts desc limit 1 "
+    localdf = db.df_read(query, connection='analysis')
     return localdf
 
 def get_data_tsm(lgrname):
-#    db = MySQLdb.connect(host = '192.168.150.253', user = 'root', passwd = 'senslope', db = 'senslopedb')
-    query= "SELECT max(ts) FROM " + 'tilt_' + lgrname + "  where ts >= '2010-01-01' and '2019-01-01' order by ts desc limit 1 "
-#    localdf = psql.read_sql(query, db)
-    localdf = qdb.get_db_dataframe(query)
-    print (localdf)
+    query= "SELECT max(ts) FROM " + 'tilt_' + lgrname + "  where ts >= '2010-01-01' order by ts desc limit 1 "
+    localdf = db.df_read(query, connection='analysis')
     return localdf
-
-
 
 def dftosql(df):
     v2df = get_loggers_v2()
@@ -103,12 +65,9 @@ def dftosql(df):
     logger_active = pd.DataFrame()
     for i in range (0,len(v2df)):
         logger_active= logger_active.append(get_data_tsm(v2df.logger_name[i]))
-        print (logger_active)
     
     for i in range (0,len(v3df)):
-    
         logger_active= logger_active.append(get_data_rain(v3df.logger_name[i]))
-        print (logger_active)
     
     logger_active = logger_active.reset_index()   
     timeNow= datetime.today()
@@ -121,17 +80,22 @@ def dftosql(df):
     fdta = tdta.astype('timedelta64[D]')
     df['diff_days'] = fdta
     
-    
     df.loc[(df['diff_days'] > -1) & (df['diff_days'] < 3), 'presence'] = 'active' 
     df['presence'] = df['diff_days'].apply(lambda x: '1' if x <= 3 else '0') 
-    print (df) 
 
-    # engine=create_engine('mysql+mysqlconnector://root:local@'+sc["hosts"]["local"]+':3306/'+sc['db']['name'], echo = False)
-    engine = create_engine('mysql+pymysql://' + sc['db']['user']  + ':'+ sc['db']['password'] + '@' + sc['hosts']['local'] +':3306/' + sc['db']['name'])
-    df.to_sql(name = 'data_presence_loggers', con = engine, if_exists = 'append', index = False)
+    data_table = sms.DataTable('data_presence_loggers', df)
+    db.df_write(data_table, connection='analysis')
   
     return df
 
-query = "DELETE FROM data_presence_loggers"
-qdb.execute_query(query, hostdb='local')
-dftosql(df)
+def main():
+    columns = ['logger_id', 'presence', 'last_data', 'ts_updated', 'diff_days']
+    df = pd.DataFrame(columns=columns)
+    
+    query = "DELETE FROM data_presence_loggers"
+    db.write(query, connection='analysis')
+    dftosql(df)
+
+###############################################################################
+if __name__ == '__main__':
+    main()
