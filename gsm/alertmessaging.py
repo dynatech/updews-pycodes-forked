@@ -19,7 +19,7 @@ def get_alert_staff_numbers():
     query += "inner join {}.user_mobiles using (user_id) ".format(conn['gsm_pi']['schema'])
     query += "inner join {}.mobile_numbers using (mobile_id) ".format(conn['gsm_pi']['schema'])
     query += "where t1.send_alert = 1"
-
+    print(query)
     dev_contacts = dbio.read(query=query, resource="sms_analysis")
 
     ts = dt.today().strftime("%Y-%m-%d %H:%M:%S")
@@ -37,7 +37,7 @@ def get_alert_staff_numbers():
     query += "inner join {}.user_mobiles using (user_id) ".format(conn['gsm_pi']['schema'])
     query += "inner join {}.mobile_numbers using (mobile_id) ".format(conn['gsm_pi']['schema'])
     query += "where nickname in {}".format(iomp_nicknames_tuple)
-
+    print(query)
     iomp_contacts = dbio.read(query=query, resource="sms_analysis")
 
     return dev_contacts + iomp_contacts
