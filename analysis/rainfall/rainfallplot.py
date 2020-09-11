@@ -224,7 +224,7 @@ def rain_stack_plot(site_code, gauges, offsetstart, start, end, tsn, threshold,
     
         plt.savefig(output_path+sc['fileio']['rainfall_path'] + 'rainfall_' +
                     tsn + '_' + site_code, dpi=100, facecolor='w',
-                    edgecolor='w',orientation='landscape',mode='w',
+                    edgecolor='w',orientation='landscape',
                     bbox_extra_artists=(lgd,))#, bbox_inches='tight')
     
     plt.close()
