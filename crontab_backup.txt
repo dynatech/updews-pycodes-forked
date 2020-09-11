@@ -1,31 +1,25 @@
-PYTHONPATH=/home/analysis-server/updews-pycodes
-PATH=/home/analysis-server/bin:/home/analysis-server/.local/bin:/home/analysis-server/miniconda3/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/analysis-server/updews-pycodes
+PYTHONPATH=/home/analysis-server/updews-pycodes/
 
-@reboot python ~/updews-pycodes/volatile/init.py # new memcache setup script
-2 * * * * python ~/updews-pycodes/volatile/init.py
+@reboot /home/analysis-server/miniconda3/bin/python ~/updews-pycodes/volatile/init.py # new memcache setup script
+2 * * * * /home/analysis-server/miniconda3/bin/python ~/updews-pycodes/volatile/init.py
 
-* * * * * python ~/updews-pycodes/gsm/smsparser.py -tloggers -l5000 -osms_data > ~/logs/smsparser_loggers.txt 2>&1 # parse SMS from smsinbox_loggers
-* * * * * python ~/updews-pycodes/gsm/smsparser.py -tusers -l10 -osms_data > ~/logs/smsparser_users.txt 2>&1 # parse SMS from smsinbox_users
-* * * * * python ~/updews-pycodes/gsm/alertgenexec.py > ~/logs/alertgenexec.txt 2>&1 # execute alertgen scripts from memory
-2-59/5 * * * * python ~/updews-pycodes/gsm/alertmessaging.py -s > ~/logs/alertmessaging.txt 2>&1 # send alert messages
+* * * * * /home/analysis-server/miniconda3/bin/python  ~/updews-pycodes/gsm/smsparser.py -tloggers -l5000 -osms_data > ~/logs/smsparser_loggers.txt
+* * * * * /home/analysis-server/miniconda3/bin/python  ~/updews-pycodes/gsm/smsparser.py -tusers -l10 -osms_data > ~/logs/smsparser_users.txt
+* * * * * /home/analysis-server/miniconda3/bin/python  ~/updews-pycodes/gsm/alertgenexec.py > ~/logs/alertgenexec.txt 2>&1 # execute
+2-59/5 * * * * /home/analysis-server/miniconda3/bin/python ~/updews-pycodes/gsm/alertmessaging.py
 
-@monthly python ~/updews-pycodes/analysis/rainfall/rainfallgauges.py # update list of rainfall gauges and rain noah data used in evaluating alerts
-30 0 1 * * python ~/updews-pycodes/analysis/rainfall/rainfallpriorities.py > ~/logs/rainfallproperties.txt 2>&1
-10,40 * * * * python ~/updews-pycodes/analysis/rainfall/updaterainnoah.py > ~/logs/updaterainnoah.txt 2>&1
-*/5 * * * * python ~/updews-pycodes/analysis/earthquake/eqevents.py 1 > ~/logs/eqevents.txt 2>&1
+30 0 1 * * /home/analysis-server/miniconda3/bin/python ~/updews-pycodes/analysis/rainfall/rainfallpriorities.py > ~/logs/rainfallpriorities.txt
+10,40 * * * * /home/analysis-server/miniconda3/bin/python ~/updews-pycodes/analysis/rainfall/updaterainnoah.py > ~/logs/updaterainnoah.txt
+*/5 * * * * /home/analysis-server/miniconda3/bin/python ~/updews-pycodes/analysis/earthquake/eqevents.py 1 > ~/logs/eqevents.txt 2>&1
 
-*/5 * * * * python ~/updews-pycodes/analysis/surficial/invalid_surficial_and_lt_handler.py > ~/logs/invalid_surficial_and_lt_handler.txt 2>&1
-11,41 * * * * python ~/updews-pycodes/analysis/rainfall/rainfall.py > ~/logs/rainfall_analysis.txt 2>&1 # rainfall alert analysis
-1-59/5 * * * * python ~/updews-pycodes/analysis/publicalerts.py > ~/logs/publicalerts.txt 2>&1
-2-59/5 * * * * python ~/updews-pycodes/analysis/gsmalerts.py > ~/logs/gsmalerts.txt 2>&1
-*/10 * * * * python ~/updews-pycodes/analysis/earthquake/eqalert.py > ~/logs/eqalert.txt 2>&1
+*/5 * * * * /home/analysis-server/miniconda3/bin/python ~/updews-pycodes/analysis/surficial/invalid_surficial_and_lt_handler.py > ~/logs/invalid_surficial_and_lt_handler.txt
+11,41 * * * * /home/analysis-server/miniconda3/bin/python ~/updews-pycodes/analysis/rainfall/rainfall.py > ~/logs/rainfall_analysis.txt
+1-59/5 * * * * /home/analysis-server/miniconda3/bin/python ~/updews-pycodes/analysis/publicalerts.py > ~/logs/publicalerts.txt 2>&1
+2-59/5 * * * * /home/analysis-server/miniconda3/bin/python ~/updews-pycodes/analysis/gsmalerts.py > ~/logs/gsmalerts.txt 2>&1
+*/10 * * * * /home/analysis-server/miniconda3/bin/python ~/updews-pycodes/analysis/earthquake/eqalert.py > ~/logs/eqalert.txt 2>&1
 
-30 7,19 * * * python ~/updews-pycodes/google/shiftsync.py # event monitoring schedule updating
-0 8,20 * * * python ~/updews-pycodes/google/shiftreminder.py # monitoring schedule reminder
+30 7,19 * * * /home/analysis-server/miniconda3/bin/python ~/updews-pycodes/google/shiftsync.py # event monitoring schedule updating
+0 8,20 * * * /home/analysis-server/miniconda3/bin/python ~/updews-pycodes/google/shiftreminder.py # monitoring schedule reminder
 
-0 * * * * python ~/updews-pycodes/analysis/outputcleanup.py
-25,45 * * * * python ~/updews-pycodes/analysis/uptime.py
-
-# Send PublicAlertRefDB.json to x.72 and x.80
-*/2 * * * * scp -P 1080 ~/Documents/monitoringoutput/PublicAlertRefDB.json ubuntu@192.168.150.72:/var/www/html/temp/data/
-*/2 * * * * scp -P 1088 ~/Documents/monitoringoutput/PublicAlertRefDB.json ubuntu@192.168.150.80:/var/www/html/temp/data/
+0 * * * * /home/analysis-server/miniconda3/bin/python ~/updews-pycodes/analysis/outputcleanup.py
+25,45 * * * * /home/analysis-server/miniconda3/bin/python ~/updews-pycodes/analysis/uptime.py
