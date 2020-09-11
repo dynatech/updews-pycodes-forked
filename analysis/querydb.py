@@ -531,27 +531,28 @@ def write_marker_alerts(df, connection='analysis'):
     db.df_write(data_table, connection=connection)
     
     
-def get_surficial_trigger(start_ts, end_ts, connection='analysis'):
+def get_surficial_trigger(start_ts, end_ts, resource='sensor_analysis'):
+    conn = mem.get('DICT_DB_CONNECTIONS')
     query  = "SELECT trigger_id, ts, site_id, alert_status, ts_updated, "
     query += "trigger_sym_id, alert_symbol, alert_level, site_code FROM "
-    query += "  (SELECT * FROM operational_triggers "
+    query += "  (SELECT * FROM {}.operational_triggers ".format(conn['analysis']['schema'])
     query += "  WHERE ts >= '{}' ".format(start_ts)
     query += "  AND ts_updated <= '{}' ".format(end_ts)
     query += "  ) AS trig "
     query += "INNER JOIN "
-    query += "  (SELECT * FROM operational_trigger_symbols "
+    query += "  (SELECT * FROM {}.operational_trigger_symbols ".format(conn['analysis']['schema'])
     query += "  WHERE alert_level > 0 "
     query += "  ) AS sym "
     query += "USING (trigger_sym_id) "
     query += "INNER JOIN "
-    query += "  (SELECT * FROM trigger_hierarchies "
+    query += "  (SELECT * FROM {}.trigger_hierarchies ".format(conn['analysis']['schema'])
     query += "  WHERE trigger_source = 'surficial' "
     query += "  ) AS hier "
     query += "USING (source_id) "
-    query += "INNER JOIN alert_status USING (trigger_id) "
-    query += "INNER JOIN sites USING (site_id) "
+    query += "INNER JOIN {}.alert_status USING (trigger_id) ".format(conn['analysis']['schema'])
+    query += "INNER JOIN {}.sites USING (site_id) ".format(conn['common']['schema'])
     query += "ORDER BY ts DESC "
-    df = db.df_read(query, connection=connection)
+    df = db.df_read(query, resource=resource)
     return df
 
 def get_valid_cotriggers(site_id, public_ts_start, connection='analysis'):
