@@ -45,6 +45,7 @@ def main(mc):
         
 		if lockscript.get_lock('alertgen for %s' % alert_info['tsm_name'], 
 			exitifexist=False):
+			print('execute:', command)
 			subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, 
 				stderr=subprocess.STDOUT)
 		else:
