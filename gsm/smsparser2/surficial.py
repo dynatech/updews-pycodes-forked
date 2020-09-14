@@ -69,10 +69,9 @@ def get_site_code(text):
     """
     err_val = 0
     site_id = 0
-    mc = mem.get_handle()
 
     site_code_match = re.split(" ", text, maxsplit = 1)[0].lower()[0:3]
-    df_sites = mc.get('df_sites')
+    df_sites = mem.get('df_sites')
     site_code = adjust_site_code(site_code_match)
     try:
         site_id = df_sites.loc[df_sites.site_code == site_code.lower(), 'site_id'].values[0]
