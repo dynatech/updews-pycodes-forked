@@ -64,7 +64,7 @@ def get_latest_ts(table_name, connection='local'):
         return ''
         
 
-def get_alert_level(site_id, end, connection='analysis'):
+def get_alert_level(site_id, end, connection='website'):
     """Retrieves alert level.
     
     Args:
