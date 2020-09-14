@@ -72,6 +72,8 @@ def get_site_code(text):
 
     site_code_match = re.split(" ", text, maxsplit = 1)[0].lower()[0:3]
     df_sites = mem.get('df_sites')
+    print(df_sites)
+    print(site_code)
     site_code = adjust_site_code(site_code_match)
     try:
         site_id = df_sites.loc[df_sites.site_code == site_code.lower(), 'site_id'].values[0]
@@ -389,7 +391,7 @@ def observation(text):
     text = re.sub(";", ":", text)
     text = re.sub("\n", " ", text)
     text = text.strip()
-
+    print(text)
     # find values in patterns
     obv["meas_type"], text = find_match_in_text(get_obv_type, text)
     obv["site_id"], text = find_match_in_text(get_site_code, text)
