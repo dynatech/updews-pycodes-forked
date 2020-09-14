@@ -72,10 +72,10 @@ def get_site_code(text):
     mc = mem.get_handle()
 
     site_code_match = re.split(" ", text, maxsplit = 1)[0].lower()[0:3]
-    sites_dict = mc.get('sites_dict')
+    df_sites = mc.get('df_sites')
     site_code = adjust_site_code(site_code_match)
     try:
-        site_id = sites_dict['site_id'][site_code]
+        site_id = df_sites.loc[df_sites == site_code, 'site_id'].values[0]
     except KeyError:
         print ("No site_code record for %s" % (site_code))
         err_val = SURFICIAL_PARSER_ERROR_VALUE["site_code"]
