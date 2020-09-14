@@ -15,7 +15,7 @@ def count_alert_analysis_instances():
 	out, err = p.communicate()
 	return int(out)
 
-def main(mc):
+def main():
 	print (dt.today().strftime("%c"))
 
 	sc = mem.server_config()
@@ -23,7 +23,7 @@ def main(mc):
 	proc_limit = sc["io"]["proc_limit"]
 	
 	while True:
-		alertgenlist = mc.get('alertgenlist')
+		alertgenlist = mem.get('alertgenlist')
 
 		print (alertgenlist)
 
@@ -35,21 +35,18 @@ def main(mc):
 
 		alert_info = alertgenlist.pop()
 
-		mc.set('alertgenlist',[])
-		mc.set('alertgenlist',alertgenlist)
+		mem.set('alertgenlist',[])
+		mem.set('alertgenlist',alertgenlist)
 
-		command = 'python %s %s "%s"' % (sc["fileio"]["alertgenscript"], 
+		command = "python %s %s '%s'" % (sc["fileio"]["alertgenscript"], 
 			alert_info['tsm_name'], alert_info['ts'])
 
 		print ("Running", alert_info['tsm_name'], "alertgen")
         
 		if lockscript.get_lock('alertgen for %s' % alert_info['tsm_name'], 
 			exitifexist=False):
-			print('execute:', command)
 			subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, 
 				stderr=subprocess.STDOUT)
-			print('done')
-			
 		else:
 			continue
 
@@ -61,17 +58,16 @@ def main(mc):
 
 if __name__ == "__main__":
 
-	mc = mem.get_handle()
-	ag_instance = mc.get('alertgenexec')
+	ag_instance = mem.get('alertgenexec')
 
 	if ag_instance == True:
 		print ('Process already exists (via memcache).. aborting')
 		sys.exit()
 
-	mc.set('alertgenexec', True)
+	mem.set('alertgenexec', True)
 	try:
-		main(mc)
+		main()
 	except KeyboardInterrupt:
 		print ('Unexpected Error')
-	mc.set('alertgenexec', False)
+	mem.set('alertgenexec', False)
 	    	
