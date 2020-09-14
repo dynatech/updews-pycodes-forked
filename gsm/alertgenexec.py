@@ -15,7 +15,7 @@ def count_alert_analysis_instances():
 	out, err = p.communicate()
 	return int(out)
 
-def main():
+def main(mc):
 	print (dt.today().strftime("%c"))
 
 	sc = mem.server_config()
@@ -23,7 +23,7 @@ def main():
 	proc_limit = sc["io"]["proc_limit"]
 	
 	while True:
-		alertgenlist = mem.get('alertgenlist')
+		alertgenlist = mc.get('alertgenlist')
 
 		print (alertgenlist)
 
@@ -35,8 +35,8 @@ def main():
 
 		alert_info = alertgenlist.pop()
 
-		mem.set('alertgenlist',[])
-		mem.set('alertgenlist',alertgenlist)
+		mc.set('alertgenlist',[])
+		mc.set('alertgenlist',alertgenlist)
 
 		command = "python %s %s '%s'" % (sc["fileio"]["alertgenscript"], 
 			alert_info['tsm_name'], alert_info['ts'])
@@ -58,16 +58,17 @@ def main():
 
 if __name__ == "__main__":
 
-	ag_instance = mem.get('alertgenexec')
+	mc = mem.get_handle()
+	ag_instance = mc.get('alertgenexec')
 
 	if ag_instance == True:
 		print ('Process already exists (via memcache).. aborting')
 		sys.exit()
 
-	mem.set('alertgenexec', True)
+	mc.set('alertgenexec', True)
 	try:
-		main()
+		main(mc)
 	except KeyboardInterrupt:
 		print ('Unexpected Error')
-	mem.set('alertgenexec', False)
+	mc.set('alertgenexec', False)
 	    	
