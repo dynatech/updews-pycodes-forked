@@ -547,6 +547,7 @@ def parse_all_messages(args,allmsgs=[]):
                 else:
                     is_msg_proc_success = False
             elif re.search("^ACK \d+ .+",sms.msg.upper()):
+                print('##############ACK##############')
                 is_msg_proc_success = amsg.process_ack_to_alert(sms)   
             elif re.search("^ *(R(O|0)*U*TI*N*E )|(EVE*NT )", sms.msg.upper()):
                 is_msg_proc_success = process_surficial_observation(sms)                  
