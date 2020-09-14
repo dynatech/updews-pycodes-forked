@@ -1,5 +1,3 @@
-import smstables
-import dynadb.db as dbio
 import argparse
 from datetime import datetime as dt
 from datetime import timedelta as td
@@ -9,6 +7,8 @@ import re
 import sys
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
+import smstables
+import dynadb.db as dbio
 import volatile.memory as mem
 # ------------------------------------------------------------------------------
 
@@ -41,7 +41,7 @@ def get_alert_staff_numbers():
     return dev_contacts + iomp_contacts
 
 
-def monitoring_start(site_id, ts_last_retrigger):
+def monitoring_start(site_id, ts_last_retrigger, connection='website'):
 
     query = "SELECT ts, ts_updated FROM "
     query += "  (SELECT * FROM public_alerts "
@@ -57,7 +57,7 @@ def monitoring_start(site_id, ts_last_retrigger):
     query += "ORDER BY ts DESC LIMIT 3"
 
     # previous positive alert
-    prev_pub_alerts = pd.DataFrame(list(dbio.read(query=query, resource="sensor_data")),
+    prev_pub_alerts = pd.DataFrame(list(dbio.read(query=query, connection=connection)),
                                    columns=['ts', 'ts_updated'])
 
     if len(prev_pub_alerts) == 1:
