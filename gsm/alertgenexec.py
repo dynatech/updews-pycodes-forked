@@ -38,7 +38,7 @@ def main(mc):
 		mc.set('alertgenlist',[])
 		mc.set('alertgenlist',alertgenlist)
 
-		command = "python %s %s '%s'" % (sc["fileio"]["alertgenscript"], 
+		command = 'python %s %s "%s"' % (sc["fileio"]["alertgenscript"], 
 			alert_info['tsm_name'], alert_info['ts'])
 
 		print ("Running", alert_info['tsm_name'], "alertgen")
@@ -48,6 +48,8 @@ def main(mc):
 			print('execute:', command)
 			subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, 
 				stderr=subprocess.STDOUT)
+			print('done')
+			
 		else:
 			continue
 
