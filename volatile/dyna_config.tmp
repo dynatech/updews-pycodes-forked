@@ -124,7 +124,7 @@ print_meas_plot = True
 meas_plot_window = 30					;Surificial ground measurement plot window in days
 surficial_num_pts = 10					;number of points to include to trending analysis
 enable_analysis = True  				;enable/disable spawing analysis scripts upon sms receipt
-ct_sim_num = 639176023735
+ct_sim_num = 639175048863
 send_reply_to_community = False
 send_ack_to_ct_phone = True
 
