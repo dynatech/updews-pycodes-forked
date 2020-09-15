@@ -51,6 +51,7 @@ FailObvEN = Error! You did not put your name on the text message. Please check y
 FailOobEN = Error! Your date or time value is either too late or too early. Please check your SMS and try again.
 
 [FileIO]
+python_path = /home/analysis-server/miniconda3/bin/python
 querylatestreportoutput = /home/analysis-server/Desktop/query_latest_report_output.txt
 alertgenscript = /home/analysis-server/updews-pycodes/analysis/subsurface/alertgen.py
 gndalert1 = /home/analysis-server/updews-pycodes/analysis/surficial/markeralerts.py
