@@ -3,12 +3,14 @@ import os
 import pandas as pd
 import sys
 
-import analysis.querydb as qdb
-sys.path.append(os.path.dirname(os.path.realpath(__file__)))
+path = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(path)
 import alertlib as lib
 import proc
 import rtwindow as rtw
 import trendingalert as trend
+sys.path.remove(path)
+import analysis.querydb as qdb
 #------------------------------------------------------------------------------
 
 
