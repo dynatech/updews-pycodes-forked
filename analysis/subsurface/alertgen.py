@@ -3,9 +3,9 @@ import os
 import pandas as pd
 import sys
 
+import analysis.querydb as qdb
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import alertlib as lib
-import analysis.querydb as qdb
 import proc
 import rtwindow as rtw
 import trendingalert as trend
