@@ -10,9 +10,10 @@ import volatile.memory as mem
 
 
 def count_alert_analysis_instances():
-	p = subprocess.Popen("ps ax | grep alertgen.py -c", stdout=subprocess.PIPE, 
-		shell=True, stderr=subprocess.STDOUT)
-	out, err = p.communicate()
+	p = subprocess.Popen(["ps ax"]", stdout=subprocess.PIPE)
+	p = subprocess.Popen(["grep", "alertgen.py", "-c"], stdin=p1.stdout, stdout=subprocess.PIPE, 
+		shell=True, stderr=subprocess.PIPE)
+	out, err = p2.communicate()
 	return int(out)
 
 def main(mc):
@@ -45,6 +46,7 @@ def main(mc):
         
 		if lockscript.get_lock('alertgen for %s' % alert_info['tsm_name'], 
 			exitifexist=False):
+			print('execute:' command)
 			subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, 
 				stderr=subprocess.STDOUT)
 		else:
