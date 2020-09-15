@@ -38,7 +38,7 @@ def main(mc):
 		mc.set('alertgenlist',[])
 		mc.set('alertgenlist',alertgenlist)
 
-		command = ["python %s".format(sc["fileio"]["alertgenscript"]), '"%s"'.format(alert_info['tsm_name']), '"%s"'.format(alert_info['ts'])]
+		command = ["python {}".format(sc["fileio"]["alertgenscript"]), '"{}"'.format(alert_info['tsm_name']), '"{}"'.format(alert_info['ts'])]
 
 		print ("Running", alert_info['tsm_name'], "alertgen")
         
