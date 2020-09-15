@@ -40,7 +40,7 @@ def main(mc):
 
 		python_path = sc['fileio']['python_path']
 		alertgen = sc["fileio"]["alertgenscript"]
-		command = ["{} {}".format(python_path, alertgen), '"{}"'.format(alert_info['tsm_name']), '"{}"'.format(alert_info['ts'])]
+		command = '{} {} {} "{}"'.format(python_path, alertgen, alert_info['tsm_name'], alert_info['ts'])
 
 		print ("Running", alert_info['tsm_name'], "alertgen")
         
