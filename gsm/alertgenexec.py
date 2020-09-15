@@ -10,10 +10,9 @@ import volatile.memory as mem
 
 
 def count_alert_analysis_instances():
-	p = subprocess.Popen(["ps ax"], stdout=subprocess.PIPE)
-	p = subprocess.Popen(["grep", "alertgen.py", "-c"], stdin=p1.stdout, stdout=subprocess.PIPE, 
-		shell=True, stderr=subprocess.PIPE)
-	out, err = p2.communicate()
+	p = subprocess.Popen("ps ax | grep alertgen.py -c", stdout=subprocess.PIPE, 
+		shell=True, stderr=subprocess.STDOUT)
+	out, err = p.communicate()
 	return int(out)
 
 def main(mc):
@@ -39,8 +38,7 @@ def main(mc):
 		mc.set('alertgenlist',[])
 		mc.set('alertgenlist',alertgenlist)
 
-		command = "python %s %s '%s'" % (sc["fileio"]["alertgenscript"], 
-			alert_info['tsm_name'], alert_info['ts'])
+		command = ["python %s".format(sc["fileio"]["alertgenscript"]), '"%s"'.format(alert_info['tsm_name']), '"%s"'.format(alert_info['ts'])]
 
 		print ("Running", alert_info['tsm_name'], "alertgen")
         
