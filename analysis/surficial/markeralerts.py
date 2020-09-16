@@ -562,7 +562,7 @@ def evaluate_marker_alerts(marker_data_df, ts, to_json):
                       'ts': ts, 'data_id': int(marker_data_df.data_id.iloc[0]),
                       'displacement': np.round(displacement, 1),
                       'time_delta': time_delta, 'alert_level': marker_alert,
-                      'trend_alert': trend_alert})
+                      'trend_alert': trend_alert, 'processed': 1})
     
 
 def get_surficial_alert(marker_alerts, site_id):
@@ -626,8 +626,8 @@ def generate_surficial_alert(site_id = None, ts = None, marker_id = None,
     marker_data_df = surficial_data_df.groupby('marker_id',as_index = False)
     marker_alerts = marker_data_df.apply(evaluate_marker_alerts, ts, to_json)
     #### Write to marker_alerts table    
-    qdb.write_marker_alerts(marker_alerts[['data_id', 'displacement',
-                                              'time_delta', 'alert_level']])
+    qdb.write_marker_alerts(marker_alerts[['ts', 'marker_id', 'data_id', 'displacement',
+                                              'time_delta', 'alert_level', 'processed']])
 
     #### Generate surficial alert for site
     surficial_alert = get_surficial_alert(marker_alerts,site_id)
