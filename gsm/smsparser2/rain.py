@@ -7,6 +7,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import dynadb.db as dynadb
 import smsclass
+import volatile.memory as mem
 #------------------------------------------------------------------------------
 
 def check_number_in_users(num):
