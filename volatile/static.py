@@ -208,7 +208,7 @@ def get_mobiles(table=None,host=None,reset_variables=False,resource=None):
             "AND t1.mobile_id < t2.mobile_id)) "
             "WHERE t2.sim_num IS NULL and t1.sim_num is not null")
 
-        nums = dbio.read(query=query, identifier='get_mobile_sim_nums', connection='common')
+        nums = dbio.read(query=query, identifier='get_mobile_sim_nums', connection='gsm_pi')
 
         logger_mobile_sim_nums = {sim_num: mobile_id for (mobile_id, sim_num, 
             gsm_id) in nums}
