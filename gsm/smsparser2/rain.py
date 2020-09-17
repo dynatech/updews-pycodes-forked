@@ -52,7 +52,7 @@ def check_logger_model(logger_name):
     query = ("SELECT model_id FROM loggers where "
         "logger_name = '%s'") % logger_name
 
-    query = dynadb.read(query,'check_logger_model')
+    query = dynadb.read(query,'check_logger_model', connection='common')
     if len(query) != 0:
         return query[0][0]
     else:
@@ -74,11 +74,12 @@ def check_name_of_number(number):
         agbta
 
     """  
-    query = ("select logger_name from loggers where "
-                "logger_id = (select logger_id from logger_mobile "
-                "where sim_num like '%{}' order by date_activated desc limit 1)".format(number) 
+    conn = mem.get('DICT_DB_CONNECTIONS')
+    query = ("select logger_name from {}.loggers where "
+                "logger_id = (select logger_id from {}.logger_mobile "
+                "where sim_num like '%{}' order by date_activated desc limit 1)".format(conn['common']['schema'],conn['gsm_pi']['schema'],number) 
                 )
-    query = dynadb.read(query,'check_name_of_number')
+    query = dynadb.read(query,'check_name_of_number', resource='sms_analysis')
     if len(query) != 0:
         return query[0][0]
     else:
