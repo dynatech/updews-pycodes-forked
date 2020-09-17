@@ -16,8 +16,10 @@ smsdb2 = sandbox
 sensor_data = analysis
 sms_data = gsm_pi
 common_data = common
+website_data = website
 sensor_analysis = common,analysis
 sms_analysis = common,gsm_pi
+website_analysis = common,website
 ops = common,analysis,gsm_pi,website
 
 
