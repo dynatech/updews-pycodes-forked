@@ -37,7 +37,7 @@ def logger_response(sms,log_type,log='False'):
     conn = mem.get('DICT_DB_CONNECTIONS')
     if log:
         query = ("INSERT INTO %s.logger_response (`logger_Id`, `inbox_id`, `log_type`)"
-         "values((Select logger_id from %.logger_mobile where sim_num = %s order by"
+         "values((Select logger_id from %s.logger_mobile where sim_num = %s order by"
           " date_activated desc limit 1),'%s','%s')" 
          % (conn['analysis']['schema'],conn['common']['schema'],sms.sim_num,sms.inbox_id,log_type))
                     
