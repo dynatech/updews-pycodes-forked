@@ -1,10 +1,9 @@
 ##### IMPORTANT matplotlib declarations must always be FIRST to make sure that matplotlib works with cron-based automation
 import platform
 curOS = platform.system()
+import matplotlib as mpl
 if curOS != "Windows":
-    import matplotlib as mpl
     mpl.use('Agg')
-plt.ion()
 
 from mpl_toolkits.axes_grid.anchored_artists import AnchoredText
 import matplotlib.lines as mlines

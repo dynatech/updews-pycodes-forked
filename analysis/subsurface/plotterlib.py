@@ -2,8 +2,8 @@
 ##### matplotlib works with cron-based automation
 import platform
 curOS = platform.system()
+import matplotlib as mpl
 if curOS != "Windows":
-    import matplotlib as mpl
     mpl.use('Agg')
 
 from datetime import timedelta
