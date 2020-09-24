@@ -1,3 +1,9 @@
+import platform
+curOS = platform.system()
+if curOS != "Windows":
+    import matplotlib as mpl
+    mpl.use('Agg')
+
 import pandas as pd
 import numpy as np
 import sys
@@ -14,7 +20,6 @@ from proc import no_initial_data
 from proc import get_last_good_data
 from collections import OrderedDict
 import matplotlib as mpl
-mpl.use('agg')
 import matplotlib.pyplot as plt
 import seaborn as sns
 import erroranalysis as err

@@ -1,11 +1,13 @@
 ##### IMPORTANT matplotlib declarations must always be FIRST to make sure that matplotlib works with cron-based automation
-import matplotlib as mpl
-mpl.use('Agg')
-import matplotlib.pyplot as plt
-import matplotlib.dates as md
-plt.ioff()
+import platform
+curOS = platform.system()
+if curOS != "Windows":
+    import matplotlib as mpl
+    mpl.use('Agg')
 
 from datetime import timedelta
+import matplotlib.dates as md
+import matplotlib.pyplot as plt
 import numpy as np
 import os
 import pandas as pd

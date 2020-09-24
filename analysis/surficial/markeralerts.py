@@ -1,18 +1,20 @@
 ##### IMPORTANT matplotlib declarations must always be FIRST
 ##### to make sure that matplotlib works with cron-based automation
-import matplotlib as mpl
-mpl.use('Agg')
-from matplotlib.legend_handler import HandlerLine2D
-import matplotlib.pyplot as plt
-plt.ioff()
+import platform
+curOS = platform.system()
+if curOS != "Windows":
+    import matplotlib as mpl
+    mpl.use('Agg')
 
 #### Import essential libraries
 from datetime import datetime, time, timedelta
+from matplotlib.legend_handler import HandlerLine2D
 from pandas.plotting import register_matplotlib_converters
 register_matplotlib_converters()
 from scipy.interpolate import UnivariateSpline
 from scipy.ndimage import filters
 from scipy.signal import gaussian
+import matplotlib.pyplot as plt
 import numpy as np
 import os
 import pandas as pd

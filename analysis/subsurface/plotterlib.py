@@ -1,16 +1,18 @@
 ##### IMPORTANT matplotlib declarations must always be FIRST to make sure that
 ##### matplotlib works with cron-based automation
-import matplotlib as mpl
-mpl.use('Agg')
-import matplotlib.pyplot as plt
-import matplotlib.dates as md
-plt.ion()
+import platform
+curOS = platform.system()
+if curOS != "Windows":
+    import matplotlib as mpl
+    mpl.use('Agg')
 
 from datetime import timedelta
+from scipy.stats import spearmanr
+import matplotlib.dates as md
+import matplotlib.pyplot as plt
 import numpy as np
 import os
 import pandas as pd
-from scipy.stats import spearmanr
 import sys
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
