@@ -774,7 +774,7 @@ def logger_array_list(TSMdf):
 
 #get_tsm_list():
 #    returns a list of loggerArray objects from the database tables
-def get_tsm_list(tsm_name='', end=datetime.now(), connection='analysis'):
+def get_tsm_list(tsm_name='', end='2010-01-01', connection='analysis'):
     try:
         query = "SELECT site_id, logger_id, tsm_id, tsm_name, number_of_segments, segment_length, date_activated"
         query += " FROM tsm_sensors WHERE (date_deactivated > '%s' OR date_deactivated IS NULL)" %end
