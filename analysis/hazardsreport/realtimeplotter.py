@@ -90,7 +90,7 @@ def main():
         query = "SELECT date_activated FROM tsm_sensors"
         query += " WHERE tsm_name = '%s'" %tsm_props.tsm_name
         try:
-            date_activated = qdb.get_db_dataframe(query).values[0][0]
+            date_activated = qdb.db.df_read(query).values[0][0]
         except:
             date_activated = pd.to_datetime('2010-01-01')
         #compute for start to end timestamp of data
@@ -99,7 +99,7 @@ def main():
         query += " UNION ALL"
         query += " (SELECT * FROM tilt_%s" %tsm_props.tsm_name
         query += " ORDER BY ts DESC LIMIT 1)"
-        start_end = qdb.get_db_dataframe(query)
+        start_end = qdb.db.df_read(query)
         
         end = pd.to_datetime(start_end['ts'].values[1])
         window, sc = rtw.get_window(end)
