@@ -1,5 +1,5 @@
 [Hosts]
-local = 127.0.0.1
+local = 192.168.150.112
 gsm = 192.168.150.112
 sandbox = 192.168.150.112
 
@@ -60,8 +60,8 @@ gndalert1 = /home/analysis-server/updews-pycodes/analysis/surficial/markeralerts
 surficialscript = /home/analysis-server/updews-pycodes/analysis/surficial/markeralerts.py
 surfscriptlogs = /home/analysis-server/logs/marker_alerts.txt
 output_path = /Documents/monitoringoutput/
-realtime_path = /Documents/monitoringoutput/realtime/
-rainfall_path = /Documents/monitoringoutput/rainfall/
+realtime_path = 
+rainfall_path = 
 surficial_path = /Documents/monitoringoutput/surficial/
 surficial_trending_path = /Documents/monitoringoutput/surficial/trending/
 surficial_meas_path = /Documents/monitoringoutput/surficial/meas/
