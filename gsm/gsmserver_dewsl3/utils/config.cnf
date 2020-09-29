@@ -1,0 +1,45 @@
+[GSM_DEFAULT_SETTINGS]
+REPLY_TIMEOUT = 10
+SEND_INITIATE_REPLY_TIMEOUT = 10
+SENDING_REPLY_TIMEOUT = 10
+WAIT_FOR_BYTES_DELAY = 0.5
+POWER_ON_DELAY = 3
+BAUDRATE = 56700
+RESET_ASSERT_DELAY = 1
+RESET_DEASSERT_DELAY = 1
+POWER_RESET_DELAY = 10
+
+[MASTER_DB_CREDENTIALS]
+host = 192.168.1.10
+user = root
+password = senslope
+db_comms = comms_db
+db_senslope = senslopedb
+db_commons = commons_db
+
+[SLAVE_READ_DB_CREDENTIALS]
+host = 192.168.150.77
+user = root
+password = senslope
+db_comms = comms_db
+db_senslope = senslopedb
+db_commons = commons_db
+
+[SLAVE_WRITE_DB_CREDENTIALS]
+host = 192.168.150.78
+user = root
+password = senslope
+db_comms = comms_db
+db_senslope = senslopedb
+db_commons = commons_db
+
+[CBEWSL_DB_CREDENTIALS]
+host = 192.168.1.10
+user = root
+password = senslope
+db_comms = comms_db
+db_senslope = senslopedb
+db_commons = commons_db
+
+[CENTRAL_SERVER_NUMBER]
+number = ['639175048863']

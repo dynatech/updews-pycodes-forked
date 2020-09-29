@@ -1,0 +1,205 @@
+******G1 Script Inactive*******
+Script Status: Active
+Reboot ts: 2019-06-26 14:12:19
+*******************************
+
+******G2 Script Inactive*******
+Script Status: Active
+Reboot ts: 2019-06-26 14:12:19
+*******************************
+
+******G1 Script Inactive*******
+Script Status: Active
+Reboot ts: 2019-06-26 14:12:34
+*******************************
+
+******G2 Script Inactive*******
+Script Status: Active
+Reboot ts: 2019-06-26 14:12:34
+*******************************
+
+******G1 Script Inactive*******
+Script Status: Active
+Reboot ts: 2019-06-26 14:15:54
+*******************************
+
+******G2 Script Inactive*******
+Script Status: Active
+Reboot ts: 2019-06-26 14:15:54
+*******************************
+
+******G1 Script Inactive*******
+Script Status: Active
+Reboot ts: 2019-06-26 14:31:46
+*******************************
+
+******G2 Script Inactive*******
+Script Status: Active
+Reboot ts: 2019-06-26 14:31:47
+*******************************
+
+******G1 Script Inactive*******
+Script Status: Active
+Reboot ts: 2019-06-26 14:42:42
+*******************************
+
+******G2 Script Inactive*******
+Script Status: Active
+Reboot ts: 2019-06-26 14:42:42
+*******************************
+
+******G1 Script Inactive*******
+Script Status: Active
+Reboot ts: 2019-06-26 14:47:15
+*******************************
+
+******G2 Script Inactive*******
+Script Status: Active
+Reboot ts: 2019-06-26 14:47:15
+*******************************
+
+******G1 Script Inactive*******
+Script Status: Active
+Reboot ts: 2019-06-26 14:48:02
+*******************************
+
+******G2 Script Inactive*******
+Script Status: Active
+Reboot ts: 2019-06-26 14:48:02
+*******************************
+
+******G1 Script Inactive*******
+Script Status: Active
+Reboot ts: 2019-06-26 14:51:11
+*******************************
+
+******G2 Script Inactive*******
+Script Status: Active
+Reboot ts: 2019-06-26 14:51:11
+*******************************
+
+******G1 Script Inactive*******
+Script Status: Active
+Reboot ts: 2019-06-26 17:57:28
+*******************************
+
+******G2 Script Inactive*******
+Script Status: Active
+Reboot ts: 2019-06-26 17:57:28
+*******************************
+
+******G1 Script Inactive*******
+Script Status: Active
+Reboot ts: 2019-06-26 17:59:01
+*******************************
+
+******G2 Script Inactive*******
+Script Status: Active
+Reboot ts: 2019-06-26 17:59:02
+*******************************
+
+******G1 Script Inactive*******
+Script Status: Active
+Reboot ts: 2019-06-26 18:00:42
+*******************************
+
+******G2 Script Inactive*******
+Script Status: Active
+Reboot ts: 2019-06-26 18:00:42
+*******************************
+
+******G1 Script Inactive*******
+Script Status: Active
+Reboot ts: 2019-06-26 18:03:58
+*******************************
+
+******G2 Script Inactive*******
+Script Status: Active
+Reboot ts: 2019-06-26 18:03:58
+*******************************
+
+******G1 Script Inactive*******
+Script Status: Active
+Reboot ts: 2019-06-26 18:05:41
+*******************************
+
+******G2 Script Inactive*******
+Script Status: Active
+Reboot ts: 2019-06-26 18:05:41
+*******************************
+
+******G1 Script Inactive*******
+Script Status: Active
+Reboot ts: 2019-06-26 18:09:13
+*******************************
+
+******G2 Script Inactive*******
+Script Status: Active
+Reboot ts: 2019-06-26 18:09:15
+*******************************
+
+******G1 Script Inactive*******
+Script Status: Active
+Reboot ts: 2019-06-26 18:13:22
+*******************************
+
+******G2 Script Inactive*******
+Script Status: Active
+Reboot ts: 2019-06-26 18:13:23
+*******************************
+
+******G1 Script Inactive*******
+Script Status: Active
+Reboot ts: 2019-06-26 18:27:12
+*******************************
+
+******G1 Script Inactive*******
+Script Status: Active
+Reboot ts: 2019-06-26 18:28:17
+*******************************
+
+******G1 Script Inactive*******
+Script Status: Active
+Reboot ts: 2019-07-09 14:08:35
+*******************************
+
+******G2 Script Inactive*******
+Script Status: Active
+Reboot ts: 2019-07-09 14:08:36
+*******************************
+
+******G1 Script Inactive*******
+Script Status: Active
+Reboot ts: 2019-07-09 14:12:13
+*******************************
+
+******G1 Script Inactive*******
+Script Status: Active
+Reboot ts: 2019-07-09 14:14:59
+*******************************
+
+******G1 Script Inactive*******
+Script Status: Active
+Reboot ts: 2019-07-10 10:25:25
+*******************************
+
+******G2 Script Inactive*******
+Script Status: Active
+Reboot ts: 2019-07-10 10:25:25
+*******************************
+
+******G1 Script Inactive*******
+Script Status: Active
+Reboot ts: 2019-07-10 10:26:12
+*******************************
+
+******G1 Script Inactive*******
+Script Status: Active
+Reboot ts: 2019-07-10 10:27:13
+*******************************
+
+******G1 Script Inactive*******
+Script Status: Active
+Reboot ts: 2019-07-10 13:21:13
+*******************************
+
