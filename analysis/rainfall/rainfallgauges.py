@@ -7,8 +7,6 @@ import sys
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import analysis.querydb as qdb
-import dynadb.db as db
-import gsm.smsparser2.smsclass as sms
 import volatile.memory as mem
 
 
@@ -71,8 +69,7 @@ def main():
     new_gauges = new_gauges.loc[:, ['gauge_name', 'data_source', 'longitude',
                              'latitude', 'date_activated']]
     if len(new_gauges) != 0:
-        data_table = sms.DataTable('rainfall_gauges', new_gauges)
-        db.df_write(data_table)
+        qdb.write_rain_gauges(new_gauges)
     
     deactivated = written_gauges.loc[~written_gauges.date_deactivated.isnull(), :]
     
@@ -85,8 +82,7 @@ def main():
                                              'longitude','latitude',
                                              'date_activated']]
     if len(deactivated_gauges) != 0:
-        data_table = sms.DataTable('rainfall_gauges', deactivated_gauges)
-        db.df_write(data_table)
+        qdb.write_rain_gauges(deactivated_gauges)
 
     qdb.print_out('runtime = %s' %(datetime.now() - start))
 

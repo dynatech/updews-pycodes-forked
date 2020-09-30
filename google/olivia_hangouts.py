@@ -18,6 +18,8 @@ import analysis.subsurface.plotterlib as plotter
 import analysis.subsurface.proc as proc
 import analysis.subsurface.rtwindow as rtw
 
+import dynadb.db as db
+
 def main(alert):    
 
     site = alert.site_code
@@ -39,20 +41,21 @@ def main(alert):
         ts_before=ts.round('4H')-td(hours=4)
         
         queryalert="""SELECT na_id,ts,t.tsm_id,tsm_name,node_id,disp_alert,vel_alert 
-                    FROM senslopedb.node_alerts
+                    FROM node_alerts
                     inner join tsm_sensors as t
                     on t.tsm_id=node_alerts.tsm_id
                     where site_id={} and (ts between '{}' and '{}')
     
                     order by tsm_name, node_id, ts desc""".format(alert.site_id,ts_before,ts)
-        dfalert=qdb.get_db_dataframe(queryalert).groupby(['tsm_id','node_id']).first().reset_index()
-        
+        dfalert=db.df_read(queryalert,connection = "analysis").groupby(['tsm_id','node_id']).first().reset_index()
+        print("ok")
 #        plot colpos & disp vel
         tsm_props = qdb.get_tsm_list(dfalert.tsm_name[0])[0]
         window, sc = rtw.get_window(ts)
         
         data = proc.proc_data(tsm_props, window, sc)
         plotter.main(data, tsm_props, window, sc, plot_inc=False, output_path=OutputFP)
+        
         
 #        plot node data
         for i in dfalert.index:
@@ -61,7 +64,7 @@ def main(alert):
             xyz.xyzplot(dfalert.tsm_id[i],dfalert.node_id[i],dfalert.ts[i],OutputFP)
             
     elif source_id == 3:
-        rain.main(site_code = site, write_to_db = False, print_plot = True,output_path = OutputFP)
+        rain.main(site_code = site, end=ts, write_to_db = False, print_plot = True,output_path = OutputFP)
         
     return OutputFP
 
@@ -93,9 +96,9 @@ query = ("SELECT stat_id, site_code,s.site_id, trigger_source, alert_symbol, "
         "alert_symbol,sym.source_id FROM "
         "(SELECT stat_id, ts_last_retrigger, site_id, trigger_sym_id FROM "
         "(SELECT * FROM alert_status WHERE "
-#        "ts_set >= NOW()-interval 5 minute "
-#        "and ts_ack is NULL"
-        "stat_id=3784 "
+        "ts_set >= NOW()-interval 5 minute "
+        "and ts_ack is NULL"
+#        "stat_id=3993 "
         ") AS stat "
         "INNER JOIN "
         "operational_triggers AS op "
@@ -106,10 +109,10 @@ query = ("SELECT stat_id, site_code,s.site_id, trigger_source, alert_symbol, "
         "inner join trigger_hierarchies as th "
         "on th.source_id=sym.source_id) AS alert "
         "INNER JOIN "
-        "sites as s "
+        "commons_db.sites as s "
         "ON s.site_id = alert.site_id")
         
-smsalert=qdb.get_db_dataframe(query)
+smsalert=db.df_read(query, connection= "analysis")
 
 for i in smsalert.index:
     OutputFP=main(smsalert.loc[i])

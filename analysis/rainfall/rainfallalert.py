@@ -8,10 +8,10 @@ import sys
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import analysis.publicalerts as pub
 import analysis.querydb as qdb
-import dynadb.db as db
-import gsm.smsparser2.smsclass as sms
 
-def get_resampled_data(gauge_name, offsetstart, start, end, check_nd=True, is_realtime=True):
+
+def get_resampled_data(rain_id, gauge_name, offsetstart, start, end,
+                       check_nd=True, is_realtime=True):
     """Resample retrieved data of gauge_name from offsetstart to end.
     
     Args:
@@ -29,9 +29,11 @@ def get_resampled_data(gauge_name, offsetstart, start, end, check_nd=True, is_re
     """
     
     if is_realtime:
-        rainfall = qdb.get_raw_rain_data(gauge_name, from_time=offsetstart)
+        rainfall = qdb.get_raw_rain_data(rain_id, gauge_name,
+                                         from_time=offsetstart)
     else:
-        rainfall = qdb.get_raw_rain_data(gauge_name, from_time=offsetstart, to_time=end)
+        rainfall = qdb.get_raw_rain_data(rain_id, gauge_name,
+                                         from_time=offsetstart, to_time=end)																
     
     try:
         latest_ts = pd.to_datetime(rainfall['ts'].values[-1])
@@ -53,7 +55,7 @@ def get_resampled_data(gauge_name, offsetstart, start, end, check_nd=True, is_re
     
     #data resampled to 30mins
     rainfall = rainfall.set_index('ts')
-    rainfall = rainfall.resample('30min', closed='right').sum()
+    rainfall = rainfall.resample('30min', closed='right').sum(min_count=1)
     rainfall = rainfall[(rainfall.index >= offsetstart)]
     rainfall = rainfall[(rainfall.index <= end)]    
     
@@ -83,7 +85,7 @@ def get_unempty_rg_data(rain_props, offsetstart, start, end):
         if i != '':
             gauge_name = rain_props[rain_props.index == i]['gauge_name'].values[0]
             rain_id = rain_props[rain_props.index == i]['rain_id'].values[0]
-            data = get_resampled_data(gauge_name, offsetstart, start, end)
+            data = get_resampled_data(rain_id, gauge_name, offsetstart, start, end)
             if len(data) != 0:
                 break
         else:
@@ -151,9 +153,8 @@ def summary_writer(site_id, site_code, gauge_name, rain_id, twoyrmax, halfmax,
         ralert=0
 
     if write_alert or ralert == 1:
-        if qdb.does_table_exist('rainfall_alerts') == False:
-            #Create a site_alerts table if it doesn't exist yet
-            qdb.create_rainfall_alerts()
+		#Create a site_alerts table if it doesn't exist yet
+        qdb.create_rainfall_alerts()
 
         columns = ['rain_alert', 'cumulative', 'threshold']
         alerts = pd.DataFrame(columns=columns)
@@ -187,8 +188,7 @@ def summary_writer(site_id, site_code, gauge_name, rain_id, twoyrmax, halfmax,
                     df = pd.DataFrame({'ts': [end], 'site_id': [site_id],
                                        'rain_id': [rain_id], 'rain_alert': [rain_alert],
                                        'cumulative': [cumulative], 'threshold': [threshold]})
-                    data_table = sms.DataTable('rainfall_alerts', df)
-                    db.df_write(data_table)
+                    qdb.write_rain_alert(df)
 
 
     summary = pd.DataFrame({'site_id': [site_id], 'site_code': [site_code],

@@ -15,6 +15,7 @@ import analysis.subsurface.filterdata as fsd
 import memcache
 import numpy as np
 
+import dynadb.db as db
     
 def xyzplot(tsm_id,nid,time, OutputFP=''):
     memc = memcache.Client(['127.0.0.1:11211'], debug=1)
@@ -50,10 +51,10 @@ def xyzplot(tsm_id,nid,time, OutputFP=''):
 
 #valid invalid
     query_na = ("SELECT COUNT(IF(na_status=1,1, NULL))/count(ts)*100.0 as "
-                "'percent_valid' FROM senslopedb.node_alerts "
+                "'percent_valid' FROM node_alerts "
                 "where tsm_id = {} and node_id = {} and na_status is not NULL "
                 "group by tsm_id, node_id".format(tsm_id,nid))
-    df_na = qdb.get_db_dataframe(query_na)
+    df_na = db.df_read(query_na, connection = "analysis")
     if df_na.empty:
         validity = np.nan
     else:
@@ -64,13 +65,13 @@ def xyzplot(tsm_id,nid,time, OutputFP=''):
     fig.suptitle("{}{} ({})".format(tsm_name,str(nid),time.strftime("%Y-%m-%d %H:%M")),fontsize=11)
     
 #accelerometer status
-    query='''SELECT status,remarks FROM senslopedb.accelerometer_status as astat
+    query='''SELECT status,remarks FROM accelerometer_status as astat
             inner join 
             (select * from accelerometers where tsm_id={} and node_id={} 
             and in_use=1) as a
             on a.accel_id=astat.accel_id
             order by stat_id desc limit 1'''.format(tsm_id,nid) 
-    dfs=qdb.get_db_dataframe(query)
+    dfs=db.df_read(query, connection = "analysis")
     if not dfs.empty:
         stat_id=dfs.status[0]
         if stat_id==1:

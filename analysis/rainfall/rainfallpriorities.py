@@ -5,8 +5,6 @@ import sys
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import analysis.querydb as qdb
-import dynadb.db as db
-import gsm.smsparser2.smsclass as sms
 import volatile.memory as mem
 
 
@@ -39,8 +37,7 @@ def to_mysql(df):
     combined = combined.drop_duplicates(['site_id', 'rain_id'], keep=False)
 
     if len(combined) > 0:
-        data_table = sms.DataTable('rainfall_priorities', combined)
-        db.df_write(data_table)
+        qdb.write_rain_priorities(combined)
 
     
 def get_distance(site_coord, rg_coord):
@@ -83,7 +80,7 @@ def get_distance(site_coord, rg_coord):
     
     return nearest_rg
 
-def main():
+def main(site_code=''):
     """Writes in rainfall_priorities information on nearest rain gauges
     from the project sites for rainfall alert analysis
 
@@ -93,6 +90,19 @@ def main():
     qdb.print_out(start)
 
     coord = all_site_coord()
+    if site_code == '':
+        try:
+            site_code = sys.argv[1].lower()
+            site_code = site_code.replace(' ', '').split(',')
+        except:
+            pass
+    else:
+        site_code = site_code.replace(' ', '').split(',')
+    if site_code != '':
+        sites = mem.get('df_sites')
+        site_id = sites.loc[sites.site_code.isin(site_code), 'site_id']
+        coord = coord.loc[coord.site_id.isin(site_id), :]
+
     rg_coord = mem.get('df_rain_gauges')
     rg_coord = rg_coord[rg_coord.date_deactivated.isnull()]
     site_coord = coord.groupby('site_id', as_index=False)
