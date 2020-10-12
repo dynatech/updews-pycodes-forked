@@ -280,16 +280,16 @@ class GsmModem:
     def reset(self):
         print(">> Resetting GSM Module ...")
         try:
-            GPIO.output(self.pow_pin, 0)
+            GPIO.output(self.pow_pin, 1)
             time.sleep(int(self.defaults['GSM_DEFAULT_SETTINGS']['RESET_DEASSERT_DELAY']))
             try:
                 self.execute_atcmd("AT+CPOWD=1", "NORMAL POWER DOWN")
             except ResetException:
                 print (">> Error: unable to send powerdown signal. "
                     "Will continue with hard reset")
-            GPIO.output(self.pow_pin, 1)
-            time.sleep(int(self.defaults['GSM_DEFAULT_SETTINGS']['RESET_ASSERT_DELAY']))
             GPIO.output(self.pow_pin, 0)
+            time.sleep(int(self.defaults['GSM_DEFAULT_SETTINGS']['RESET_ASSERT_DELAY']))
+            GPIO.output(self.pow_pin, 1)
             time.sleep(int(self.defaults['GSM_DEFAULT_SETTINGS']['RESET_DEASSERT_DELAY']))
             GPIO.cleanup()
             print ('>> Done')
