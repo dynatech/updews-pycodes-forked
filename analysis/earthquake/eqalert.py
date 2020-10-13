@@ -39,7 +39,7 @@ def get_unprocessed():
 def get_sites():
     query = ("SELECT site_id, site_code, latitude, longitude FROM "
         "loggers left join sites using (site_id) "
-        "where logger_name not like '%g'")
+        "where logger_name not like '%%g'")
     print(query)
     df = dynadb.df_read(query=query, resource="common_data")
     df = df.drop_duplicates('site_id',keep='first').dropna()
