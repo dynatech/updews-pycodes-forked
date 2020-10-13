@@ -37,10 +37,11 @@ def get_unprocessed():
     return df
 
 def get_sites():
-    query = ("SELECT s.site_id, site_code, latitude, longitude FROM "
-        "loggers as l left join sites as s on s.site_id = l.site_id ")
+    query = ("SELECT site_id, site_code, latitude, longitude FROM "
+        "loggers left join sites using (site_id) "
+        "where logger_name not like '%g'")
     df = dynadb.df_read(query=query, resource="common_data")
-    df = df.drop_duplicates('site_id',keep='last').dropna()
+    df = df.drop_duplicates('site_id',keep='first').dropna()
     return df
     
 def get_alert_symbol():
