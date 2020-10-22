@@ -34,6 +34,7 @@ def get_resampled_data(rain_id, gauge_name, offsetstart, start, end,
     else:
         rainfall = qdb.get_raw_rain_data(rain_id, gauge_name,
                                          from_time=offsetstart, to_time=end)
+    rainfall = rainfall.loc[rainfall.rain != -1, :]
     
     try:
         latest_ts = pd.to_datetime(rainfall['ts'].values[-1])
