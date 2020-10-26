@@ -7,7 +7,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import analysis.querydb as qdb
 import dynadb.db as db
-
+import gsm.gsmserver_dewsl3.sms_data as sms
 
 def create_node_alerts():   
     query = "CREATE TABLE `node_alerts` ("
@@ -26,7 +26,7 @@ def create_node_alerts():
     query += "    ON DELETE NO ACTION"
     query += "    ON UPDATE CASCADE)"
 
-    qdb.execute_query(query)
+    db.write(query, connection='local')
     
 def trending_alert_gen(pos_alert, tsm_id, end):
     
@@ -43,8 +43,9 @@ def trending_alert_gen(pos_alert, tsm_id, end):
         node_alert['ts'] = end
         node_alert['tsm_id'] = tsm_id
         node_alert['node_id'] = pos_alert['node_id'].values[0]
-        qdb.push_db_dataframe(node_alert, 'node_alerts', index=False)
-        
+        data_table = sms.DataTable('node_alerts', node_alert)
+        db.df_write(data_table, connection='local')
+    
     query = "SELECT * FROM node_alerts WHERE tsm_id = %s and node_id = %s and ts >= '%s'" %(tsm_id, pos_alert['node_id'].values[0], end-timedelta(hours=3))
     node_alert = db.df_read(query, connection='local')
     
