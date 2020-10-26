@@ -190,17 +190,4 @@ def column_alert(col_alert, alert, num_nodes_to_check, k_ac_ax, vel2, vel3):
     #alert:                             Pandas DataFrame object; same as input dataframe "alert" with additional column for column-level alert
 
     i = col_alert['node_id'].values[0]
-    #checking if current node alert is 2 or 3
-    if alert[alert.node_id == i]['node_alert'].values[0] != 0:
- 
-        #defining indices of adjacent nodes
-        adj_node_ind=[]
-        for s in range(1,num_nodes_to_check+1):
-            if i-s>0: adj_node_ind.append(i-s)
-            if i+s<=len(alert): adj_node_ind.append(i+s)
-
-        #looping through adjacent nodes to validate current node alert
-        validity_check(adj_node_ind, alert, i, vel2, vel3)
-           
-    else:
-        alert.loc[alert.node_id == i, 'col_alert'] = alert[alert.node_id == i]['node_alert'].values[0]
+    alert.loc[alert.node_id == i, 'col_alert'] = alert[alert.node_id == i]['node_alert'].values[0]
