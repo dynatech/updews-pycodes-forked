@@ -6,6 +6,7 @@ import sys
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import analysis.querydb as qdb
+import dynadb.db as db
 
 
 def create_node_alerts():   
@@ -37,7 +38,7 @@ def trending_alert_gen(pos_alert, tsm_id, end):
     query += " WHERE ts = '%s'" %end
     query += " and tsm_id = %s and node_id = %s)" %(tsm_id, pos_alert['node_id'].values[0])
     
-    if qdb.get_db_dataframe(query).values[0][0] == 0:
+    if db.df_read(query, connection='local').values[0][0] == 0:
         node_alert = pos_alert[['disp_alert', 'vel_alert']]
         node_alert['ts'] = end
         node_alert['tsm_id'] = tsm_id
@@ -45,7 +46,7 @@ def trending_alert_gen(pos_alert, tsm_id, end):
         qdb.push_db_dataframe(node_alert, 'node_alerts', index=False)
         
     query = "SELECT * FROM node_alerts WHERE tsm_id = %s and node_id = %s and ts >= '%s'" %(tsm_id, pos_alert['node_id'].values[0], end-timedelta(hours=3))
-    node_alert = qdb.get_db_dataframe(query)
+    node_alert = db.df_read(query, connection='local')
     
     node_alert['node_alert'] = np.where(node_alert['vel_alert'].values >= node_alert['disp_alert'].values,
 
