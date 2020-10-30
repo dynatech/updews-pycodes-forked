@@ -66,7 +66,7 @@ def site_alerts(curr_trig, ts, release_data_ts, connection):
     written = db.df_read(query, connection=connection)
 
     site_curr_trig = pd.merge(curr_trig, written, how='left')
-    site_curr_trig.loc[(site_curr_trig.ts_last_retrigger+timedelta(1) < site_curr_trig.ts_updated) | (site_curr_trig.ts_last_retrigger.isnull()), :]
+    site_curr_trig = site_curr_trig.loc[(site_curr_trig.ts_last_retrigger+timedelta(1) < site_curr_trig.ts_updated) | (site_curr_trig.ts_last_retrigger.isnull()), :]
 
     if len(site_curr_trig) == 0:
         qdb.print_out('no new trigger for site_id %s' %site_id)
