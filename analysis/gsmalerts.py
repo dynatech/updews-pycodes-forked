@@ -57,15 +57,15 @@ def round_data_ts(date_time):
     return date_time
 
 def site_alerts(curr_trig, ts, release_data_ts, connection):
-    curr_trig.drop_duplicates(['trigger_source', 'alert_level'], inplace=True)
-    site_id = curr_trig['site_id'].values[0]
-
+    df = curr_trig.drop_duplicates(['site_id', 'trigger_source', 'alert_level'])
+    site_id = df['site_id'].values[0]
+    
     query = "SELECT * FROM alert_status"
     query += " WHERE trigger_id in (%s)" %(','.join(map(lambda x: str(x), \
-                                         set(curr_trig['trigger_id'].values))))
+                                         set(df['trigger_id'].values))))
     written = db.df_read(query, connection=connection)
 
-    site_curr_trig = pd.merge(curr_trig, written, how='left')
+    site_curr_trig = pd.merge(df, written, how='left')
     site_curr_trig = site_curr_trig.loc[(site_curr_trig.ts_last_retrigger+timedelta(1) < site_curr_trig.ts_updated) | (site_curr_trig.ts_last_retrigger.isnull()), :]
 
     if len(site_curr_trig) == 0:
@@ -107,7 +107,7 @@ def main(connection='analysis'):
     query += "USING (trigger_sym_id) "
     query += "ORDER BY ts_updated DESC"
     curr_trig = db.df_read(query, connection=connection)
-
+    
     if len(curr_trig) == 0:
         qdb.print_out('no new trigger')
         return
