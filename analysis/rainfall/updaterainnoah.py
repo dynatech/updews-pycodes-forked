@@ -117,9 +117,9 @@ def update_single_table(noah_gauges):
     #Find the latest timestamp for noah_id (which is also the start date)
     latest_ts = qdb.get_latest_ts(gauge_name)   
 
-    if (latest_ts == '') or (latest_ts == None):
+    if (latest_ts == '') or (latest_ts == None) or latest_ts < datetime.now() - timedelta(3):
         #assign a starting date if table is currently empty
-        latest_ts = datetime.now() - timedelta(3)
+        latest_ts = (datetime.now() - timedelta(3)).strftime("%Y-%m-%d %H:%M:%S")
     else:
         latest_ts = latest_ts.strftime("%Y-%m-%d %H:%M:%S")
     
