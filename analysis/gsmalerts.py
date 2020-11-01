@@ -60,14 +60,15 @@ def site_alerts(curr_trig, ts, release_data_ts, connection):
     df = curr_trig.drop_duplicates(['site_id', 'trigger_source', 'alert_level'])
     site_id = df['site_id'].values[0]
     
-    query = "SELECT * FROM alert_status"
-    query += " WHERE trigger_id in (%s)" %(','.join(map(lambda x: str(x), \
+    query = "SELECT trigger_id, MAX(ts_last_retrigger) ts_last_retrigger FROM alert_status"
+    query += " WHERE trigger_id IN (%s)" %(','.join(map(lambda x: str(x), \
                                          set(df['trigger_id'].values))))
+    query += " GROUP BY trigger_id"
     written = db.df_read(query, connection=connection)
 
     site_curr_trig = pd.merge(df, written, how='left')
     site_curr_trig = site_curr_trig.loc[(site_curr_trig.ts_last_retrigger+timedelta(1) < site_curr_trig.ts_updated) | (site_curr_trig.ts_last_retrigger.isnull()), :]
-
+    
     if len(site_curr_trig) == 0:
         qdb.print_out('no new trigger for site_id %s' %site_id)
         return
@@ -77,7 +78,7 @@ def site_alerts(curr_trig, ts, release_data_ts, connection):
             'ts_last_retrigger'})
     alert_status['ts_set'] = datetime.now()
     data_table = sms.DataTable('alert_status', alert_status)
-    db.df_write(data_table, connection=connection)
+#    db.df_write(data_table, connection=connection)
 
 def main(connection='analysis'):
     start_time = datetime.now()
