@@ -78,7 +78,7 @@ def site_alerts(curr_trig, ts, release_data_ts, connection):
             'ts_last_retrigger'})
     alert_status['ts_set'] = datetime.now()
     data_table = sms.DataTable('alert_status', alert_status)
-#    db.df_write(data_table, connection=connection)
+    db.df_write(data_table, connection=connection)
 
 def main(connection='analysis'):
     start_time = datetime.now()
