@@ -21,7 +21,7 @@ def check_sending(shift_release, inbox_tag, outbox_tag):
     end = shift_release.ts_reminder.values[0]
     site_code = shift_release.site_code.values[0]
     meas = inbox_tag.loc[(inbox_tag.ts_sms >= start) & (inbox_tag.ts_sms < end) & (inbox_tag.site_code == site_code), :]
-    meas_reminder = outbox_tag.loc[(outbox_tag.ts_written >= end) & (outbox_tag.ts_written < end+np.timedelta64(30, 'm')) & (outbox_tag.site_code == site_code), :]
+    meas_reminder = outbox_tag.loc[(outbox_tag.ts_written >= end-np.timedelta64(5, 'm')) & (outbox_tag.ts_written < end+np.timedelta64(30, 'm')) & (outbox_tag.site_code == site_code), :]
     shift_release.loc[:, 'reminder'] = int((len(meas) + len(meas_reminder) != 0) & (len(meas) * len(meas_reminder) == 0))
     return shift_release
 

@@ -19,9 +19,9 @@ def remove_downtime(sending_status, downtime):
         sending_status = sending_status.loc[(sending_status.ts_start < start) | (sending_status.ts_start > end), :]
     return sending_status 
 
-def main(year, quarter, start, end, recompute=False):
+def main(start, end, recompute=False):
     if recompute:
-        ewisms_meal.main(year, quarter, start=start, end=end)
+        ewisms_meal.main(start, end)
 
     monitoring_ipr = pd.read_excel('output/monitoring_ipr.xlsx', sheet_name=None)
     ewi_sms = pd.read_csv('output/sending_status.csv')

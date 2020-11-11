@@ -75,26 +75,36 @@ def get_shift(key, sheet_name):
     return df.loc[:, ['ts', 'IOMP-MT', 'IOMP-CT']]
 
 
-def main(year, quarter, start='', end='', update_existing=True, update_dtr=False):
-    if start == '' and end == '':
-        start, end = timeline(year, quarter)
+def main(start, end, update_existing=True, update_dtr=False):
+    key = "1UylXLwDv1W1ukT4YNoUGgHCHF-W8e3F8-pIg1E024ho"
+    date_range = pd.date_range(start=start, end=end, freq='M', closed='left')
+    shift_sched = pd.DataFrame()
+    for ts in date_range:
+        sheet_name = ts.strftime('%B %Y')
+        shift_sched = shift_sched.append(get_shift(key, sheet_name))
+    shift_sched = shift_sched.loc[(shift_sched.ts > start) & (shift_sched.ts < end-timedelta(0.5))]
+    
+    if update_existing:
+        monitoring_ipr = pd.read_excel('output/monitoring_ipr.xlsx', sheet_name=None)
+        writer = pd.ExcelWriter('output/monitoring_ipr.xlsx')
+        for name in monitoring_ipr.keys():
+            indiv_ipr = monitoring_ipr[name]
+            for shift_type in ['MT', 'CT']:
+                curr_shift = shift_sched.loc[shift_sched['IOMP-{}'.format(shift_type)] == name, :]
+                shift_list = set(curr_shift.ts) - set(map(pd.to_datetime, indiv_ipr.columns[5:]))
+                for ts in shift_list:
+                    indiv_ipr.loc[indiv_ipr.Category == 'Shift', str(ts)] = shift_type
+            monitoring_ipr[name] = indiv_ipr
 
-    if not update_existing:
+    else:
         writer = pd.ExcelWriter('output/monitoring_ipr.xlsx')
         grading_system = pd.read_excel('input/baseline.xlsx', sheet_name='format')
         monitoring_ipr = {}
     
-        key = "1UylXLwDv1W1ukT4YNoUGgHCHF-W8e3F8-pIg1E024ho"
         personnel_sheet = "personnel"    
         
         name_df = get_sheet(key, personnel_sheet)
         name_list = name_df.loc[name_df.current == 1, 'Nickname'].values
-        date_range = pd.date_range(start=start, end=end, freq='MS', closed='left')    
-        shift_sched = pd.DataFrame()
-        for ts in date_range:
-            sheet_name = ts.strftime('%B %Y')
-            shift_sched = shift_sched.append(get_shift(key, sheet_name))
-        shift_sched = shift_sched.loc[(shift_sched.ts > pd.to_datetime('2020-07-15')) & (shift_sched.ts < end-timedelta(0.5))]
             
         for name in name_list:
             indiv_ipr = grading_system.copy()
@@ -105,26 +115,25 @@ def main(year, quarter, start='', end='', update_existing=True, update_dtr=False
             monitoring_ipr[name] = indiv_ipr
     
     
-        for sheet_name, xlsxdf in monitoring_ipr.items():
-            xlsxdf.to_excel(writer, sheet_name, index=False)
-        writer.save()
+    for sheet_name, xlsxdf in monitoring_ipr.items():
+        xlsxdf.to_excel(writer, sheet_name, index=False)
+    writer.save()
 
-    ewisms.main(year, quarter, start=start, end=end)
+    ewisms.main(start, end)
     dtr.main(update_dtr)
     measreminder.main(start, end)
     raininfo.main(start, end)
     webrelease.main(start, end)
     
+    format_cells()
+    
 ###############################################################################
 if __name__ == "__main__":
     run_start = datetime.now()
     
-    year = 2020
-    quarter = 3
-    start = ''#pd.to_datetime('2020-09-01')
-    end = ''#pd.to_datetime('2020-10-01')
-    main(year, quarter, start=start, end=end)
-    format_cells()
-        
+    start = pd.to_datetime('2020-07-15')
+    end = pd.to_datetime('2020-11-01')
+    main(start, end)
+    
     runtime = datetime.now() - run_start
     print("runtime = {}".format(runtime))

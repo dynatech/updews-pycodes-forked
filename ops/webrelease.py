@@ -10,13 +10,12 @@ import numpy as np
 import pandas as pd
 
 import dynadb.db as db
-import ewisms_meal
 
 
 def check_sending(shift_release, releases):
     site_code = shift_release.site_code.values[0]
     start = shift_release.ts_start.values[0]
-    sent = releases.loc[(releases.ts_start == pd.to_datetime(start)) & (releases.site_code == site_code), :]
+    sent = releases.loc[(releases.ts_start >= pd.to_datetime(start)-timedelta(hours=0.5)) & (releases.ts_start <= pd.to_datetime(start+timedelta(hours=0.5))) & (releases.site_code == site_code), :]
     if len(sent) == 0:
         shift_release.loc[:, 'deduction'] = 1
     else:
