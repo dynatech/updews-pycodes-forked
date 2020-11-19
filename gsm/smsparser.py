@@ -509,7 +509,12 @@ def parse_all_messages(args,allmsgs=[]):
                     is_msg_proc_success = False
             #check if message is from rain gauge
             elif re.search("^\w{4},[\d\/:,]+",sms.msg):
-                df_data = rain.v3(sms)
+                # if v5 logger
+                if len(sms.msg.split(',')) == 6:
+                    df_data = rain.v5(sms)
+                else:
+                    df_data = rain.v3(sms)
+                
                 if df_data:
                     print (df_data.data)
                     dbio.df_write(df_data, resource=resource)
