@@ -28,7 +28,7 @@ def get_loggers_v2():
     inner join logger_models using (model_id)
     where date_deactivated is NULL
     and logger_type in ('arq', 'regular', 'router')
-	and logger_name not in ('testa', 'testb', 'testc')
+	and logger_name not in ('testa', 'testb', 'testc', 'bulg','phig', 'bgbg','mycg','nvcg')
     and logger_name not like '%%___r_%%' 
     and logger_name not like '%%___pz%%' 
     and logger_name not like '%%___x_%%'"""
@@ -43,7 +43,7 @@ def get_loggers_v3():
     where logger_type in ('gateway','arq')
     and logger_name like '%%___r_%%'
     or logger_name like '%%___g%%' 
-    and logger_name not in ("madg")"""
+    and logger_name not in ('madg,'bulg','phig', 'bgbg','mycg','nvcg')"""
     localdf = db.df_read(query, connection='common')
     return localdf
 
