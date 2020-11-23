@@ -28,9 +28,9 @@ mpl.rcParams['xtick.labelsize'] = 8
 mpl.rcParams['ytick.labelsize'] = 8
 
             
-def nonrepeat_colors(ax,NUM_COLORS,color='jet'):
+def nonrepeat_colors(ax,NUM_COLORS,color='plasma'):
     cm = plt.get_cmap(color)
-    ax.set_prop_cycle(color=[cm(1.*(NUM_COLORS-i-1)/NUM_COLORS) for i in
+    ax.set_prop_cycle(color=[cm((NUM_COLORS-i+1)/NUM_COLORS) for i in
                                 range(NUM_COLORS+1)[::-1]])
     return ax
 
@@ -46,10 +46,10 @@ def get_surficial_df(site, start, end):
     query += " AND ts <= '%s'"% end
     query += " AND ts > '%s'" % start
     query += " ORDER BY ts"
-    
-    df = db.df_read(query)    
+    print(query)
+    df = db.df_read(query, connection='analysis')
     df['ts'] = pd.to_datetime(df['ts'])
-    df['marker_name'] = map(lambda x: x.upper(), df['marker_name'])
+    df['marker_name'] = df['marker_name'].apply(lambda x: x.upper())
     
     marker_df = df.groupby('marker_name', as_index=False)
     df = marker_df.apply(zeroed, column='measurement')
@@ -67,7 +67,7 @@ def plot_surficial(ax, df, marker_lst):
                 label=marker, alpha=1)
     ax.set_ylabel('Displacement\n(cm)', fontsize='small')
     ax.set_title('Surficial Ground Displacement', fontsize='medium')
-    ncol = (len(set(df.marker_name)) + 3) / 4
+    ncol = int((len(set(df.marker_name)) + 3) / 4)
     ax.legend(loc='upper left', ncol=ncol, fontsize='x-small', fancybox = True, framealpha = 0.5)
     ax.grid()
 
