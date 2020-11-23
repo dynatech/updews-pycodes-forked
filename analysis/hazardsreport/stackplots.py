@@ -46,7 +46,7 @@ def get_surficial_df(site, start, end):
     query += " AND ts <= '%s'"% end
     query += " AND ts > '%s'" % start
     query += " ORDER BY ts"
-    print(query)
+
     df = db.df_read(query, connection='analysis')
     df['ts'] = pd.to_datetime(df['ts'])
     df['marker_name'] = df['marker_name'].apply(lambda x: x.upper())
@@ -91,7 +91,7 @@ def get_rain_df(rain_gauge, start, end):
     return rain_df
 
 # rainfall plot
-def plot_rain(ax, df, site, rain_gauge, plot_inst=True):
+def plot_rain(ax, df, site, rain_gauge, plot_inst=True, alpha=0.05):
     ax.plot(df.ts, df.one, color='green', label='1-day cml', alpha=1)
     ax.plot(df.ts,df.three, color='blue', label='3-day cml', alpha=1)
     
@@ -101,7 +101,7 @@ def plot_rain(ax, df, site, rain_gauge, plot_inst=True):
     if plot_inst:
         ax2 = ax.twinx()
         width = float(0.004 * (max(df['ts']) - min(df['ts'])).days)
-        ax2.bar(df['ts'].apply(lambda x: pltdates.date2num(x)), df.rain, width=width,alpha=0.05, color='k', label = '30min rainfall')
+        ax2.bar(df['ts'].apply(lambda x: pltdates.date2num(x)), df.rain, width=width,alpha=alpha, color='k', label = '30min rainfall')
         ax2.xaxis_date()
     
     gauges = rm.rainfall_gauges()
@@ -282,7 +282,7 @@ def main(site, start, end, rainfall_props, surficial_props, subsurface_props, cs
                 ax = fig.add_subplot(subplot-1, sharex=ax)
                 subplot -= 1                    
                 ax.xaxis.set_visible(False)
-            plot_rain(ax, rain, site, rain_gauge.upper().replace('RAIN_NOAH_', 'ASTI ARG '), plot_inst=rainfall_props['plot_inst'])
+            plot_rain(ax, rain, site, rain_gauge.upper().replace('RAIN_NOAH_', 'ASTI ARG '), plot_inst=rainfall_props['plot_inst'], alpha=rainfall_props['alpha'])
             for event_id in range(len(event_lst[0])):
                 try:
                     color = event_lst[1][event_id]
@@ -290,7 +290,10 @@ def main(site, start, end, rainfall_props, surficial_props, subsurface_props, cs
                     color = 'red'
                 plot_single_event(ax, event_lst[0][event_id], color=color)
             
-            for startTS, endTS, color in span_list:
+            for i in range(len(span_list[0])):
+                startTS = span_list[0][i]
+                endTS = span_list[1][i]
+                color = span_list[2][i]
                 plot_span(ax, startTS, endTS, color)
     
     if surficial_props['to_plot']:
@@ -310,7 +313,10 @@ def main(site, start, end, rainfall_props, surficial_props, subsurface_props, cs
                 color = 'red'
             plot_single_event(ax, event_lst[0][event_id], color=color)
             
-        for startTS, endTS, color in span_list:
+        for i in range(len(span_list[0])):
+            startTS = span_list[0][i]
+            endTS = span_list[1][i]
+            color = span_list[2][i]
             plot_span(ax, startTS, endTS, color)
 
     if csv_props['to_plot']:
@@ -332,7 +338,10 @@ def main(site, start, end, rainfall_props, surficial_props, subsurface_props, cs
                 color = 'red'
             plot_single_event(ax, event_lst[0][event_id], color=color)
             
-        for startTS, endTS, color in span_list:
+        for i in range(len(span_list[0])):
+            startTS = span_list[0][i]
+            endTS = span_list[1][i]
+            color = span_list[2][i]
             plot_span(ax, startTS, endTS, color)
 
     if subsurface_props['disp']['to_plot']:
@@ -360,7 +369,10 @@ def main(site, start, end, rainfall_props, surficial_props, subsurface_props, cs
                         color = 'red'
                     plot_single_event(ax, event_lst[0][event_id], color=color)
           
-                for startTS, endTS, color in span_list:
+                for i in range(len(span_list[0])):
+                    startTS = span_list[0][i]
+                    endTS = span_list[1][i]
+                    color = span_list[2][i]
                     plot_span(ax, startTS, endTS, color)
 
     if subsurface_props['cml']['to_plot']:
@@ -397,11 +409,16 @@ def main(site, start, end, rainfall_props, surficial_props, subsurface_props, cs
                     except:
                         color = 'red'
                     plot_single_event(ax, event_lst[0][event_id], color=color)
-                
-                for startTS, endTS, color in span_list:
+                for i in range(len(span_list[0])):
+                    startTS = span_list[0][i]
+                    endTS = span_list[1][i]
+                    color = span_list[2][i]
                     plot_span(ax, startTS, endTS, color)
 
     ax.set_xlim([start, end])
+    fig.autofmt_xdate()
+    xfmt = pltdates.DateFormatter('%Y-%m-%d')
+    ax.xaxis.set_major_formatter(xfmt)
     fig.subplots_adjust(top=0.9, right=0.95, left=0.15, bottom=0.05, hspace=0.3)
     fig.suptitle(site.upper() + " Event Timeline",fontsize='x-large')
     plt.savefig(site + "_event_timeline", dpi=200,mode='w', orientation='portrait')#, 
@@ -427,14 +444,15 @@ if __name__ == '__main__':
     span_ends = ['2020-10-27 06:00', '2020-10-27 15:00', '2020-10-30 11:00', '2020-11-06 08:00', '2020-11-07 13:04', '2020-11-08',]
     alert = []
     span_colors = ['green', 'orange', 'red', 'green', 'orange', 'green']
-    span_list = zip(span_starts, span_ends, span_colors)
+    span_list = [span_starts, span_ends, span_colors]
     
     
     # rainfall plot                                                 
     rainfall = True                             ### True if to plot rainfall
-    plot_inst = False                           ### True if to plot instantaneous rainfall
+    plot_inst = True                           ### True if to plot instantaneous rainfall
+    alpha = 0.5                                ### opacity of instantaneous rainfall
     rain_gauge_lst = ['rain_inag']                ### specifiy rain gauge (e.g rain_noah_1234, rain_tuetb)
-    rainfall_props = {'to_plot': rainfall, 'rain_gauge_lst': rain_gauge_lst, 'plot_inst': plot_inst}
+    rainfall_props = {'to_plot': rainfall, 'rain_gauge_lst': rain_gauge_lst, 'plot_inst': plot_inst, 'alpha': alpha}
 
     # surficial plot
     surficial = True             ### True if to plot surficial
@@ -460,13 +478,13 @@ if __name__ == '__main__':
     # subsurface displacement
     disp = True                 ### True if to plot subsurface displacement
     ### specifiy tsm name and axis; 'all' if all nodes
-    disp_tsm_axis = {'inata': {'xz': [6,14]}} #'inata': {'xz': [6,14]}} #{'xz': [7,8,9], 'xy': [7,8,9]},
+    disp_tsm_axis = {'inata': {'xz': [6,7,14,16]}} #'inata': {'xz': [6,14]}} #{'xz': [7,8,9], 'xy': [7,8,9]},
             #'blcsb': {'xy': range(1,11), 'xz': range(1,11)}}
     
     # subsurface cumulative displacement
     cml = True     ### True if to plot subsurface cumulative displacement
     ### specifiy tsm name and axis; 'all' if all nodes
-    cml_tsm_axis = {'inata': {'xz': [6,14]}}# 'inata': {'xz': [6,14]}} 
+    cml_tsm_axis = {'inata': {'xz': [6,7,14,16]}}# 'inata': {'xz': [6,14]}} 
     #'sagtb': {'xz':range(3,20)}} #'magtb': {'xy': range(11,16), 'xz': range(11,16)}}
     
     subsurface_props = {'disp': {'to_plot': disp, 'disp_tsm_axis': disp_tsm_axis},
