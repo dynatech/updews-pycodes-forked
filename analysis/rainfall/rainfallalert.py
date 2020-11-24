@@ -6,7 +6,7 @@ import pandas as pd
 import sys
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
-import analysis.publicalerts as pub
+import analysis.analysislib as lib
 import analysis.querydb as qdb
 
 
@@ -229,11 +229,11 @@ def main(rain_props, end, sc, trigger_symbol, write_to_db=True):
 
         if qdb.get_alert_level(site_id, end)['alert_level'].values[0] > 0:
             
-            start_monitor = pub.event_start(site_id, end)
-            op_trig = pub.get_operational_trigger(site_id, start_monitor, end)
+            start_monitor = lib.event_start(site_id, end)
+            op_trig = lib.get_operational_trigger(site_id, start_monitor, end)
             op_trig = op_trig[op_trig.alert_level > 0]
             validity = max(op_trig['ts_updated'].values)
-            validity = pub.release_time(pd.to_datetime(validity)) \
+            validity = lib.release_time(pd.to_datetime(validity)) \
                                      + timedelta(1)
             if 3 in op_trig['alert_level'].values:
                 validity += timedelta(1)

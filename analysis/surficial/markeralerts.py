@@ -23,6 +23,7 @@ import time as mytime
 
 #### Import local codes
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
+import analysis.analysislib as lib
 import analysis.querydb as qdb
 import volatile.memory as mem
 
@@ -65,32 +66,6 @@ def gaussian_weighted_average(series, sigma = 3, width = 39):
     var = filters.convolve1d(np.power(series-average, 2), b/b.sum())
     
     return average, var
-
-
-def round_time(date_time):
-    """ Rounds given date_time to the next alert release time.
-    
-    """
-    
-    date_time = pd.to_datetime(date_time)
-    time_hour = int(date_time.strftime('%H'))
-    time_float = float(date_time.strftime('%H')) + \
-                 float(date_time.strftime('%M'))/60
-
-    quotient = time_hour // 4
-    if quotient == 5:
-        if time_float % 4 > 3.5:
-            date_time = datetime.combine(date_time.date() + timedelta(1),
-                                         time(4))
-        else:
-            date_time = datetime.combine(date_time.date() + timedelta(1),
-                                         time(0))
-    elif time_float % 4 > 3.5:
-        date_time = datetime.combine(date_time.date(), time((quotient+2) * 4))
-    else:
-        date_time = datetime.combine(date_time.date(), time((quotient+1) * 4))
-            
-    return date_time
 
 
 def tableau_20_colors():
@@ -499,7 +474,7 @@ def evaluate_marker_alerts(marker_data_df, ts, to_json):
     trend_alert = {'trend_alert': 0}
 
     #### Check if data is valid for given time of alert generation
-    if round_time(marker_data_df['ts'].values[0]) < round_time(ts):
+    if lib.release_time(marker_data_df['ts'].values[0]) < lib.release_time(ts):
         
         #### Marker alert is ND
         marker_alert = -1

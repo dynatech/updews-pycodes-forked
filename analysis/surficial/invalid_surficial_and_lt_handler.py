@@ -4,7 +4,7 @@ import pandas as pd
 import sys
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
-from analysis.publicalerts import round_data_ts
+from analysis.analysislib import round_data_ts
 import analysis.querydb as qdb
 
 
