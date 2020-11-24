@@ -474,7 +474,8 @@ def evaluate_marker_alerts(marker_data_df, ts, to_json):
     trend_alert = {'trend_alert': 0}
 
     #### Check if data is valid for given time of alert generation
-    if lib.release_time(marker_data_df['ts'].values[0]) < lib.release_time(ts):
+    data_ts = pd.to_datetime(marker_data_df['ts'].values[0])
+    if lib.release_time(data_ts) < lib.release_time(ts):
         
         #### Marker alert is ND
         marker_alert = -1
