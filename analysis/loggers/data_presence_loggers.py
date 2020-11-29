@@ -43,7 +43,7 @@ def get_loggers_v3():
     where logger_type in ('gateway','arq')
     and logger_name like '%%___r_%%'
     or logger_name like '%%___g%%' 
-    and logger_name not in ('madg,'bulg','phig', 'bgbg','mycg','nvcg')"""
+    and logger_name not in ('madg','bulg','phig', 'bgbg','mycg','nvcg')"""
     localdf = db.df_read(query, connection='common')
     return localdf
 
