@@ -75,7 +75,7 @@ def get_shift(key, sheet_name):
     return df.loc[:, ['ts', 'IOMP-MT', 'IOMP-CT']]
 
 
-def main(start, end, update_existing=True, update_dtr=False):
+def main(start, end, update_existing=True, update_dtr=True, recompute=True, mysql=True):
     key = "1UylXLwDv1W1ukT4YNoUGgHCHF-W8e3F8-pIg1E024ho"
     date_range = pd.date_range(start=start, end=end, freq='M', closed='left')
     shift_sched = pd.DataFrame()
@@ -119,11 +119,11 @@ def main(start, end, update_existing=True, update_dtr=False):
         xlsxdf.to_excel(writer, sheet_name, index=False)
     writer.save()
 
-    ewisms.main(start, end)
+    ewisms.main(start=start, end=end, recompute=recompute)
     dtr.main(update_dtr)
-    measreminder.main(start, end)
-    raininfo.main(start, end)
-    webrelease.main(start, end)
+    measreminder.main(start, end, mysql=mysql)
+    raininfo.main(start, end, mysql=mysql)
+    webrelease.main(start, end, mysql=mysql)
     
     format_cells()
     
@@ -132,8 +132,8 @@ if __name__ == "__main__":
     run_start = datetime.now()
     
     start = pd.to_datetime('2020-07-15')
-    end = pd.to_datetime('2020-11-01')
-    main(start, end)
+    end = pd.to_datetime('2020-12-01')
+    main(start, end, update_dtr=False)
     
     runtime = datetime.now() - run_start
     print("runtime = {}".format(runtime))

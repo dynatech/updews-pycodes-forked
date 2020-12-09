@@ -15,7 +15,8 @@ import dynadb.db as db
 
 def outbox_tag(start, end, mysql = False):
     if mysql:
-        query  = "  (SELECT outbox_id, ts_written, ts_sent, sim_num, mobile_id, sms_msg, send_status, user_id, mn.gsm_id FROM "
+        query  = "SELECT * FROM "
+        query += "  (SELECT outbox_id, ts_written, ts_sent, sim_num, mobile_id, sms_msg, send_status, user_id, mn.gsm_id FROM "
         query += "    (SELECT * FROM comms_db.smsoutbox_users "
         query += "    WHERE ts_written BETWEEN '{start}' AND '{end}' "
         query += "    ) AS sms "

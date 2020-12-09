@@ -42,18 +42,18 @@ def remove_downtime(shift_release, downtime):
     return shift_release
 
 
-def main(start, end):
+def main(start, end, mysql=False):
     ewi_sched = pd.read_csv('output/sending_status.csv', parse_dates=['ts_start'])
     ewi_sched = ewi_sched.loc[(ewi_sched.ts_start.dt.time >= time(8,0)) & (ewi_sched.ts_start.dt.time <= time(16,0)) & (ewi_sched.raising != 1), :]
     ewi_sched.loc[:, ['ts_start', 'ts_end']] = ewi_sched.loc[:, ['ts_start', 'ts_end']].apply(pd.to_datetime)
 
-    inbox_tag = smstags.inbox_tag(start, end)
+    inbox_tag = smstags.inbox_tag(start, end, mysql=mysql)
     inbox_tag = inbox_tag.loc[inbox_tag.tag.isin(['#GroundMeas', '#CantSendGroundMeas']), :]
-    outbox_tag = smstags.outbox_tag(start, end)
+    outbox_tag = smstags.outbox_tag(start, end, mysql=mysql)
     outbox_tag = outbox_tag.loc[outbox_tag.tag == '#GroundMeasReminder', :]
     
     monitoring_ipr = pd.read_excel('output/monitoring_ipr.xlsx', sheet_name=None)
-    downtime = system_downtime()
+    downtime = system_downtime(mysql=mysql)
     ewi_sched = remove_downtime(ewi_sched, downtime)
     
     for name in monitoring_ipr.keys():

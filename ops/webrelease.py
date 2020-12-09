@@ -14,12 +14,12 @@ import dynadb.db as db
 
 def check_sending(shift_release, releases):
     site_code = shift_release.site_code.values[0]
-    start = shift_release.ts_start.values[0]
-    sent = releases.loc[(releases.ts_start >= pd.to_datetime(start)-timedelta(hours=0.5)) & (releases.ts_start <= pd.to_datetime(start+timedelta(hours=0.5))) & (releases.site_code == site_code), :]
+    start = pd.to_datetime(shift_release.ts_start.values[0])
+    sent = releases.loc[(releases.ts_start >= start-timedelta(hours=0.5)) & (releases.ts_start <= start+timedelta(hours=0.5)) & (releases.site_code == site_code), :]
     if len(sent) == 0:
         shift_release.loc[:, 'deduction'] = 1
     else:
-        ts_release = min(sent.ts_release)
+        ts_release = pd.to_datetime(min(sent.ts_release))
         if ts_release < start:
             shift_release.loc[:, 'deduction'] = 0
         else:
@@ -42,14 +42,33 @@ def remove_downtime(df, downtime):
         df = df.loc[(df.ts_start < start+np.timedelta64(150, 'm')) | (df.ts_start > end+np.timedelta64(150, 'm')), :]
     return df
 
+def get_reelases(start, end, mysql=False):
+    if mysql:
+        query  = "SELECT site_code, event_id, validity, pub_sym_id, data_ts as ts_start, release_time "
+        query += "FROM commons_db.sites "
+        query += "INNER JOIN ewi_db.monitoring_events USING (site_id) "
+        query += "INNER JOIN ewi_db.monitoring_event_alerts USING (event_id) "
+        query += "LEFT JOIN "
+        query += "  (SELECT * FROM ewi_db.monitoring_releases "
+        query += "  LEFT JOIN ewi_db.monitoring_triggers USING (release_id) "
+        query += "  LEFT JOIN ewi_db.internal_alert_symbols USING (internal_sym_id) "
+        query += "  ) AS trig "
+        query += "USING (event_alert_id)"
+        query += "WHERE data_ts BETWEEN '{start}' AND '{end}' "
+        query += "ORDER BY site_code, data_ts desc"
+        query = query.format(start=start, end=end)
+        df = db.df_read(query=query, resource="ops")
+    else:
+        df = pd.read_csv('input/webreleases.csv')
+    return df
 
-def main(start, end):
-    downtime = system_downtime()
+def main(start, end, mysql=False):
+    downtime = system_downtime(mysql=mysql)
     ewi_sched = pd.read_csv('output/sending_status.csv', parse_dates=['ts_start', 'ts_end'])
     ewi_sched = remove_downtime(ewi_sched, downtime)
     ewi_sched.loc[ewi_sched.raising == 1, 'ts_start'] = ewi_sched.loc[ewi_sched.raising == 1, 'ts_start'] + timedelta(minutes=55)
     
-    releases = pd.read_csv('input/webreleases.csv')
+    releases = get_reelases(start, end, mysql=mysql)
     releases.loc[:, ['ts_start', 'release_time']] = releases.loc[:, ['ts_start', 'release_time']].apply(pd.to_datetime)
     releases.loc[: , 'ts_start'] = releases.loc[: , 'ts_start'] + timedelta(minutes=30)
     releases.loc[:, 'ts_release'] = releases.loc[: , ['ts_start', 'release_time']].apply(lambda row: datetime.combine(row.ts_start.date(), row.release_time.time()), axis = 1)

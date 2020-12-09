@@ -235,19 +235,19 @@ def actual_releases(ewi_sched, sent):
     return ewi_sched
 
 
-def main(year='', quarter='', start='', end=''):
+def main(year='', quarter='', start='', end='', mysql=False):
     if start == '' and end == '':
         start, end = timeline(year, quarter)
     list_org_name = ['lewc', 'blgu', 'mlgu', 'plgu']
     
-    routine = routine_sched()
+    routine = routine_sched(mysql=mysql)
     ewi_sched = quarter_dates(start, end)
     ewi_sched.loc[:, 'set_site_code'] = ewi_sched.apply(lambda row: set(routine[(routine[row.month] == routine.season_type) & (routine.iso_week_day == row.day)].site_code), axis=1)
     ewi_sched = ewi_sched.loc[~(ewi_sched.set_site_code == set()), :]
     ewi_sched.loc[:, 'set_org_name'] = len(ewi_sched) * [set(list_org_name[0:3])]
     ewi_sched.loc[:, 'ts_start'] = ewi_sched.ts.apply(lambda x: x + timedelta(0.5))
     ewi_sched.loc[:, 'ts_end'] = ewi_sched.ts_start.apply(lambda x: x + timedelta(minutes=5))
-    event = get_events(start, end)
+    event = get_events(start, end, mysql=mysql)
     event_grp = event.groupby('event_id', as_index=False)
     event_sched = event_grp.apply(event_releases, ewi_sched=ewi_sched, 
                                   list_org_name=list_org_name).reset_index(drop=True)
@@ -260,7 +260,7 @@ def main(year='', quarter='', start='', end=''):
     all_ewi_sched = all_ewi_sched.loc[all_ewi_sched.site_code != 'umi', :]
     all_ewi_sched = all_ewi_sched.loc[(all_ewi_sched.ts_start >= start) & (all_ewi_sched.ts_start < end), :]
     
-    sent = ewi_sent(start, end)
+    sent = ewi_sent(start, end, mysql=mysql)
     sent.loc[: ,'ts_written'] = sent.ts_written.apply(lambda x: pd.to_datetime(x))
     ewi_sched_grp = all_ewi_sched.reset_index().groupby('index', as_index=False)
     all_ewi_sched = ewi_sched_grp.apply(actual_releases, sent=sent).reset_index(drop=True)
@@ -281,9 +281,9 @@ if __name__ == "__main__":
     
     year = 2020
     quarter = 3
-    start = ''#pd.to_datetime('2020-09-01')
-    end = ''#pd.to_datetime('2020-10-01')
-    all_ewi_sched = main(year, quarter, start, end)
+    start = pd.to_datetime('2020-11-01')
+    end = pd.to_datetime('2020-12-01')
+    all_ewi_sched = main(year, quarter, start, end, mysql=True)
         
     runtime = datetime.now() - run_start
     print("runtime = {}".format(runtime))

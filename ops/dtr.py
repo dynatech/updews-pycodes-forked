@@ -101,6 +101,9 @@ def eval_online_dtr(name, ts, ts_end, online_dtr):
 
 def eval_dtr(ts, ts_end, indiv_dtr):
     shift_dtr = indiv_dtr.loc[(indiv_dtr.index == str(ts.date())) | (indiv_dtr.index == str(ts_end.date())), :]
+    if len(shift_dtr) == 0:
+        print ('no in', ts)
+        return 0
     if ts.time() == time(20,0):
         time_in = max(pd.to_datetime(shift_dtr.in3[0]), ts-timedelta(minutes=15))
         time_out = min(pd.to_datetime(shift_dtr.out1[1]), ts_end+timedelta(minutes=15))
@@ -113,9 +116,8 @@ def eval_dtr(ts, ts_end, indiv_dtr):
             grade = np.round((shift_dtr.out2 - shift_dtr.in1) / timedelta(hours=12.5), 2).values[0]
         else:
             tot = 0
-            col_list = np.reshape(shift_dtr.columns, (int(len(shift_dtr.columns)/2), 2))
-            for i in col_list:
-                tot += shift_dtr[i].diff(axis=1).values[0][-1]
+            for i in range(1,int( len(shift_dtr.dropna(axis=1).columns)/2)+1):
+                tot += shift_dtr[['in'+str(i), 'out'+str(i)]].diff(axis=1).values[0][-1]
             grade = np.round(tot/np.timedelta64(int(12.5*60), 'm'), 2)
     return grade
 
@@ -127,6 +129,8 @@ def main(update_dtr = False):
     monitoring_ipr = pd.read_excel('output/monitoring_ipr.xlsx', sheet_name=None)
     monitoring_dtr = pd.read_excel('output/monitoring_dtr.xlsx', sheet_name=None, parse_dates=True)
     online_dtr = get_online_dtr()
+    ewi_sms = pd.read_csv('output/sending_status.csv')
+    ewi_sms.loc[:, 'ts_start'] = pd.to_datetime(ewi_sms.loc[:, 'ts_start'])
 
     for name in monitoring_ipr.keys():
         indiv_ipr = monitoring_ipr[name]
@@ -139,7 +143,12 @@ def main(update_dtr = False):
                 grade = eval_online_dtr(name, ts, ts_end, online_dtr)
             else:
                 grade = eval_dtr(ts, ts_end, indiv_dtr)
-            indiv_ipr.loc[indiv_ipr.Category == 'Personnel timeliness', str(ts)] = grade
+            sending_status = ewi_sms.loc[(ewi_sms.ts_start >= ts) & (ewi_sms.ts_start < ts+timedelta(0.5)), :]
+            if len(sending_status) != 0:
+                indiv_ipr.loc[indiv_ipr.Category == 'Personnel timeliness', str(ts)] = grade
+            else:
+                indiv_ipr.loc[indiv_ipr.Output2 == 'personnel timeliness', str(ts)] = grade
+                indiv_ipr.loc[indiv_ipr.Category == 'Personnel timeliness', str(ts)] = np.nan
         monitoring_ipr[name] = indiv_ipr
     
     writer = pd.ExcelWriter('output/monitoring_ipr.xlsx')

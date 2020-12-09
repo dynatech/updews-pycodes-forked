@@ -54,16 +54,16 @@ def check_sending(shift_release, outbox_tag):
     return shift_release
 
 
-def main(start, end):
+def main(start, end, mysql=False):
     site_list = site_recipient()
-    downtime = system_downtime()
+    downtime = system_downtime(mysql=mysql)
     ewi_sched = pd.read_csv('output/sending_status.csv', parse_dates=['ts_start'])
     ewi_sched = ewi_sched.loc[(ewi_sched.raising != 1) & (ewi_sched.event == 1) & (ewi_sched.site_code.isin(site_list)), :]
     ewi_sched.loc[:, 'ts_end'] = ewi_sched.ts_start + timedelta(minutes=15)
     ewi_sched.loc[:, ['ts_start', 'ts_end']] = ewi_sched.loc[:, ['ts_start', 'ts_end']].apply(pd.to_datetime)
     ewi_sched = remove_downtime(ewi_sched, downtime)
     
-    outbox_tag = smstags.outbox_tag(start, end)
+    outbox_tag = smstags.outbox_tag(start, end, mysql=mysql)
     outbox_tag = outbox_tag.loc[outbox_tag.tag.isin(['#RainInfo']), :]
     
     monitoring_ipr = pd.read_excel('output/monitoring_ipr.xlsx', sheet_name=None)
@@ -79,7 +79,10 @@ def main(start, end):
             if len(shift_release) != 0:
                 indiv_release = shift_release.groupby('index', as_index=False)
                 shift_release = indiv_release.apply(check_sending, outbox_tag=outbox_tag).reset_index(drop=True)
+                shift_release.loc[shift_release.deduction>1, 'deduction'] = 1
                 grade = np.round((len(shift_release) - sum(shift_release.deduction)) / len(shift_release), 2)
+                if grade > 1:
+                    grade = 1
                 indiv_ipr.loc[indiv_ipr.Output2 == 'Rainfall info', str(ts)] = grade
         monitoring_ipr[name] = indiv_ipr
         
