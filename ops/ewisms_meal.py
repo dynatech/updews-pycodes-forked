@@ -168,7 +168,7 @@ def event_releases(event, ewi_sched, list_org_name):
     #lowering
     lowering_sched = event.loc[:, ['site_code']]
     lowering_sched.loc[:, 'ts_start'] = validity
-    lowering_sched.loc[:, 'ts_end'] = lowering_sched.ts_start.apply(lambda x: x + timedelta(minutes=5))
+    lowering_sched.loc[:, 'ts_end'] = lowering_sched.ts_start.apply(lambda x: x + timedelta(minutes=10))
     lowering_sched.loc[:, 'lowering'] = 1
     #4H release
     event_4H_start = min(event.ts_start)
@@ -184,14 +184,14 @@ def event_releases(event, ewi_sched, list_org_name):
     ts_start = sorted(set(ts_start) - onset_ts)
     #4H release
     event_sched = pd.DataFrame({'ts_start': ts_start})
-    event_sched.loc[:, 'ts_end'] = event_sched.ts_start.apply(lambda x: x + timedelta(minutes=5))
+    event_sched.loc[:, 'ts_end'] = event_sched.ts_start.apply(lambda x: x + timedelta(minutes=10))
     event_sched.loc[:, 'site_code'] = site_code
     event_sched = event_sched.append(onset_sched, ignore_index=True, sort=False).append(lowering_sched, ignore_index=True, sort=False)
     event_sched.loc[:, 'set_org_name'] = [set(list_org_name)] * len(event_sched)
     event_sched.loc[:, 'event'] = 1
     #extended
     extended_sched = pd.DataFrame({'ts_start': pd.date_range(start=pd.to_datetime(validity.date())+timedelta(1.5), periods=3, freq='1D')})
-    extended_sched.loc[:, 'ts_end'] = extended_sched.ts_start.apply(lambda x: x + timedelta(minutes=5))
+    extended_sched.loc[:, 'ts_end'] = extended_sched.ts_start.apply(lambda x: x + timedelta(minutes=10))
     extended_sched.loc[:, 'site_code'] = site_code
     extended_sched.loc[:, 'set_org_name'] = [set(list_org_name[0:3])] * len(extended_sched)
     event_sched = event_sched.append(extended_sched, ignore_index=True, sort=False)
@@ -246,7 +246,7 @@ def main(year='', quarter='', start='', end='', mysql=False):
     ewi_sched = ewi_sched.loc[~(ewi_sched.set_site_code == set()), :]
     ewi_sched.loc[:, 'set_org_name'] = len(ewi_sched) * [set(list_org_name[0:3])]
     ewi_sched.loc[:, 'ts_start'] = ewi_sched.ts.apply(lambda x: x + timedelta(0.5))
-    ewi_sched.loc[:, 'ts_end'] = ewi_sched.ts_start.apply(lambda x: x + timedelta(minutes=5))
+    ewi_sched.loc[:, 'ts_end'] = ewi_sched.ts_start.apply(lambda x: x + timedelta(minutes=10))
     event = get_events(start, end, mysql=mysql)
     event_grp = event.groupby('event_id', as_index=False)
     event_sched = event_grp.apply(event_releases, ewi_sched=ewi_sched, 
@@ -281,7 +281,7 @@ if __name__ == "__main__":
     
     year = 2020
     quarter = 3
-    start = pd.to_datetime('2020-11-01')
+    start = pd.to_datetime('2020-07-15')
     end = pd.to_datetime('2020-12-01')
     all_ewi_sched = main(year, quarter, start, end, mysql=True)
         

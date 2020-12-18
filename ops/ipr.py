@@ -82,7 +82,7 @@ def main(start, end, update_existing=True, update_dtr=True, recompute=True, mysq
     for ts in date_range:
         sheet_name = ts.strftime('%B %Y')
         shift_sched = shift_sched.append(get_shift(key, sheet_name))
-    shift_sched = shift_sched.loc[(shift_sched.ts > start) & (shift_sched.ts < end-timedelta(0.5))]
+    shift_sched = shift_sched.loc[(shift_sched.ts > start) & (shift_sched.ts < end)]
     
     if update_existing:
         monitoring_ipr = pd.read_excel('output/monitoring_ipr.xlsx', sheet_name=None)
@@ -118,7 +118,6 @@ def main(start, end, update_existing=True, update_dtr=True, recompute=True, mysq
     for sheet_name, xlsxdf in monitoring_ipr.items():
         xlsxdf.to_excel(writer, sheet_name, index=False)
     writer.save()
-
     ewisms.main(start=start, end=end, recompute=recompute)
     dtr.main(update_dtr)
     measreminder.main(start, end, mysql=mysql)

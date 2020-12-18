@@ -34,18 +34,18 @@ def main(start, end, recompute=False, mysql=True):
         indiv_ipr.columns = indiv_ipr.columns.astype(str)
         for ts in indiv_ipr.columns[5:]:
             ts = pd.to_datetime(ts)
-            sending_status = ewi_sms.loc[(ewi_sms.ts_start >= ts) & (ewi_sms.ts_start < ts+timedelta(0.5)), :]
+            sending_status = ewi_sms.loc[(ewi_sms.ts_start > ts) & (ewi_sms.ts_start <= ts+timedelta(0.5)), :]
             if len(sending_status) == 0:
-                continue
+                indiv_ipr.loc[indiv_ipr.Output2.str.contains('EWI SMS', na=False), str(ts)] = np.nan
             elif sum(sending_status.tot_unsent) == 0:
                 # all sent on time
-                indiv_ipr.loc[indiv_ipr.Output2 == 'EWI SMS\n (queued for sending)', str(ts)] = 1
+                indiv_ipr.loc[indiv_ipr.Output2.str.contains('EWI SMS', na=False), str(ts)] = 1
             else:
                 sending_status.loc[:, 'deduction'] = 0.1 * np.ceil((sending_status.sent - sending_status.ts_end).dt.total_seconds()/600)
                 sending_status.loc[sending_status.deduction > 1, 'deduction'] = 1
                 sending_status.loc[sending_status.deduction < 0, 'deduction'] = 0
                 sending_status.loc[:, 'deduction'].fillna(1, inplace = True)
-                indiv_ipr.loc[indiv_ipr.Output2 == 'EWI SMS\n (queued for sending)', str(ts)] = np.round((sum(sending_status.min_recipient) - sum(sending_status.tot_unsent * sending_status.deduction)) / sum(sending_status.min_recipient), 2)
+                indiv_ipr.loc[indiv_ipr.Output2.str.contains('EWI SMS', na=False), str(ts)] = np.round((sum(sending_status.min_recipient) - sum(sending_status.tot_unsent * sending_status.deduction)) / sum(sending_status.min_recipient), 2)
         monitoring_ipr[name] = indiv_ipr
     
     writer = pd.ExcelWriter('output/monitoring_ipr.xlsx')

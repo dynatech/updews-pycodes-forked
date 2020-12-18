@@ -136,6 +136,7 @@ def main(update_dtr = False):
         indiv_ipr = monitoring_ipr[name]
         indiv_dtr = monitoring_dtr[name].set_index('ts')
         indiv_dtr = indiv_dtr.apply(lambda x: pd.to_datetime(x))
+        indiv_dtr = indiv_dtr.sort_index()
         for ts in indiv_ipr.columns[5:]:
             ts = pd.to_datetime(ts)
             ts_end = ts + timedelta(0.5)
@@ -143,7 +144,7 @@ def main(update_dtr = False):
                 grade = eval_online_dtr(name, ts, ts_end, online_dtr)
             else:
                 grade = eval_dtr(ts, ts_end, indiv_dtr)
-            sending_status = ewi_sms.loc[(ewi_sms.ts_start >= ts) & (ewi_sms.ts_start < ts+timedelta(0.5)), :]
+            sending_status = ewi_sms.loc[(ewi_sms.ts_start > ts) & (ewi_sms.ts_start <= ts+timedelta(0.5)), :]
             if len(sending_status) != 0:
                 indiv_ipr.loc[indiv_ipr.Category == 'Personnel timeliness', str(ts)] = grade
             else:
