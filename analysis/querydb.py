@@ -1029,7 +1029,7 @@ def alert_to_db(df, table_name, connection='analysis', lt_overwrite=True):
     else:
         where_id = 'site_id'
         
-    ts_updated = pd.to_datetime(df['ts_updated'].values[0])-timedelta(hours=0.5)
+    ts_updated = pd.to_datetime(df['ts_updated'].values[0])-timedelta(hours=1.5)
     
     # previous alert
     query += "  SELECT * FROM %s " %table_name
@@ -1044,7 +1044,7 @@ def alert_to_db(df, table_name, connection='analysis', lt_overwrite=True):
         query += "  ) AS trig "
         query += "ON trig.trigger_sym_id = sym.trigger_sym_id "
 
-    query += "ORDER BY ts DESC LIMIT 1"
+    query += "ORDER BY ts_updated DESC LIMIT 1"
 
     df2 = db.df_read(query, connection=connection)
 
