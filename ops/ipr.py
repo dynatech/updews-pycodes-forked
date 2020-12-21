@@ -10,6 +10,7 @@ import openpyxl
 import pandas as pd
 
 import dtr
+import ewibulletin
 import ewisms
 import measreminder
 import raininfo
@@ -118,11 +119,13 @@ def main(start, end, update_existing=True, update_dtr=True, recompute=True, mysq
     for sheet_name, xlsxdf in monitoring_ipr.items():
         xlsxdf.to_excel(writer, sheet_name, index=False)
     writer.save()
+
     ewisms.main(start=start, end=end, recompute=recompute)
     dtr.main(update_dtr)
     measreminder.main(start, end, mysql=mysql)
     raininfo.main(start, end, mysql=mysql)
     webrelease.main(start, end, mysql=mysql)
+    ewibulletin.main(start, end, mysql=mysql)
     
     format_cells()
     

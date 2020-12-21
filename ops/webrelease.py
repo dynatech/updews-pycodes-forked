@@ -42,7 +42,7 @@ def remove_downtime(df, downtime):
         df = df.loc[(df.ts_start < start+np.timedelta64(150, 'm')) | (df.ts_start > end+np.timedelta64(150, 'm')), :]
     return df
 
-def get_reelases(start, end, mysql=False):
+def get_releases(start, end, mysql=False):
     if mysql:
         query  = "SELECT site_code, event_id, validity, pub_sym_id, data_ts as ts_start, release_time "
         query += "FROM commons_db.sites "
@@ -68,7 +68,7 @@ def main(start, end, mysql=False):
     ewi_sched = remove_downtime(ewi_sched, downtime)
     ewi_sched.loc[ewi_sched.raising == 1, 'ts_start'] = ewi_sched.loc[ewi_sched.raising == 1, 'ts_start'] + timedelta(minutes=55)
     
-    releases = get_reelases(start, end, mysql=mysql)
+    releases = get_releases(start, end, mysql=mysql)
     releases.loc[:, ['ts_start', 'release_time']] = releases.loc[:, ['ts_start', 'release_time']].apply(pd.to_datetime)
     releases.loc[: , 'ts_start'] = releases.loc[: , 'ts_start'] + timedelta(minutes=30)
     releases.loc[:, 'ts_release'] = releases.loc[: , ['ts_start', 'release_time']].apply(lambda row: datetime.combine(row.ts_start.date(), row.release_time.time()), axis = 1)
