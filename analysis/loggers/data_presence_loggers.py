@@ -59,8 +59,14 @@ def get_data_tsm(lgrname):
     query = "SELECT max(ts) FROM " + 'tilt_' + lgrname + \
         "  where ts >= '2010-01-01' order by ts desc limit 1 "
     localdf = db.df_read(query, connection='analysis')
+    if (localdf is None):
+        localdf = 0
     return localdf
-
+    if (localdf.empty == False): 
+        return localdf
+    else:
+        localdf = 0
+    return localdf
 
 def dftosql(df):
     v2df = get_loggers_v2()
