@@ -30,7 +30,7 @@ def get_data(lgrname):
     if (localdf.empty == False): 
         return localdf
     else:
-        localdf = 0
+        localdf = pd.DataFrame(columns = ["max(ts)"])
     return localdf
 
 def dftosql(df):
