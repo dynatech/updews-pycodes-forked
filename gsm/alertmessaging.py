@@ -265,7 +265,7 @@ def check_alerts():
              ") as sym "
              "USING (trigger_sym_id)) AS alert "
              "INNER JOIN "
-             "{}.sites "
+             "(SELECT * FROM {}.sites WHERE active = 1) s "
              "USING (site_id)").format(analysis,ts_now,analysis,analysis,analysis,common)
 
     alert_msgs = dbio.read(query=query, resource="sensor_analysis")
