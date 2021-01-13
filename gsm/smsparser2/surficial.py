@@ -1,4 +1,5 @@
 from datetime import datetime as dt
+from datetime import timedelta as td
 import os
 import re
 import sys
@@ -157,7 +158,7 @@ def get_date(text):
     if match is None or date_str == None:
         err_val = SURFICIAL_PARSER_ERROR_VALUE["date_no_matches"]
 
-    elif dt.strptime(date_str, DATE_FORMAT_STD) > dt.now():
+    elif dt.strptime(date_str, DATE_FORMAT_STD) > dt.now() or dt.strptime(date_str, DATE_FORMAT_STD) < dt.now() - td(90):
         err_val = SURFICIAL_PARSER_ERROR_VALUE["date_value_advance"]
 
     return {"value": str(date_str), "match": str(match_date_str), 
@@ -212,7 +213,7 @@ def get_time(text):
     # sanity check
     if not err_val:
         time_val = dt.strptime(time_str, TIME_FORMAT_STD).time()
-        if (time_val > dt.strptime("18:00:00","%H:%M:%S").time() or time_val < 
+        if (time_val > dt.strptime("19:00:00","%H:%M:%S").time() or time_val < 
             dt.strptime("05:00:00","%H:%M:%S").time()):
             print ('Time out of bounds. Unrealizable time to measure' )
             err_val = SURFICIAL_PARSER_ERROR_VALUE["time_out_of_bounds"]
@@ -395,6 +396,9 @@ def observation(text):
     obv["site_id"], text = find_match_in_text(get_site_code, text)
     date_str, text = find_match_in_text(get_date, text)
     time_str, text = find_match_in_text(get_time, text)
+    if dt.strptime("{} {}".format(date_str, time_str), "%Y-%m-%d %H:%M:%S") > dt.now():
+        err_val = SURFICIAL_PARSER_ERROR_VALUE["date_value_advance"]
+        raise ValueError(err_val)
     measurement_matches, text = find_match_in_text(get_measurements, text)
     obv["weather"], text = find_match_in_text(get_weather_description, text)
     obv["observer_name"], text = find_match_in_text(get_observer_names, text)

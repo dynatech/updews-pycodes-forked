@@ -263,6 +263,11 @@ def process_surficial_observation(sms):
             messages.iloc[err_val - 1].internal_msg, sms.msg)
         smstables.write_outbox(sms_msg_for_operations, ct_sim_num)
 
+        if SEND_REPLY_TO_COMMUNITY:
+            error_msg = messages.iloc[err_val - 1].external_msg
+            print('## msg to community:', error_msg, '##')
+            smstables.write_outbox(error_msg, sms.sim_num)
+
         return False
 
     site_surf_mark = surf_mark[(surf_mark["site_id"] == obv["obv"]["site_id"]) & (surf_mark["in_use"] == 1)]
