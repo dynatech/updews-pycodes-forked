@@ -79,47 +79,47 @@ def send_hangouts(OutputFP, alert):
             "{}:{}:{}".format(alert.ts_last_retrigger,alert.stat_id,
                                  alert.site_code,alert.alert_symbol,alert.trigger_source))
 
-    cmd = "python send_message.py --conversation-id {} --message-text '{}'".format(conversation_id,message)
+    cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/send_message.py --conversation-id {} --message-text '{}'".format(conversation_id,message)
     os.system(cmd)
    
     for a in os.listdir(OutputFP):
         print (a)
-        cmd = "python upload_image.py --conversation-id {} --image '{}'".format(conversation_id,OutputFP+a)
+        cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/upload_image.py --conversation-id {} --image '{}'".format(conversation_id,OutputFP+a)
         os.system(cmd)
 
 
 ##########################################################
-
-query = ("SELECT stat_id, site_code,s.site_id, trigger_source, alert_symbol, "
-        "ts_last_retrigger,source_id FROM "
-        "(SELECT stat_id, ts_last_retrigger, site_id, trigger_source, "
-        "alert_symbol,sym.source_id FROM "
-        "(SELECT stat_id, ts_last_retrigger, site_id, trigger_sym_id FROM "
-        "(SELECT * FROM alert_status WHERE "
-        "ts_set >= NOW()-interval 5 minute "
-        "and ts_ack is NULL"
-#        "stat_id=3993 "
-        ") AS stat "
-        "INNER JOIN "
-        "operational_triggers AS op "
-        "ON stat.trigger_id = op.trigger_id) AS trig "
-        "INNER JOIN "
-        "(Select * from operational_trigger_symbols  where source_id in (1,3)) AS sym "
-        "ON trig.trigger_sym_id = sym.trigger_sym_id "
-        "inner join trigger_hierarchies as th "
-        "on th.source_id=sym.source_id) AS alert "
-        "INNER JOIN "
-        "commons_db.sites as s "
-        "ON s.site_id = alert.site_id")
-        
-smsalert=db.df_read(query, connection= "analysis")
-
-for i in smsalert.index:
-    OutputFP=main(smsalert.loc[i])
-    if not OutputFP:
-        print ("nasend na!")
-    else:
-        send_hangouts(OutputFP,smsalert.loc[i])
+if __name__ == '__main__':
+    query = ("SELECT stat_id, site_code,s.site_id, trigger_source, alert_symbol, "
+            "ts_last_retrigger,source_id FROM "
+            "(SELECT stat_id, ts_last_retrigger, site_id, trigger_source, "
+            "alert_symbol,sym.source_id FROM "
+            "(SELECT stat_id, ts_last_retrigger, site_id, trigger_sym_id FROM "
+            "(SELECT * FROM alert_status WHERE "
+            "ts_set >= NOW()-interval 5 minute "
+            "and ts_ack is NULL"
+#            "stat_id=6790 "
+            ") AS stat "
+            "INNER JOIN "
+            "operational_triggers AS op "
+            "ON stat.trigger_id = op.trigger_id) AS trig "
+            "INNER JOIN "
+            "(Select * from operational_trigger_symbols  where source_id in (1,3)) AS sym "
+            "ON trig.trigger_sym_id = sym.trigger_sym_id "
+            "inner join trigger_hierarchies as th "
+            "on th.source_id=sym.source_id) AS alert "
+            "INNER JOIN "
+            "commons_db.sites as s "
+            "ON s.site_id = alert.site_id")
+            
+    smsalert=db.df_read(query, connection= "analysis")
+    
+    for i in smsalert.index:
+        OutputFP=main(smsalert.loc[i])
+        if not OutputFP:
+            print ("nasend na!")
+        else:
+            send_hangouts(OutputFP,smsalert.loc[i])
 
         
 

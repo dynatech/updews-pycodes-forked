@@ -183,9 +183,9 @@ def rain_stack_plot(site_code, gauges, offsetstart, start, end, tsn, threshold,
     fig = plt.figure(figsize = (15,20))
     # assigning axis name for instantaneous rainfall of each rain gauge
     ins1 = fig.add_subplot(len(gauges),2,1)
-    ins2 = fig.add_subplot(len(gauges),2,3, sharex=ins1, sharey=ins1)
-    ins3 = fig.add_subplot(len(gauges),2,5, sharex=ins1, sharey=ins1)
-    ins4 = fig.add_subplot(len(gauges),2,7, sharex=ins1, sharey=ins1)
+    ins2 = fig.add_subplot(len(gauges),2,3, sharex=ins1)
+    ins3 = fig.add_subplot(len(gauges),2,5, sharex=ins1)
+    ins4 = fig.add_subplot(len(gauges),2,7, sharex=ins1)
     # assigning axis name for cumulative rainfall of each rain gauge
     cum1 = fig.add_subplot(len(gauges),2,2)
     cum2 = fig.add_subplot(len(gauges),2,4, sharex=cum1)
