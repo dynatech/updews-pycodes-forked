@@ -40,6 +40,24 @@ def get_db_data(query):
     # disconnect from server
     db.close()
     return data
+
+def insert_db_data(query):
+    # Open database connection
+    db = MySQLdb.connect("192.168.150.247","root","senslope","senslopedb" )
+    
+    # prepare a cursor object using cursor() method
+    cursor = db.cursor()
+    
+    # execute SQL query using execute() method.
+    cursor.execute(query)
+    
+    # Fetch a single row using fetchone() method.
+    data = cursor.fetchone()
+#    print ("Database data : {} ".format(data))
+    db.commit()
+    # disconnect from server
+    db.close()
+    
     
 def main(alert):    
 
@@ -237,6 +255,24 @@ def on_event(conv_event):
             conversation_id = test_groupchat
             cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/upload_image.py --conversation-id {} --image '{}'".format(conversation_id,file)
             os.system(cmd)
-                
+        
+        elif re.search('olivia add quote "[A-Za-z0-9.,!?() ]+" - [A-Za-z0-9.,!?() ]+',received_msg.lower()):
+            quote = received_msg.split('"')
+            quotation = quote[1]
+            author = quote[2].replace(" - ","")
+            author = author.replace("- ","")
+            author = author.replace(" -","")
+            author = author.replace("-","")
+            
+            query = "INSERT INTO `senslopedb`.`olivia_quotes` (`quotations`, `author`) VALUES ('{}', '{}');".format(quotation,author)
+            quote = insert_db_data(query)
+            
+            
+            message = '"{}" -{} --added successfully'.format(quote[1],quote[2])
+            
+            conversation_id = test_groupchat
+            cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/send_message.py --conversation-id {} --message-text '{}'".format(conversation_id,message)
+            os.system(cmd)
+            
 if __name__ == '__main__':
     run_example(receive_messages)
