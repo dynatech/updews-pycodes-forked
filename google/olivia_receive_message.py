@@ -256,7 +256,7 @@ def on_event(conv_event):
             cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/upload_image.py --conversation-id {} --image '{}'".format(conversation_id,file)
             os.system(cmd)
         
-        elif re.search('olivia add quote "[A-Za-z0-9.,!?() ]+" - [A-Za-z0-9.,!?() ]+',received_msg.lower()):
+        elif re.search('olivia add quote "[A-Za-z0-9.,!?() ]+"[-A-Za-z0-9.,!?() ]+',received_msg.lower()):
             quote = received_msg.split('"')
             quotation = quote[1]
             author = quote[2].replace(" - ","")
@@ -265,7 +265,7 @@ def on_event(conv_event):
             author = author.replace("-","")
             
             query = "INSERT INTO `senslopedb`.`olivia_quotes` (`quotations`, `author`) VALUES ('{}', '{}');".format(quotation,author)
-            quote = insert_db_data(query)
+            insert_db_data(query)
             
             
             message = '"{}" -{} --added successfully'.format(quote[1],quote[2])
