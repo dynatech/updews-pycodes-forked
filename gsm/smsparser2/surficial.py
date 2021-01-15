@@ -2,6 +2,7 @@ from datetime import datetime as dt
 from datetime import timedelta as td
 import os
 import re
+import string
 import sys
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
@@ -390,6 +391,8 @@ def observation(text):
     text = re.sub(";", ":", text)
     text = re.sub("\n", " ", text)
     text = text.strip()
+    special_char = string.punctuation.translate(str.maketrans(dict.fromkeys('.,:!')))
+    text = text.translate(str.maketrans(dict.fromkeys(special_char, ' ')))
     print(text)
     # find values in patterns
     obv["meas_type"], text = find_match_in_text(get_obv_type, text)
