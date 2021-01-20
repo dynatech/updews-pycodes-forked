@@ -266,7 +266,8 @@ def process_surficial_observation(sms):
         if SEND_REPLY_TO_COMMUNITY:
             error_msg = messages.iloc[err_val - 1].external_msg
             print('## msg to community:', error_msg, '##')
-            smstables.write_outbox(error_msg, sms.sim_num)
+            if error_msg:
+                smstables.write_outbox(error_msg, sms.sim_num)
 
         return False
 
