@@ -293,14 +293,14 @@ def on_event(conv_event):
             message ="https://trello.com/c/YztIYZq0/8-monitoring-operations-manual-guides-and-links"
             
 #            conversation_id = conv_event.conversation_id    #test_groupchat
-            cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/send_message.py --conversation-id {} --message-text '{}'".format(conversation_id,message)
+            cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/send_message_link.py --conversation-id {} --message-text '{}'".format(conversation_id,message)
             os.system(cmd)
         
         elif re.search('olivia manual',received_msg.lower()):
             message ="https://drive.google.com/file/d/1u5cTNCkfVF--AYMaXiShOCozXE5dg7NW/view"
             
 #            conversation_id = conv_event.conversation_id    #test_groupchat
-            cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/send_message.py --conversation-id {} --message-text '{}'".format(conversation_id,message)
+            cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/send_message_link.py --conversation-id {} --message-text '{}'".format(conversation_id,message)
             os.system(cmd)
             
             
