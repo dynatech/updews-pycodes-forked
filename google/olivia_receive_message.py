@@ -128,6 +128,7 @@ def send_hangouts(OutputFP, alert):
 
 
 async def receive_messages(client, args):
+    global user_list
     print('loading conversation list...')
     user_list, conv_list = (
         await hangups.build_user_conversation_list(client)
@@ -142,20 +143,22 @@ async def receive_messages(client, args):
             print ("error")
 
 def on_event(conv_event):
+    global user_list
     if isinstance(conv_event, hangups.ChatMessageEvent):
         print('received chat message: "{}"'.format(conv_event.text))
         received_msg = conv_event.text
         test_groupchat='UgwcSTTEx1yRS0DrYVN4AaABAQ'
         brain = 'UgwySAbzw-agrDF6QAB4AaABAagBp5i4CQ'
-        if re.search("valid",received_msg.lower()):
-            print('send')
+        if re.search("valid",received_msg.lower()):          
+            message = "Thanks {}".format(user_list.get_user(conv_event.user_id).full_name)
+            cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/send_message.py --conversation-id {} --message-text '{}'".format(conversation_id,message)
+            os.system(cmd)
             
-#            message = "nice!"
             query = "SELECT quotations,author FROM senslopedb.olivia_quotes order by rand() limit 1"
             quote = get_db_data(query)
             message = '"{}" -{}'.format(quote[0],quote[1])
             
-            conversation_id = test_groupchat
+            conversation_id = conv_event.conversation_id    #test_groupchat
             cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/send_message.py --conversation-id {} --message-text '{}'".format(conversation_id,message)
             os.system(cmd)
             
@@ -163,7 +166,7 @@ def on_event(conv_event):
             alert_id = received_msg.split(" ")[2]
             message = "wait..."
             
-            conversation_id = test_groupchat
+            conversation_id = conv_event.conversation_id    #test_groupchat
             cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/send_message.py --conversation-id {} --message-text '{}'".format(conversation_id,message)
             os.system(cmd)
             
@@ -201,7 +204,7 @@ def on_event(conv_event):
             except:
                 message = "error no alert {}".format(alert_id)
             
-                conversation_id = test_groupchat
+                conversation_id = conv_event.conversation_id    #test_groupchat
                 cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/send_message.py --conversation-id {} --message-text '{}'".format(conversation_id,message)
                 os.system(cmd)
         
@@ -223,7 +226,7 @@ def on_event(conv_event):
             cur_alert = cur_alert.groupby("site_code").first().reset_index()
             message = "{} alerts".format(len(cur_alert))
         
-            conversation_id = test_groupchat
+            conversation_id = conv_event.conversation_id    #test_groupchat
             cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/send_message.py --conversation-id {} --message-text '{}'".format(conversation_id,message)
             os.system(cmd)
             
@@ -235,16 +238,20 @@ def on_event(conv_event):
                         message = "{} : {}-{} {}".format(cur_alert.site_code[i],cur_alert.alert_symbol[i],cur_alert.trigger_list[i], cur_alert.stat[i])
                     
                     print(message)
-                    conversation_id = test_groupchat
+                    conversation_id = conv_event.conversation_id    #test_groupchat
                     cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/send_message.py --conversation-id {} --message-text '{}'".format(conversation_id,message)
                     os.system(cmd)
                     
         elif re.search("hi olivia",received_msg.lower()):
+            message = "Hello {}".format(user_list.get_user(conv_event.user_id).full_name)
+            cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/send_message.py --conversation-id {} --message-text '{}'".format(conversation_id,message)
+            os.system(cmd)
+            
             query = "SELECT quotations,author FROM senslopedb.olivia_quotes order by rand() limit 1"
             quote = get_db_data(query)
             message = '"{}" -{}'.format(quote[0],quote[1])
             
-            conversation_id = test_groupchat
+            conversation_id = conv_event.conversation_id    #test_groupchat
             cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/send_message.py --conversation-id {} --message-text '{}'".format(conversation_id,message)
             os.system(cmd)
         
@@ -252,13 +259,15 @@ def on_event(conv_event):
             
             file="/home/sensordev/sdteambranch/google/olivia_help.jpg"
 #            print(file)
-            conversation_id = test_groupchat
+            conversation_id = conv_event.conversation_id    #test_groupchat
             cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/upload_image.py --conversation-id {} --image '{}'".format(conversation_id,file)
             os.system(cmd)
         
         elif re.search('olivia add quote "[A-Za-z0-9.,!?() ]+"[-A-Za-z0-9.,!?() ]+',received_msg.lower()):
             quote = received_msg.split('"')
-            quotation = quote[1]
+            quotation = quote[1].replace("'","")
+            quotation = quotation.replace('"',"")
+            
             author = quote[2].replace(" - ","")
             author = author.replace("- ","")
             author = author.replace(" -","")
@@ -268,11 +277,26 @@ def on_event(conv_event):
             insert_db_data(query)
             
             
-            message = '"{}" -{} --added successfully'.format(quote[1],quote[2])
+            message = '"{}" -{} --added successfully'.format(quotation, author)
             
-            conversation_id = test_groupchat
+            conversation_id = conv_event.conversation_id    #test_groupchat
             cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/send_message.py --conversation-id {} --message-text '{}'".format(conversation_id,message)
             os.system(cmd)
+        
+        elif re.search('olivia link',received_msg.lower()):
+            message ="https://trello.com/c/YztIYZq0/8-monitoring-operations-manual-guides-and-links"
+            
+            conversation_id = conv_event.conversation_id    #test_groupchat
+            cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/send_message.py --conversation-id {} --message-text '{}'".format(conversation_id,message)
+            os.system(cmd)
+        
+        elif re.search('olivia manual',received_msg.lower()):
+            message ="https://drive.google.com/file/d/1u5cTNCkfVF--AYMaXiShOCozXE5dg7NW/view"
+            
+            conversation_id = conv_event.conversation_id    #test_groupchat
+            cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/send_message.py --conversation-id {} --message-text '{}'".format(conversation_id,message)
+            os.system(cmd)
+            
             
 if __name__ == '__main__':
     run_example(receive_messages)
