@@ -207,13 +207,16 @@ def get_rain_tag(rain_id, from_time, to_time, connection='analysis'):
         dataframe: Rainfall data tag of rain_id from from_time to to_time.
     
     """    
-    
+
+    if to_time == '':
+        to_time = datetime.now()
     query = "select * from rainfall_data_tags "
     query += "where rain_id = {} ".format(rain_id)
-    query += "and ts_start <= {}".format(to_time)
-    query += "and (ts_end is null or ts_end >= {})".format(from_time)
+    query += "and ts_start <= '{}' ".format(to_time)
+    query += "and (ts_end is null or ts_end >= '{}')".format(from_time)
+    print(query)
     df = db.df_read(query, connection=connection)
-    if df:
+    if df is not None:
         df.loc[df.ts_end.isnull(), 'ts_end'] = df.loc[df.ts_end.isnull(), 'ts_start'].apply(lambda x: pd.to_datetime(x) + timedelta(1))
     else:
         df = pd.DataFrame()
