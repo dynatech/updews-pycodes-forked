@@ -6,6 +6,7 @@ import sys
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import dynadb.db as db
+import volatile.memory as mem
 
 
 def timeline(year, quarter):
@@ -79,16 +80,16 @@ def release_time(date_time):
 def routine_sched(mysql=False):
     if mysql:
         query  = "select * from "
-        query += "	(select * from commons_db.sites "
+        query += "	(select * from sites "
         query += "    where active = 1 "
         query += "    ) sites "
         query += "inner join "
-        query += "	commons_db.seasons seas "
+        query += "	seasons seas "
         query += "on sites.season = seas.season_group_id "
         query += "inner join "
-        query += "	commons_db.routine_schedules "
+        query += "	routine_schedules "
         query += "using (sched_group_id)"
-        df = db.df_read(query)
+        df = db.df_read(query, connection='common')
     else:
         df = pd.read_csv('input/routine.csv')
     return df
@@ -96,20 +97,22 @@ def routine_sched(mysql=False):
 
 def get_events(start, end, mysql=False, drop=True):
     if mysql:
+        conn = mem.get('DICT_DB_CONNECTIONS')
         query =  "select site_code, event_id, validity, pub_sym_id, data_ts ts_start, release_time "
-        query += "from commons_db.sites "
-        query += "inner join ewi_db.monitoring_events using(site_id) "
-        query += "left join ewi_db.monitoring_event_alerts using(event_id) "
+        query += "from {common}.sites "
+        query += "inner join {website}.monitoring_events using(site_id) "
+        query += "left join {website}.monitoring_event_alerts using(event_id) "
         query += "left join "
-        query += "	(SELECT * FROM ewi_db.monitoring_releases "
-        query += "	left join ewi_db.monitoring_triggers using(release_id) "
-        query += "	left join ewi_db.internal_alert_symbols using(internal_sym_id) "
+        query += "	(SELECT * FROM {website}.monitoring_releases "
+        query += "	left join {website}.monitoring_triggers using(release_id) "
+        query += "	left join {website}.internal_alert_symbols using(internal_sym_id) "
         query += "    ) as trig "
         query += "using(event_alert_id) "
-        query += "where data_ts between '{}' and '{}' ".format(start-timedelta(hours=0.5), end-timedelta(hours=0.5))
+        query += "where data_ts between '{start}' and '{end}' "
         query += "and pub_sym_id != 1 "
         query += "order by event_id, data_ts"
-        df = db.df_read(query)
+        query = query.format(start=start-timedelta(hours=0.5), end=end-timedelta(hours=0.5), common=conn['common']['schema'], website=conn['website']['schema'])
+        df = db.df_read(query, resource='ops')
     else:
         df = pd.read_csv('input/event.csv')
     if drop:
@@ -120,39 +123,41 @@ def get_events(start, end, mysql=False, drop=True):
 
 def ewi_sent(start, end, mysql=False):
     if mysql:
+        conn = mem.get('DICT_DB_CONNECTIONS')
         query =  "SELECT outbox_id, ts_written, ts_sent, site_code, org_name, "
         query += "fullname, sim_num, send_status, sms_msg FROM "
         query += "	(SELECT outbox_id, ts_written, ts_sent, sim_num, "
         query += "	CONCAT(first_name, ' ', last_name) AS fullname, sms_msg, "
         query += "	send_status, user_id FROM "
-        query += "		comms_db.smsoutbox_users "
+        query += "		{gsm_pi}.smsoutbox_users "
         query += "	INNER JOIN "
-        query += "		comms_db.smsoutbox_user_status "
+        query += "		{gsm_pi}.smsoutbox_user_status "
         query += "	USING (outbox_id) "
         query += "	INNER JOIN "
         query += "		(SELECT * FROM  "
-        query += "			comms_db.user_mobiles "
+        query += "			{gsm_pi}.user_mobiles "
         query += "		INNER JOIN "
-        query += "			comms_db.mobile_numbers "
+        query += "			{gsm_pi}.mobile_numbers "
         query += "		USING (mobile_id) "
         query += "		) mobile "
         query += "	USING (mobile_id) "
         query += "	INNER JOIN "
-        query += "		commons_db.users "
+        query += "		{common}.users "
         query += "	USING (user_id) "
         query += "	) as msg "
         query += "LEFT JOIN "
         query += "	(SELECT * FROM "
-        query += "		commons_db.user_organizations AS org "
+        query += "		{common}.user_organizations AS org "
         query += "	INNER JOIN "
-        query += "		commons_db.sites "
+        query += "		{common}.sites "
         query += "	USING (site_id) "
         query += "	) AS site_org "
         query += "USING (user_id) "
         query += "WHERE sms_msg regexp 'ang alert level' "
-        query += "AND ts_written between '{}' and '{}' ".format(start, end)
+        query += "AND ts_written between '{start}' and '{end}' "
         query += "AND send_status = 5"
-        df = db.df_read(query)
+        query = query.format(start=start, end=end, common=conn['common']['schema'], gsm_pi=conn['gsm_pi']['schema'])
+        df = db.df_read(query, resource='sms_analysis')
     else:
         df = pd.read_csv('input/sent.csv')
     return df
@@ -221,7 +226,6 @@ def ewi_releases(ewi_sched, non_plgu):
 def actual_releases(ewi_sched, sent):
     site_code = ewi_sched['site_code'].values[0]
     set_org_name = ewi_sched['set_org_name'].values[0]
-    # bar has no ewi recipient for blgu
     ts_start = pd.to_datetime(ewi_sched['ts_start'].values[0])
     ts_end = pd.to_datetime(ewi_sched['ts_end'].values[0])
     temp_queued = sent.loc[(sent.ts_written >= ts_start-timedelta(minutes=10)) & (sent.ts_written <= ts_end+timedelta(minutes=100)) & (sent.site_code == site_code), :]
@@ -232,7 +236,7 @@ def actual_releases(ewi_sched, sent):
     return ewi_sched
 
 
-def main(year='', quarter='', start='', end='', mysql=False):
+def main(year='', quarter='', start='', end='', mysql=False, write_csv=True):
     if start == '' and end == '':
         start, end = timeline(year, quarter)
     list_org_name = ['lewc', 'blgu', 'mlgu', 'plgu']
@@ -268,7 +272,8 @@ def main(year='', quarter='', start='', end='', mysql=False):
     all_ewi_sched.loc[~(all_ewi_sched.ts_end >= all_ewi_sched.queued)|(all_ewi_sched.queued.isnull()), 'tot_unsent'] = all_ewi_sched.loc[~(all_ewi_sched.ts_end >= all_ewi_sched.queued), 'min_recipient']
     all_ewi_sched.loc[(all_ewi_sched.ts_end >= all_ewi_sched.queued), 'tot_unsent'] = all_ewi_sched.loc[(all_ewi_sched.ts_end >= all_ewi_sched.queued), 'unsent'].apply(lambda x: len(x))
     all_ewi_sched.loc[:, 'tot_unsent'] = all_ewi_sched.tot_unsent.fillna(0)
-    all_ewi_sched.to_csv('output/sending_status.csv', index=False)
+    if write_csv:
+        all_ewi_sched.to_csv('output/sending_status.csv', index=False)
     
     print("{}% ewi sent".format(100 * (1 - sum(all_ewi_sched.tot_unsent)/sum(all_ewi_sched.min_recipient))))
     print("{}% ewi queud for sending".format(100 * (1 - len(all_ewi_sched.loc[all_ewi_sched.queued.isnull(), :]) / len(all_ewi_sched))))
