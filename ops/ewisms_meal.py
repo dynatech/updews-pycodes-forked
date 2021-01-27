@@ -195,8 +195,6 @@ def event_releases(event, ewi_sched, list_org_name):
     extended_sched.loc[:, 'site_code'] = site_code
     extended_sched.loc[:, 'set_org_name'] = [set(list_org_name[0:3])] * len(extended_sched)
     event_sched = event_sched.append(extended_sched, ignore_index=True, sort=False)
-    # no blgu in msl and msu
-    event_sched.loc[event_sched.site_code.isin(['msl', 'msu']), 'set_org_name'] = event_sched.loc[event_sched.site_code.isin(['msl', 'msu']), 'set_org_name'].apply(lambda x: x - {'blgu'})
     #no routine if end of validity is same day before 12NN
     if validity.hour in [0, 4, 8] and validity.date() in set(ewi_sched.ts.apply(lambda x: x.date())):
         ewi_sched.loc[ewi_sched.ts == pd.to_datetime(validity.date()), 'set_site_code'] = ewi_sched.loc[ewi_sched.ts == pd.to_datetime(validity.date()), ['set_site_code']].apply(lambda x: x - set([site_code]))
@@ -224,14 +222,13 @@ def actual_releases(ewi_sched, sent):
     site_code = ewi_sched['site_code'].values[0]
     set_org_name = ewi_sched['set_org_name'].values[0]
     # bar has no ewi recipient for blgu
-    if site_code == 'bar':
-        set_org_name -= {'blgu'}
-    ts_start = ewi_sched['ts_start'].values[0]
+    ts_start = pd.to_datetime(ewi_sched['ts_start'].values[0])
     ts_end = pd.to_datetime(ewi_sched['ts_end'].values[0])
-    temp_sent = sent.loc[(sent.ts_written >= ts_start) & (sent.ts_written <= ts_end+timedelta(minutes=100)) & (sent.site_code == site_code), :]
-    ewi_sched.loc[:, 'unsent'] = [set_org_name - set(temp_sent.org_name)]
-    if len(temp_sent) != 0:
-        ewi_sched.loc[:, 'sent'] = min(temp_sent.ts_written)
+    temp_queued = sent.loc[(sent.ts_written >= ts_start-timedelta(minutes=10)) & (sent.ts_written <= ts_end+timedelta(minutes=100)) & (sent.site_code == site_code), :]
+    ewi_sched.loc[:, 'unsent'] = [set_org_name - set(temp_queued.org_name)]
+    if len(temp_queued) != 0:
+        ewi_sched.loc[:, 'queued'] = min(temp_queued.ts_written)
+        ewi_sched.loc[:, 'actual_sent'] = min(temp_queued.ts_sent)
     return ewi_sched
 
 
@@ -264,14 +261,17 @@ def main(year='', quarter='', start='', end='', mysql=False):
     sent.loc[: ,'ts_written'] = sent.ts_written.apply(lambda x: pd.to_datetime(x))
     ewi_sched_grp = all_ewi_sched.reset_index().groupby('index', as_index=False)
     all_ewi_sched = ewi_sched_grp.apply(actual_releases, sent=sent).reset_index(drop=True)
+    # no blgu in bar, msl and msu
+    all_ewi_sched.loc[all_ewi_sched.site_code.isin(['bar', 'msl', 'msu']), 'set_org_name'] = all_ewi_sched.loc[all_ewi_sched.site_code.isin(['bar', 'msl', 'msu']), 'set_org_name'].apply(lambda x: x - {'blgu'})
+
     all_ewi_sched.loc[:, 'min_recipient'] = all_ewi_sched.set_org_name.apply(lambda x: len(x))
-    all_ewi_sched.loc[~(all_ewi_sched.ts_end >= all_ewi_sched.sent), 'tot_unsent'] = all_ewi_sched.loc[~(all_ewi_sched.ts_end >= all_ewi_sched.sent), 'min_recipient']
-    all_ewi_sched.loc[(all_ewi_sched.ts_end >= all_ewi_sched.sent), 'tot_unsent'] = all_ewi_sched.loc[(all_ewi_sched.ts_end >= all_ewi_sched.sent), 'unsent'].apply(lambda x: len(x))
+    all_ewi_sched.loc[~(all_ewi_sched.ts_end >= all_ewi_sched.queued)|(all_ewi_sched.queued.isnull()), 'tot_unsent'] = all_ewi_sched.loc[~(all_ewi_sched.ts_end >= all_ewi_sched.queued), 'min_recipient']
+    all_ewi_sched.loc[(all_ewi_sched.ts_end >= all_ewi_sched.queued), 'tot_unsent'] = all_ewi_sched.loc[(all_ewi_sched.ts_end >= all_ewi_sched.queued), 'unsent'].apply(lambda x: len(x))
     all_ewi_sched.loc[:, 'tot_unsent'] = all_ewi_sched.tot_unsent.fillna(0)
     all_ewi_sched.to_csv('output/sending_status.csv', index=False)
     
     print("{}% ewi sent".format(100 * (1 - sum(all_ewi_sched.tot_unsent)/sum(all_ewi_sched.min_recipient))))
-    print("{}% ewi queud for sending".format(100 * (1 - len(all_ewi_sched.loc[all_ewi_sched.sent.isnull(), :]) / len(all_ewi_sched))))
+    print("{}% ewi queud for sending".format(100 * (1 - len(all_ewi_sched.loc[all_ewi_sched.queued.isnull(), :]) / len(all_ewi_sched))))
 
     return all_ewi_sched
 

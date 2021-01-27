@@ -90,6 +90,7 @@ def main(start, end, update_existing=True, update_dtr=True, recompute=True, mysq
         writer = pd.ExcelWriter('output/monitoring_ipr.xlsx')
         for name in monitoring_ipr.keys():
             indiv_ipr = monitoring_ipr[name]
+            indiv_ipr = indiv_ipr.loc[:, ~indiv_ipr.columns.str.contains('Unnamed:', na=False)]
             for shift_type in ['MT', 'CT']:
                 curr_shift = shift_sched.loc[shift_sched['IOMP-{}'.format(shift_type)] == name, :]
                 shift_list = set(curr_shift.ts) - set(map(pd.to_datetime, indiv_ipr.columns[5:]))
