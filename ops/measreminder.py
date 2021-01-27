@@ -28,7 +28,7 @@ def check_sending(shift_release, inbox_tag, outbox_tag):
 
 def system_downtime(mysql=False):
     if mysql:
-        query = 'SELECT * FROM system_down'
+        query = 'SELECT * FROM system_down WHERE reported = 1'
         df = db.df_read(query=query, resource="sensor_data")
     else:
         df = pd.read_csv('input/downtime.csv')
