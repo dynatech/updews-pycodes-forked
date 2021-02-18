@@ -316,7 +316,7 @@ def process_ack_to_alert(sms):
     try:
         alert_status = re.search("(in)*valid(ating)*", remarks,
                                  re.IGNORECASE).group(0)
-        remarks = remarks.replace(alert_status, "").strip()
+        remarks = remarks.replace(alert_status, "", 1).strip()
     except AttributeError:
         errmsg = ("Please put in the alert status validity."
                   " i.e (VALID, INVALID, VALIDATING)")
