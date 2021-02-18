@@ -647,13 +647,17 @@ def process_gateway_msg(sms):
             # format is
             # <router name>,<rssi value>,...
             query = ("INSERT IGNORE INTO router_rssi "
-                "(ts, logger_id, rssi_val) VALUES ")
-            tuples = re.findall("[A-Z]+,\d+",rssi_string)
+                "(ts, logger_id, rssi_val, battery) VALUES ")
+            tuples = re.findall("[A-Z]+,\d+,\d*\.\d+|[A-Z]+,\d+,",rssi_string)
             count = 0
             for item in tuples:
                 try:
-                    query += "('%s',%d,%s)," % (timestamp,
-                        routers[item.split(',')[0].lower()], item.split(',')[1])
+                    if item.split(',')[2] != '':
+                        query += "('%s','%d','%s','%s')," % (timestamp,
+                            routers[item.split(',')[0].lower()], item.split(',')[1], item.split(',')[2])
+                    else:
+                        query += "('%s','%d','%s',NULL)," % (timestamp,
+                            routers[item.split(',')[0].lower()], item.split(',')[1])
                     count += 1
                 except KeyError:
                     print ('Key error for', item)

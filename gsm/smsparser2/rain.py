@@ -212,9 +212,10 @@ def v3(sms):
         txtdatetime = txtdatetime.strftime('%Y-%m-%d %H:%M:%S')
         
         # data = items.group(3)
+        temperature = line.split(",")[5]
         rain = line.split(",")[6]
         print (line)
-
+        battery1 = line.split(",")[7]
         csq = line.split(",")[8]
 
 
@@ -235,7 +236,7 @@ def v3(sms):
         #     "VALUES ('%s',%s,%s)") % (msgtable.lower(),txtdatetime,rain,csq)
         # print query   
         if csq != 'NULL':
-            df_data = [{'ts':txtdatetime,'rain':rain,'csq':csq}]
+            df_data = [{'ts':txtdatetime,'rain':rain,'temperature':temperature,'battery1':battery1,'csq':csq}]
         else:
            df_data = [{'ts':txtdatetime,'rain':rain}]
 
@@ -286,9 +287,9 @@ def v5(sms):
         logger_model = check_logger_model(logger_name)
         print (logger_name,logger_model)
         #if logger_model in [23,24,25,26]:
-        msgtable = logger_name
+#        msgtable = logger_name
 #        else:
-#            msgtable = line.split(",")[0][:-1]+'G'
+        msgtable = line.split(",")[0][:-1]+'G'
         # msgtable = check_name_of_number(sender)
         msgdatetime = line.split(',')[5]
 
