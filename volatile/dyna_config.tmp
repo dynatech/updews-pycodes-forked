@@ -105,8 +105,8 @@ rt_window_length=10.					;length of real-time monitoring window, in days
 roll_window_length=3.					;length of rolling/moving window operations in days
 print_plot = False
 print_summary_alert = False
-noah_gauges = http://weather.asti.dost.gov.ph/web-api/index.php/api/devices
-noah_data = http://weather.asti.dost.gov.ph/web-api/index.php/api/data
+noah_gauges = http://philsensors.asti.dost.gov.ph/api/station
+noah_data = http://philsensors.asti.dost.gov.ph/api/api/data
 noah_user = phivolcs.ggrdd
 noah_password = PhiVolcs0117
 
