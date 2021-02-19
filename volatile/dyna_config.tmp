@@ -106,7 +106,7 @@ roll_window_length=3.					;length of rolling/moving window operations in days
 print_plot = False
 print_summary_alert = False
 noah_gauges = http://philsensors.asti.dost.gov.ph/api/station
-noah_data = http://philsensors.asti.dost.gov.ph/api/api/data
+noah_data = http://philsensors.asti.dost.gov.ph/api/data
 noah_user = phivolcs.ggrdd
 noah_password = PhiVolcs0117
 
