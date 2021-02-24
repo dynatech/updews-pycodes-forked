@@ -1,73 +1,91 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 import os
+import pandas as pd
 import sys
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
+import dynadb.db as db
 import querydb as qdb
-import publicalerts as pub
+import gsm.gsmserver_dewsl3.sms_data as sms
 
-def site_alerts(curr_trig, ts, release_data_ts):
-    site_id = curr_trig['site_id'].values[0]
 
-    query = "SELECT site_id, stat.trigger_id, trigger_source, alert_level FROM "
-    query += "  (SELECT * FROM alert_status "
-    query += "  WHERE ts_last_retrigger >= '%s' " %(ts - timedelta(1))
-    query += "  ) as stat "
-    query += "INNER JOIN "
-    query += "  (SELECT trigger_id, site_id, trigger_source, alert_level FROM "
-    query += "    (SELECT * FROM operational_triggers "
-    query += "    WHERE site_id = %s " %site_id
-    query += "    ) as op "
-    query += "  INNER JOIN "
-    query += "    (SELECT trigger_sym_id, trigger_source, alert_level FROM "
-    query += "      operational_trigger_symbols AS trig_sym "
-    query += "    INNER JOIN "
-    query += "      trigger_hierarchies AS trig "
-    query += "    ON trig.source_id = trig_sym.source_id "
-    query += "    ) as sym "
-    query += "  ON op.trigger_sym_id = sym.trigger_sym_id "
-    query += "  ) as sub "
-    query += "ON stat.trigger_id = sub.trigger_id"
-    sent_alert = qdb.get_db_dataframe(query)
+def release_time(date_time):
+    """Rounds time to 4/8/12 AM/PM.
 
-    query = "SELECT * FROM alert_status"
-    query += " WHERE trigger_id in (%s)" %(','.join(map(lambda x: str(x), \
-                                         set(curr_trig['trigger_id'].values))))
-    written = qdb.get_db_dataframe(query)
+    Args:
+        date_time (datetime): Timestamp to be rounded off. 04:00 to 07:30 is
+        rounded off to 8:00, 08:00 to 11:30 to 12:00, etc.
 
-    site_curr_trig = curr_trig[~curr_trig.trigger_id.isin(written.trigger_id)]
-    site_curr_trig = site_curr_trig.sort_values('alert_level', ascending=False)
-    site_curr_trig = site_curr_trig.drop_duplicates('trigger_source')
+    Returns:
+        datetime: Timestamp with time rounded off to 4/8/12 AM/PM.
 
+    """
+
+    time_hour = int(date_time.strftime('%H'))
+
+    quotient = int(time_hour / 4)
+
+    if quotient == 5:
+        date_time = datetime.combine(date_time.date()+timedelta(1), time(0,0))
+    else:
+        date_time = datetime.combine(date_time.date(), time((quotient+1)*4,0))
+            
+    return date_time
+
+def round_data_ts(date_time):
+    """Rounds time to HH:00 or HH:30.
+
+    Args:
+        date_time (datetime): Timestamp to be rounded off. Rounds to HH:00
+        if before HH:30, else rounds to HH:30.
+
+    Returns:
+        datetime: Timestamp with time rounded off to HH:00 or HH:30.
+
+    """
+
+    hour = date_time.hour
+    minute = date_time.minute
+
+    if minute < 30:
+        minute = 0
+    else:
+        minute = 30
+
+    date_time = datetime.combine(date_time.date(), time(hour, minute))
+    
+    return date_time
+
+def site_alerts(curr_trig, ts, release_data_ts, connection):
+    df = curr_trig.drop_duplicates(['site_id', 'trigger_source', 'alert_level'])
+    site_id = df['site_id'].values[0]
+    
+    query = "SELECT trigger_id, MAX(ts_last_retrigger) ts_last_retrigger FROM alert_status"
+    query += " WHERE trigger_id IN (%s)" %(','.join(map(lambda x: str(x), \
+                                         set(df['trigger_id'].values))))
+    query += " GROUP BY trigger_id"
+    written = db.df_read(query, connection=connection)
+
+    site_curr_trig = pd.merge(df, written, how='left')
+    site_curr_trig = site_curr_trig.loc[(site_curr_trig.ts_last_retrigger+timedelta(1) < site_curr_trig.ts_updated) | (site_curr_trig.ts_last_retrigger.isnull()), :]
+    
     if len(site_curr_trig) == 0:
         qdb.print_out('no new trigger for site_id %s' %site_id)
         return
-
-    if len(sent_alert) == 0:
-        pass
-    elif max(site_curr_trig.alert_level) <= max(sent_alert.alert_level):
-        if max(sent_alert.alert_level) > 1 or \
-                    (max(site_curr_trig.alert_level) == 1 and \
-                    'surficial' not in site_curr_trig['trigger_source'].values):
-            qdb.print_out('no higher trigger')
-            return
-        site_curr_trig = site_curr_trig[site_curr_trig.trigger_source == 'surficial']
-    else:
-        site_curr_trig = site_curr_trig[site_curr_trig.alert_level >
-                max(sent_alert.alert_level)]
         
-    alert_status = site_curr_trig[['ts_last_retrigger', 'trigger_id']]                
-    alert_status = alert_status.rename(columns = {'ts': 
+    alert_status = site_curr_trig[['ts_updated', 'trigger_id']]                
+    alert_status = alert_status.rename(columns = {'ts_updated': 
             'ts_last_retrigger'})
     alert_status['ts_set'] = datetime.now()
-    qdb.push_db_dataframe(alert_status, 'alert_status', index=False)
+    data_table = sms.DataTable('alert_status', alert_status)
+    db.df_write(data_table, connection=connection)
 
-def main():
+def main(connection='analysis'):
     start_time = datetime.now()
     qdb.print_out(start_time)
     
-    ts = pub.round_data_ts(start_time)
-    release_data_ts = pub.release_time(ts) - timedelta(hours=0.5)
+    ts = round_data_ts(start_time)
+    release_data_ts = release_time(ts) - timedelta(hours=0.5)
     
     if qdb.does_table_exist('operational_triggers') == False:
         qdb.create_operational_triggers()
@@ -76,7 +94,7 @@ def main():
     query += "alert_level, ts_updated FROM "
     query += "  (SELECT * FROM operational_triggers "
     query += "  WHERE ts <= '%s' " %ts
-    query += "  AND ts_updated >= '%s' " %(ts - timedelta(1))
+    query += "  AND ts_updated >= '%s' " %(ts - timedelta(2))
     query += "  ) AS op "
     query += "INNER JOIN " 
     query += "  (SELECT trigger_sym_id, alert_level, trigger_source FROM "
@@ -84,13 +102,13 @@ def main():
     query += "    WHERE alert_level > 0 "
     query += "    ) AS trig_sym "
     query += "  INNER JOIN "
-    query += "    trigger_hierarchies AS trig "
-    query += "  ON trig_sym.source_id = trig.source_id "
+    query += "    (SELECT * FROM trigger_hierarchies WHERE trigger_source not in ('moms', 'on demand')) AS trig "
+    query += "  USING (source_id) "
     query += "  ) AS sym "
-    query += "ON op.trigger_sym_id = sym.trigger_sym_id "
+    query += "USING (trigger_sym_id) "
     query += "ORDER BY ts_updated DESC"
-    curr_trig = qdb.get_db_dataframe(query)
-
+    curr_trig = db.df_read(query, connection=connection)
+    
     if len(curr_trig) == 0:
         qdb.print_out('no new trigger')
         return
@@ -98,9 +116,8 @@ def main():
     if not qdb.does_table_exist('alert_status'):
         qdb.create_alert_status()
 
-    curr_trig = curr_trig.rename(columns = {"ts_updated": "ts_last_retrigger"})
     site_curr_trig = curr_trig.groupby('site_id', as_index=False)
-    site_curr_trig.apply(site_alerts, ts=ts, release_data_ts=release_data_ts)
+    site_curr_trig.apply(site_alerts, ts=ts, release_data_ts=release_data_ts, connection=connection)
 
 ################################################################################
 

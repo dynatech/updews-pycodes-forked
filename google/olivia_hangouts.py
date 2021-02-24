@@ -10,18 +10,20 @@ import analysis.querydb as qdb
 import pandas as pd
 from datetime import timedelta as td
 import os
+import shutil
 import fb.xyzrealtimeplot as xyz
 import analysis.subsurface.filterdata as fsd
 import analysis.rainfall.rainfall as rain
+import analysis.surficial.markeralerts as marker
 
 import analysis.subsurface.plotterlib as plotter
 import analysis.subsurface.proc as proc
 import analysis.subsurface.rtwindow as rtw
-
+import volatile.memory as mem
 import dynadb.db as db
 
 def main(alert):    
-
+    site_id = alert.site_id
     site = alert.site_code
     ts = alert.ts_last_retrigger
     source_id = alert.source_id
@@ -65,6 +67,32 @@ def main(alert):
             
     elif source_id == 3:
         rain.main(site_code = site, end=ts, write_to_db = False, print_plot = True,output_path = OutputFP)
+    
+    elif source_id ==2:
+        print("marker")
+        query_alert = ("SELECT marker_id FROM marker_alerts "
+                       "where ts = '{}' and alert_level >0".format(ts))
+        dfalert=db.df_read(query_alert,connection = "analysis")
+        
+        
+        for m_id in dfalert.marker_id:
+            marker.generate_surficial_alert(site_id=site_id, ts = ts, marker_id=m_id)
+        
+
+
+        #### Open config files
+        sc = mem.get('server_config')
+        output_path = os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                           '../..'))
+        
+        plot_path_meas = output_path+sc['fileio']['surficial_meas_path']
+        plot_path_trend = output_path+sc['fileio']['surficial_trending_path']
+        
+        for img in os.listdir(plot_path_meas):    
+            shutil.move("{}/{}".format(plot_path_meas,img), OutputFP)
+        
+        for img in os.listdir(plot_path_trend):    
+            shutil.move("{}/{}".format(plot_path_trend,img), OutputFP)
         
     return OutputFP
 
@@ -98,13 +126,13 @@ if __name__ == '__main__':
             "(SELECT * FROM alert_status WHERE "
             "ts_set >= NOW()-interval 5 minute "
             "and ts_ack is NULL"
-#            "stat_id=6790 "
+#            "stat_id=4071 "
             ") AS stat "
             "INNER JOIN "
             "operational_triggers AS op "
             "ON stat.trigger_id = op.trigger_id) AS trig "
             "INNER JOIN "
-            "(Select * from operational_trigger_symbols  where source_id in (1,3)) AS sym "
+            "(Select * from operational_trigger_symbols  where source_id in (1,2,3)) AS sym "
             "ON trig.trigger_sym_id = sym.trigger_sym_id "
             "inner join trigger_hierarchies as th "
             "on th.source_id=sym.source_id) AS alert "

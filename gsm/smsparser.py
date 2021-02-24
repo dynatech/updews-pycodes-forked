@@ -420,7 +420,7 @@ def parse_all_messages(args,allmsgs=[]):
             elif re.search("\*FF",sms.msg) or re.search("PZ\*",sms.msg):
                 is_msg_proc_success = process_piezometer(sms)
             # elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*\d+T?$",sms.msg):
-            elif re.search("[A-Z]{4}DUE\*[A-F0-9]+\*.*",sms.msg):
+            elif re.search('[A-Z(?!&"%)]{4}DUE\*[A-F0-9(?!&"%)]+\*.*',sms.msg):
                 df_data = subsurface.v1(sms)
                 if df_data:
                     print (df_data[0].data ,  df_data[1].data)
@@ -435,7 +435,7 @@ def parse_all_messages(args,allmsgs=[]):
                     print ('>> Value Error')
                     is_msg_proc_success = False
               
-            elif re.search("^[A-Z]{4,5}\*[xyabcdXYABCD]\*[A-F0-9]+\*[0-9]+T?$",
+            elif re.search('^[A-Z(?!&"%)]{4,5}\*[xyabcdXYABCD]\*[A-F0-9(?!&"%)]+\*[0-9]+T?$',
                 sms.msg):
                 try:
                     df_data = subsurface.v2(sms)
@@ -465,7 +465,7 @@ def parse_all_messages(args,allmsgs=[]):
                     print (">> Error writing data to DB")
                     is_msg_proc_success = False
 
-            elif re.search("^[A-Z]{5}\*[A-Za-z0-9/+]{2}\*[A-Za-z0-9/+]+\*[0-9]{12}$",
+            elif re.search('^[A-Z(?!&"%)]{4,5}\*[A-Za-z0-9/+]{2}\*[A-Za-z0-9/+(?!&"%)]+\*[0-9]{12}$',
                 sms.msg):
                 try:
                     df_data = subsurface.b64Parser(sms)
@@ -492,7 +492,7 @@ def parse_all_messages(args,allmsgs=[]):
                     print (">> Error writing data to DB")
                     is_msg_proc_success = False
                     
-            elif re.search("[A-Z]{4}\*[A-F0-9]+\*[0-9]+$",sms.msg):
+            elif re.search('[A-Z(?!&"%)]{4}\*[A-F0-9(?!&"%)]+\*[0-9]+$',sms.msg):
                 df_data =subsurface.v1(sms)
                 if df_data:
                     print (df_data[0].data ,  df_data[1].data)
@@ -772,8 +772,8 @@ def main():
     print ('SMS Parser')
     args = get_arguments()
 
-    if not args.bypasslock:
-        lockscript.get_lock('smsparser %s' % args.table)
+#    if not args.bypasslock:
+#        lockscript.get_lock('smsparser %s' % args.table)
 
     allmsgs = smstables.get_inbox(host=args.dbhost, table=args.table,
         read_status=args.status, limit=args.messagelimit)

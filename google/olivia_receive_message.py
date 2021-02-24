@@ -8,6 +8,7 @@ import hangups
 import os
 import re
 from common import run_example
+import shutil
 
 import analysis.querydb as qdb
 import pandas as pd
@@ -15,13 +16,15 @@ from datetime import timedelta as td
 import fb.xyzrealtimeplot as xyz
 
 import analysis.rainfall.rainfall as rain
-
+import analysis.surficial.markeralerts as marker
 import analysis.subsurface.plotterlib as plotter
 import analysis.subsurface.proc as proc
 import analysis.subsurface.rtwindow as rtw
 
+import volatile.memory as mem
 import dynadb.db as db
 import MySQLdb
+import subprocess
 
 def get_db_data(query):
     # Open database connection
@@ -60,7 +63,7 @@ def insert_db_data(query):
     
     
 def main(alert):    
-
+    site_id = alert.site_id
     site = alert.site_code
     ts = alert.ts_last_retrigger
     source_id = alert.source_id
@@ -104,7 +107,32 @@ def main(alert):
             
     elif source_id == 3:
         rain.main(site_code = site, end=ts, write_to_db = False, print_plot = True,output_path = OutputFP)
+    
+    elif source_id ==2:
+        print("marker")
+        query_alert = ("SELECT marker_id FROM marker_alerts "
+                       "where ts = '{}' and alert_level >0".format(ts))
+        dfalert=db.df_read(query_alert,connection = "analysis")
         
+        
+        for m_id in dfalert.marker_id:
+            marker.generate_surficial_alert(site_id=site_id, ts = ts, marker_id=m_id)
+        
+
+
+        #### Open config files
+        sc = mem.get('server_config')
+        output_path = os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                           '../..'))
+        
+        plot_path_meas = output_path+sc['fileio']['surficial_meas_path']
+        plot_path_trend = output_path+sc['fileio']['surficial_trending_path']
+        
+        for img in os.listdir(plot_path_meas):    
+            shutil.move("{}/{}".format(plot_path_meas,img), OutputFP)
+        
+        for img in os.listdir(plot_path_trend):    
+            shutil.move("{}/{}".format(plot_path_trend,img), OutputFP)
     return OutputFP
 
 def send_hangouts(OutputFP, alert):
@@ -188,7 +216,7 @@ def on_event(conv_event):
                     "operational_triggers AS op "
                     "ON stat.trigger_id = op.trigger_id) AS trig "
                     "INNER JOIN "
-                    "(Select * from operational_trigger_symbols  where source_id in (1,3)) AS sym "
+                    "(Select * from operational_trigger_symbols  where source_id in (1,2,3)) AS sym "
                     "ON trig.trigger_sym_id = sym.trigger_sym_id "
                     "inner join trigger_hierarchies as th "
                     "on th.source_id=sym.source_id) AS alert "
@@ -269,7 +297,13 @@ def on_event(conv_event):
             cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/upload_image.py --conversation-id {} --image '{}'".format(conversation_id,file)
             os.system(cmd)
         
-        elif re.search('olivia add quote "[A-Za-z0-9.,!?() ]+"[-A-Za-z0-9.,!?() ]+',received_msg.lower()):
+        elif (re.search("""olivia add quote "[A-Za-z0-9.,!?()'’ ]+"[-A-Za-z0-9.,!?() ]+""",received_msg.lower()) or
+             re.search("""olivia add quote “[A-Za-z0-9.,!?()'’ ]+”[-A-Za-z0-9.,!?() ]+""",received_msg.lower()) ):
+            
+            received_msg = received_msg.replace('“','"')
+            received_msg = received_msg.replace('”','"')
+            received_msg = received_msg.replace("’","'")
+            
             quote = received_msg.split('"')
             quotation = quote[1].replace("'","")
             quotation = quotation.replace('"',"")
@@ -303,6 +337,24 @@ def on_event(conv_event):
             cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/send_message_link.py --conversation-id {} --message-text '{}'".format(conversation_id,message)
             os.system(cmd)
             
+        elif re.search('olivia ping',received_msg.lower()):
+            try:
+                ipadd = received_msg.split(" ")[2]
+                
+                result = os.system("ping -c 1 {}".format(ipadd))
+                if result == 0:
+                    ping_response = subprocess.Popen(["ping", ipadd, "-c", '1'], stdout=subprocess.PIPE).stdout.read().decode("utf-8")
+                    if (re.search('unreachable',ping_response)):
+                        message = "Unreachable network in {}".format(ipadd)
+                    else:
+                        message = "Ok network in {}".format(ipadd)
+                else:
+                    message = "NOT ok network in {}".format(ipadd)
+            except:
+                message = "error input"
+            cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/send_message.py --conversation-id {} --message-text '{}'".format(conversation_id,message)
+            os.system(cmd) 																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																												   
             
+
 if __name__ == '__main__':
     run_example(receive_messages)
