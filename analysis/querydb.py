@@ -327,7 +327,7 @@ def get_raw_accel_data(tsm_id='',tsm_name = "", from_time = "", to_time = "",
     """
 
     #memcached
-    memc = memcache.Client(['127.0.0.1:11211'], debug=1)
+    memc = memcache.Client(['192.168.150.247:11211'], debug=1)
     
     tsm_details = memc.get('DF_TSM_SENSORS')
     accelerometers = memc.get('DF_ACCELEROMETERS')

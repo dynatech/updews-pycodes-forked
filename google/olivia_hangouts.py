@@ -69,14 +69,14 @@ def main(alert):
         rain.main(site_code = site, end=ts, write_to_db = False, print_plot = True,output_path = OutputFP)
     
     elif source_id ==2:
-        print("marker")
-        query_alert = ("SELECT marker_id FROM marker_alerts "
-                       "where ts = '{}' and alert_level >0".format(ts))
-        dfalert=db.df_read(query_alert,connection = "analysis")
+#        print("marker")
+#        query_alert = ("SELECT marker_id FROM marker_alerts "
+#                       "where ts = '{}' and alert_level >0".format(ts))
+#        dfalert=db.df_read(query_alert,connection = "analysis")
         
         
-        for m_id in dfalert.marker_id:
-            marker.generate_surficial_alert(site_id=site_id, ts = ts, marker_id=m_id)
+        #for m_id in dfalert.marker_id:
+        marker.generate_surficial_alert(site_id=site_id, ts = ts)#, marker_id=m_id)
         
 
 

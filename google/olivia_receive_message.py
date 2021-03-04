@@ -12,6 +12,7 @@ import shutil
 
 import analysis.querydb as qdb
 import pandas as pd
+from datetime import datetime as dt
 from datetime import timedelta as td
 import fb.xyzrealtimeplot as xyz
 
@@ -109,14 +110,14 @@ def main(alert):
         rain.main(site_code = site, end=ts, write_to_db = False, print_plot = True,output_path = OutputFP)
     
     elif source_id ==2:
-        print("marker")
-        query_alert = ("SELECT marker_id FROM marker_alerts "
-                       "where ts = '{}' and alert_level >0".format(ts))
-        dfalert=db.df_read(query_alert,connection = "analysis")
+#        print("marker")
+#        query_alert = ("SELECT marker_id FROM marker_alerts "
+#                       "where ts = '{}' and alert_level >0".format(ts))
+#        dfalert=db.df_read(query_alert,connection = "analysis")
         
         
-        for m_id in dfalert.marker_id:
-            marker.generate_surficial_alert(site_id=site_id, ts = ts, marker_id=m_id)
+#        for m_id in dfalert.marker_id:
+        marker.generate_surficial_alert(site_id=site_id, ts = ts)#, marker_id=m_id)
         
 
 
@@ -353,8 +354,60 @@ def on_event(conv_event):
             except:
                 message = "error input"
             cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/send_message.py --conversation-id {} --message-text '{}'".format(conversation_id,message)
-            os.system(cmd) 																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																												   
+            os.system(cmd)
+ 																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																												   
+        elif re.search('olivia may data tilt',received_msg.lower()):
+            table_name = received_msg.split(' ')[3]
+            try:
+                query_table = ("SELECT ts, node_id, type_num FROM {} "
+                               "where ts > (SELECT ts FROM {} where ts <= NOW() order by data_id desc limit 1) "
+                               "- interval 30 minute".format(table_name,table_name))
+                last_data = db.df_read(query_table, connection= "analysis")
+                latest_ts = last_data.ts.max()
+                num_nodes = last_data.groupby('type_num').size().rename('num').reset_index()
+                
+                mes = []
+                if dt.now()-latest_ts <= td(minutes = 30):
+                    mes.append("MERON ngayon")
+                else:
+                    mes.append("WALA ngayon")
+                    
+                mes.append("latest ts: {}".format(latest_ts))
+                for msgid,n_nodes in zip(num_nodes.type_num,num_nodes.num):
+                    mes.append("msgid = {} ; # of nodes = {}".format(msgid,n_nodes))
+            except:
+                mes = ["error table: {}".format(table_name)]
             
-
+            for message in mes:
+                cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/send_message.py --conversation-id {} --message-text '{}'".format(conversation_id,message)
+                os.system(cmd)
+        
+        elif re.search('olivia may data rain',received_msg.lower()):
+            table_name = received_msg.split(' ')[3]
+            
+            try:
+                query_table = ("SELECT * FROM {} "
+                               "where ts <= NOW() order by data_id desc limit 1 ".format(table_name,table_name))
+                last_data = db.df_read(query_table, connection= "analysis")
+                latest_ts = last_data.ts.max()
+                
+                mes = []
+                if dt.now()-latest_ts <= td(minutes = 30):
+                    mes.append("MERON ngayon")
+                else:
+                    mes.append("WALA ngayon")
+                    
+                mes.append("latest ts: {}".format(latest_ts))
+                mes.append("rain = {}mm".format(last_data.rain[0]))
+                mes.append("batt1 = {}".format(last_data.battery1[0]))
+                mes.append("batt2 = {}".format(last_data.battery2[0]))
+            
+            except:
+                mes = ["error table: {}".format(table_name)]
+            
+            for message in mes:
+                cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/send_message.py --conversation-id {} --message-text '{}'".format(conversation_id,message)
+                os.system(cmd)                           
+                        
 if __name__ == '__main__':
     run_example(receive_messages)
