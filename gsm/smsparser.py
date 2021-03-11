@@ -18,6 +18,7 @@ import smsparser2.lidar as lidarparser
 import smsparser2.rain as rain
 import smsparser2.smsclass as smsclass
 import smsparser2.subsurface as subsurface
+import smsparser2.surficialtilt as surficialtilt
 import smstables
 import volatile.memory as mem
 
@@ -513,8 +514,24 @@ def parse_all_messages(args,allmsgs=[]):
                 else:
                     print ('>> Value Error')
                     is_msg_proc_success = False
+            
+            #diagnostics (voltage/current)
+            elif re.search("^[A-Z]{4,5}\*[m]\*[A-F0-9]+\*[0-9]+T?$",
+                sms.msg):
+                try:
+                    df_data =subsurface.diagnostics(sms)
+                    if df_data:
+                        print (df_data.data)
+                        dbio.df_write(df_data, resource=resource)
+                        
+                    else:
+                        print ('>>Value Error')
+                        is_msg_proc_success = False
+                except:
+                    print ("error parsing diagnostics")
+                        
             #check if message is from rain gauge
-            elif re.search("^\w{4},[\d\/:,]+",sms.msg):
+            elif re.search("^\w{4,7},[\d\/:,]+",sms.msg):
                 # if v5 logger
                 if len(sms.msg.split(',')) == 6:
                     df_data = rain.v5(sms)
@@ -541,6 +558,21 @@ def parse_all_messages(args,allmsgs=[]):
             elif (sms.msg.split('*')[0] == 'COORDINATOR' or 
                 sms.msg.split('*')[0] == 'GATEWAY'):
                 is_msg_proc_success = process_gateway_msg(sms)
+            
+            #check if surficial tilt data
+            elif re.search("[A-Z]{5,6}\*[R,F]+\*",sms.msg):
+                try: 
+                    df_data = surficialtilt.stilt_parser(sms)
+                    if df_data:
+                        print (df_data.data)
+                        dbio.df_write(df_data, resource=resource)
+                    else:
+                        print ('>> Value Error')
+                        is_msg_proc_success = False
+                except:
+                    print ('>>Value Error')
+                    is_msg_proc_success = False
+                    
             elif common_logger_sms(sms) > 0:
                 print ('inbox_id: ', sms.inbox_id)
                 print ('match')

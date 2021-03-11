@@ -287,9 +287,9 @@ def v5(sms):
         logger_model = check_logger_model(logger_name)
         print (logger_name,logger_model)
         #if logger_model in [23,24,25,26]:
-#        msgtable = logger_name
+        msgtable = logger_name
 #        else:
-        msgtable = line.split(",")[0][:-1]+'G'
+#        msgtable = line.split(",")[0][:-1]+'G'
         # msgtable = check_name_of_number(sender)
         msgdatetime = line.split(',')[5]
 
