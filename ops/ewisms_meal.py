@@ -108,10 +108,12 @@ def get_events(start, end, mysql=False, drop=True):
         query += "	left join {website}.internal_alert_symbols using(internal_sym_id) "
         query += "    ) as trig "
         query += "using(event_alert_id) "
-        query += "where data_ts between '{start}' and '{end}' "
+        query += "where ((ts_start >= '{start}' and ts_start <= '{end}') "
+        query += "or (validity >= '{start}' and validity <= '{end}') "
+        query += "or (ts_start <= '{start}' and validity >= '{end}')) "
         query += "and pub_sym_id != 1 "
         query += "order by event_id, data_ts"
-        query = query.format(start=start-timedelta(hours=0.5), end=end-timedelta(hours=0.5), common=conn['common']['schema'], website=conn['website']['schema'])
+        query = query.format(start=start, end=end, common=conn['common']['schema'], website=conn['website']['schema'])
         df = db.df_read(query, resource='ops')
     else:
         df = pd.read_csv('input/event.csv')
@@ -275,8 +277,7 @@ def main(year='', quarter='', start='', end='', mysql=False, write_csv=True):
     if write_csv:
         all_ewi_sched.to_csv('output/sending_status.csv', index=False)
     
-    print("{}% ewi sent".format(100 * (1 - sum(all_ewi_sched.tot_unsent)/sum(all_ewi_sched.min_recipient))))
-    print("{}% ewi queud for sending".format(100 * (1 - len(all_ewi_sched.loc[all_ewi_sched.queued.isnull(), :]) / len(all_ewi_sched))))
+    print("{}% ewi queud for sending".format(100 * (1 - sum(all_ewi_sched.tot_unsent)/sum(all_ewi_sched.min_recipient))))
 
     return all_ewi_sched
 
@@ -286,8 +287,8 @@ if __name__ == "__main__":
     
     year = 2020
     quarter = 3
-    start = pd.to_datetime('2020-07-15')
-    end = pd.to_datetime('2020-12-01')
+    start = pd.to_datetime('2021-02-01')
+    end = pd.to_datetime('2021-03-01')
     all_ewi_sched = main(year, quarter, start, end, mysql=True)
         
     runtime = datetime.now() - run_start
