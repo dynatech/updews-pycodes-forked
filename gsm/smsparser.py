@@ -98,6 +98,7 @@ def process_piezometer(sms):
     """     
     #msg = message
     line = sms.msg
+    line = line.replace("*p*","*")
     print ('Piezometer data: ' + line)
     line = re.sub("\*\*","*",line)
     try:
@@ -516,8 +517,7 @@ def parse_all_messages(args,allmsgs=[]):
                     is_msg_proc_success = False
             
             #diagnostics (voltage/current)
-            elif re.search("^[A-Z]{4,5}\*[m]\*[A-F0-9]+\*[0-9]+T?$",
-                sms.msg):
+            elif re.search("^[A-Z]{4,7}\*[m]\*",sms.msg):
                 try:
                     df_data =subsurface.diagnostics(sms)
                     if df_data:
