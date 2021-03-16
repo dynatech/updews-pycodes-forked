@@ -63,11 +63,11 @@ def insert_db_data(query):
     db.close()
 
 def check_data(table_name = '', data = False):
-    list_mes = []
+    list_mes = ""
     try:
-        if re.search("rain",table_name):
+        if re.search("rain",table_name) or re.search("piezo",table_name):
             query_table = ("SELECT * FROM {} "
-                           "where ts <= NOW() order by data_id desc limit 1 ".format(table_name))
+                           "where ts <= NOW() order by ts desc limit 1 ".format(table_name))
         else:
             query_table = ("SELECT ts, node_id, type_num FROM {} "
                            "where ts > (SELECT ts FROM {} where ts <= NOW() order by ts desc limit 1) "
@@ -77,29 +77,33 @@ def check_data(table_name = '', data = False):
         latest_ts = last_data.ts.max()
         
         if dt.now()-latest_ts <= td(minutes = 30):
-            list_mes.append("{}: MERON ngayon".format(table_name))
+            list_mes += "{}: MERON ngayon\n".format(table_name)
         else:
-            list_mes.append("{}: WALA ngayon".format(table_name))        
+            list_mes += "{}: WALA ngayon\n".format(table_name)        
         
         if data:
-            list_mes.append("latest ts: {}".format(latest_ts))
+            list_mes += "latest ts: {}\n".format(latest_ts)
             if re.search("rain",table_name):
-                list_mes.append("rain = {}mm".format(last_data.rain[0]))
-                list_mes.append("batt1 = {}".format(last_data.battery1[0]))
-                list_mes.append("batt2 = {}".format(last_data.battery2[0]))
+                list_mes += "rain = {}mm\n".format(last_data.rain[0])
+                list_mes += "batt1 = {}\n".format(last_data.battery1[0])
+                list_mes += "batt2 = {}\n".format(last_data.battery2[0])
+                
+            elif re.search("piezo",table_name):
+                print ("piezo")
+                
             else:
                 #for v2 and up
                 if len(table_name)>9:
                     num_nodes = last_data.groupby('type_num').size().rename('num').reset_index()
         
                     for msgid,n_nodes in zip(num_nodes.type_num,num_nodes.num):
-                        list_mes.append("msgid = {} ; # of nodes = {}".format(msgid,n_nodes))
+                        list_mes += "msgid = {} ; # of nodes = {}\n".format(msgid,n_nodes)
                 #for v1
                 else:
                     n_nodes = last_data.node_id.count()
-                    list_mes.append("# of nodes = {}".format(n_nodes))
+                    list_mes += "# of nodes = {}".format(n_nodes)
     except:
-        list_mes = ["error table: {}".format(table_name)]
+        list_mes = "error table: {}\n".format(table_name)
     
     return list_mes
     
@@ -398,18 +402,18 @@ def on_event(conv_event):
  																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																												   
         elif re.search('olivia may data',received_msg.lower()) :
             table_name = received_msg.lower().split(' ')[3]
-            mes = check_data(table_name, True)
+            message = check_data(table_name, True)
             
-            for message in mes:
-                cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/send_message.py --conversation-id {} --message-text '{}'".format(conversation_id,message)
-                os.system(cmd)
+#            for message in mes:
+            cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/send_message.py --conversation-id {} --message-text '{}'".format(conversation_id,message)
+            os.system(cmd)
         
                         
         elif re.search('olivia check site [A-Za-z]{3}',received_msg.lower()):
             site_code = received_msg.lower().split(' ')[3]
             df_sites = mem.get("DF_SITES")
             
-            mes = []
+            message = ""
             try:
                 site_id = df_sites.site_id[df_sites.site_code == site_code].values[0]
                 
@@ -418,32 +422,38 @@ def on_event(conv_event):
                                  "inner join commons_db.logger_models "
                                  "on logger_models.model_id = l.model_id".format(site_id))
                 site_loggers = db.df_read(query_loggers,connection="common")
-                mes = []
+                
                 for i in site_loggers.index:
                     #if has rain
                     if site_loggers.has_rain[i] == 1:
                         table_name = "rain_{}".format(site_loggers.logger_name[i])
                         add_mes = check_data(table_name)
-                        mes.extend(add_mes)  
+                        message += add_mes  
                     
                     #if has tilt
                     if site_loggers.has_tilt[i] == 1 and site_loggers.logger_type[i]!="gateway":
                         table_name = "tilt_{}".format(site_loggers.logger_name[i])
                         add_mes = check_data(table_name)
-                        mes.extend(add_mes)  
+                        message += add_mes  
                         
                     #if has soms
                     if site_loggers.has_soms[i] == 1 and site_loggers.logger_type[i]!="gateway":
                         table_name = "soms_{}".format(site_loggers.logger_name[i])
                         add_mes = check_data(table_name)
-                        mes.extend(add_mes)  
+                        message += add_mes  
+
+                    #if has piezo
+                    if site_loggers.has_piezo[i] == 1 and site_loggers.logger_type[i]!="gateway":
+                        table_name = "piezo_{}".format(site_loggers.logger_name[i])
+                        add_mes = check_data(table_name)
+                        message += add_mes  
                         
             except:
-                mes = ["error site_code: {}".format(site_code)]
+                message = "error site_code: {}".format(site_code)
             
-            for message in mes:
-                cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/send_message.py --conversation-id {} --message-text '{}'".format(conversation_id,message)
-                os.system(cmd)
+#            for message in mes:
+            cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/send_message.py --conversation-id {} --message-text '{}'".format(conversation_id,message)
+            os.system(cmd)
 
 if __name__ == '__main__':
     run_example(receive_messages)
