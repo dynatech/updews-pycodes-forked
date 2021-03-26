@@ -301,23 +301,27 @@ def on_event(conv_event):
             cur_alert=db.df_read(query, connection= "website")
             # remove repeating site_code
             cur_alert = cur_alert.groupby("site_code").first().reset_index()
-            message = "{} alerts".format(len(cur_alert))
+            message = "{} alerts\n".format(len(cur_alert))
+            
+            if len(cur_alert) == 1:
+                message.replace("s","")
         
 #            conversation_id = conv_event.conversation_id    #test_groupchat
-            cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/send_message.py --conversation-id {} --message-text '{}'".format(conversation_id,message)
-            os.system(cmd)
+#            cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/send_message.py --conversation-id {} --message-text '{}'".format(conversation_id,message)
+#            os.system(cmd)
             
             if len(cur_alert)>0:
                 for i in range(0,len(cur_alert)):
                     if "ND" in cur_alert.trigger_list[i]:
-                        message = "{} : {} {}".format(cur_alert.site_code[i],cur_alert.trigger_list[i], cur_alert.stat[i])
+                        message += "{} : {} {}\n".format(cur_alert.site_code[i],cur_alert.trigger_list[i], cur_alert.stat[i])
                     else:
-                        message = "{} : {}-{} {}".format(cur_alert.site_code[i],cur_alert.alert_symbol[i],cur_alert.trigger_list[i], cur_alert.stat[i])
+                        message += "{} : {}-{} {}\n".format(cur_alert.site_code[i],cur_alert.alert_symbol[i],cur_alert.trigger_list[i], cur_alert.stat[i])
                     
-                    print(message)
+            print(message)
 #                    conversation_id = conv_event.conversation_id    #test_groupchat
-                    cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/send_message.py --conversation-id {} --message-text '{}'".format(conversation_id,message)
-                    os.system(cmd)
+            message = message[:-1]
+            cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/send_message.py --conversation-id {} --message-text '{}'".format(conversation_id,message)
+            os.system(cmd)
                     
         elif re.search("hi olivia",received_msg.lower()):
 #            conversation_id = conv_event.conversation_id    #test_groupchat
@@ -403,7 +407,7 @@ def on_event(conv_event):
         elif re.search('olivia may data',received_msg.lower()) :
             table_name = received_msg.lower().split(' ')[3]
             message = check_data(table_name, True)
-            
+            message = message[:-1]
 #            for message in mes:
             cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/send_message.py --conversation-id {} --message-text '{}'".format(conversation_id,message)
             os.system(cmd)
@@ -446,7 +450,8 @@ def on_event(conv_event):
                     if site_loggers.has_piezo[i] == 1 and site_loggers.logger_type[i]!="gateway":
                         table_name = "piezo_{}".format(site_loggers.logger_name[i])
                         add_mes = check_data(table_name)
-                        message += add_mes  
+                        message += add_mes 
+                message = message[:-1]
                         
             except:
                 message = "error site_code: {}".format(site_code)
@@ -454,6 +459,34 @@ def on_event(conv_event):
 #            for message in mes:
             cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/send_message.py --conversation-id {} --message-text '{}'".format(conversation_id,message)
             os.system(cmd)
-
+        
+        elif re.search('olivia server number',received_msg.lower()):
+            query = ("SELECT gsm_id, gsm_name, gsm_sim_num FROM gsm_modules "
+                     "where gsm_id between 2 and 7")
+            server_num = db.df_read(query, resource= "sms_data")
+            
+            message = "Server number for USERS:\nGlobe: {}\nSmart: {}\n".format(server_num.gsm_sim_num[server_num.gsm_id ==2].values[0],server_num.gsm_sim_num[server_num.gsm_id ==3].values[0])
+            message += "\nServer number for LOGGERS:\nGlobe: \n{}\n{}\nSmart: \n{}\n{}".format(server_num.gsm_sim_num[server_num.gsm_id ==4].values[0],server_num.gsm_sim_num[server_num.gsm_id ==6].values[0],server_num.gsm_sim_num[server_num.gsm_id ==5].values[0],server_num.gsm_sim_num[server_num.gsm_id ==7].values[0])
+            
+            cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/send_message.py --conversation-id {} --message-text '{}'".format(conversation_id,message)
+            os.system(cmd)   
+        
+        ts = (conv_event.timestamp +td(hours=8)).strftime("%Y-%m-%d %H:%M:%S")
+        email = ""
+        for e in user_list.get_user(conv_event.user_id).emails:
+            email += '"{}",'.format(e)
+        email = email[:-1]
+        try:
+            query = 'select email_id from user_emails where email in ({}) limit 1'.format(email)
+            email_id = db.read(query, connection = "common")
+            
+            received_msg = received_msg.replace("'","")
+            received_msg = received_msg.replace('"',"")
+            
+            query_log = "INSERT INTO `olivia_logs` (`ts`, `conv_id`, `email_id`, `message`) VALUES ('{}', '{}', '{}', '{}');".format(ts,conversation_id,email_id[0][0],received_msg)
+            db.write(query_log, connection="gsm_pi")
+        except:
+            print("error logging")
+            
 if __name__ == '__main__':
     run_example(receive_messages)
