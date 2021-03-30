@@ -27,7 +27,7 @@ def main(time_now=datetime.now()):
     end = curr_release + timedelta(hours=4)
     
     mysql = True
-    print(curr_release)
+    
     ewi_sched = lib.get_monitored_sites(curr_release, start, end, mysql=mysql)
     ewi_sched = ewi_sched.loc[ewi_sched.mon_type == 'event', :]
     
@@ -37,7 +37,7 @@ def main(time_now=datetime.now()):
     
         df = bulletin_sent.loc[bulletin_sent.timestamp.isnull(), ['site_code']]
         
-        lib.send_unsent_notif(df, curr_release)
+        lib.send_unsent_notif(df, 'EWI Bulletin', curr_release)
     
 
 if __name__ == '__main__':
