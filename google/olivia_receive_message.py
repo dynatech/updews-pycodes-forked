@@ -22,6 +22,9 @@ import analysis.subsurface.plotterlib as plotter
 import analysis.subsurface.proc as proc
 import analysis.subsurface.rtwindow as rtw
 
+import gsm.alertmessaging as amsg
+import gsm.smsparser2.smsclass as smsclass
+
 import volatile.memory as mem
 import dynadb.db as db
 import MySQLdb
@@ -191,12 +194,12 @@ def send_hangouts(OutputFP, alert):
             "{}:{}:{}".format(alert.ts_last_retrigger,alert.stat_id,
                                  alert.site_code,alert.alert_symbol,alert.trigger_source))
 
-    cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/send_message.py --conversation-id {} --message-text '{}'".format(conversation_id,message)
+    cmd = "{} {}/send_message.py --conversation-id {} --message-text '{}'".format(python_path,file_path,conversation_id,message)
     os.system(cmd)
    
     for a in os.listdir(OutputFP):
         print (a)
-        cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/upload_image.py --conversation-id {} --image '{}'".format(conversation_id,OutputFP+a)
+        cmd = "{} {}/upload_image.py --conversation-id {} --image '{}'".format(python_path,file_path,conversation_id,OutputFP+a)
         os.system(cmd)
 
 
@@ -224,11 +227,12 @@ def on_event(conv_event):
         brain = 'UgwySAbzw-agrDF6QAB4AaABAagBp5i4CQ'
         
         conversation_id = conv_event.conversation_id    #test_groupchat
-        
-        if re.search("valid",received_msg.lower()):
+
+        if re.search("hi olivia",received_msg.lower()):
 #            conversation_id = conv_event.conversation_id    #test_groupchat
-            message = "Thanks {}".format(user_list.get_user(conv_event.user_id).full_name)
-            cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/send_message.py --conversation-id {} --message-text '{}'".format(conversation_id,message)
+            
+            message = "Hello {}".format(user_list.get_user(conv_event.user_id).full_name)
+            cmd = "{} {}/send_message.py --conversation-id {} --message-text '{}'".format(python_path,file_path,conversation_id,message)
             os.system(cmd)
             
             query = "SELECT quotations,author FROM senslopedb.olivia_quotes order by rand() limit 1"
@@ -236,7 +240,47 @@ def on_event(conv_event):
             message = '"{}" -{}'.format(quote[0],quote[1])
             
 #            conversation_id = conv_event.conversation_id    #test_groupchat
-            cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/send_message.py --conversation-id {} --message-text '{}'".format(conversation_id,message)
+            cmd = "{} {}/send_message.py --conversation-id {} --message-text '{}'".format(python_path,file_path,conversation_id,message)
+            os.system(cmd)
+            
+        elif re.search('ack \d+ .+',received_msg.lower()):
+            message = "Thanks {} for acknowledgement".format(user_list.get_user(conv_event.user_id).full_name)
+            
+            email = ""
+            for e in user_list.get_user(conv_event.user_id).emails:
+                email += '"{}",'.format(e)
+            email = email[:-1]
+            try:
+                query = ('SELECT sim_num FROM comms_db.mobile_numbers '
+                         'INNER JOIN comms_db.user_mobiles '
+                         'ON mobile_numbers.mobile_id = user_mobiles.mobile_id '
+                         'INNER JOIN user_emails '
+                         'ON user_emails.user_id = user_mobiles.user_id '
+                         'WHERE email IN ({}) LIMIT 1'.format(email))
+                
+                sim_num = db.read(query, connection = "common")
+                
+                sms = smsclass.SmsInbox("",received_msg,sim_num[0][0],"")
+        
+                amsg.process_ack_to_alert(sms) 
+            except:
+                message = "wrong formatting"
+            
+            cmd = "{} {}/send_message.py --conversation-id {} --message-text '{}'".format(python_path,file_path,conversation_id,message)
+            os.system(cmd)     
+            
+        elif re.search("\A(in)*valid",received_msg.lower()):
+#            conversation_id = conv_event.conversation_id    #test_groupchat
+            message = "Thanks {}".format(user_list.get_user(conv_event.user_id).full_name)
+            cmd = "{} {}/send_message.py --conversation-id {} --message-text '{}'".format(python_path,file_path,conversation_id,message)
+            os.system(cmd)
+            
+            query = "SELECT quotations,author FROM senslopedb.olivia_quotes order by rand() limit 1"
+            quote = get_db_data(query)
+            message = '"{}" -{}'.format(quote[0],quote[1])
+            
+#            conversation_id = conv_event.conversation_id    #test_groupchat
+            cmd = "{} {}/send_message.py --conversation-id {} --message-text '{}'".format(python_path,file_path,conversation_id,message)
             os.system(cmd)
             
         elif re.search("olivia plot [0-9]{4}",received_msg.lower()):
@@ -244,7 +288,7 @@ def on_event(conv_event):
             message = "wait..."
             
 #            conversation_id = conv_event.conversation_id    #test_groupchat
-            cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/send_message.py --conversation-id {} --message-text '{}'".format(conversation_id,message)
+            cmd = "{} {}/send_message.py --conversation-id {} --message-text '{}'".format(python_path,file_path,conversation_id,message)
             os.system(cmd)
             
             query = ("SELECT stat_id, site_code,s.site_id, trigger_source, alert_symbol, "
@@ -282,7 +326,7 @@ def on_event(conv_event):
                 message = "error no alert {}".format(alert_id)
             
 #                conversation_id = conv_event.conversation_id    #test_groupchat
-                cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/send_message.py --conversation-id {} --message-text '{}'".format(conversation_id,message)
+                cmd = "{} {}/send_message.py --conversation-id {} --message-text '{}'".format(python_path,file_path,conversation_id,message)
                 os.system(cmd)
         
         elif re.search("olivia ilan alert",received_msg.lower()):
@@ -304,10 +348,10 @@ def on_event(conv_event):
             message = "{} alerts\n".format(len(cur_alert))
             
             if len(cur_alert) == 1:
-                message.replace("s","")
+                message = message.replace("s","")
         
 #            conversation_id = conv_event.conversation_id    #test_groupchat
-#            cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/send_message.py --conversation-id {} --message-text '{}'".format(conversation_id,message)
+#            cmd = "{} {}/send_message.py --conversation-id {} --message-text '{}'".format(python_path,file_path,conversation_id,message)
 #            os.system(cmd)
             
             if len(cur_alert)>0:
@@ -320,30 +364,17 @@ def on_event(conv_event):
             print(message)
 #                    conversation_id = conv_event.conversation_id    #test_groupchat
             message = message[:-1]
-            cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/send_message.py --conversation-id {} --message-text '{}'".format(conversation_id,message)
+            cmd = "{} {}/send_message.py --conversation-id {} --message-text '{}'".format(python_path,file_path,conversation_id,message)
             os.system(cmd)
                     
-        elif re.search("hi olivia",received_msg.lower()):
-#            conversation_id = conv_event.conversation_id    #test_groupchat
-            
-            message = "Hello {}".format(user_list.get_user(conv_event.user_id).full_name)
-            cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/send_message.py --conversation-id {} --message-text '{}'".format(conversation_id,message)
-            os.system(cmd)
-            
-            query = "SELECT quotations,author FROM senslopedb.olivia_quotes order by rand() limit 1"
-            quote = get_db_data(query)
-            message = '"{}" -{}'.format(quote[0],quote[1])
-            
-#            conversation_id = conv_event.conversation_id    #test_groupchat
-            cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/send_message.py --conversation-id {} --message-text '{}'".format(conversation_id,message)
-            os.system(cmd)
+
         
         elif re.search("olivia help",received_msg.lower()):
             
-            file="/home/sensordev/sdteambranch/google/olivia_help.jpg"
+            file="{}/olivia_help.jpg".format(file_path)
 #            print(file)
 #            conversation_id = conv_event.conversation_id    #test_groupchat
-            cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/upload_image.py --conversation-id {} --image '{}'".format(conversation_id,file)
+            cmd = "{} {}/upload_image.py --conversation-id {} --image '{}'".format(python_path,file_path,conversation_id,file)
             os.system(cmd)
         
         elif (re.search("""olivia add quote "[A-Za-z0-9.,!?()'’ ]+"[-A-Za-z0-9.,!?() ]+""",received_msg.lower()) or
@@ -369,21 +400,25 @@ def on_event(conv_event):
             message = '"{}" -{} --added successfully'.format(quotation, author)
             
 #            conversation_id = conv_event.conversation_id    #test_groupchat
-            cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/send_message.py --conversation-id {} --message-text '{}'".format(conversation_id,message)
+            cmd = "{} {}/send_message.py --conversation-id {} --message-text '{}'".format(python_path,file_path,conversation_id,message)
             os.system(cmd)
         
         elif re.search('olivia link',received_msg.lower()):
-            message ="https://trello.com/c/YztIYZq0/8-monitoring-operations-manual-guides-and-links"
+            query = "SELECT link from olivia_link where link_id = 1"
+            message = db.read(query, connection = "gsm_pi")[0][0]
+#            message ="https://trello.com/c/YztIYZq0/8-monitoring-operations-manual-guides-and-links"
             
 #            conversation_id = conv_event.conversation_id    #test_groupchat
-            cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/send_message_link.py --conversation-id {} --message-text '{}'".format(conversation_id,message)
+            cmd = "{} {}/send_message.py --conversation-id {} --message-text '{}'".format(python_path,file_path,conversation_id,message)
             os.system(cmd)
         
         elif re.search('olivia manual',received_msg.lower()):
-            message ="https://drive.google.com/file/d/1u5cTNCkfVF--AYMaXiShOCozXE5dg7NW/view"
+            query = "SELECT link from olivia_link where link_id = 2"
+            message = db.read(query, connection = "gsm_pi")[0][0]
+#            message ="https://drive.google.com/file/d/1u5cTNCkfVF--AYMaXiShOCozXE5dg7NW/view"
             
 #            conversation_id = conv_event.conversation_id    #test_groupchat
-            cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/send_message_link.py --conversation-id {} --message-text '{}'".format(conversation_id,message)
+            cmd = "{} {}/send_message.py --conversation-id {} --message-text '{}'".format(python_path,file_path,conversation_id,message)
             os.system(cmd)
             
         elif re.search('olivia ping',received_msg.lower()):
@@ -401,7 +436,7 @@ def on_event(conv_event):
                     message = "NOT ok network in {}".format(ipadd)
             except:
                 message = "error input"
-            cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/send_message.py --conversation-id {} --message-text '{}'".format(conversation_id,message)
+            cmd = "{} {}/send_message.py --conversation-id {} --message-text '{}'".format(python_path,file_path,conversation_id,message)
             os.system(cmd)
  																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																												   
         elif re.search('olivia may data',received_msg.lower()) :
@@ -409,7 +444,7 @@ def on_event(conv_event):
             message = check_data(table_name, True)
             message = message[:-1]
 #            for message in mes:
-            cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/send_message.py --conversation-id {} --message-text '{}'".format(conversation_id,message)
+            cmd = "{} {}/send_message.py --conversation-id {} --message-text '{}'".format(python_path,file_path,conversation_id,message)
             os.system(cmd)
         
                         
@@ -457,7 +492,7 @@ def on_event(conv_event):
                 message = "error site_code: {}".format(site_code)
             
 #            for message in mes:
-            cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/send_message.py --conversation-id {} --message-text '{}'".format(conversation_id,message)
+            cmd = "{} {}/send_message.py --conversation-id {} --message-text '{}'".format(python_path,file_path,conversation_id,message)
             os.system(cmd)
         
         elif re.search('olivia server number',received_msg.lower()):
@@ -468,8 +503,14 @@ def on_event(conv_event):
             message = "Server number for USERS:\nGlobe: {}\nSmart: {}\n".format(server_num.gsm_sim_num[server_num.gsm_id ==2].values[0],server_num.gsm_sim_num[server_num.gsm_id ==3].values[0])
             message += "\nServer number for LOGGERS:\nGlobe: \n{}\n{}\nSmart: \n{}\n{}".format(server_num.gsm_sim_num[server_num.gsm_id ==4].values[0],server_num.gsm_sim_num[server_num.gsm_id ==6].values[0],server_num.gsm_sim_num[server_num.gsm_id ==5].values[0],server_num.gsm_sim_num[server_num.gsm_id ==7].values[0])
             
-            cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/send_message.py --conversation-id {} --message-text '{}'".format(conversation_id,message)
+            cmd = "{} {}/send_message.py --conversation-id {} --message-text '{}'".format(python_path,file_path,conversation_id,message)
             os.system(cmd)   
+            
+          
+            
+            
+#            smstables.write_outbox(message=message, recipients="639176321023",
+#                           gsm_id=2, table='users')
         
         ts = (conv_event.timestamp +td(hours=8)).strftime("%Y-%m-%d %H:%M:%S")
         email = ""
@@ -489,4 +530,9 @@ def on_event(conv_event):
             print("error logging")
             
 if __name__ == '__main__':
+    query = "SELECT link from olivia_link where link_id = 3"
+    python_path = db.read(query, connection = "gsm_pi")[0][0]
+    
+    file_path = os.path.dirname(__file__)
+    
     run_example(receive_messages)

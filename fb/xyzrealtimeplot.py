@@ -126,10 +126,10 @@ def xyzplot(tsm_id,nid,time, OutputFP=''):
         plt.title('z-axis', color='green',fontsize=8,verticalalignment='top')
         
         try:
-            axb1 = plt.subplot(3,4,4, sharex = ax1)
-            plt.axvspan(time-td(days=3),time,facecolor='yellow', alpha=0.4)
+            axb1 = plt.subplot(3,4,4)
             dfr0['batt'].plot(color='green')
             axb1.tick_params(axis='both',direction='in', labelsize=7)
+            plt.axvspan(time-td(days=3),time,facecolor='yellow', alpha=0.4)
             axb1.axhline(accel.voltage_max[accel.node_id == nid_up].values[0],color='black', linestyle='--', linewidth=1)
             axb1.axhline(accel.voltage_min[accel.node_id == nid_up].values[0],color='black', linestyle='--', linewidth=1)
             plt.title('batt', color='green',fontsize=8,verticalalignment='top')
@@ -168,10 +168,10 @@ def xyzplot(tsm_id,nid,time, OutputFP=''):
         plt.title('z-axis', color='blue',fontsize=8,verticalalignment='top')
         
         try:
-            axb2 = plt.subplot(3,4,8, sharex = ax4)
-            plt.axvspan(time-td(days=3),time,facecolor='yellow', alpha=0.4)
+            axb2 = plt.subplot(3,4,8)
             dfr['batt'].plot(color='blue')
             axb2.tick_params(axis='both',direction='in', labelsize=7)
+            plt.axvspan(time-td(days=3),time,facecolor='yellow', alpha=0.4)
             axb2.axhline(accel.voltage_max[accel.node_id == nid].values[0],color='black', linestyle='--', linewidth=1)
             axb2.axhline(accel.voltage_min[accel.node_id == nid].values[0],color='black', linestyle='--', linewidth=1)
             plt.title('batt', color='blue',fontsize=8,verticalalignment='top')
@@ -211,10 +211,10 @@ def xyzplot(tsm_id,nid,time, OutputFP=''):
         plt.title('z-axis', color='red',fontsize=8,verticalalignment='top')
         
         try:
-            axb3 = plt.subplot(3,4,12, sharex = ax7)
-            plt.axvspan(time-td(days=3),time,facecolor='yellow', alpha=0.4)
+            axb3 = plt.subplot(3,4,12)
             dfr1['batt'].plot(color='red')
             axb3.tick_params(axis='both',direction='in', labelsize=7)
+            plt.axvspan(time-td(days=3),time,facecolor='yellow', alpha=0.4)
             axb3.axhline(accel.voltage_max[accel.node_id == nid_down].values[0],color='black', linestyle='--', linewidth=1)
             axb3.axhline(accel.voltage_min[accel.node_id == nid_down].values[0],color='black', linestyle='--', linewidth=1)
             plt.title('batt', color='red',fontsize=8,verticalalignment='top')

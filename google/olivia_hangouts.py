@@ -104,20 +104,27 @@ def send_hangouts(OutputFP, alert):
     message=("SANDBOX:\n"
             "As of {}\n"
             "Alert ID {}:\n"
-            "{}:{}:{}".format(alert.ts_last_retrigger,alert.stat_id,
+            "{}:{}:{}\n\n"
+            "Reply:\n"
+            "ACK <alert_id> <validity> <remarks>".format(alert.ts_last_retrigger,alert.stat_id,
                                  alert.site_code,alert.alert_symbol,alert.trigger_source))
 
-    cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/send_message.py --conversation-id {} --message-text '{}'".format(conversation_id,message)
+    cmd = "{} {}/send_message.py --conversation-id {} --message-text '{}'".format(python_path,file_path,conversation_id,message)
     os.system(cmd)
    
     for a in os.listdir(OutputFP):
         print (a)
-        cmd = "/home/sensordev/miniconda3/bin/python3.7 ~/sdteambranch/google/upload_image.py --conversation-id {} --image '{}'".format(conversation_id,OutputFP+a)
+        cmd = "{} {}/upload_image.py --conversation-id {} --image '{}'".format(python_path,file_path,conversation_id,OutputFP+a)
         os.system(cmd)
 
 
 ##########################################################
 if __name__ == '__main__':
+    query = "SELECT link from olivia_link where link_id = 3"
+    python_path = db.read(query, connection = "gsm_pi")[0][0]
+    
+    file_path = os.path.dirname(__file__)
+    
     query = ("SELECT stat_id, site_code,s.site_id, trigger_source, alert_symbol, "
             "ts_last_retrigger,source_id FROM "
             "(SELECT stat_id, ts_last_retrigger, site_id, trigger_source, "
