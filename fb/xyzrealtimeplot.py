@@ -18,7 +18,7 @@ import numpy as np
 import dynadb.db as db
     
 def xyzplot(tsm_id,nid,time, OutputFP=''):
-    memc = memcache.Client(['127.0.0.1:11211'], debug=1)
+    memc = memcache.Client(['192.168.150.247:11211'], debug=1)
     tsm_sensors = memc.get('DF_TSM_SENSORS')
     accelerometers = memc.get('DF_ACCELEROMETERS')
     accel = accelerometers[(accelerometers.tsm_id == tsm_id) & 
