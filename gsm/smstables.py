@@ -82,8 +82,10 @@ def get_inbox(host='local',read_status=0,table='loggers',limit=200,
     resource="sms_data"):
     db, cur = dbio.connect(host=host, resource=resource)
 
-    if table in ['loggers','users']:
+    if table == 'loggers':
         tbl_contacts = '%s_mobile' % table[:-1]
+    elif table == 'users':
+        tbl_contacts = 'mobile_numbers'
     else:
         raise ValueError('Error: unknown table', table)
     
@@ -232,7 +234,7 @@ def write_inbox(msglist='',gsm_info='',resource="sms_data"):
 
     if len(sms_id_unk)>0:
         for msg_details in sms_id_unk:
-            check_if_existing = "SELECT * FROM user_mobile where sim_num = '%s'" % msg_details.simnum
+            check_if_existing = "SELECT * FROM mobile_numbers where sim_num = '%s'" % msg_details.simnum
             is_exist = dbio.read(query=check_if_existing, host=sms_host, resource=resource)
             
             if len(is_exist) == 0:
@@ -242,23 +244,26 @@ def write_inbox(msglist='',gsm_info='',resource="sms_data"):
                 '"1994-08-16","M","1")' % (random_id, random_id)
                 dbio.write(query=new_unknown_query, host=sms_host, resource=resource)
 
-                query_insert_mobile_details = 'insert into user_mobile (user_id,' \
-                'sim_num,priority,mobile_status,gsm_id) values ' \
-                '((SELECT user_id FROM users WHERE firstname = "UNKNOWN_%s"),"%s","%s","%s","%s")' % (random_id, msg_details.simnum,'1','1', gsm_id)
+                query_insert_mobile_details = 'insert into mobile_numbers (sim_num,gsm_id) values ' \
+                '("%s","%s")' % (msg_details.simnum,gsm_id)
+
+                mobile_id = dbio.write(query=query_insert_mobile_details, host=sms_host, resource=resource, last_insert=True)
+
+                query_insert_mobile_details = 'insert into user_mobiles (user_id,' \
+                'mobile_id,priority,status) values ' \
+                '((SELECT user_id FROM users WHERE firstname = "UNKNOWN_%s"),"%s","%s","%s")' % (random_id,mobile_id,'1','1')
 
                 dbio.write(query=query_insert_mobile_details, host=sms_host, resource=resource)
 
-                get_mobile_id_query = "SELECT mobile_id FROM user_mobile WHERE sim_num = '%s'" % msg_details.simnum
-                mobile_id = dbio.read(query=get_mobile_id_query, host=sms_host, resource=resource)
 
-                user_mobile_sim_nums[mobile_id[0][0]] = msg_details.simnum
+                user_mobile_sim_nums[mobile_id] = msg_details.simnum
 
                 query_users += "('%s','%s','%s','%s',%d,%d)" \
-                % (msg_details.dt, ts_stored, mobile_id[0][0], msg_details.data, 0, gsm_id)
+                % (msg_details.dt, ts_stored, mobile_id, msg_details.data, 0, gsm_id)
                 dbio.write(query=query_users, host=sms_host, resource=resource)
 
             else:
-                get_mobile_id_query = "SELECT mobile_id FROM user_mobile WHERE sim_num = '%s'" % msg_details.simnum
+                get_mobile_id_query = "SELECT mobile_id FROM mobile_numbers WHERE sim_num = '%s'" % msg_details.simnum
                 mobile_id = dbio.read(query=get_mobile_id_query, host=sms_host, resource=resource)
                 
                 query_users += "('%s','%s','%s','%s',%d,%d)" \
@@ -314,11 +319,9 @@ def write_outbox(message=None,recipients=None,gsm_id=None,table=None,
     else:
         table_name = table
 
-    print ("table_name:", table_name)
-
     query = ("insert into smsoutbox_%s (ts_written,sms_msg,source) VALUES "
         "('%s','%s','central')") % (table_name,tsw,message)
-        
+    
     outbox_id = dbio.write(query=query, identifier="womtdb", 
         last_insert=True, host=host, resource=resource)[0][0]
 
@@ -333,7 +336,6 @@ def write_outbox(message=None,recipients=None,gsm_id=None,table=None,
         try:
             mobile_id = table_mobile[r]
             gsm_id = def_gsm_id[mobile_id]
-            print (outbox_id, mobile_id, gsm_id)
             query += "(%d, %d, %d)," % (outbox_id, mobile_id, gsm_id)
         except KeyError:
             print (">> Error: Possible key error for", r)

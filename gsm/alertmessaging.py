@@ -7,42 +7,48 @@ import re
 import sys
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
-import dynadb.db as dbio
 import smstables
-#------------------------------------------------------------------------------
+import dynadb.db as dbio
+import volatile.memory as mem
+# ------------------------------------------------------------------------------
+
 
 def get_alert_staff_numbers():
-    query = ("select t1.user_id,t2.sim_num,t2.gsm_id from user_alert_info t1 inner join"
-        " user_mobile t2 on t1.user_id = t2.user_id where t1.send_alert = 1;")
-
-    dev_contacts = dbio.read(query=query,resource="sms_data")
+    conn = mem.get('DICT_DB_CONNECTIONS')
+    query = "select user_id, sim_num, gsm_id from {}.user_alert_info ".format(conn['common']['schema'])
+    query += "inner join {}.user_mobiles using (user_id) ".format(conn['gsm_pi']['schema'])
+    query += "inner join {}.mobile_numbers using (mobile_id) ".format(conn['gsm_pi']['schema'])
+    query += "where send_alert = 1"
+    dev_contacts = dbio.read(query=query, resource="sms_analysis")
 
     ts = dt.today().strftime("%Y-%m-%d %H:%M:%S")
     query = ("select iompmt, iompct from monshiftsched where "
-        "ts < '{}' order by ts desc limit 1;".format(ts))
+             "ts < '{}' order by ts desc limit 1;".format(ts))
 
     try:
-        iomp_nicknames_tuple = dbio.read(query=query,resource="sensor_data")[0]
+        iomp_nicknames_tuple = dbio.read(
+            query=query, resource="sensor_data")[0]
     except IndexError:
-        print (">> Error in getting IOMP nicknames")
-        print (">> No alert message will be sent to IOMPs")
-
-    query = ("select t1.user_id, t2.sim_num, t2.gsm_id from users t1 "
-        "inner join user_mobile t2 on t1.user_id = t2.user_id "
-        "where t1.nickname in {}".format(iomp_nicknames_tuple))
-
-    iomp_contacts = dbio.read(query=query,resource="sms_data")
+        print(">> Error in getting IOMP nicknames")
+        print(">> No alert message will be sent to IOMPs")
+    
+    query  = "select user_id, sim_num, gsm_id from {}.users ".format(conn['common']['schema'])
+    query += "inner join {}.user_mobiles using (user_id) ".format(conn['gsm_pi']['schema'])
+    query += "inner join {}.mobile_numbers using (mobile_id) ".format(conn['gsm_pi']['schema'])
+    query += "where nickname in {}".format(iomp_nicknames_tuple)
+    iomp_contacts = dbio.read(query=query, resource="sms_analysis")
 
     return dev_contacts + iomp_contacts
 
-def monitoring_start(site_id, ts_last_retrigger):
 
-    query =  "SELECT ts, ts_updated FROM "
+def monitoring_start(site_id, ts_last_retrigger, connection='website'):
+
+    query = "SELECT ts, ts_updated FROM "
     query += "  (SELECT * FROM public_alerts "
-    query += "  WHERE site_id = %s " %site_id
-    query += "  AND (ts_updated <= '%s' " %ts_last_retrigger
-    query += "    OR (ts_updated >= '%s' " %ts_last_retrigger
-    query += "      AND ts <= '%s')) " %ts_last_retrigger
+    query += "  WHERE site_id = %s " % site_id
+    query += "  AND (ts_updated <= '%s' " % ts_last_retrigger
+    query += "    OR (ts_updated >= '%s' " % ts_last_retrigger
+    query += "      AND ts <= '%s')) " % ts_last_retrigger
     query += "  ) AS pub "
     query += "INNER JOIN "
     query += "  (SELECT * FROM public_alert_symbols "
@@ -51,8 +57,8 @@ def monitoring_start(site_id, ts_last_retrigger):
     query += "ORDER BY ts DESC LIMIT 3"
 
     # previous positive alert
-    prev_pub_alerts = pd.DataFrame(list(dbio.read(query=query,resource="sensor_data")),
-                                      columns=['ts', 'ts_updated'])
+    prev_pub_alerts = pd.DataFrame(list(dbio.read(query=query, connection=connection)),
+                                   columns=['ts', 'ts_updated'])
 
     if len(prev_pub_alerts) == 1:
         start_monitor = pd.to_datetime(prev_pub_alerts['ts'].values[0])
@@ -74,8 +80,8 @@ def monitoring_start(site_id, ts_last_retrigger):
             if pd.to_datetime(prev_pub_alerts['ts'].values[1]) - \
                     pd.to_datetime(prev_pub_alerts['ts_updated'].values[2]) \
                     <= td(hours=0.5):
-                start_monitor = pd.to_datetime(prev_pub_alerts['ts']\
-                        .values[2])
+                start_monitor = pd.to_datetime(prev_pub_alerts['ts']
+                                               .values[2])
             # one event with two previous positive alert
             else:
                 start_monitor = pd.to_datetime(prev_pub_alerts['ts'].values[1])
@@ -84,33 +90,35 @@ def monitoring_start(site_id, ts_last_retrigger):
 
     return start_monitor
 
+
 def rainfall_details(site_id, start_monitor, ts_last_retrigger):
-    query =  "SELECT gauge_name FROM "
+    query = "SELECT gauge_name FROM "
     query += "  (SELECT * FROM rainfall_alerts "
-    query += "  WHERE site_id = %s " %site_id
-    query += "  AND ts >= '%s' " %start_monitor
-    query += "  AND ts <= '%s' " %ts_last_retrigger
+    query += "  WHERE site_id = %s " % site_id
+    query += "  AND ts >= '%s' " % start_monitor
+    query += "  AND ts <= '%s' " % ts_last_retrigger
     query += "  ) AS alerts "
     query += "INNER JOIN "
     query += "  rainfall_gauges "
     query += "USING (rain_id) "
-    data_source_df = pd.DataFrame(list(dbio.read(query=query,resource="sensor_data")),
+    data_source_df = pd.DataFrame(list(dbio.read(query=query, resource="sensor_data")),
                                   columns=['gauge_name'])
     data_source = ':' + ','.join(set(data_source_df['gauge_name']))
     return data_source
 
+
 def subsurface_details(site_id, start_monitor, ts_last_retrigger):
-    query =  "SELECT node_id, tsm_name FROM "
+    query = "SELECT node_id, tsm_name FROM "
     query += "  (SELECT * FROM node_alerts "
-    query += "  WHERE ts >= '%s' " %start_monitor
-    query += "  AND ts <= '%s' " %ts_last_retrigger
+    query += "  WHERE ts >= '%s' " % start_monitor
+    query += "  AND ts <= '%s' " % ts_last_retrigger
     query += "  ) AS alerts "
     query += "INNER JOIN "
     query += "  (SELECT * FROM tsm_sensors "
-    query += "  WHERE site_id = '%s' " %site_id
+    query += "  WHERE site_id = '%s' " % site_id
     query += "  ) AS sensors "
     query += "USING (tsm_id)"
-    data_source_df = pd.DataFrame(list(dbio.read(query=query,resource="sensor_data")),
+    data_source_df = pd.DataFrame(list(dbio.read(query=query, resource="sensor_data")),
                                   columns=['node', 'tsm_name'])
     data_source_df = data_source_df.drop_duplicates(['node', 'tsm_name'])
     tsm_source_df = data_source_df.groupby('tsm_name', as_index=False)
@@ -118,16 +126,18 @@ def subsurface_details(site_id, start_monitor, ts_last_retrigger):
 
     return data_source
 
+
 def tsm_details(df):
     nodes = ','.join(set(df['node'].apply(lambda x: str(x))))
     lst = str(df["tsm_name"].iloc[0]) + '(' + nodes + ')'
     return lst
 
+
 def surficial_details(site_id, start_monitor, ts_last_retrigger):
-    query =  "SELECT marker_name FROM "
+    query = "SELECT marker_name FROM "
     query += "  (SELECT * FROM marker_alerts "
-    query += "  WHERE ts >= '%s' " %start_monitor
-    query += "  AND ts <= '%s' " %ts_last_retrigger
+    query += "  WHERE ts >= '%s' " % start_monitor
+    query += "  AND ts <= '%s' " % ts_last_retrigger
     query += "  AND alert_level > 0 "
     query += "  ) AS alerts "
     query += "INNER JOIN "
@@ -147,35 +157,40 @@ def surficial_details(site_id, start_monitor, ts_last_retrigger):
     query += "    WHERE marker_id IN ( "
     query += "      SELECT marker_id "
     query += "      FROM markers "
-    query += "      WHERE site_id = %s) " %site_id
+    query += "      WHERE site_id = %s) " % site_id
     query += "    ) AS site_hist "
     query += "  INNER JOIN "
     query += "    marker_names "
     query += "  USING(history_id) "
     query += "  ) AS names "
     query += "USING (marker_id) "
-    data_source_df = pd.DataFrame(list(dbio.read(query=query,resource="sensor_data")),
+    data_source_df = pd.DataFrame(list(dbio.read(query=query, resource="sensor_data")),
                                   columns=['marker_name'])
     data_source = ':' + ','.join(set(data_source_df['marker_name']))
-    
+
     return data_source
 
+
 def alert_details(site_id, trigger_source, ts_last_retrigger):
-    
+
     start_monitor = monitoring_start(site_id, ts_last_retrigger)
-    
+
     if trigger_source == 'rainfall':
-        data_source = rainfall_details(site_id, start_monitor, ts_last_retrigger)
-        
+        data_source = rainfall_details(
+            site_id, start_monitor, ts_last_retrigger)
+
     elif trigger_source == 'subsurface':
-        data_source = subsurface_details(site_id, start_monitor, ts_last_retrigger)
-        
+        data_source = subsurface_details(
+            site_id, start_monitor, ts_last_retrigger)
+
     elif trigger_source == 'surficial':
-        data_source = surficial_details(site_id, start_monitor, ts_last_retrigger)
-    else:  
+        data_source = surficial_details(
+            site_id, start_monitor, ts_last_retrigger)
+    else:
         data_source = ''
-    
+
     return data_source
+
 
 def send_alert_message():
     # check due alert messages
@@ -189,149 +204,157 @@ def send_alert_message():
     contacts = get_alert_staff_numbers()
 
     if len(alert_msgs) == 0:
-        print ('No alertmsg set for sending')
+        print('No alertmsg set for sending')
         return
 
-    for (stat_id, site_id, site_code, trigger_source, alert_symbol, 
-        ts_last_retrigger) in alert_msgs:
+    for (stat_id, site_id, site_code, trigger_source, alert_symbol,
+         ts_last_retrigger) in alert_msgs:
         tlr_str = ts_last_retrigger.strftime("%Y-%m-%d %H:%M:%S")
-        message = ("SANDBOX:\n"
-            "As of %s\n"
-            "Alert ID %d:\n"
-            "%s:%s:%s") % (tlr_str, stat_id, site_code,
-                          alert_symbol, trigger_source)
-        
-        message += alert_details(site_id, trigger_source, ts_last_retrigger)
-            
-        message += "\n\nText\nSandbox ACK <alert_id> <validity> <remarks>"
+        message = ("As of %s\n"
+                   "Alert ID %d:\n"
+                   "%s:%s:%s") % (tlr_str, stat_id, site_code,
+                                  alert_symbol, trigger_source)
 
-        # send to alert staff        
+        message += alert_details(site_id, trigger_source, ts_last_retrigger)
+
+        message += "\n\nText\nACK <alert_id> <validity> <remarks>"
+
+        # send to alert staff
         recipients_list = ""
         for mobile_id, sim_num, gsm_id in contacts:
             recipients_list += "%s," % (sim_num)
         recipients_list = recipients_list[:-1]
         smstables.write_outbox(message=message, recipients=recipients_list,
-            gsm_id=gsm_id, table='users')
-        
+                               gsm_id=gsm_id, table='users')
+
         # # set alert to 15 mins later
         ts_due = dt.now() + td(seconds=60*15)
         query = ("update alert_status set ts_set = '%s' where "
-            "stat_id = %s") % (ts_due.strftime("%Y-%m-%d %H:%M:%S"),
-            stat_id)
+                 "stat_id = %s") % (ts_due.strftime("%Y-%m-%d %H:%M:%S"),
+                                    stat_id)
 
         dbio.write(query, 'checkalertmsg')
 
+
 def check_alerts():
+    conn = mem.get('DICT_DB_CONNECTIONS')
     ts_now = dt.now().strftime("%Y-%m-%d %H:%M:%S")
+    common = conn['common']['schema']
+    analysis = conn['analysis']['schema']
     query = ("SELECT stat_id, site_id, site_code, trigger_source, "
-            "alert_symbol, ts_last_retrigger FROM "
-            "(SELECT stat_id, ts_last_retrigger, site_id, "
-            "trigger_source, alert_symbol FROM "
-            "(SELECT stat_id, ts_last_retrigger, site_id, "
-            "trigger_sym_id FROM "
-            "(SELECT * FROM alert_status "
-            "WHERE ts_set < '%s' " 
-            "and ts_ack is NULL "
-            ") AS stat "
-            "INNER JOIN "
-            "operational_triggers AS op "
-            "USING (trigger_id) "
-            ") AS trig "
-            "INNER JOIN "
-            "(SELECT trigger_sym_id, trigger_source, "
-            "alert_level, alert_symbol FROM "
-            "operational_trigger_symbols "
-            "INNER JOIN "
-            "trigger_hierarchies "
-            "USING (source_id) "
-            ") as sym "
-            "USING (trigger_sym_id)) AS alert "
-            "INNER JOIN "
-            "sites "
-            "USING (site_id)") % (ts_now)
+             "alert_symbol, ts_last_retrigger FROM "
+             "(SELECT stat_id, ts_last_retrigger, site_id, "
+             "trigger_source, alert_symbol FROM "
+             "(SELECT stat_id, ts_last_retrigger, site_id, "
+             "trigger_sym_id FROM "
+             "(SELECT * FROM {}.alert_status "
+             "WHERE ts_set < '{}' "
+             "and ts_ack is NULL "
+             ") AS stat "
+             "INNER JOIN "
+             "{}.operational_triggers AS op "
+             "USING (trigger_id) "
+             ") AS trig "
+             "INNER JOIN "
+             "(SELECT trigger_sym_id, trigger_source, "
+             "alert_level, alert_symbol FROM "
+             "{}.operational_trigger_symbols "
+             "INNER JOIN "
+             "{}.trigger_hierarchies "
+             "USING (source_id) "
+             ") as sym "
+             "USING (trigger_sym_id)) AS alert "
+             "INNER JOIN "
+             "(SELECT * FROM {}.sites WHERE active = 1) s "
+             "USING (site_id)").format(analysis,ts_now,analysis,analysis,analysis,common)
 
-    alert_msgs = dbio.read(query=query,resource="sensor_data")
+    alert_msgs = dbio.read(query=query, resource="sensor_analysis")
 
-    print ("alert messages:", alert_msgs)
+    print("alert messages:", alert_msgs)
 
     return alert_msgs
 
-def get_name_of_staff(number):
-    query =  ("select t1.user_id, t2.nickname, t1.gsm_id from user_mobile t1 "
-        "inner join users t2 on t1.user_id = t2.user_id where "
-        "t1.sim_num = '%s';") % (number)
 
-    return dbio.read(query=query,resource="sms_data")[0]
+def get_name_of_staff(number):
+    conn = mem.get('DICT_DB_CONNECTIONS')
+    query  = "select user_id, nickname, gsm_id from {}.users ".format(conn['common']['schema'])
+    query += "inner join {}.user_mobiles using (user_id) ".format(conn['gsm_pi']['schema'])
+    query += "inner join {}.mobile_numbers using (mobile_id) ".format(conn['gsm_pi']['schema'])
+    query += "where sim_num = '%s'" % (number)
+
+    return dbio.read(query=query, resource="sms_data")[0]
+
 
 def process_ack_to_alert(sms):
     try:
-        stat_id = re.search("(?<=K )\d+(?= )", sms.msg,re.IGNORECASE).group(0)
+        stat_id = re.search("(?<=K )\d+(?= )", sms.msg, re.IGNORECASE).group(0)
     except IndexError:
         errmsg = "Error in parsing alert id. Please try again"
         # smstables.write_outbox(errmsg,sms.sim_num)
         return False
 
     user_id, nickname, def_gsm_id = get_name_of_staff(sms.sim_num)
-    print (user_id, nickname, sms.msg)
-    if re.search("server",nickname.lower()):
+    print(user_id, nickname, sms.msg)
+    if re.search("server", nickname.lower()):
         try:
             nickname = re.search("(?<=-).+(?= from)", sms.msg).group(0)
         except AttributeError:
-            print ("Error in processing nickname")
+            print("Error in processing nickname")
     # else:
     #     name = nickname
 
     try:
-        remarks = re.search("(?<=\d ).+(?=($|\r|\n))",sms.msg, 
-            re.IGNORECASE).group(0)
+        remarks = re.search("(?<=\d ).+(?=($|\r|\n))", sms.msg,
+                            re.IGNORECASE).group(0)
     except AttributeError:
         errmsg = "Please put in your remarks."
-        smstables.write_outbox(message = errmsg, recipients = sms.sim_num,
-            gsm_id=def_gsm_id,table='users')
+        smstables.write_outbox(message=errmsg, recipients=sms.sim_num,
+                               gsm_id=def_gsm_id, table='users')
         # write_outbox_dyna(errmsg, sms.sim_num)
         return True
 
     try:
         alert_status = re.search("(in)*valid(ating)*", remarks,
-            re.IGNORECASE).group(0)
-        remarks = remarks.replace(alert_status,"").strip()
+                                 re.IGNORECASE).group(0)
+        remarks = remarks.replace(alert_status, "", 1).strip()
     except AttributeError:
         errmsg = ("Please put in the alert status validity."
-            " i.e (VALID, INVALID, VALIDATING)")
-        smstables.write_outbox(message = errmsg, recipients = sms.sim_num,
-            gsm_id=def_gsm_id,table='users')
+                  " i.e (VALID, INVALID, VALIDATING)")
+        smstables.write_outbox(message=errmsg, recipients=sms.sim_num,
+                               gsm_id=def_gsm_id, table='users')
         # write_outbox_dyna(errmsg, sms.sim_num)
         return True
 
     alert_status_dict = {"validating": 0, "valid": 1, "invalid": -1}
-
+    remarks = remarks.replace("'", r"\'").replace('"', r'\"')
     query = ("update alert_status set user_id = %d, alert_status = %d, "
-        "ts_ack = '%s', remarks = '%s' where stat_id = %s") % (user_id,
-        alert_status_dict[alert_status.lower()], sms.ts, remarks, stat_id)
+             "ts_ack = '%s', remarks = '%s' where stat_id = %s") % (user_id,
+                                                                    alert_status_dict[alert_status.lower()], sms.ts, remarks, stat_id)
     # print query
-    dbio.write(query=query,resource="sensor_data")
+    dbio.write(query=query, resource="sensor_data")
 
     contacts = get_alert_staff_numbers()
     message = ("\nAlert ID %s ACK by %s on %s\nStatus: %s\n"
-        "Remarks: %s") % (stat_id, nickname, sms.ts, alert_status, remarks)
-    
+               "Remarks: %s") % (stat_id, nickname, sms.ts, alert_status, remarks)
+
     recipients_list = ""
     for mobile_id, sim_num, gsm_id in contacts:
         recipients_list += "%s," % (sim_num)
     recipients_list = recipients_list[:-1]
-    smstables.write_outbox(message = message, recipients = recipients_list,
-        gsm_id=gsm_id, table='users')
+    smstables.write_outbox(message=message, recipients=recipients_list,
+                           gsm_id=gsm_id, table='users')
 
     return True
+
 
 def update_shift_tags():
     # remove tags to old shifts
     today = dt.today().strftime("%Y-%m-%d %H:%M:%S")
-    print ('Updating shift tags for', today)
+    print('Updating shift tags for', today)
 
-    query = ("update senslopedb.dewslcontacts set grouptags = "
-        "replace(grouptags,',alert-mon','') where grouptags like '%alert-mon%'")
-    dbio.write(query, 'update_shift_tags')
+    query = ("update dewslcontacts set grouptags = "
+             "replace(grouptags,',alert-mon','') where grouptags like '%alert-mon%'")
+    dbio.write(query, 'update_shift_tags', connection='analysis')
 
     # update the tags of current shifts
     query = (
@@ -346,33 +369,35 @@ def update_shift_tags():
         "t1.nickname = t2.oomps or"
         "t1.nickname = t2.oompmt or"
         "t1.nickname = t2.oompct"
-        ) % (today)
-    dbio.write(query, 'update_shift_tags')
+    ) % (today)
+    dbio.write(query, 'update_shift_tags', connection='analysis')
+
 
 def main():
     desc_str = "Request information from server\n PSIR [-options]"
     parser = argparse.ArgumentParser(description=desc_str)
-    parser.add_argument("-w", "--writetodb", help="write alert to db", 
-        action="store_true")
-    parser.add_argument("-s", "--send_alert_message", 
-        help="send alert messages from db", action="store_true")
-    parser.add_argument("-u", "--updateshifts", 
-        help="update shifts with alert tag", action="store_true")
-    parser.add_argument("-cs", "--checksendalert", 
-        help="check alert then send", action="store_true")
-    parser.add_argument("-c", "--check_alerts", 
-        help="check alerts", action="store_true")
-    
-    
+    parser.add_argument("-w", "--writetodb", help="write alert to db",
+                        action="store_true")
+    parser.add_argument("-s", "--send_alert_message",
+                        help="send alert messages from db", action="store_true")
+    parser.add_argument("-u", "--updateshifts",
+                        help="update shifts with alert tag", action="store_true")
+    parser.add_argument("-cs", "--checksendalert",
+                        help="check alert then send", action="store_true")
+    parser.add_argument("-c", "--check_alerts",
+                        help="check alerts", action="store_true")
+    parser.add_argument("-ms", "--monitoring_shift",
+                        help="send monitoring shift", action="store_true")
+
     try:
         args = parser.parse_args()
     except:
-        print ('>> Error in parsing in line arguments')
+        print('>> Error in parsing in line arguments')
         error = parser.format_help()
-        print (error)
+        print(error)
         return
 
-    if args.writetodb: 
+    if args.writetodb:
         writetodb = True
     if args.send_alert_message:
         send_alert_message()
@@ -381,6 +406,6 @@ def main():
     if args.check_alerts:
         check_alerts()
 
-    
+
 if __name__ == "__main__":
     main()
