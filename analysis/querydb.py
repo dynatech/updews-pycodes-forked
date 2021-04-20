@@ -805,7 +805,7 @@ def get_node_status(tsm_id, status=4, ts=datetime.now(), connection='analysis'):
         query += " on s.accel_id = a.accel_id"
         query += " where tsm_id = %s" %tsm_id
         query += " and status = %s" %status        
-        query += " and ts_flag <= '%s'" %ts
+        query += " and date_identified <= '%s'" %ts
         df = db.df_read(query, connection=connection)
         return df['node_id'].values
     except:
