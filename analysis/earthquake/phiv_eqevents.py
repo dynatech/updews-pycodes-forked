@@ -120,7 +120,7 @@ def main():
     query = "SELECT * FROM earthquake_events ORDER BY ts DESC LIMIT 1"
     start = pd.to_datetime(db.df_read(query, connection='analysis').ts.values[0]) - timedelta(1)
     eq_data = eq_data.loc[eq_data.ts >= start, ['ts', 'latitude', 'longitude', 'depth', 'magnitude', 'province']]
-    eq_data.loc['issuer'] = 'PHIV'
+    eq_data.loc[:, 'issuer'] = 'PHIV'
     data_table = sms.DataTable('earthquake_events', eq_data)
     db.df_write(data_table, connection='analysis')
 
