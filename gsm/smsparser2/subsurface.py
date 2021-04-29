@@ -400,6 +400,7 @@ def diagnostics(sms):
     
     msg = sms.msg
     msg = msg.replace("DUE","")
+    msg = msg.replace("PZ","")
     
     split_msg = msg.split("*")
     ts = split_msg[len(split_msg)-1]

@@ -8,6 +8,8 @@ sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import dynadb.db as dynadb
 import smsclass
 import volatile.memory as mem
+import volatile.static as static
+
 #------------------------------------------------------------------------------
 
 def check_number_in_users(num):
@@ -122,9 +124,21 @@ def rain_arq(sms):
 #        msgname_contact = msgname
     else:
         raise ValueError("Number not registered {}".format(sender))
-
+    
+    df_raingauges = mem.get("DF_RAIN_GAUGES")
+    
+    if not df_raingauges:
+#        print("walang laman")
+        static.set_static_variable("DF_RAIN_GAUGES")
+        df_raingauges = mem.get("DF_RAIN_GAUGES")
+        
+    try:    
+        res = df_raingauges[df_raingauges.gauge_name == msgname].resolution.values[0]
+    except:
+        res = 0.5
+    
     try:
-        rain = int(linesplit[1])*0.5
+        rain = int(linesplit[1])*res
         batv1 = linesplit[3]
         batv2 = linesplit[4]
         csq = linesplit[9]
