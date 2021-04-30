@@ -285,10 +285,10 @@ def main(year='', quarter='', start='', end='', mysql=False, write_csv=True):
 if __name__ == "__main__":
     run_start = datetime.now()
     
-    year = 2020
+    year = 2021
     quarter = 3
-    start = pd.to_datetime('2021-02-01')
-    end = pd.to_datetime('2021-03-01')
+    start = pd.to_datetime('2020-08-01')
+    end = pd.to_datetime('2021-01-01')
     all_ewi_sched = main(year, quarter, start, end, mysql=True)
         
     runtime = datetime.now() - run_start

@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 import os
 import pandas as pd
 import sys
@@ -6,7 +6,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import dynadb.db as db
 import gsm.smsparser2.smsclass as sms
-import ops.ipr.ewisms_meal as ewisms
+import ops.ewisms_meal as ewisms
 
 
 def get_monitored_sites(curr_release, start, end, mysql=True):
@@ -28,6 +28,17 @@ def get_monitored_sites(curr_release, start, end, mysql=True):
     ewi_sched = ewi_sched.append(pd.DataFrame({'site_code': routine_sites, 'mon_type': ['routine']*len(routine_sites)}))
     ewi_sched = ewi_sched.append(pd.DataFrame({'site_code': extended_sites, 'mon_type': ['extended']*len(extended_sites)}))
     return ewi_sched
+
+
+def unsent_ewisms(df):
+    set_org_name = set(['lewc', 'blgu', 'mlgu', 'plgu'])
+    if df.mon_type.values[0] != 'event':
+        set_org_name -= set(['plgu'])
+    unsent = sorted(set_org_name-set(df.org_name))
+    unsent_df = pd.DataFrame()
+    if len(unsent) != 0:
+        unsent_df = pd.DataFrame({'site_code': [df.site_code.values[0]], 'ofc': [', '.join(unsent)]})
+    return unsent_df
 
 
 def get_recipient(curr_release, unsent=True):    
@@ -56,14 +67,14 @@ def get_recipient(curr_release, unsent=True):
     return user_mobiles.loc[user_mobiles.status == 1, ['mobile_id', 'gsm_id']]
 
 
-def send_unsent_notif(df, notif_type, curr_release):
+def send_unsent_notif(df, curr_release):
     ts = curr_release.strftime('%I%p %B %d, %Y')
     if len(df) != 0:
         unsent_ewi = '\n'.join(list(map(lambda x: ': '.join(x), df.values)))
-        sms_msg = 'Unsent ' + notif_type + ' (' + ts + '):\n\n' + unsent_ewi
+        sms_msg = 'Unsent EWI SMS (' + ts + '):\n\n' + unsent_ewi
         smsoutbox_user_status = get_recipient(curr_release)
     else:
-        sms_msg = 'Sent all ' + notif_type + ' (' + ts + ')'
+        sms_msg = 'Sent all EWI SMS (' + ts + ')'
         smsoutbox_user_status = get_recipient(curr_release, unsent=False)
     smsoutbox_users = pd.DataFrame({'sms_msg': [sms_msg], 'source': ['central']})
     data_table = sms.DataTable('smsoutbox_users', smsoutbox_users)
@@ -72,3 +83,32 @@ def send_unsent_notif(df, notif_type, curr_release):
     smsoutbox_user_status.loc[:, 'outbox_id'] = outbox_id
     data_table = sms.DataTable('smsoutbox_user_status', smsoutbox_user_status)
     db.df_write(data_table, connection='gsm_pi')
+
+
+def main():
+
+    time_now = datetime.now()
+    curr_release = ewisms.release_time(time_now) - timedelta(hours=4)
+    
+    start = curr_release - timedelta(3)
+    end = curr_release + timedelta(hours=4)
+    
+    mysql = True
+    
+    ewi_sched = get_monitored_sites(curr_release, start, end, mysql=mysql)
+    
+    if len(ewi_sched) != 0:
+        ewisms_sent = ewisms.ewi_sent(start=curr_release, end=end, mysql=mysql)    
+        ewisms_sent = pd.merge(ewi_sched, ewisms_sent.reset_index(), how='left', on='site_code')
+    
+        site_ewisms = ewisms_sent.groupby('site_code', as_index=False)
+        df = site_ewisms.apply(unsent_ewisms).reset_index(drop=True)
+        
+        send_unsent_notif(df, curr_release)
+    
+    return df
+
+
+
+if __name__ == '__main__':
+    df = main()

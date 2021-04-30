@@ -7,7 +7,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import lib
 import dynadb.db as db
-import ops.ewisms_meal as ewisms
+import ops.ipr.ewisms_meal as ewisms
 
 
 def get_bulletin_sent(start, end):

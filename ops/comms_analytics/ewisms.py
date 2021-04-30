@@ -6,7 +6,7 @@ import re
 import sys
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
-import ops.ewisms_meal as sms
+import ops.ipr.ewisms_meal as sms
 
 
 def ewi_stats(df, quarter=False):
@@ -38,8 +38,8 @@ def main(start, end, mysql=True, write_csv=False):
 if __name__ == "__main__":
     run_start = datetime.now()
     
-    start = pd.to_datetime('2020-01-01')
-    end = pd.to_datetime('2021-01-01')
+    start = pd.to_datetime('2021-01-01')
+    end = pd.to_datetime('2021-04-01')
 #    stat = main(start, end)
     
     mysql=True
