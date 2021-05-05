@@ -127,10 +127,6 @@ def rain_arq(sms):
     
     df_raingauges = mem.get("DF_RAIN_GAUGES")
     
-    if not df_raingauges:
-#        print("walang laman")
-        static.set_static_variable("DF_RAIN_GAUGES")
-        df_raingauges = mem.get("DF_RAIN_GAUGES")
         
     try:    
         res = df_raingauges[df_raingauges.gauge_name == msgname].resolution.values[0]
