@@ -10,7 +10,7 @@ import analysis.querydb as qdb
 import analysis.rainfall.rainfall as rain
 import analysis.surficial.markeralerts as surf
 import dynadb.db as db
-import smsparser2.smsclass as sms
+import gsm.smsparser2.smsclass as sms
 import volatile.memory as mem
 
 
