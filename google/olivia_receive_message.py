@@ -250,6 +250,7 @@ def on_event(conv_event):
             for e in user_list.get_user(conv_event.user_id).emails:
                 email += '"{}",'.format(e)
             email = email[:-1]
+            ts = (conv_event.timestamp +td(hours=8)).strftime("%Y-%m-%d %H:%M:%S")
             try:
                 query = ('SELECT sim_num FROM comms_db.mobile_numbers '
                          'INNER JOIN comms_db.user_mobiles '
@@ -260,7 +261,7 @@ def on_event(conv_event):
                 
                 sim_num = db.read(query, connection = "common")
                 
-                sms = smsclass.SmsInbox("",received_msg,sim_num[0][0],"")
+                sms = smsclass.SmsInbox("",received_msg,sim_num[0][0],ts)
         
                 amsg.process_ack_to_alert(sms) 
             except:

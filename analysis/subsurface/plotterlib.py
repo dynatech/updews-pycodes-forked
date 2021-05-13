@@ -1,16 +1,18 @@
 ##### IMPORTANT matplotlib declarations must always be FIRST to make sure that
 ##### matplotlib works with cron-based automation
+import platform
+curOS = platform.system()
 import matplotlib as mpl
-mpl.use('Agg')
-import matplotlib.pyplot as plt
-import matplotlib.dates as md
-plt.ion()
-
+if curOS != "Windows":
+    mpl.use('Agg')
+							   
 from datetime import timedelta
+from scipy.stats import spearmanr
+import matplotlib.dates as md
+import matplotlib.pyplot as plt
 import numpy as np
 import os
-import pandas as pd
-from scipy.stats import spearmanr
+import pandas as pd						 
 import sys
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
@@ -258,12 +260,13 @@ def disp0off(df, window, sc, xzd_plotoffset, num_nodes):
     df0off = nodal_df0.apply(df_add_offset_col, offset = xzd_plotoffset,
                              num_nodes = num_nodes)
 
-    # conpensates double offset of node 1 due to df.apply
-    a = df0off.loc[df0off.node_id == 1].copy()
-    a.loc[:, ['xz', 'xy']] = a[['xz', 'xy']] - (num_nodes - 1) * xzd_plotoffset
-    df0off = df0off.loc[df0off.node_id != 1]
-    df0off = df0off.append(a, sort=False)
-    df0off = df0off.sort_values('ts')
+    if curOS == "Windows":						  
+		# compensates double offset of node 1 due to df.apply in windows
+		a = df0off.loc[df0off.node_id == 1].copy()
+		a.loc[:, ['xz', 'xy']] = a[['xz', 'xy']] - (num_nodes - 1) * xzd_plotoffset
+		df0off = df0off.loc[df0off.node_id != 1]
+		df0off = df0off.append(a, sort=False)
+		df0off = df0off.sort_values('ts')
 
     return df0off
 

@@ -95,7 +95,27 @@ def xyzplot(tsm_id,nid,time, OutputFP=''):
 # end of accelerometer status
     
 #filter/raw
-    fig.text(0.900, 0.95, '%%filter/raw = %.2f%%\n%%validity = %.2f%%'%(percent,validity),
+    
+    if validity >50:
+        history = "mostly VALID"
+    elif validity ==0:
+        history = "ALL INVALID"
+    elif validity ==100:
+        history = "ALL VALID"
+    elif np.isnan(validity):
+        history = "NO history"
+    else:
+        history = "mostly INVALID"
+    
+    if percent <50:
+        qdata = "many error data"
+    elif 50< percent <90:
+        qdata = "some error data"
+    else:
+        qdata = "good data"
+    
+    
+    fig.text(0.900, 0.95, 'Data: {}\nHistory: {}'.format(qdata,history),
          horizontalalignment='right',
          verticalalignment='top',
          fontsize=8,color='blue')    
