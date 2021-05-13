@@ -262,11 +262,11 @@ def disp0off(df, window, sc, xzd_plotoffset, num_nodes):
 
     if curOS == "Windows":						  
 		# compensates double offset of node 1 due to df.apply in windows
-		a = df0off.loc[df0off.node_id == 1].copy()
-		a.loc[:, ['xz', 'xy']] = a[['xz', 'xy']] - (num_nodes - 1) * xzd_plotoffset
-		df0off = df0off.loc[df0off.node_id != 1]
-		df0off = df0off.append(a, sort=False)
-		df0off = df0off.sort_values('ts')
+        a = df0off.loc[df0off.node_id == 1].copy()
+        a.loc[:, ['xz', 'xy']] = a[['xz', 'xy']] - (num_nodes - 1) * xzd_plotoffset
+        df0off = df0off.loc[df0off.node_id != 1]
+        df0off = df0off.append(a, sort=False)
+        df0off = df0off.sort_values('ts')
 
     return df0off
 
