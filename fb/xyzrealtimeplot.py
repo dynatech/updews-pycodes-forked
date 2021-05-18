@@ -130,7 +130,7 @@ def xyzplot(tsm_id,nid,time, OutputFP=''):
         plt.axvspan(time-td(days=3),time,facecolor='yellow', alpha=0.4)
         df0['x'].plot(color='green')
         ax1.tick_params(axis='both',direction='in', labelsize=7)
-        plt.ylabel(tsm_name+str(nid_up), color='green', fontsize=14)
+        plt.ylabel(tsm_name+str(nid_up), color='green')
         plt.title('x-axis', color='green',fontsize=8,verticalalignment='top')
         
         ax2 = plt.subplot(3,4,2, sharex = ax1)
@@ -172,7 +172,7 @@ def xyzplot(tsm_id,nid,time, OutputFP=''):
         plt.axvspan(time-td(days=3),time,facecolor='yellow', alpha=0.4)
         df['x'].plot(color='blue')
         ax4.tick_params(axis='both',direction='in', labelsize=7)
-        plt.ylabel(tsm_name+str(nid), color='blue', fontsize=14)        
+        plt.ylabel(tsm_name+str(nid)+"\n(triggered node)", color='blue')        
         plt.title('x-axis', color='blue',fontsize=8,verticalalignment='top')
         
         ax5 = plt.subplot(3,4,6, sharex = ax4)
@@ -215,7 +215,7 @@ def xyzplot(tsm_id,nid,time, OutputFP=''):
         df1['x'].plot(color='red')
         ax7.tick_params(axis='both',direction='in', labelsize=7)
         plt.axvspan(time-td(days=3),time,facecolor='yellow', alpha=0.4)
-        plt.ylabel(tsm_name+str(nid_down), color='red', fontsize=14)
+        plt.ylabel(tsm_name+str(nid_down), color='red')
         plt.title('x-axis', color='red',fontsize=8,verticalalignment='top')
         
         ax8 = plt.subplot(3,4,10, sharex = ax7)
