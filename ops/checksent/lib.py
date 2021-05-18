@@ -56,11 +56,14 @@ def get_recipient(curr_release, unsent=True):
     return user_mobiles.loc[user_mobiles.status == 1, ['mobile_id', 'gsm_id']]
 
 
-def send_unsent_notif(df, notif_type, curr_release):
+def send_unsent_notif(df, notif_type, curr_release, validation=False):
     ts = curr_release.strftime('%I%p %B %d, %Y')
     if len(df) != 0:
-        unsent_ewi = '\n'.join(list(map(lambda x: ': '.join(x), df.values)))
-        sms_msg = 'Unsent ' + notif_type + ' (' + ts + '):\n\n' + unsent_ewi
+        site_notif = '\n'.join(list(map(lambda x: ': '.join(x), df.values)))
+        if validation:
+            sms_msg = 'Validate measurements with displacement of 1cm and more:\n\n' + site_notif
+        else:
+            sms_msg = 'Unsent ' + notif_type + ' (' + ts + '):\n\n' + site_notif
         smsoutbox_user_status = get_recipient(curr_release)
     else:
         sms_msg = 'Sent all ' + notif_type + ' (' + ts + ')'
