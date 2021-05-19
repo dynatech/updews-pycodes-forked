@@ -17,6 +17,7 @@ def main():
     query += "  (select data_id from {analysis}.marker_data_tags "
     query += "  where tag_type = 0 "
     query += "  ) tag "
+    query += "inner join (select data_id, alert_level from {analysis}.marker_alerts) sub1 using (data_id) "
     query += "inner join {analysis}.marker_data using (data_id) "
     query += "inner join {analysis}.marker_observations mo using (mo_id) "
     query += "inner join {common}.sites using (site_id) "
