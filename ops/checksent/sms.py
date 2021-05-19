@@ -36,6 +36,7 @@ def main(time_now=datetime.now()):
     
         site_ewisms = ewisms_sent.groupby('site_code', as_index=False)
         df = site_ewisms.apply(unsent_ewisms).reset_index(drop=True)
+        df.loc[df.site_code.isin(['lte']), 'ofc'] = df.loc[df.site_code.isin(['lte']), 'ofc'].apply(lambda x: ', '.join(sorted(set(x.split(', ')) - set(['lewc']))))
         df.loc[df.site_code.isin(['bar', 'msl', 'msu']), 'ofc'] = df.loc[df.site_code.isin(['bar', 'msl', 'msu']), 'ofc'].apply(lambda x: ', '.join(sorted(set(x.split(', ')) - set(['blgu']))))
         df = df.loc[df.ofc != '', :]
         

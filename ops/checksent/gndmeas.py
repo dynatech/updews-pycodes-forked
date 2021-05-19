@@ -15,14 +15,14 @@ def main():
     conn = mem.get('DICT_DB_CONNECTIONS')
     query  = "select site_code, ts, marker_name from  "
     query += "  (select data_id from {analysis}.marker_data_tags "
-    #query += "  where tag_type = 0 "
+    query += "  where tag_type = 0 "
     query += "  ) tag "
     query += "inner join {analysis}.marker_data using (data_id) "
     query += "inner join {analysis}.marker_observations mo using (mo_id) "
     query += "inner join {common}.sites using (site_id) "
     query += "inner join (select marker_id, marker_name from {analysis}.view_marker_history) sub2 using (marker_id)"
-    #query += "where alert_level = 0 "
-    #query += "and mo.ts >= '{ts}' "
+    query += "where alert_level = 0 "
+    query += "and mo.ts >= '{ts}' "
     query = query.format(analysis=conn['analysis']['schema'], common=conn['common']['schema'], ts=time_now-timedelta(1.5))
     tags = db.df_read(query, resource='sensor_analysis')
     tags.loc[:, 'ts'] = tags.loc[:, 'ts'].astype(str)
