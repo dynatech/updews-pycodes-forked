@@ -66,6 +66,8 @@ def send_unsent_notif(df, notif_type, curr_release, validation=False):
             sms_msg = 'Unsent ' + notif_type + ' (' + ts + '):\n\n' + site_notif
         smsoutbox_user_status = get_recipient(curr_release)
     else:
+        if notif_type == 'gndmeas':
+            return
         sms_msg = 'Sent all ' + notif_type + ' (' + ts + ')'
         smsoutbox_user_status = get_recipient(curr_release, unsent=False)
     smsoutbox_users = pd.DataFrame({'sms_msg': [sms_msg], 'source': ['central']})
