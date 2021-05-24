@@ -7,6 +7,8 @@ import sys
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import smsclass
+import volatile.memory as mem
+import dynadb.db as db
 #------------------------------------------------------------------------------
 
 
@@ -412,20 +414,28 @@ def diagnostics(sms):
     outl = []
     for i in range(0,int(num_of_data)):
         try:
-            if i == int(num_of_data)-1:
-                stat = 99
-            
-            else:
-                stat = i
-            
+
             curr_draw = split_msg[2+(i)*2]
             batt_volt = split_msg[2+(i)*2+1]    
-                
+
+            if i == int(num_of_data)-1:
+                stat = 99
+                last_str_split = batt_volt.split(">")
+                batt_volt = last_str_split[0]
+                try:
+                    unsent_data = int(last_str_split[1])
+                except IndexError:
+                    unsent_data = np.nan
+            else:
+                stat = i
+                line = {"ts":timestamp, "stat":stat, "curr_draw":curr_draw, "batt_volt":batt_volt}
+            
             print (i)
             print (stat, curr_draw, batt_volt)
-        
+            
             line = {"ts":timestamp, "stat":stat, "curr_draw":curr_draw, "batt_volt":batt_volt}
             outl.append(line)
+            
         except:
             print("kulang data")
             
@@ -434,7 +444,31 @@ def diagnostics(sms):
     
     
     df = pd.DataFrame(outl)
-    data = smsclass.DataTable(name_df,df)
+    volt = smsclass.DataTable(name_df,df)
+    
+    #for unsent
+    out2 = []
+    tsm_sensors = mem.get("DF_TSM_SENSORS")
+    try:
+        tsm_id = tsm_sensors[tsm_sensors.tsm_name==tsm_name].tsm_id.values[0]
+    except:
+        tsm_id = np.nan
+    
+    sender = sms.sim_num[-10:]
+    
+    try:
+        query = ("select mobile_id from logger_mobile "
+                 "where sim_num like '%{}' order by date_activated desc limit 1".format(sender))
+        mobile_id = db.read(query,resource = "sms_data")[0][0]
+    except:
+        mobile_id = np.nan
+        
+    line2 = {"ts":timestamp, "mobile_id":mobile_id, "tsm_id":tsm_id, "unsent":unsent_data}
+    out2.append(line2)
+    df2 = pd.DataFrame(out2)
+    unsent = smsclass.DataTable("unsent",df2)
+    
+    data = [volt,unsent]
     return data
 
 
