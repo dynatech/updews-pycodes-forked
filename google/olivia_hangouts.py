@@ -161,7 +161,7 @@ if __name__ == '__main__':
     q_log = ("SELECT TIMESTAMPDIFF(MINUTE, ts, NOW()) "
              "AS difference FROM olivia_logs "
              "where log_id = (select max(log_id) from olivia_logs)")
-    ts_diff = db.read(query, connection= "gsm_pi")[0][0]
+    ts_diff = db.read(q_log, connection= "gsm_pi")[0][0]
     
     if ts_diff>=360:
         brain = 'UgwySAbzw-agrDF6QAB4AaABAagBp5i4CQ'
