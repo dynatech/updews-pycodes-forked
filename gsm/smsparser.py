@@ -251,6 +251,7 @@ def process_surficial_observation(sms):
     resource = "sensor_data"
     
     obv = []
+    sms.msg = sms.msg.replace('"', '').replace("'", "")
     try:
         obv = parser.surficial.observation(sms.msg)
         
