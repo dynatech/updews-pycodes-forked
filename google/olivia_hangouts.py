@@ -8,6 +8,7 @@ Created on Tue Jun 18 10:39:27 2019
 
 import analysis.querydb as qdb
 import pandas as pd
+from datetime import datetime as dt
 from datetime import timedelta as td
 import os
 import shutil
@@ -156,9 +157,18 @@ if __name__ == '__main__':
         else:
             send_hangouts(OutputFP,smsalert.loc[i])
 
+#check for inactivity for 3hrs
+    q_log = ("SELECT TIMESTAMPDIFF(MINUTE, ts, NOW()) "
+             "AS difference FROM olivia_logs "
+             "where log_id = (select max(log_id) from olivia_logs)")
+    ts_diff = db.read(query, connection= "gsm_pi")[0][0]
+    
+    if ts_diff>=360:
+        brain = 'UgwySAbzw-agrDF6QAB4AaABAagBp5i4CQ'
         
-
-
+        message = "as of {} no messages for 3hrs".format(dt.now().strftime("%Y-%m-%d %H:%M"))
+        cmd = "{} {}/send_message.py --conversation-id {} --message-text '{}'".format(python_path,file_path,brain,message)
+        os.system(cmd)
 
 
 
