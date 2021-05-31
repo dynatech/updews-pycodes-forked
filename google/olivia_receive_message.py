@@ -505,8 +505,16 @@ def on_event(conv_event):
             message += "\nServer number for LOGGERS:\nGlobe: \n{}\n{}\nSmart: \n{}\n{}".format(server_num.gsm_sim_num[server_num.gsm_id ==4].values[0],server_num.gsm_sim_num[server_num.gsm_id ==6].values[0],server_num.gsm_sim_num[server_num.gsm_id ==5].values[0],server_num.gsm_sim_num[server_num.gsm_id ==7].values[0])
             
             cmd = "{} {}/send_message.py --conversation-id {} --message-text '{}'".format(python_path,file_path,conversation_id,message)
-            os.system(cmd)   
+            os.system(cmd)
             
+        elif re.search('olivia info',received_msg.lower()):
+            file="{}/infographics_plot.png".format(file_path)
+            cmd = "{} {}/upload_image.py --conversation-id {} --image '{}'".format(python_path,file_path,conversation_id,file)
+            os.system(cmd)
+            
+            file="{}/infographics_invalid.png".format(file_path)
+            cmd = "{} {}/upload_image.py --conversation-id {} --image '{}'".format(python_path,file_path,conversation_id,file)
+            os.system(cmd)
           
             
             

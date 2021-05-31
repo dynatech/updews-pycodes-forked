@@ -163,10 +163,10 @@ if __name__ == '__main__':
              "where log_id = (select max(log_id) from olivia_logs)")
     ts_diff = db.read(q_log, connection= "gsm_pi")[0][0]
     
-    if ts_diff>=360:
+    if ts_diff>=240:
         brain = 'UgwySAbzw-agrDF6QAB4AaABAagBp5i4CQ'
         
-        message = "as of {} no messages for 3hrs".format(dt.now().strftime("%Y-%m-%d %H:%M"))
+        message = "as of {} no messages for 2hrs".format(dt.now().strftime("%Y-%m-%d %H:%M"))
         cmd = "{} {}/send_message.py --conversation-id {} --message-text '{}'".format(python_path,file_path,brain,message)
         os.system(cmd)
 
