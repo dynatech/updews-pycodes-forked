@@ -126,8 +126,7 @@ def apply_filters(dfl, orthof=True, rangef=True, outlierf=True):
         dfl = dfl.apply(orthogonal_filter)
         dfl = dfl.reset_index(drop=True)
         if dfl.empty:
-            return dfl[['ts','tsm_name','node_id','x','y','z']]
-            
+            return dfl[['ts','tsm_name','node_id','x','y','z']]            
     
     if outlierf:
         dfl = dfl.groupby(['node_id'])
@@ -139,5 +138,9 @@ def apply_filters(dfl, orthof=True, rangef=True, outlierf=True):
 
     
     dfl = dfl.reset_index(drop=True)     
-    dfl = dfl[['ts','tsm_name','node_id','x','y','z']]
+    try:
+        dfl = dfl[['ts','tsm_name','node_id','x','y','z','batt']]
+    except KeyError:
+        dfl = dfl[['ts','tsm_name','node_id','x','y','z']]
+        
     return dfl

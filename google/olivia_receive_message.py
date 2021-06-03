@@ -242,7 +242,12 @@ def on_event(conv_event):
 #            conversation_id = conv_event.conversation_id    #test_groupchat
             cmd = "{} {}/send_message.py --conversation-id {} --message-text '{}'".format(python_path,file_path,conversation_id,message)
             os.system(cmd)
-            
+        
+        elif received_msg.lower() == "invalid":
+            file="{}/invalid.png".format(file_path)
+            cmd = "{} {}/upload_image.py --conversation-id {} --image '{}'".format(python_path,file_path,conversation_id,file)
+            os.system(cmd)        
+        
         elif re.search('ack \d+ .+',received_msg.lower()):
             message = "Thanks {} for acknowledgement".format(user_list.get_user(conv_event.user_id).full_name)
             
