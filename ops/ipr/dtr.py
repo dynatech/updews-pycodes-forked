@@ -7,81 +7,77 @@ from datetime import time
 import numpy as np
 import pandas as pd
 
-
-def get_sheet(key, sheet_name):
-    url = 'https://docs.google.com/spreadsheets/d/{key}/gviz/tq?tqx=out:csv&sheet={sheet_name}&headers=1'.format(
-        key=key, sheet_name=sheet_name.replace(' ', '%20'))
-    df = pd.read_csv(url)
-    df = df.drop([col for col in df.columns if col.startswith('Unnamed')], axis=1)
-    return df
-
-
-# personnel list
-def get_personnel():
-    key = "1UylXLwDv1W1ukT4YNoUGgHCHF-W8e3F8-pIg1E024ho"
-    sheet_name = "personnel"
-    df = get_sheet(key, sheet_name)
-    return df
+import lib
 
 
 def retrieve_dtr():
-    year=2020
-    personnel = get_personnel()
+    personnel = lib.get_personnel()
     ### admin's dtr file list
     gauth = GoogleAuth()
     gauth.LocalWebserverAuth() # client_secrets.json need to be in the same directory as the script
     drive = GoogleDrive(gauth)
     
-    file_list = drive.ListFile({'q': "'1IIzPXlKos9GDNHrIXnO0KerW6rCB_8Ij' in parents and trashed=false"}).GetList()
-    
-    writer = pd.ExcelWriter('output/monitoring_dtr.xlsx')
-    
-    for file in file_list:
-        title = file['title'].split('.')
-        name = title[-1]
-        dtr_id = title[0]
-        print(name)
-        key = file['id']
-        url = 'https://docs.google.com/spreadsheets/d/{key}/export?format=xlsx&id={key}'.format(key=key)
-        dct = pd.read_excel(url, sheet_name=None, usecols='A:I', nrows = 34,
-                           names=['ts', 'in1', 'out1', 'in2', 'out2',
-                                  'in3', 'out3', 'in4', 'out4'],
-                           header=None, dtype=str)
-        dtr_df = pd.DataFrame()
-        for month in dct.keys():
-            month_df = dct.get(month)
-            if not month_df.empty:
+    folder_dict = {2020: '1IIzPXlKos9GDNHrIXnO0KerW6rCB_8Ij', 
+                   2021: '1-0cidZzINCpH2rGse8QJfItnwdxs5HLp'}
+    for year in folder_dict.keys():
+        writer = pd.ExcelWriter('output/monitoring_dtr.xlsx')
+        
+        file_list = drive.ListFile({'q': "'{}' in parents and trashed=false".format(folder_dict.get(year))}).GetList()
+        for file in file_list:
+            title = file['title'].split('.')
+            print(title)
+            dtr_id = int(title[0])
+            if dtr_id in personnel.dtr_id.values:
+                sheet_name = personnel.loc[personnel.dtr_id == dtr_id, 'Nickname'].values[0]
+                print(sheet_name)
+                key = file['id']
+                url = 'https://docs.google.com/spreadsheets/d/{key}/export?format=xlsx&id={key}'.format(key=key)
+                dct = pd.read_excel(url, sheet_name=None, usecols='A:I', nrows = 34,
+                                   names=['ts', 'in1', 'out1', 'in2', 'out2',
+                                          'in3', 'out3', 'in4', 'out4'],
+                                   header=None, dtype=str)
+                dtr_df = pd.DataFrame()
+                for month in dct.keys():
+                    month_df = dct.get(month)
+                    if not month_df.empty:
+                        try:
+                            ts = pd.to_datetime('{} 1, {}'.format(month, year))
+                        except: 
+                            ts = pd.to_datetime('{} 1, {}'.format(month_df.ts[0], year))
+                        if ts < pd.to_datetime('2020-09-01'):
+                            continue
+                        month_df = month_df.loc[(month_df.index != 0) & (~month_df.ts.isnull()), :]
+                        month_df.loc[:, 'ts'] = month_df.loc[:, 'ts'].apply(lambda x: ts + timedelta(int(x)-1))
+                        month_df = month_df.set_index('ts')
+                        month_df = month_df.dropna(axis=1, how='all').dropna(axis=0, how='all')
+                        dtr_df = dtr_df.append(month_df, ignore_index=False)
+                dtr_df = dtr_df.replace({'00:00:00': '24:00:00', '1900-01-01 00:00:00': '24:00:00', '1900-01-01 10:00:00': '10:00:00'})
+        
+                col_list = dtr_df.columns
+                dtr_df = dtr_df.reset_index()
+                for col in col_list:
+                    dtr_df.loc[~dtr_df[col].isnull(), col] = dtr_df.loc[~dtr_df[col].isnull(), col].apply(lambda x: 60*int(x.split(':')[0])+int(x.split(':')[1]))
+                    dtr_df.loc[~dtr_df[col].isnull(), col] = dtr_df.loc[~dtr_df[col].isnull(), ['ts', col]].apply(lambda x: str(x.ts + timedelta(minutes=x[col])), axis=1)
+        
+                
                 try:
-                    ts = pd.to_datetime('{} 1, {}'.format(month, year))
-                except: 
-                    ts = pd.to_datetime('{} 1, {}'.format(month_df.ts[0], year))
-                if ts < pd.to_datetime('2020-09-01'):
-                    continue
-                month_df = month_df.loc[(month_df.index != 0) & (~month_df.ts.isnull()), :]
-                month_df.loc[:, 'ts'] = month_df.loc[:, 'ts'].apply(lambda x: ts + timedelta(int(x)-1))
-                month_df = month_df.set_index('ts')
-                month_df = month_df.dropna(axis=1, how='all').dropna(axis=0, how='all')
-                dtr_df = dtr_df.append(month_df, ignore_index=False)
-        dtr_df = dtr_df.replace({'00:00:00': '24:00:00', '1900-01-01 00:00:00': '24:00:00'})
-
-        col_list = dtr_df.columns
-        dtr_df = dtr_df.reset_index()
-        for col in col_list:
-            dtr_df.loc[~dtr_df[col].isnull(), col] = dtr_df.loc[~dtr_df[col].isnull(), col].apply(lambda x: 60*int(x.split(':')[0])+int(x.split(':')[1]))
-            dtr_df.loc[~dtr_df[col].isnull(), col] = dtr_df.loc[~dtr_df[col].isnull(), ['ts', col]].apply(lambda x: str(x.ts + timedelta(minutes=x[col])), axis=1)
-
-        sheet_name = personnel.loc[personnel.dtr_id == int(dtr_id), 'Nickname'].values[0]
-        dtr_df.to_excel(writer, sheet_name, index=False)
-    
-    writer.save()
+                    prev_dtr_df = pd.read_excel('output/monitoring_dtr.xlsx', sheet_name=sheet_name)
+                    prev_dtr_df.loc[:, 'ts'] = pd.to_datetime(prev_dtr_df.loc[:, 'ts'])
+                except:
+                    prev_dtr_df = pd.DataFrame()
+                dtr_df = prev_dtr_df.append(dtr_df, ignore_index=True)
+                dtr_df = dtr_df.drop_duplicates('ts', keep='last')
+                dtr_df.to_excel(writer, sheet_name, index=False)
+        
+        writer.save()
     
 
 def get_online_dtr():
     key = "1wZhFAvBDMF03fFxlnXoJJ1sH4iOSlN8a2DmOMYW_IxM"
     sheet_name = "dtr"
-    online_dtr = get_sheet(key, sheet_name)
-    personnel = get_personnel()
-    df = pd.merge(online_dtr, personnel, left_on='Name', right_on='Fullname').loc[:, ['Timestamp', 'Nickname']]
+    online_dtr = lib.get_sheet(key, sheet_name)
+    personnel = lib.get_personnel()
+    df = pd.merge(online_dtr, personnel, left_on='Name', right_on='Name').loc[:, ['Timestamp', 'Nickname']]
     df.loc[:, 'Timestamp'] = pd.to_datetime(df.Timestamp)
     df = df.rename(columns = {'Timestamp': 'ts', 'Nickname': 'name'})
     return df
@@ -106,7 +102,10 @@ def eval_dtr(ts, ts_end, indiv_dtr):
         return 0
     if ts.time() == time(20,0):
         time_in = max(pd.to_datetime(shift_dtr.in3[0]), ts-timedelta(minutes=15))
-        time_out = min(pd.to_datetime(shift_dtr.out1[1]), ts_end+timedelta(minutes=15))
+        if len(shift_dtr) < 2:
+            time_out = ts_end+timedelta(minutes=15)
+        else:
+            time_out = min(pd.to_datetime(shift_dtr.out1[1]), ts_end+timedelta(minutes=15))
         grade = np.round((time_out - time_in) / timedelta(hours=12.5), 2)
     else:
         shift_dtr.loc[shift_dtr.in1 < (ts-timedelta(minutes=15)), 'in1'] = ts-timedelta(minutes=15)
@@ -126,14 +125,15 @@ def main(update_dtr = False):
     if update_dtr:
         retrieve_dtr()
     
-    monitoring_ipr = pd.read_excel('output/monitoring_ipr.xlsx', sheet_name=None)
+    monitoring_ipr = pd.read_excel('output/monitoring_ipr.xlsx', sheet_name=None, dtype=str)
     monitoring_dtr = pd.read_excel('output/monitoring_dtr.xlsx', sheet_name=None, parse_dates=True)
     online_dtr = get_online_dtr()
     ewi_sms = pd.read_csv('output/sending_status.csv')
     ewi_sms.loc[:, 'ts_start'] = pd.to_datetime(ewi_sms.loc[:, 'ts_start'])
 
-    for name in monitoring_ipr.keys():
+    for name in monitoring_ipr.keys() -set({'Summary'}):
         indiv_ipr = monitoring_ipr[name]
+        indiv_ipr.columns = indiv_ipr.columns.astype(str)
         indiv_dtr = monitoring_dtr[name].set_index('ts')
         indiv_dtr = indiv_dtr.apply(lambda x: pd.to_datetime(x))
         indiv_dtr = indiv_dtr.sort_index()

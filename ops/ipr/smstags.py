@@ -57,6 +57,7 @@ def outbox_tag(start, end, mysql = False):
         query = query.format(start=start, end=end)
         outbox_tag = db.df_read(query, resource='ops')
         outbox_tag.loc[:, 'ts_sms'] = pd.to_datetime(outbox_tag.ts_written)
+        outbox_tag.to_csv('input/outbox_tag.csv', index=False)
     else:
         outbox_tag = pd.read_csv('input/outbox_tag.csv', parse_dates=['ts_written'])
     return outbox_tag
@@ -66,7 +67,7 @@ def inbox_tag(start, end, mysql = False):
         query  = "SELECT inbox_id, ts_sms, ts_stored, read_status, site_code, org_name, sim_num, sms_msg, tag FROM "
         query += "  (SELECT inbox_id, ts_sms, ts_stored, sim_num, sms_msg, read_status, user_id FROM "
         query += "    (SELECT * FROM comms_db.smsinbox_users "
-        query += "    where ts_sms BETWEEN '2020-07-01' AND '2020-10-01' "
+        query += "    where ts_sms BETWEEN '{start}' AND '{end}' "
         query += "    ) sms "
         query += "  LEFT JOIN "
         query += "    comms_db.mobile_numbers "
@@ -91,8 +92,10 @@ def inbox_tag(start, end, mysql = False):
         query += "  USING (tag_id) "
         query += "  ) as tags "
         query += "USING (inbox_id) "
+        query = query.format(start=start, end=end)
         inbox_tag = db.df_read(query, resource='ops')
         inbox_tag.loc[:, 'ts_sms'] = pd.to_datetime(inbox_tag.ts_sms)
+        inbox_tag.to_csv('input/inbox_tag.csv', index=False)
     else:
         inbox_tag = pd.read_csv('input/inbox_tag.csv', parse_dates=['ts_sms'])
     return inbox_tag

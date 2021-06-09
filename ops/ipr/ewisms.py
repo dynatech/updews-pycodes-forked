@@ -10,6 +10,7 @@ def system_downtime(mysql=False):
     if mysql:
         query = 'SELECT * FROM system_down WHERE reported = 1'
         df = db.df_read(query=query, resource="sensor_data")
+        df.to_csv('input/downtime.csv', index=False)
     else:
         df = pd.read_csv('input/downtime.csv')
     return df
@@ -19,7 +20,7 @@ def remove_downtime(sending_status, downtime):
         sending_status = sending_status.loc[(sending_status.ts_start < start) | (sending_status.ts_start > end), :]
     return sending_status 
 
-def main(start, end, recompute=False, mysql=True):
+def main(start, end, eval_df, recompute=False, mysql=True):
     if recompute:
         ewisms_meal.main(start=start, end=end, mysql=mysql)
 
@@ -46,6 +47,10 @@ def main(start, end, recompute=False, mysql=True):
                 sending_status.loc[sending_status.deduction < 0, 'deduction'] = 0
                 sending_status.loc[:, 'deduction'].fillna(1, inplace = True)
                 indiv_ipr.loc[indiv_ipr.Output2.str.contains('EWI SMS', na=False), str(ts)] = np.round((sum(sending_status.min_recipient) - sum(sending_status.tot_unsent * sending_status.deduction)) / sum(sending_status.min_recipient), 2)
+            if ts >= pd.to_datetime('2021-04-01') and len(sending_status) != 0:
+                shift_eval = eval_df.loc[(eval_df.shift_ts >= ts) & (eval_df.shift_ts <= ts+timedelta(1)) & ((eval_df['evaluated_MT'] == name) | (eval_df['evaluated_CT'] == name) | (eval_df['evaluated_backup'] == name)), :].drop_duplicates('shift_ts', keep='last')
+                deduction = np.nansum(shift_eval[['routine_sms_alert', 'sms_alert']].values) + np.nansum(shift_eval[['routine_sms_ts', 'sms_ts']].values)/3 + np.nansum(shift_eval[['routine_sms_typo', 'sms_typo']].values)/30
+                indiv_ipr.loc[indiv_ipr.Output1 == 'EWI SMS', str(ts)] = np.round((len(sending_status) - deduction)/len(sending_status), 2)
         monitoring_ipr[name] = indiv_ipr
     
     writer = pd.ExcelWriter('output/monitoring_ipr.xlsx')

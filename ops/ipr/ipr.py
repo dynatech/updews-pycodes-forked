@@ -9,9 +9,15 @@ from datetime import datetime, timedelta
 import openpyxl
 import pandas as pd
 
+import aim
 import dtr
+import eosr
 import ewibulletin
 import ewisms
+import fyipermission
+import gndmeas
+import shifteval
+import lib
 import measreminder
 import raininfo
 import webrelease
@@ -60,15 +66,9 @@ def timeline(year, quarter):
     start = pd.to_datetime("{}-{}-01".format(year, str(3*quarter - 2).zfill(2)))
     return start, end
 
-def get_sheet(key, sheet_name):
-    url = 'https://docs.google.com/spreadsheets/d/{key}/gviz/tq?tqx=out:csv&sheet={sheet_name}&headers=1'.format(
-        key=key, sheet_name=sheet_name.replace(' ', '%20'))
-    df = pd.read_csv(url)
-    df = df.drop([col for col in df.columns if col.startswith('Unnamed')], axis=1)
-    return df
 
 def get_shift(key, sheet_name):
-    df = get_sheet(key, sheet_name)
+    df = lib.get_sheet(key, sheet_name)
     df = df.drop([col for col in df.columns if col.startswith('Unnamed')], axis=1)
     df.loc[:, 'Date'] = pd.to_datetime(df.loc[:, 'Date'].ffill())
     df.loc[:, 'Shift'] = pd.to_timedelta(df.loc[:, 'Shift'].map({'AM': timedelta(hours=8), 'PM': timedelta(hours=20)}))
@@ -88,13 +88,13 @@ def main(start, end, update_existing=True, update_dtr=True, recompute=True, mysq
     if update_existing:
         monitoring_ipr = pd.read_excel('output/monitoring_ipr.xlsx', sheet_name=None)
         writer = pd.ExcelWriter('output/monitoring_ipr.xlsx')
-        for name in monitoring_ipr.keys():
+        for name in monitoring_ipr.keys() -set({'Summary'}):
             indiv_ipr = monitoring_ipr[name]
             indiv_ipr = indiv_ipr.loc[:, ~indiv_ipr.columns.str.contains('Unnamed:', na=False)]
             for shift_type in ['MT', 'CT']:
                 curr_shift = shift_sched.loc[shift_sched['IOMP-{}'.format(shift_type)] == name, :]
                 shift_list = set(curr_shift.ts) - set(map(pd.to_datetime, indiv_ipr.columns[5:]))
-                for ts in shift_list:
+                for ts in sorted(shift_list):
                     indiv_ipr.loc[indiv_ipr.Category == 'Shift', str(ts)] = shift_type
             monitoring_ipr[name] = indiv_ipr
 
@@ -105,7 +105,7 @@ def main(start, end, update_existing=True, update_dtr=True, recompute=True, mysq
     
         personnel_sheet = "personnel"    
         
-        name_df = get_sheet(key, personnel_sheet)
+        name_df = lib.get_sheet(key, personnel_sheet)
         name_list = name_df.loc[name_df.current == 1, 'Nickname'].values
             
         for name in name_list:
@@ -121,12 +121,19 @@ def main(start, end, update_existing=True, update_dtr=True, recompute=True, mysq
         xlsxdf.to_excel(writer, sheet_name, index=False)
     writer.save()
 
-    ewisms.main(start=start, end=end, recompute=recompute)
+    eval_df = shifteval.get_eval_df()
+
+    ewisms.main(start=start, end=end, eval_df=eval_df, recompute=recompute, mysql=mysql)
     dtr.main(update_dtr)
     measreminder.main(start, end, mysql=mysql)
-    raininfo.main(start, end, mysql=mysql)
-    webrelease.main(start, end, mysql=mysql)
-    ewibulletin.main(start, end, mysql=mysql)
+    gndmeas.main(start, end, eval_df, mysql=mysql)
+    raininfo.main(start, end, eval_df, mysql=mysql)
+    webrelease.main(start, end, eval_df, mysql=mysql)
+    ewibulletin.main(start, end, eval_df, mysql=mysql)
+    eosr.main(start, end, eval_df, mysql=mysql)
+    shifteval.eval_timeliness(eval_df)
+    fyipermission.main(start, end, mysql=mysql)
+    aim.main(start, end, eval_df, mysql=mysql)
     
     format_cells()
     
@@ -134,9 +141,9 @@ def main(start, end, update_existing=True, update_dtr=True, recompute=True, mysq
 if __name__ == "__main__":
     run_start = datetime.now()
     
-    start = pd.to_datetime('2020-07-15')
-    end = pd.to_datetime('2020-12-01')
-    main(start, end, update_dtr=False)
+    start = pd.to_datetime('2020-12-01 08:00')
+    end = pd.to_datetime('2021-06-01 08:00')
+    main(start, end, update_dtr=False, mysql=False)
     
     runtime = datetime.now() - run_start
     print("runtime = {}".format(runtime))

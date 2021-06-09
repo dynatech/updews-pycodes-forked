@@ -5,11 +5,12 @@ Created on Wed Jun 24 11:08:27 2020
 @author: Meryll
 """
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 import numpy as np
 import pandas as pd
 
 import dynadb.db as db
+import lib
 
 
 def check_sending(shift_release, releases):
@@ -27,21 +28,6 @@ def check_sending(shift_release, releases):
     return shift_release
 
 
-def system_downtime(mysql=False):
-    if mysql:
-        query = 'SELECT * FROM system_down WHERE reported = 1'
-        df = db.df_read(query=query, resource="sensor_data")
-    else:
-        df = pd.read_csv('input/downtime.csv')
-    df.loc[:, ['start_ts', 'end_ts']] = df.loc[:, ['start_ts', 'end_ts']].apply(pd.to_datetime)
-    return df
-
-
-def remove_downtime(df, downtime):
-    for start, end in downtime[['start_ts', 'end_ts']].values:
-        df = df.loc[(df.ts_start < start+np.timedelta64(150, 'm')) | (df.ts_start > end+np.timedelta64(150, 'm')), :]
-    return df
-
 def get_releases(start, end, mysql=False):
     if mysql:
         query  = "SELECT site_code, event_id, validity, pub_sym_id, data_ts as ts_start, release_time "
@@ -58,27 +44,27 @@ def get_releases(start, end, mysql=False):
         query += "ORDER BY site_code, data_ts desc"
         query = query.format(start=start, end=end)
         df = db.df_read(query=query, resource="ops")
+        df.to_csv('input/webreleases.csv', index=False)
     else:
         df = pd.read_csv('input/webreleases.csv')
     return df
 
-def main(start, end, mysql=False):
-    downtime = system_downtime(mysql=mysql)
+def main(start, end, eval_df, mysql=False):
+    downtime = lib.system_downtime(mysql=mysql)
     ewi_sched = pd.read_csv('output/sending_status.csv', parse_dates=['ts_start', 'ts_end'])
-    ewi_sched = remove_downtime(ewi_sched, downtime)
+    ewi_sched = lib.remove_downtime(ewi_sched, downtime)
     ewi_sched.loc[ewi_sched.raising == 1, 'ts_start'] = ewi_sched.loc[ewi_sched.raising == 1, 'ts_start'] + timedelta(minutes=55)
     
     releases = get_releases(start, end, mysql=mysql)
-    releases.loc[:, ['ts_start', 'release_time']] = releases.loc[:, ['ts_start', 'release_time']].apply(pd.to_datetime)
-    releases.loc[: , 'ts_start'] = releases.loc[: , 'ts_start'] + timedelta(minutes=30)
-    releases.loc[:, 'ts_release'] = releases.loc[: , ['ts_start', 'release_time']].apply(lambda row: datetime.combine(row.ts_start.date(), row.release_time.time()), axis = 1)
-    releases.loc[releases.ts_start.dt.time < releases.release_time.dt.time, 'ts_release'] = releases.loc[releases.ts_start.dt.time < releases.release_time.dt.time, 'ts_release'] - timedelta(1)
+    releases.loc[: , 'ts_start'] = pd.to_datetime(releases.loc[: , 'ts_start']) + timedelta(minutes=30)
+    releases.loc[:, 'ts_release'] = releases.loc[: , ['ts_start', 'release_time']].apply(lambda row: pd.to_datetime(str(row.ts_start.date()) + ' ' + str(row.release_time).replace('0 days ', '')), axis=1)
+    releases.loc[releases.ts_start.dt.time < releases.ts_release.dt.time, 'ts_release'] = releases.loc[releases.ts_start.dt.time < releases.ts_release.dt.time, 'ts_release'] - timedelta(1)
     
     monitoring_ipr = pd.read_excel('output/monitoring_ipr.xlsx', sheet_name=None)
     
     for name in monitoring_ipr.keys():
         indiv_ipr = monitoring_ipr[name]
-    
+        indiv_ipr.columns = indiv_ipr.columns.astype(str)
         for ts in indiv_ipr.columns[5:]:
             ts = pd.to_datetime(ts)
             ts_end = ts + timedelta(0.5)
@@ -88,6 +74,10 @@ def main(start, end, mysql=False):
                 shift_release = indiv_release.apply(check_sending, releases=releases).reset_index(drop=True)
                 grade = np.round((len(shift_release) - sum(shift_release.deduction)) / len(shift_release), 2)
                 indiv_ipr.loc[indiv_ipr.Output2 == 'EWI web release', str(ts)] = grade
+            if ts >= pd.to_datetime('2021-04-01') and len(shift_release) != 0:
+                shift_eval = eval_df.loc[(eval_df.shift_ts >= ts) & (eval_df.shift_ts <= ts+timedelta(1)) & ((eval_df['evaluated_MT'] == name) | (eval_df['evaluated_CT'] == name) | (eval_df['evaluated_backup'] == name)), :].drop_duplicates('shift_ts', keep='last')
+                deduction = np.nansum(shift_eval[['routine_web_alert_ts', 'web_alert_ts']].values)/3 + np.nansum(shift_eval[['routine_web_alert_level', 'web_alert_level']].values)
+                indiv_ipr.loc[indiv_ipr.Output1 == 'web release', str(ts)] = np.round((len(shift_release) - deduction)/len(shift_release), 2)
         monitoring_ipr[name] = indiv_ipr
         
     writer = pd.ExcelWriter('output/monitoring_ipr.xlsx')

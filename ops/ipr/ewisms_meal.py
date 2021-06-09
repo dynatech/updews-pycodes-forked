@@ -1,13 +1,15 @@
 from datetime import datetime, timedelta, time
-import numpy as np
 import os
 import pandas as pd
 import sys
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import dynadb.db as db
+import lib
 import volatile.memory as mem
 
+
+output_path = os.path.dirname(os.path.realpath(__file__))
 
 def timeline(year, quarter):
     if quarter == 4:
@@ -53,30 +55,6 @@ def round_data_ts(date_time):
     return date_time
 
 
-def release_time(date_time):
-    """Rounds time to 4/8/12 AM/PM.
-
-    Args:
-        date_time (datetime): Timestamp to be rounded off. 04:00 to 07:30 is
-        rounded off to 8:00, 08:00 to 11:30 to 12:00, etc.
-
-    Returns:
-        datetime: Timestamp with time rounded off to 4/8/12 AM/PM.
-
-    """
-
-    time_hour = int(date_time.strftime('%H'))
-
-    quotient = int(time_hour / 4)
-
-    if quotient == 5:
-        date_time = datetime.combine(date_time.date()+timedelta(1), time(0,0))
-    else:
-        date_time = datetime.combine(date_time.date(), time((quotient+1)*4,0))
-            
-    return date_time
-
-
 def routine_sched(mysql=False):
     if mysql:
         query  = "select * from "
@@ -90,15 +68,22 @@ def routine_sched(mysql=False):
         query += "	routine_schedules "
         query += "using (sched_group_id)"
         df = db.df_read(query, connection='common')
+        df.to_csv('input/routine.csv', index=False)
     else:
         df = pd.read_csv('input/routine.csv')
+    return df
+
+
+def check_eq_moms(df):
+    df.loc[:, 'eq'] = int('E' in df.alert_symbol.values)
+    df.loc[:, 'moms'] = int('m' in df.alert_symbol.values or 'M' in df.alert_symbol.values or any(site_code in df.site_code.values for site_code in ['msl', 'pug', 'tue', 'umi']))
     return df
 
 
 def get_events(start, end, mysql=False, drop=True):
     if mysql:
         conn = mem.get('DICT_DB_CONNECTIONS')
-        query =  "select site_code, event_id, validity, pub_sym_id, data_ts ts_start, release_time "
+        query =  "select site_code, event_id, validity, pub_sym_id, alert_symbol, data_ts ts_start, release_time "
         query += "from {common}.sites "
         query += "inner join {website}.monitoring_events using(site_id) "
         query += "left join {website}.monitoring_event_alerts using(event_id) "
@@ -115,8 +100,11 @@ def get_events(start, end, mysql=False, drop=True):
         query += "order by event_id, data_ts"
         query = query.format(start=start, end=end, common=conn['common']['schema'], website=conn['website']['schema'])
         df = db.df_read(query, resource='ops')
+        df.to_csv('input/event.csv', index=False)
     else:
         df = pd.read_csv('input/event.csv')
+    df_grp = df.groupby('event_id', as_index=False)
+    df = df_grp.apply(check_eq_moms).reset_index(drop=True)
     if drop:
         df = df.drop_duplicates(['event_id', 'pub_sym_id'])
     df.loc[:, 'ts_start'] = df.ts_start.apply(lambda x: round_data_ts(pd.to_datetime(x)))
@@ -160,6 +148,7 @@ def ewi_sent(start, end, mysql=False):
         query += "AND send_status = 5"
         query = query.format(start=start, end=end, common=conn['common']['schema'], gsm_pi=conn['gsm_pi']['schema'])
         df = db.df_read(query, resource='sms_analysis')
+        df.to_csv('input/sent.csv', index=False)
     else:
         df = pd.read_csv('input/sent.csv')
     return df
@@ -168,15 +157,19 @@ def ewi_sent(start, end, mysql=False):
 def event_releases(event, ewi_sched, list_org_name):
     validity = pd.to_datetime(max(event.validity))
     site_code = event['site_code'].values[0]
+    moms = event['moms'].values[0]
+    eq = event['eq'].values[0]
     #onset
-    onset_sched = event.loc[:, ['site_code', 'ts_start']]
+    onset_sched = event.loc[:, ['site_code', 'ts_start', 'alert_symbol', 'pub_sym_id']]
     onset_sched.loc[:, 'ts_end'] = onset_sched.ts_start.apply(lambda x: x + timedelta(minutes=55))
     onset_sched.loc[:, 'raising'] = 1
+    onset_sched.loc[:, 'permission'] = onset_sched.loc[:, ['alert_symbol', 'pub_sym_id']].apply(lambda row: int(((row.alert_symbol == 'D') | (row.pub_sym_id == 4))), axis=1)
     #lowering
-    lowering_sched = event.loc[:, ['site_code']]
+    lowering_sched = event.loc[:, ['site_code', 'alert_symbol', 'pub_sym_id']]
     lowering_sched.loc[:, 'ts_start'] = validity
     lowering_sched.loc[:, 'ts_end'] = lowering_sched.ts_start.apply(lambda x: x + timedelta(minutes=10))
     lowering_sched.loc[:, 'lowering'] = 1
+    lowering_sched.loc[:, 'permission'] = lowering_sched.loc[:, ['alert_symbol', 'pub_sym_id']].apply(lambda row: int((row.pub_sym_id == 4)), axis=1)
     #4H release
     event_4H_start = min(event.ts_start)
     if event_4H_start.time() in [time(3,0), time(3,30), time(7,0), time(7,30), time(11,0), time(11,30), time(15,0), time(15,30), time(19,0), time(19,30), time(23,0), time(23,30)]:
@@ -184,10 +177,10 @@ def event_releases(event, ewi_sched, list_org_name):
     #no routine if onset at 11:00 or 11:30
     if (event_4H_start.time() == time(11,0) or event_4H_start.time() == time(11,30)) and event_4H_start.date() in set(ewi_sched.ts.apply(lambda x: x.date())):
         ewi_sched.loc[ewi_sched.ts == pd.to_datetime(event_4H_start.date()), 'set_site_code'] = ewi_sched.loc[ewi_sched.ts == pd.to_datetime(event_4H_start.date()), ['set_site_code']].apply(lambda x: x - set([site_code]))
-    event_4H_start = release_time(event_4H_start)
+    event_4H_start = lib.release_time(event_4H_start)
     ts_start = pd.date_range(start=event_4H_start, end=validity-timedelta(hours=4), freq='4H')
     #no 4H release if onset 1H before supposed release
-    onset_ts = set(event.loc[event.ts_start.apply(lambda x: x.time() in [time(3,0), time(3,30), time(7,0), time(7,30), time(11,0), time(11,30), time(15,0), time(15,30), time(19,0), time(19,30), time(23,0), time(23,30)]), 'ts_start'].apply(lambda x: release_time(x)))
+    onset_ts = set(event.loc[event.ts_start.apply(lambda x: x.time() in [time(3,0), time(3,30), time(7,0), time(7,30), time(11,0), time(11,30), time(15,0), time(15,30), time(19,0), time(19,30), time(23,0), time(23,30)]), 'ts_start'].apply(lambda x: lib.release_time(x)))
     ts_start = sorted(set(ts_start) - onset_ts)
     #4H release
     event_sched = pd.DataFrame({'ts_start': ts_start})
@@ -205,6 +198,8 @@ def event_releases(event, ewi_sched, list_org_name):
     #no routine if end of validity is same day before 12NN
     if validity.hour in [0, 4, 8] and validity.date() in set(ewi_sched.ts.apply(lambda x: x.date())):
         ewi_sched.loc[ewi_sched.ts == pd.to_datetime(validity.date()), 'set_site_code'] = ewi_sched.loc[ewi_sched.ts == pd.to_datetime(validity.date()), ['set_site_code']].apply(lambda x: x - set([site_code]))
+    event_sched.loc[:, 'moms'] = moms
+    event_sched.loc[:, 'eq'] = eq
     return event_sched
 
 
@@ -259,23 +254,24 @@ def main(year='', quarter='', start='', end='', mysql=False, write_csv=True):
     ewi_sched_grp = ewi_sched.groupby('ts_start', as_index=False)
     non_plgu = set(list_org_name[0:3])
     all_ewi_sched = ewi_sched_grp.apply(ewi_releases, non_plgu=non_plgu).reset_index(drop=True)
-    all_ewi_sched = all_ewi_sched.loc[:, ['ts_start', 'ts_end', 'set_org_name', 'site_code', 'raising', 'event']]
-    all_ewi_sched = all_ewi_sched.loc[all_ewi_sched.site_code != 'umi', :]
+    all_ewi_sched = all_ewi_sched.loc[:, ['ts_start', 'ts_end', 'set_org_name', 'site_code', 'raising', 'event', 'lowering', 'permission', 'eq', 'moms']]
+    all_ewi_sched = all_ewi_sched.loc[~all_ewi_sched.site_code.isin(['phi', 'umi']), :]
     all_ewi_sched = all_ewi_sched.loc[(all_ewi_sched.ts_start >= start) & (all_ewi_sched.ts_start < end), :]
     
     sent = ewi_sent(start, end, mysql=mysql)
     sent.loc[: ,'ts_written'] = sent.ts_written.apply(lambda x: pd.to_datetime(x))
-    ewi_sched_grp = all_ewi_sched.reset_index().groupby('index', as_index=False)
-    all_ewi_sched = ewi_sched_grp.apply(actual_releases, sent=sent).reset_index(drop=True)
     # no blgu in bar, msl and msu
     all_ewi_sched.loc[all_ewi_sched.site_code.isin(['bar', 'msl', 'msu']), 'set_org_name'] = all_ewi_sched.loc[all_ewi_sched.site_code.isin(['bar', 'msl', 'msu']), 'set_org_name'].apply(lambda x: x - {'blgu'})
+    ewi_sched_grp = all_ewi_sched.reset_index().groupby('index', as_index=False)
+    all_ewi_sched = ewi_sched_grp.apply(actual_releases, sent=sent).reset_index(drop=True)
 
     all_ewi_sched.loc[:, 'min_recipient'] = all_ewi_sched.set_org_name.apply(lambda x: len(x))
     all_ewi_sched.loc[~(all_ewi_sched.ts_end >= all_ewi_sched.queued)|(all_ewi_sched.queued.isnull()), 'tot_unsent'] = all_ewi_sched.loc[~(all_ewi_sched.ts_end >= all_ewi_sched.queued), 'min_recipient']
     all_ewi_sched.loc[(all_ewi_sched.ts_end >= all_ewi_sched.queued), 'tot_unsent'] = all_ewi_sched.loc[(all_ewi_sched.ts_end >= all_ewi_sched.queued), 'unsent'].apply(lambda x: len(x))
     all_ewi_sched.loc[:, 'tot_unsent'] = all_ewi_sched.tot_unsent.fillna(0)
+
     if write_csv:
-        all_ewi_sched.to_csv('output/sending_status.csv', index=False)
+        all_ewi_sched.to_csv(output_path+'/output/sending_status.csv', index=False)
     
     print("{}% ewi queud for sending".format(100 * (1 - sum(all_ewi_sched.tot_unsent)/sum(all_ewi_sched.min_recipient))))
 
@@ -285,11 +281,9 @@ def main(year='', quarter='', start='', end='', mysql=False, write_csv=True):
 if __name__ == "__main__":
     run_start = datetime.now()
     
-    year = 2021
-    quarter = 3
-    start = pd.to_datetime('2020-08-01')
-    end = pd.to_datetime('2021-01-01')
-    all_ewi_sched = main(year, quarter, start, end, mysql=True)
+    start = pd.to_datetime('2020-12-01')
+    end = pd.to_datetime('2021-06-01')
+    all_ewi_sched = main(start=start, end=end, mysql=True)
         
     runtime = datetime.now() - run_start
     print("runtime = {}".format(runtime))

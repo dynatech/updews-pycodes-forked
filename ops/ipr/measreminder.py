@@ -9,7 +9,7 @@ from datetime import timedelta, time
 import numpy as np
 import pandas as pd
 
-import dynadb.db as db
+import lib
 import smstags
 
 
@@ -26,22 +26,6 @@ def check_sending(shift_release, inbox_tag, outbox_tag):
     return shift_release
 
 
-def system_downtime(mysql=False):
-    if mysql:
-        query = 'SELECT * FROM system_down WHERE reported = 1'
-        df = db.df_read(query=query, resource="sensor_data")
-    else:
-        df = pd.read_csv('input/downtime.csv')
-    df.loc[:, ['start_ts', 'end_ts']] = df.loc[:, ['start_ts', 'end_ts']].apply(pd.to_datetime)
-    return df
-
-
-def remove_downtime(shift_release, downtime):
-    for start, end in downtime[['start_ts', 'end_ts']].values:
-        shift_release = shift_release.loc[(shift_release.ts_start < start+np.timedelta64(150, 'm')) | (shift_release.ts_start > end+np.timedelta64(150, 'm')), :]
-    return shift_release
-
-
 def main(start, end, mysql=False):
     ewi_sched = pd.read_csv('output/sending_status.csv', parse_dates=['ts_start'])
     ewi_sched = ewi_sched.loc[(ewi_sched.ts_start.dt.time >= time(8,0)) & (ewi_sched.ts_start.dt.time <= time(16,0)) & (ewi_sched.raising != 1), :]
@@ -53,12 +37,12 @@ def main(start, end, mysql=False):
     outbox_tag = outbox_tag.loc[outbox_tag.tag == '#GroundMeasReminder', :]
     
     monitoring_ipr = pd.read_excel('output/monitoring_ipr.xlsx', sheet_name=None)
-    downtime = system_downtime(mysql=mysql)
-    ewi_sched = remove_downtime(ewi_sched, downtime)
+    downtime = lib.system_downtime(mysql=mysql)
+    ewi_sched = lib.remove_downtime(ewi_sched, downtime)
     
     for name in monitoring_ipr.keys():
         indiv_ipr = monitoring_ipr[name]
-    
+        indiv_ipr.columns = indiv_ipr.columns.astype(str)
         for ts in indiv_ipr.columns[5:]:
             ts = pd.to_datetime(ts)
             ts_end = ts + timedelta(0.5)

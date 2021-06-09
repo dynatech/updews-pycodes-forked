@@ -10,8 +10,7 @@ import numpy as np
 import pandas as pd
 import re
 
-import dynadb.db as db
-
+import lib
 
 def check_sending(df, releases):
     start = pd.to_datetime(df.ts_start.values[0])
@@ -35,71 +34,38 @@ def check_sending(df, releases):
     return df
 
 
-def system_downtime(mysql=False):
-    if mysql:
-        query = 'SELECT * FROM system_down WHERE reported = 1'
-        df = db.df_read(query=query, resource="sensor_data")
-    else:
-        df = pd.read_csv('input/downtime.csv')
-    df.loc[:, ['start_ts', 'end_ts']] = df.loc[:, ['start_ts', 'end_ts']].apply(pd.to_datetime)
-    return df
-
-
-def remove_downtime(df, downtime):
-    for start, end in downtime[['start_ts', 'end_ts']].values:
-        df = df.loc[(df.ts_start < start+np.timedelta64(150, 'm')) | (df.ts_start > end+np.timedelta64(150, 'm')), :]
-    return df
-
-
 def release_start(releases):
     ts_date = pd.to_datetime(pd.to_datetime(releases.timestamp.values[0]).date())
     text = releases.narrative.values[0]
     text = text.replace('NN', 'PM')
     match = re.search("\d{0,2}[:]{0,1}\d{1,2}[ ]{0,1}[AP]M", text)[0]
-    hour = int(match[0:2])
+    hour = int(match[:-2].split(':')[0])
     ts_start = ts_date 
     if hour != 12:
-        ts_start += timedelta(hours=int(match[0:2]))
+        ts_start += timedelta(hours=int(hour))
     if match[-2] == "P":
         ts_start += timedelta(0.5)
     if ':' in match:
-        ts_start += timedelta(minutes=int(match[3:5]))
+        ts_start += timedelta(minutes=int(match[:-2].split(':')[1]))
     releases.loc[:, 'ts_start'] = ts_start
     return releases
 
 
-def get_releases(start, end, mysql=False):
-    if mysql:
-        query  = "SELECT site_code, timestamp, narrative FROM "
-        query += "  (SELECT * FROM commons_db.narratives "
-        query += "  WHERE narrative REGEXP 'EWI BULLETIN' "
-        query += "  AND timestamp > '{start}' "
-        query += "  AND timestamp <= '{end}' "
-        query += "  ) bulletin "
-        query += "INNER JOIN commons_db.sites USING (site_id) "
-        query += "ORDER BY timestamp"
-        query = query.format(start=start+timedelta(hours=8), end=end+timedelta(hours=8))
-        df = db.df_read(query=query, connection="common")
-    else:
-        df = pd.read_csv('input/webbulletin.csv')
-    df.loc[:, 'timestamp'] = pd.to_datetime(df.timestamp)
-    df_grp = df.reset_index().groupby('index', as_index=False)
-    df = df_grp.apply(release_start).reset_index(drop=True)
-    return df
-
-def main(start, end, mysql=False):
-    downtime = system_downtime(mysql=mysql)
+def main(start, end, eval_df, mysql=False):
+    downtime = lib.system_downtime(mysql=mysql)
     ewi_sched = pd.read_csv('output/sending_status.csv', parse_dates=['ts_start', 'ts_end'])
-    ewi_sched = remove_downtime(ewi_sched, downtime)
+    ewi_sched = lib.remove_downtime(ewi_sched, downtime)
     ewi_sched = ewi_sched.loc[ewi_sched.event == 1, :]
     
-    releases = get_releases(start, end, mysql=mysql)
-    
+    releases = lib.get_narratives(start, end, mysql=mysql)
+    releases_grp = releases.reset_index().groupby('index', as_index=False)
+    releases = releases_grp.apply(release_start).reset_index(drop=True)
+
     monitoring_ipr = pd.read_excel('output/monitoring_ipr.xlsx', sheet_name=None)
     
     for name in monitoring_ipr.keys():
         indiv_ipr = monitoring_ipr[name]
-    
+        indiv_ipr.columns = indiv_ipr.columns.astype(str)
         for ts in indiv_ipr.columns[5:]:
             ts = pd.to_datetime(ts)
             ts_end = ts + timedelta(0.5)
@@ -109,6 +75,10 @@ def main(start, end, mysql=False):
                 shift_release = indiv_release.apply(check_sending, releases=releases).reset_index(drop=True)
                 grade = np.round((len(shift_release) - sum(shift_release.deduction)) / len(shift_release), 2)
                 indiv_ipr.loc[indiv_ipr.Output2 == 'EWI bulletin', str(ts)] = grade
+            if ts >= pd.to_datetime('2021-04-01') and len(shift_release) != 0:
+                shift_eval = eval_df.loc[(eval_df.shift_ts >= ts) & (eval_df.shift_ts <= ts+timedelta(1)) & ((eval_df['evaluated_MT'] == name) | (eval_df['evaluated_CT'] == name) | (eval_df['evaluated_backup'] == name)), :].drop_duplicates('shift_ts', keep='last')
+                deduction = np.nansum((4/15)*shift_eval['bul_ts'] + shift_eval['bul_alert'] + (1/15)*shift_eval['bul_typo'])
+                indiv_ipr.loc[indiv_ipr.Output1 == 'EWI bulletin', str(ts)] = np.round((len(shift_release) - deduction)/len(shift_release), 2)
         monitoring_ipr[name] = indiv_ipr
         
     writer = pd.ExcelWriter('output/monitoring_ipr.xlsx')
