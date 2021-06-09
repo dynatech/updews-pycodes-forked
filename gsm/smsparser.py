@@ -251,6 +251,7 @@ def process_surficial_observation(sms):
     resource = "sensor_data"
     
     obv = []
+    sms.msg = sms.msg.replace('"', '').replace("'", "")
     try:
         obv = parser.surficial.observation(sms.msg)
         
@@ -521,14 +522,20 @@ def parse_all_messages(args,allmsgs=[]):
                 try:
                     df_data =subsurface.diagnostics(sms)
                     if df_data:
-                        print (df_data.data)
-                        dbio.df_write(df_data, resource=resource)
-                        
+                        print (df_data[0].data)
+                        print (df_data[1].data)
+                        try:
+                            dbio.df_write(df_data[0], resource=resource)
+                            dbio.df_write(df_data[1], resource=resource)
+                        except:
+                            print ('>>SQL Error')
+                            is_msg_proc_success = False
                     else:
                         print ('>>Value Error')
                         is_msg_proc_success = False
                 except:
                     print ("error parsing diagnostics")
+                    is_msg_proc_success = False
                         
             #check if message is from rain gauge
             elif re.search("^\w{4,7},[\d\/:,]+",sms.msg):
