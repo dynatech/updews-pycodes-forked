@@ -14,7 +14,7 @@ import gsm.smsparser2.smsclass as sms
 import volatile.memory as mem
 
 
-def rainfall(site_id, ts, rain_id, rain_alert=None):
+def rainfall(site_id, ts, rain_id, rain_alert='both'):
     """Insert values to rainfall_alerts and operational_triggers tables 
     to (re)trigger rainfall alert
     
@@ -35,25 +35,29 @@ def rainfall(site_id, ts, rain_id, rain_alert=None):
     df = df.rename(columns={'threshold_value': 'threshold'})
     df.loc[:, 'ts'] = ts
     # rainfall cumulative based on alert level
-    if rain_alert != 'x':
-        df.loc[:, 'rain_alert'] = 'b'
-        df.loc[:, 'cumulative'] = 1.2 * df.loc[:, 'threshold']
+    if str(rain_alert) == '0':
+            df.loc[:, 'rain_alert'] = 0
+            df.loc[:, 'cumulative'] = 0
     else:
-        df.loc[:, 'rain_alert'] = 'x'
-        df.loc[:, 'cumulative'] = 0.76 * df.loc[:, 'threshold']
-    if rain_alert == 'a' or rain_alert == None:
-        dfa = df.copy()
-        dfa.loc[:, ['cumulative', 'threshold']] = dfa.loc[:, ['cumulative', 'threshold']].div(2)
-        dfa.loc[:, 'rain_alert'] = 'a'
-        if rain_alert == 'a':
-            df = dfa.copy()
+        if rain_alert != 'x':
+            df.loc[:, 'rain_alert'] = 'b'
+            df.loc[:, 'cumulative'] = 1.2 * df.loc[:, 'threshold']
         else:
-            df = df.append(dfa, ignore_index=True)
-    qdb.write_rain_alert(df)
+            df.loc[:, 'rain_alert'] = 'x'
+            df.loc[:, 'cumulative'] = 0.80 * df.loc[:, 'threshold']
+        if rain_alert == 'a' or rain_alert == 'both':
+            dfa = df.copy()
+            dfa.loc[:, ['cumulative', 'threshold']] = dfa.loc[:, ['cumulative', 'threshold']].div(2)
+            dfa.loc[:, 'rain_alert'] = 'a'
+            if rain_alert == 'a':
+                df = dfa.copy()
+            else:
+                df = df.append(dfa, ignore_index=True)
+        qdb.write_rain_alert(df)
 
     # writes to operational_triggers
     trigger_symbol = mem.get('df_trigger_symbols')
-    if rain_alert == 'x':
+    if str(rain_alert) in ['0', 'x']:
         alert_level = 0
     else:
         alert_level = 1
