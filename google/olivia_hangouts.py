@@ -6,6 +6,7 @@ Created on Tue Jun 18 10:39:27 2019
 @author: brain
 """
 
+import sys
 import analysis.querydb as qdb
 import pandas as pd
 from datetime import datetime as dt
@@ -22,6 +23,8 @@ import analysis.subsurface.proc as proc
 import analysis.subsurface.rtwindow as rtw
 import volatile.memory as mem
 import dynadb.db as db
+
+from olivia_receive_message import ilan_alert
 
 def main(alert):    
     site_id = alert.site_id
@@ -121,54 +124,80 @@ def send_hangouts(OutputFP, alert):
 
 ##########################################################
 if __name__ == '__main__':
-    query = "SELECT link from olivia_link where link_id = 3"
-    python_path = db.read(query, connection = "gsm_pi")[0][0]
+    test_groupchat='UgwcSTTEx1yRS0DrYVN4AaABAQ'
+    brain = 'UgwySAbzw-agrDF6QAB4AaABAagBp5i4CQ'
     
-    file_path = os.path.dirname(__file__)
-    
-    query = ("SELECT stat_id, site_code,s.site_id, trigger_source, alert_symbol, "
-            "ts_last_retrigger,source_id FROM "
-            "(SELECT stat_id, ts_last_retrigger, site_id, trigger_source, "
-            "alert_symbol,sym.source_id FROM "
-            "(SELECT stat_id, ts_last_retrigger, site_id, trigger_sym_id FROM "
-            "(SELECT * FROM alert_status WHERE "
-            "ts_set >= NOW()-interval 5 minute "
-            "and ts_ack is NULL"
-#            "stat_id=4071 "
-            ") AS stat "
-            "INNER JOIN "
-            "operational_triggers AS op "
-            "ON stat.trigger_id = op.trigger_id) AS trig "
-            "INNER JOIN "
-            "(Select * from operational_trigger_symbols  where source_id in (1,2,3)) AS sym "
-            "ON trig.trigger_sym_id = sym.trigger_sym_id "
-            "inner join trigger_hierarchies as th "
-            "on th.source_id=sym.source_id) AS alert "
-            "INNER JOIN "
-            "commons_db.sites as s "
-            "ON s.site_id = alert.site_id")
-            
-    smsalert=db.df_read(query, connection= "analysis")
-    
-    for i in smsalert.index:
-        OutputFP=main(smsalert.loc[i])
-        if not OutputFP:
-            print ("nasend na!")
-        else:
-            send_hangouts(OutputFP,smsalert.loc[i])
-
-#check for inactivity for 3hrs
-    q_log = ("SELECT TIMESTAMPDIFF(MINUTE, ts, NOW()) "
-             "AS difference FROM olivia_logs "
-             "where log_id = (select max(log_id) from olivia_logs)")
-    ts_diff = db.read(q_log, connection= "gsm_pi")[0][0]
-    
-    if ts_diff>=240:
-        brain = 'UgwySAbzw-agrDF6QAB4AaABAagBp5i4CQ'
+    if sys.argv<=1:
+        query = "SELECT link from olivia_link where link_id = 3"
+        python_path = db.read(query, connection = "gsm_pi")[0][0]
         
-        message = "as of {} no messages for 2hrs".format(dt.now().strftime("%Y-%m-%d %H:%M"))
-        cmd = "{} {}/send_message.py --conversation-id {} --message-text '{}'".format(python_path,file_path,brain,message)
+        file_path = os.path.dirname(__file__)
+        
+        query = ("SELECT stat_id, site_code,s.site_id, trigger_source, alert_symbol, "
+                "ts_last_retrigger,source_id FROM "
+                "(SELECT stat_id, ts_last_retrigger, site_id, trigger_source, "
+                "alert_symbol,sym.source_id FROM "
+                "(SELECT stat_id, ts_last_retrigger, site_id, trigger_sym_id FROM "
+                "(SELECT * FROM alert_status WHERE "
+                "ts_set >= NOW()-interval 5 minute "
+                "and ts_ack is NULL"
+    #            "stat_id=4071 "
+                ") AS stat "
+                "INNER JOIN "
+                "operational_triggers AS op "
+                "ON stat.trigger_id = op.trigger_id) AS trig "
+                "INNER JOIN "
+                "(Select * from operational_trigger_symbols  where source_id in (1,2,3)) AS sym "
+                "ON trig.trigger_sym_id = sym.trigger_sym_id "
+                "inner join trigger_hierarchies as th "
+                "on th.source_id=sym.source_id) AS alert "
+                "INNER JOIN "
+                "commons_db.sites as s "
+                "ON s.site_id = alert.site_id")
+                
+        smsalert=db.df_read(query, connection= "analysis")
+        
+        for i in smsalert.index:
+            OutputFP=main(smsalert.loc[i])
+            if not OutputFP:
+                print ("nasend na!")
+            else:
+                send_hangouts(OutputFP,smsalert.loc[i])
+    
+    #check for inactivity for 3hrs
+        q_log = ("SELECT TIMESTAMPDIFF(MINUTE, ts, NOW()) "
+                 "AS difference FROM olivia_logs "
+                 "where log_id = (select max(log_id) from olivia_logs)")
+        ts_diff = db.read(q_log, connection= "gsm_pi")[0][0]
+        
+        if ts_diff>=240:
+            brain = 'UgwySAbzw-agrDF6QAB4AaABAagBp5i4CQ'
+            
+            message = "as of {} no messages for 2hrs".format(dt.now().strftime("%Y-%m-%d %H:%M"))
+            cmd = "{} {}/send_message.py --conversation-id {} --message-text '{}'".format(python_path,file_path,brain,message)
+            os.system(cmd)
+    
+    # (9:00am / 9:00pm) magsend ng link
+    elif sys.argv[1] == "eval":
+        query = "SELECT link from olivia_link where description = 'eval form'"
+        link = db.read(query, connection = "gsm_pi")[0][0]
+        message = "Evaluation Form \n\n{}\n".format(link) 
+        cmd = "{} {}/send_message.py --conversation-id {} --message-text '{}'".format(python_path,file_path,test_groupchat,message)
         os.system(cmd)
-
-
+    
+    #end of monitoring (8:00am / 8:00pm) magsend ng link
+    elif sys.argv[1] == "behavioral":
+        query = "SELECT link from olivia_link where description = 'monitoring behavior'"
+        link = db.read(query, connection = "gsm_pi")[0][0]
+        message = "Monitoring Behavior Form \n\n{}\n".format(link)    
+        
+        cmd = "{} {}/send_message.py --conversation-id {} --message-text '{}'".format(python_path,file_path,test_groupchat,message)
+        os.system(cmd)
+    
+    #start of monitoring (8:30am / 8:30pm) magsend kung ilan alert
+    elif sys.argv[1] == "start":
+        message = "as of {}\n".format(dt.now().strftime("%Y-%m-%d %H:%M"))
+        message += ilan_alert(link = True)
+        cmd = "{} {}/send_message.py --conversation-id {} --message-text '{}'".format(python_path,file_path,test_groupchat,message)
+        os.system(cmd)
 

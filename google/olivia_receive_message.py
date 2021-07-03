@@ -109,6 +109,46 @@ def check_data(table_name = '', data = False):
         list_mes = "error table: {}\n".format(table_name)
     
     return list_mes
+
+def ilan_alert(link = False):
+    query = ("SELECT site_code,alert_symbol, trigger_list "
+             ",if (timestampdiff(hour, data_ts,validity)<5,'for lowering','') as stat "
+             "FROM monitoring_events "
+             "inner join commons_db.sites on sites.site_id = monitoring_events.site_id "
+             "inner join monitoring_event_alerts "
+             "on monitoring_event_alerts.event_id = monitoring_events.event_id "
+             "inner join monitoring_releases "
+             "on monitoring_event_alerts.event_alert_id = monitoring_releases.event_alert_id "
+             "inner join public_alert_symbols "
+             "on public_alert_symbols.pub_sym_id = monitoring_event_alerts.pub_sym_id "
+             "where monitoring_event_alerts.pub_sym_id >= 2 and validity > Now() and data_ts >= NOW()-INTERVAL 4 hour "
+             "order by alert_symbol desc")
+    cur_alert=db.df_read(query, connection= "website")
+    # remove repeating site_code
+    cur_alert = cur_alert.groupby("site_code").first().reset_index()
+    message = "{} alerts\n".format(len(cur_alert))
+    
+    if len(cur_alert) == 1:
+        message = message.replace("s","")
+
+    
+    if len(cur_alert)>0:
+        for i in range(0,len(cur_alert)):
+            if "ND" in cur_alert.trigger_list[i]:
+                message += "{} : {} {}\n".format(cur_alert.site_code[i],cur_alert.trigger_list[i], cur_alert.stat[i])
+            else:
+                message += "{} : {}-{} {}\n".format(cur_alert.site_code[i],cur_alert.alert_symbol[i],cur_alert.trigger_list[i], cur_alert.stat[i])
+    
+    else:
+        if link:
+            query = "SELECT link from olivia_link where description = 'contacts updating'"
+            contact_link = db.read(query, connection = "gsm_pi")[0][0]
+            message += "Magupdate ng contacts \n\n{}\n".format(contact_link)
+            
+    print(message)
+
+    message = message[:-1]
+    return message
     
 def main(alert):    
     site_id = alert.site_id
@@ -336,40 +376,7 @@ def on_event(conv_event):
                 os.system(cmd)
         
         elif re.search("olivia ilan alert",received_msg.lower()):
-            query = ("SELECT site_code,alert_symbol, trigger_list "
-                     ",if (timestampdiff(hour, data_ts,validity)<5,'for lowering','') as stat "
-                     "FROM monitoring_events "
-                     "inner join commons_db.sites on sites.site_id = monitoring_events.site_id "
-                     "inner join monitoring_event_alerts "
-                     "on monitoring_event_alerts.event_id = monitoring_events.event_id "
-                     "inner join monitoring_releases "
-                     "on monitoring_event_alerts.event_alert_id = monitoring_releases.event_alert_id "
-                     "inner join public_alert_symbols "
-                     "on public_alert_symbols.pub_sym_id = monitoring_event_alerts.pub_sym_id "
-                     "where monitoring_event_alerts.pub_sym_id >= 2 and validity > Now() and data_ts >= NOW()-INTERVAL 4 hour "
-                     "order by alert_symbol desc")
-            cur_alert=db.df_read(query, connection= "website")
-            # remove repeating site_code
-            cur_alert = cur_alert.groupby("site_code").first().reset_index()
-            message = "{} alerts\n".format(len(cur_alert))
-            
-            if len(cur_alert) == 1:
-                message = message.replace("s","")
-        
-#            conversation_id = conv_event.conversation_id    #test_groupchat
-#            cmd = "{} {}/send_message.py --conversation-id {} --message-text '{}'".format(python_path,file_path,conversation_id,message)
-#            os.system(cmd)
-            
-            if len(cur_alert)>0:
-                for i in range(0,len(cur_alert)):
-                    if "ND" in cur_alert.trigger_list[i]:
-                        message += "{} : {} {}\n".format(cur_alert.site_code[i],cur_alert.trigger_list[i], cur_alert.stat[i])
-                    else:
-                        message += "{} : {}-{} {}\n".format(cur_alert.site_code[i],cur_alert.alert_symbol[i],cur_alert.trigger_list[i], cur_alert.stat[i])
-                    
-            print(message)
-#                    conversation_id = conv_event.conversation_id    #test_groupchat
-            message = message[:-1]
+            message = ilan_alert()
             cmd = "{} {}/send_message.py --conversation-id {} --message-text '{}'".format(python_path,file_path,conversation_id,message)
             os.system(cmd)
                     
