@@ -126,12 +126,14 @@ def send_hangouts(OutputFP, alert):
 if __name__ == '__main__':
     test_groupchat='UgwcSTTEx1yRS0DrYVN4AaABAQ'
     brain = 'UgwySAbzw-agrDF6QAB4AaABAagBp5i4CQ'
+
+    query = "SELECT link from olivia_link where link_id = 3"
+    python_path = db.read(query, connection = "gsm_pi")[0][0]
     
-    if sys.argv<=1:
-        query = "SELECT link from olivia_link where link_id = 3"
-        python_path = db.read(query, connection = "gsm_pi")[0][0]
+    file_path = os.path.dirname(__file__)
         
-        file_path = os.path.dirname(__file__)
+    if len(sys.argv)<=1:
+
         
         query = ("SELECT stat_id, site_code,s.site_id, trigger_source, alert_symbol, "
                 "ts_last_retrigger,source_id FROM "
@@ -170,7 +172,7 @@ if __name__ == '__main__':
                  "where log_id = (select max(log_id) from olivia_logs)")
         ts_diff = db.read(q_log, connection= "gsm_pi")[0][0]
         
-        if ts_diff>=240:
+        if ts_diff>=120:
             brain = 'UgwySAbzw-agrDF6QAB4AaABAagBp5i4CQ'
             
             message = "as of {} no messages for 2hrs".format(dt.now().strftime("%Y-%m-%d %H:%M"))
@@ -181,7 +183,7 @@ if __name__ == '__main__':
     elif sys.argv[1] == "eval":
         query = "SELECT link from olivia_link where description = 'eval form'"
         link = db.read(query, connection = "gsm_pi")[0][0]
-        message = "Evaluation Form \n\n{}\n".format(link) 
+        message = "Evaluation Form\n{}\n".format(link) 
         cmd = "{} {}/send_message.py --conversation-id {} --message-text '{}'".format(python_path,file_path,test_groupchat,message)
         os.system(cmd)
     
@@ -189,7 +191,7 @@ if __name__ == '__main__':
     elif sys.argv[1] == "behavioral":
         query = "SELECT link from olivia_link where description = 'monitoring behavior'"
         link = db.read(query, connection = "gsm_pi")[0][0]
-        message = "Monitoring Behavior Form \n\n{}\n".format(link)    
+        message = "Monitoring Behavior Form\n{}\n".format(link)    
         
         cmd = "{} {}/send_message.py --conversation-id {} --message-text '{}'".format(python_path,file_path,test_groupchat,message)
         os.system(cmd)
