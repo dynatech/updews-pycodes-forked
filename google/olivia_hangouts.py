@@ -203,3 +203,14 @@ if __name__ == '__main__':
         cmd = "{} {}/send_message.py --conversation-id {} --message-text '{}'".format(python_path,file_path,test_groupchat,message)
         os.system(cmd)
 
+    #10:00am magsend kung health dec form
+    elif sys.argv[1] == "healthdec":
+        cmd = "{} {}/upload_image.py --conversation-id {} --image '{}/health dec.png'".format(python_path,file_path,test_groupchat,file_path)
+        os.system(cmd)
+        
+        query = "SELECT link from olivia_link where description = 'health dec'"
+        link = db.read(query, connection = "gsm_pi")[0][0]
+        
+        message = "Health Check Declaration Form\n{}\n".format(link)
+        cmd = "{} {}/send_message.py --conversation-id {} --message-text '{}'".format(python_path,file_path,test_groupchat,message)
+        os.system(cmd)
