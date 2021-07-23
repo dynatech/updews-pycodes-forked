@@ -110,7 +110,7 @@ def rainfall_details(site_id, start_monitor, ts_last_retrigger):
 def subsurface_details(site_id, start_monitor, ts_last_retrigger):
     query = "SELECT node_id, tsm_name FROM "
     query += "  (SELECT * FROM node_alerts "
-    query += "  WHERE ts >= '%s' " % start_monitor
+    query += "  WHERE ts >= '%s' " % (ts_last_retrigger-td(hours=4))
     query += "  AND ts <= '%s' " % ts_last_retrigger
     query += "  ) AS alerts "
     query += "INNER JOIN "
