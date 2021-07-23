@@ -61,7 +61,7 @@ def send_reminder(ts = datetime.now()):
     df = db.df_read(query)
     df = df.rename(columns={'iompmt': 'MT', 'iompct': 'CT'})
     
-    sched = shift_ts.strftime("%B %d, %Y %I:%M%p")
+    sched = (shift_ts-timedelta(hours=0.25)).strftime("%B %d, %Y %I:%M%p")
     greeting = ts.strftime("%p")
     if greeting == 'AM':
         greeting = 'morning'
