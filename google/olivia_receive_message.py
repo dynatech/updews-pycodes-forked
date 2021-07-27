@@ -139,60 +139,64 @@ def ilan_alert(link = False):
             else:
                 message += "{} : {}-{} {}\n".format(cur_alert.site_code[i],cur_alert.alert_symbol[i],cur_alert.trigger_list[i], cur_alert.stat[i])
     
-    else:
-        if link:
+#    else:
+    if link:
+        if len(cur_alert)==0:
             magupdate = True
+        
+        #if am shift
+        if dt.now().hour < 12:
+            #check if routine
+            month = dt.now().strftime("%B").lower()
+            day = dt.now().isoweekday()
+            query = "SELECT season_group_id FROM seasons where {} = ".format(month)
             
-            #if am shift
-            if dt.now().hour < 12:
-                #check if routine
-                month = dt.now().strftime("%B").lower()
-                day = dt.now().isoweekday()
-                query = "SELECT season_group_id FROM seasons where {} = ".format(month)
+            if day in (2,5):
+                #wet season
+                print("wet season")
+                query +="'w'"
+            elif day ==3:
+                print("dry season")
+                query +="'d'"
+            else:
+                query+="'j'"
                 
-                if day in (2,5):
-                    #wet season
-                    print("wet season")
-                    query +="'w'"
-                elif day ==3:
-                    print("dry season")
-                    query +="'d'"
-                else:
-                    query+="'j'"
+            season = db.df_read(query, connection = "common")
+            
+            if len(season)>0:
+                routine = True
+                message += "Routine Monitoring\n"
+            else:
+                routine = False
+                
+            #check if theres extended
+            query = ("SELECT distinct site_code FROM monitoring_events "
+                     "INNER JOIN commons_db.sites ON sites.site_id = monitoring_events.site_id "
+                     "INNER JOIN monitoring_event_alerts ON monitoring_event_alerts.event_id = monitoring_events.event_id "
+                     "INNER JOIN monitoring_releases ON monitoring_event_alerts.event_alert_id = monitoring_releases.event_alert_id "
+                     "INNER JOIN public_alert_symbols ON public_alert_symbols.pub_sym_id = monitoring_event_alerts.pub_sym_id "
+                     "WHERE alert_level = 0 and status =2 and ts_start > now() - interval 3 day "
+                     "and date_format(ts_start,'%Y-%m-%d') + interval 1 day < now()")
+            ext_site = db.read(query, connection= "website")
+            
+            if len(ext_site)>0:
+                extended = True
+                message += "Extended Monitoring {} sites:\n".format(len(ext_site))
+                if len(ext_site) == 1: 
+                    message = message.replace("sites","site")
                     
-                season = db.df_read(query, connection = "common")
+                for site in ext_site:
+                    message += "{}\n".format(site[0])
+            else:
+                extended = False
+            
+            if routine or extended:
+                magupdate = False
                 
-                if len(season)>0:
-                    routine = True
-                    message += "Routine Monitoring\n"
-                else:
-                    routine = False
-                    
-                #check if theres extended
-                query = ("SELECT distinct site_code FROM monitoring_events "
-                         "INNER JOIN commons_db.sites ON sites.site_id = monitoring_events.site_id "
-                         "INNER JOIN monitoring_event_alerts ON monitoring_event_alerts.event_id = monitoring_events.event_id "
-                         "INNER JOIN monitoring_releases ON monitoring_event_alerts.event_alert_id = monitoring_releases.event_alert_id "
-                         "INNER JOIN public_alert_symbols ON public_alert_symbols.pub_sym_id = monitoring_event_alerts.pub_sym_id "
-                         "WHERE alert_level = 0 and status =2 and ts_start > now() - interval 3 day "
-                         "and date_format(ts_start,'%Y-%m-%d') + interval 1 day < now()")
-                ext_site = db.read(query, connection= "website")
-                
-                if len(ext_site)>0:
-                    extended = True
-                    message += "Extended Monitoring {} sites:\n".format(len(ext_site))
-                    for site in ext_site:
-                        message += "{}\n".format(site[0])
-                else:
-                    extended = False
-                
-                if routine or extended:
-                    magupdate = False
-                    
-            if magupdate:
-                query = "SELECT link from olivia_link where description = 'contacts updating'"
-                contact_link = db.read(query, connection = "gsm_pi")[0][0]
-                message += "Magupdate ng contacts{}\n".format(contact_link)
+        if magupdate:
+            query = "SELECT link from olivia_link where description = 'contacts updating'"
+            contact_link = db.read(query, connection = "gsm_pi")[0][0]
+            message += "Magupdate ng contacts{}\n".format(contact_link)
             
     print(message)
 
