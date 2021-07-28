@@ -26,7 +26,7 @@ def get_surficial_data(site_code, sheet_name, marker_name, excel_column_letter, 
         IOMP_col_num += [col_num]
     usecols = [0,1] + excel_column_number + [public_alert_column_number] + IOMP_col_num
     names = ['date', 'time'] + marker_name + ['public_alert', 'MT', 'CT']
-    df = pd.read_excel('(NEW) Site Monitoring Database.xlsx', skiprows=[0,1], na_values=['ND', '-'], usecols=usecols, names=names, parse_dates=[[0,1]])
+    df = pd.read_excel('(NEW) Site Monitoring Database.xlsx', sheet_name=sheet_name, skiprows=[0,1], na_values=['ND', '-'], usecols=usecols, names=names, parse_dates=[[0,1]])
     df = df.dropna(subset=marker_name, how='all')
     df = df.rename(columns={'date_time': 'ts'})
     df.loc[:, 'public_alert'] = df['public_alert'].fillna('A0')
