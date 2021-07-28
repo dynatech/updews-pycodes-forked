@@ -47,16 +47,17 @@ def get_releases(start, end, mysql=False):
         df.to_csv('input/webreleases.csv', index=False)
     else:
         df = pd.read_csv('input/webreleases.csv')
+    df.loc[:, 'ts_start'] = pd.to_datetime(df.ts_start)
     return df
 
 def main(start, end, eval_df, mysql=False):
     downtime = lib.system_downtime(mysql=mysql)
-    ewi_sched = pd.read_csv('output/sending_status.csv', parse_dates=['ts_start', 'ts_end'])
+    ewi_sched = pd.read_csv('output/sending_status.csv', parse_dates=['data_ts', 'ts_start', 'ts_end'])
     ewi_sched = lib.remove_downtime(ewi_sched, downtime)
-    ewi_sched.loc[ewi_sched.raising == 1, 'ts_start'] = ewi_sched.loc[ewi_sched.raising == 1, 'ts_start'] + timedelta(minutes=55)
+    ewi_sched.loc[ewi_sched.raising == 1, 'ts_end'] = ewi_sched.loc[ewi_sched.raising == 1, 'ts_start'] + timedelta(minutes=55)
     
     releases = get_releases(start, end, mysql=mysql)
-    releases.loc[: , 'ts_start'] = pd.to_datetime(releases.loc[: , 'ts_start']) + timedelta(minutes=30)
+    releases.loc[: , 'ts_start'] = releases.ts_start + timedelta(minutes=30)
     releases.loc[:, 'ts_release'] = releases.loc[: , ['ts_start', 'release_time']].apply(lambda row: pd.to_datetime(str(row.ts_start.date()) + ' ' + str(row.release_time).replace('0 days ', '')), axis=1)
     releases.loc[releases.ts_start.dt.time < releases.ts_release.dt.time, 'ts_release'] = releases.loc[releases.ts_start.dt.time < releases.ts_release.dt.time, 'ts_release'] - timedelta(1)
     
@@ -68,14 +69,14 @@ def main(start, end, eval_df, mysql=False):
         for ts in indiv_ipr.columns[5:]:
             ts = pd.to_datetime(ts)
             ts_end = ts + timedelta(0.5)
-            shift_release = ewi_sched.loc[(ewi_sched.ts_start > ts) & (ewi_sched.ts_start <= ts_end), :]
+            shift_release = ewi_sched.loc[(ewi_sched.data_ts >= ts) & (ewi_sched.data_ts < ts_end), :]
             if len(shift_release) != 0:
                 indiv_release = shift_release.groupby('index', as_index=False)
                 shift_release = indiv_release.apply(check_sending, releases=releases).reset_index(drop=True)
                 grade = np.round((len(shift_release) - sum(shift_release.deduction)) / len(shift_release), 2)
                 indiv_ipr.loc[indiv_ipr.Output2 == 'EWI web release', str(ts)] = grade
             if ts >= pd.to_datetime('2021-04-01') and len(shift_release) != 0:
-                shift_eval = eval_df.loc[(eval_df.shift_ts >= ts) & (eval_df.shift_ts <= ts+timedelta(1)) & ((eval_df['evaluated_MT'] == name) | (eval_df['evaluated_CT'] == name) | (eval_df['evaluated_backup'] == name)), :].drop_duplicates('shift_ts', keep='last')
+                shift_eval = eval_df.loc[(eval_df.shift_ts >= ts) & (eval_df.shift_ts <= ts+timedelta(1)) & ((eval_df['evaluated_MT'] == name) | (eval_df['evaluated_CT'] == name) | (eval_df['evaluated_backup'] == name)), :].drop_duplicates('shift_ts', keep='last')[0:1]
                 deduction = np.nansum(shift_eval[['routine_web_alert_ts', 'web_alert_ts']].values)/3 + np.nansum(shift_eval[['routine_web_alert_level', 'web_alert_level']].values)
                 indiv_ipr.loc[indiv_ipr.Output1 == 'web release', str(ts)] = np.round((len(shift_release) - deduction)/len(shift_release), 2)
         monitoring_ipr[name] = indiv_ipr

@@ -58,10 +58,10 @@ def check_sending(shift_release, outbox_tag):
 def main(start, end, eval_df, mysql=False):
     site_list = site_recipient()
     downtime = system_downtime(mysql=mysql)
-    ewi_sched = pd.read_csv('output/sending_status.csv', parse_dates=['ts_start'])
+    ewi_sched = pd.read_csv('output/sending_status.csv', parse_dates=['data_ts', 'ts_start', 'ts_end'])
     ewi_sched = ewi_sched.loc[(ewi_sched.raising != 1) & (ewi_sched.event == 1) & (ewi_sched.site_code.isin(site_list)), :]
+    ewi_sched = ewi_sched.loc[~((ewi_sched.site_code == 'png') & (ewi_sched.ts_start < pd.to_datetime('2021-05-05 08:00'))), :]
     ewi_sched.loc[:, 'ts_end'] = ewi_sched.ts_start + timedelta(minutes=15)
-    ewi_sched.loc[:, ['ts_start', 'ts_end']] = ewi_sched.loc[:, ['ts_start', 'ts_end']].apply(pd.to_datetime)
     ewi_sched = remove_downtime(ewi_sched, downtime)
     
     outbox_tag = smstags.outbox_tag(start, end, mysql=mysql)
@@ -75,7 +75,7 @@ def main(start, end, eval_df, mysql=False):
         for ts in indiv_ipr.columns[5:]:
             ts = pd.to_datetime(ts)
             ts_end = ts + timedelta(0.5)
-            shift_release = ewi_sched.loc[(ewi_sched.ts_start > ts) & (ewi_sched.ts_start <= ts_end), :]
+            shift_release = ewi_sched.loc[(ewi_sched.data_ts >= ts) & (ewi_sched.data_ts < ts_end), :]
             if len(shift_release) != 0:
                 indiv_release = shift_release.groupby('index', as_index=False)
                 shift_release = indiv_release.apply(check_sending, outbox_tag=outbox_tag).reset_index(drop=True)
@@ -83,7 +83,7 @@ def main(start, end, eval_df, mysql=False):
                 grade = np.round((len(shift_release) - sum(shift_release.deduction)) / len(shift_release), 2)
                 indiv_ipr.loc[indiv_ipr.Output2 == 'Rainfall info', str(ts)] = grade
             if ts >= pd.to_datetime('2021-04-01') and len(shift_release) != 0:
-                shift_eval = eval_df.loc[(eval_df.shift_ts >= ts) & (eval_df.shift_ts <= ts+timedelta(1)) & ((eval_df['evaluated_MT'] == name) | (eval_df['evaluated_CT'] == name) | (eval_df['evaluated_backup'] == name)), :].drop_duplicates('shift_ts', keep='last')
+                shift_eval = eval_df.loc[(eval_df.shift_ts >= ts) & (eval_df.shift_ts <= ts+timedelta(1)) & ((eval_df['evaluated_MT'] == name) | (eval_df['evaluated_CT'] == name) | (eval_df['evaluated_backup'] == name)), :].drop_duplicates('shift_ts', keep='last')[0:1]
                 deduction = np.nansum(0.5*shift_eval['rain_det'] + 0.05*shift_eval['rain_typo'])
                 indiv_ipr.loc[indiv_ipr.Output1 == 'Rainfall info', str(ts)] = np.round((len(shift_release) - deduction)/len(shift_release), 2)
         monitoring_ipr[name] = indiv_ipr

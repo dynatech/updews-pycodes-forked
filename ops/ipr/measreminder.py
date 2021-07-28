@@ -27,9 +27,8 @@ def check_sending(shift_release, inbox_tag, outbox_tag):
 
 
 def main(start, end, mysql=False):
-    ewi_sched = pd.read_csv('output/sending_status.csv', parse_dates=['ts_start'])
-    ewi_sched = ewi_sched.loc[(ewi_sched.ts_start.dt.time >= time(8,0)) & (ewi_sched.ts_start.dt.time <= time(16,0)) & (ewi_sched.raising != 1), :]
-    ewi_sched.loc[:, ['ts_start', 'ts_end']] = ewi_sched.loc[:, ['ts_start', 'ts_end']].apply(pd.to_datetime)
+    ewi_sched = pd.read_csv('output/sending_status.csv', parse_dates=['data_ts', 'ts_start', 'ts_end'])
+    ewi_sched = ewi_sched.loc[(ewi_sched.gndmeas == 1), :]
 
     inbox_tag = smstags.inbox_tag(start, end, mysql=mysql)
     inbox_tag = inbox_tag.loc[inbox_tag.tag.isin(['#GroundMeas', '#CantSendGroundMeas']), :]
@@ -46,7 +45,7 @@ def main(start, end, mysql=False):
         for ts in indiv_ipr.columns[5:]:
             ts = pd.to_datetime(ts)
             ts_end = ts + timedelta(0.5)
-            shift_release = ewi_sched.loc[(ewi_sched.ts_start > ts) & (ewi_sched.ts_start <= ts_end), :]
+            shift_release = ewi_sched.loc[(ewi_sched.data_ts >= ts) & (ewi_sched.data_ts < ts_end), :]
             if len(shift_release) != 0:
                 shift_release.loc[:, 'ts_reminder'] = shift_release.ts_start-timedelta(hours=2.5)
                 indiv_release = shift_release.groupby('index', as_index=False)

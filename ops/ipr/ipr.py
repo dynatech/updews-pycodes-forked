@@ -141,9 +141,9 @@ def main(start, end, update_existing=True, update_dtr=True, recompute=True, mysq
 if __name__ == "__main__":
     run_start = datetime.now()
     
-    start = pd.to_datetime('2020-12-01 08:00')
+    start = pd.to_datetime('2020-12-01')
     end = pd.to_datetime('2021-06-01 08:00')
-    main(start, end, update_dtr=False, mysql=False)
+    main(start, end, update_dtr=False, mysql=False, recompute=False)
     
     runtime = datetime.now() - run_start
     print("runtime = {}".format(runtime))

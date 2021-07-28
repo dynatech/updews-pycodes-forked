@@ -60,15 +60,17 @@ def main(tsm_name='', end='', end_mon=False):
         
     tsm_alert = pd.DataFrame({'ts': [window.end], 'tsm_id': [tsm_props.tsm_id], 'alert_level': [site_alert], 'ts_updated': [window.end]})
 
-    qdb.alert_to_db(tsm_alert, 'tsm_alerts')
+#    qdb.alert_to_db(tsm_alert, 'tsm_alerts')
     
-    qdb.write_op_trig(tsm_props.site_id, window.end)
+#    qdb.write_op_trig(tsm_props.site_id, window.end)
 
     qdb.print_out(tsm_alert)
     
     qdb.print_out('run time = ' + str(datetime.now()-run_start))
+    
+    return tilt
 
 ################################################################################
 
 if __name__ == "__main__":
-    main()
+    tilt = main('magta', '2016-10-12 12:00')

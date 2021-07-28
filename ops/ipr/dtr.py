@@ -28,7 +28,7 @@ def retrieve_dtr():
             print(title)
             dtr_id = int(title[0])
             if dtr_id in personnel.dtr_id.values:
-                sheet_name = personnel.loc[personnel.dtr_id == dtr_id, 'Nickname'].values[0]
+                sheet_name = personnel.loc[personnel.dtr_id == dtr_id, 'Nickname'].values[-1]
                 print(sheet_name)
                 key = file['id']
                 url = 'https://docs.google.com/spreadsheets/d/{key}/export?format=xlsx&id={key}'.format(key=key)
@@ -98,7 +98,7 @@ def eval_online_dtr(name, ts, ts_end, online_dtr):
 def eval_dtr(ts, ts_end, indiv_dtr):
     shift_dtr = indiv_dtr.loc[(indiv_dtr.index == str(ts.date())) | (indiv_dtr.index == str(ts_end.date())), :]
     if len(shift_dtr) == 0:
-        print ('no in', ts)
+        print('no in', ts)
         return 0
     if ts.time() == time(20,0):
         time_in = max(pd.to_datetime(shift_dtr.in3[0]), ts-timedelta(minutes=15))
@@ -128,8 +128,7 @@ def main(update_dtr = False):
     monitoring_ipr = pd.read_excel('output/monitoring_ipr.xlsx', sheet_name=None, dtype=str)
     monitoring_dtr = pd.read_excel('output/monitoring_dtr.xlsx', sheet_name=None, parse_dates=True)
     online_dtr = get_online_dtr()
-    ewi_sms = pd.read_csv('output/sending_status.csv')
-    ewi_sms.loc[:, 'ts_start'] = pd.to_datetime(ewi_sms.loc[:, 'ts_start'])
+    ewi_sms = pd.read_csv('output/sending_status.csv', parse_dates=['data_ts', 'ts_start', 'ts_end'])
 
     for name in monitoring_ipr.keys() -set({'Summary'}):
         indiv_ipr = monitoring_ipr[name]
@@ -144,7 +143,9 @@ def main(update_dtr = False):
                 grade = eval_online_dtr(name, ts, ts_end, online_dtr)
             else:
                 grade = eval_dtr(ts, ts_end, indiv_dtr)
-            sending_status = ewi_sms.loc[(ewi_sms.ts_start > ts) & (ewi_sms.ts_start <= ts+timedelta(0.5)), :]
+                if grade == 0:
+                    print(name)
+            sending_status = ewi_sms.loc[(ewi_sms.data_ts >= ts) & (ewi_sms.data_ts < ts+timedelta(0.5)), :]
             if len(sending_status) != 0:
                 indiv_ipr.loc[indiv_ipr.Category == 'Personnel timeliness', str(ts)] = grade
             else:

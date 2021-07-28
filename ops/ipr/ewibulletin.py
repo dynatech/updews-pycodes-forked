@@ -53,7 +53,7 @@ def release_start(releases):
 
 def main(start, end, eval_df, mysql=False):
     downtime = lib.system_downtime(mysql=mysql)
-    ewi_sched = pd.read_csv('output/sending_status.csv', parse_dates=['ts_start', 'ts_end'])
+    ewi_sched = pd.read_csv('output/sending_status.csv', parse_dates=['data_ts', 'ts_start', 'ts_end'])
     ewi_sched = lib.remove_downtime(ewi_sched, downtime)
     ewi_sched = ewi_sched.loc[ewi_sched.event == 1, :]
     
@@ -69,14 +69,14 @@ def main(start, end, eval_df, mysql=False):
         for ts in indiv_ipr.columns[5:]:
             ts = pd.to_datetime(ts)
             ts_end = ts + timedelta(0.5)
-            shift_release = ewi_sched.loc[(ewi_sched.ts_start > ts) & (ewi_sched.ts_start <= ts_end), :]
+            shift_release = ewi_sched.loc[(ewi_sched.data_ts >= ts) & (ewi_sched.data_ts < ts_end), :]
             if len(shift_release) != 0:
                 indiv_release = shift_release.groupby('ts_start', as_index=False)
                 shift_release = indiv_release.apply(check_sending, releases=releases).reset_index(drop=True)
-                grade = np.round((len(shift_release) - sum(shift_release.deduction)) / len(shift_release), 2)
+                grade = np.round(max(0, len(shift_release) - sum(shift_release.deduction)) / len(shift_release), 2)
                 indiv_ipr.loc[indiv_ipr.Output2 == 'EWI bulletin', str(ts)] = grade
             if ts >= pd.to_datetime('2021-04-01') and len(shift_release) != 0:
-                shift_eval = eval_df.loc[(eval_df.shift_ts >= ts) & (eval_df.shift_ts <= ts+timedelta(1)) & ((eval_df['evaluated_MT'] == name) | (eval_df['evaluated_CT'] == name) | (eval_df['evaluated_backup'] == name)), :].drop_duplicates('shift_ts', keep='last')
+                shift_eval = eval_df.loc[(eval_df.shift_ts >= ts) & (eval_df.shift_ts <= ts+timedelta(1)) & ((eval_df['evaluated_MT'] == name) | (eval_df['evaluated_CT'] == name) | (eval_df['evaluated_backup'] == name)), :].drop_duplicates('shift_ts', keep='last')[0:1]
                 deduction = np.nansum((4/15)*shift_eval['bul_ts'] + shift_eval['bul_alert'] + (1/15)*shift_eval['bul_typo'])
                 indiv_ipr.loc[indiv_ipr.Output1 == 'EWI bulletin', str(ts)] = np.round((len(shift_release) - deduction)/len(shift_release), 2)
         monitoring_ipr[name] = indiv_ipr
