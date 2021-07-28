@@ -69,7 +69,7 @@ def send_unsent_notif(df, notif_type, curr_release, validation=False):
         if notif_type == 'gndmeas':
             return
         sms_msg = 'Sent all ' + notif_type + ' (' + ts + ')'
-        smsoutbox_user_status = get_recipient(curr_release, unsent=False)
+        smsoutbox_user_status = get_recipient(curr_release, unsent=False)  
     smsoutbox_users = pd.DataFrame({'sms_msg': [sms_msg], 'source': ['central']})
     data_table = sms.DataTable('smsoutbox_users', smsoutbox_users)
     outbox_id = db.df_write(data_table, connection='gsm_pi', last_insert=True)[0][0]

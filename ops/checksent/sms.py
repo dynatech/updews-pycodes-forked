@@ -6,6 +6,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import lib
 import ops.ipr.ewisms_meal as ewisms
+import ops.ipr.lib as iprlib
 
 
 def unsent_ewisms(df):
@@ -21,7 +22,7 @@ def unsent_ewisms(df):
 
 def main(time_now=datetime.now()):
 
-    curr_release = ewisms.release_time(time_now) - timedelta(hours=4)
+    curr_release = iprlib.release_time(time_now) - timedelta(hours=4)
     
     start = curr_release - timedelta(3)
     end = curr_release + timedelta(hours=4)
@@ -36,9 +37,10 @@ def main(time_now=datetime.now()):
     
         site_ewisms = ewisms_sent.groupby('site_code', as_index=False)
         df = site_ewisms.apply(unsent_ewisms).reset_index(drop=True)
-        df.loc[df.site_code.isin(['lte']), 'ofc'] = df.loc[df.site_code.isin(['lte']), 'ofc'].apply(lambda x: ', '.join(sorted(set(x.split(', ')) - set(['lewc']))))
-        df.loc[df.site_code.isin(['bar', 'msl', 'msu']), 'ofc'] = df.loc[df.site_code.isin(['bar', 'msl', 'msu']), 'ofc'].apply(lambda x: ', '.join(sorted(set(x.split(', ')) - set(['blgu']))))
-        df = df.loc[df.ofc != '', :]
+        if len(df) != 0:
+            df.loc[df.site_code.isin(['lte']), 'ofc'] = df.loc[df.site_code.isin(['lte']), 'ofc'].apply(lambda x: ', '.join(sorted(set(x.split(', ')) - set(['lewc']))))
+            df.loc[df.site_code.isin(['bar', 'msl', 'msu']), 'ofc'] = df.loc[df.site_code.isin(['bar', 'msl', 'msu']), 'ofc'].apply(lambda x: ', '.join(sorted(set(x.split(', ')) - set(['blgu']))))
+            df = df.loc[df.ofc != '', :]
         
         lib.send_unsent_notif(df, 'EWI SMS', curr_release)
 

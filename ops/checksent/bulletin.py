@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta
-import numpy as np
 import os
 import pandas as pd
 import sys
@@ -7,7 +6,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import lib
 import dynadb.db as db
-import ops.ipr.ewisms_meal as ewisms
+import ops.ipr.lib as iprlib
 
 
 def get_bulletin_sent(start, end):
@@ -30,7 +29,7 @@ def get_eq_bulletin():
 
 def main(time_now=datetime.now()):
 
-    curr_release = ewisms.release_time(time_now) - timedelta(hours=4)
+    curr_release = iprlib.release_time(time_now) - timedelta(hours=4)
     
     start = curr_release - timedelta(3)
     end = curr_release + timedelta(hours=4)
