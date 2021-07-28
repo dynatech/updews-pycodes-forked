@@ -11,12 +11,11 @@ import sys
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import dynadb.db as dbio
-import smsparser2.smsclass as smsclass
+import gsm.smsparser2.smsclass as smsclass
 import analysis.surficial.markeralerts as ma
 
 
 def get_surficial_data(site_code, sheet_name, marker_name, excel_column_letter, public_alert_column_letter, IOMP):    
-    key = '18zDtWJrOXg1oYwwLKRY7ztGpU8YzXtEv37GEGs723ro'
     excel_column_number = list(map(lambda x: ord(x.upper()) - 65, excel_column_letter))
     public_alert_column_number = ord(public_alert_column_letter.upper()) - 65
     IOMP_col_num = []
@@ -26,12 +25,10 @@ def get_surficial_data(site_code, sheet_name, marker_name, excel_column_letter, 
             col_num += 26
         IOMP_col_num += [col_num]
     usecols = [0,1] + excel_column_number + [public_alert_column_number] + IOMP_col_num
-    url = 'https://docs.google.com/spreadsheets/d/{key}/gviz/tq?tqx=out:csv&sheet={sheet_name}'.format(
-        key=key, sheet_name=sheet_name.replace(' ', '%20'))
     names = ['date', 'time'] + marker_name + ['public_alert', 'MT', 'CT']
-    df = pd.read_csv(url, skiprows=1, na_values=['ND', '-'], usecols=usecols, names=names)
+    df = pd.read_excel('(NEW) Site Monitoring Database.xlsx', skiprows=[0,1], na_values=['ND', '-'], usecols=usecols, names=names, parse_dates=[[0,1]])
     df = df.dropna(subset=marker_name, how='all')
-    df.loc[:, 'ts'] = df.apply(lambda row: pd.to_datetime(row.date + ' ' + row.time), axis=1)
+    df = df.rename(columns={'date_time': 'ts'})
     df.loc[:, 'public_alert'] = df['public_alert'].fillna('A0')
     mon_type = {'A0': 'routine', 'A0-R': 'event', 'ND-R': 'event', 'A1': 'event', 'A2': 'event'}
     df.loc[:, 'meas_type'] = df.public_alert.map(mon_type)
@@ -85,13 +82,13 @@ def write_surficial(site_code):
     
 
 if __name__ == '__main__':
-    
-    site_code= 'bak'
-    sheet_name = 'BAK'
-    marker_name = ['A', 'B', 'C', 'D', 'E', 'F']
-    excel_column_letter = ['L', 'M', 'N', 'O', 'P', 'Q']
-    public_alert_column_letter = 'T'
-    IOMP = ['AB', 'AC']
+        
+    site_code= 'mar'
+    sheet_name = 'MAR'
+    marker_name = ['A', 'B', 'C', 'D']
+    excel_column_letter = ['K', 'L', 'N', 'M']
+    public_alert_column_letter = 'Q'
+    IOMP = ['Y', 'Z']
     
     get_surficial_data(site_code, sheet_name, marker_name, excel_column_letter, public_alert_column_letter, IOMP)
     write_surficial(site_code)
