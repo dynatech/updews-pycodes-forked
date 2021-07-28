@@ -38,6 +38,8 @@ def get_surficial_data(site_code, sheet_name, marker_name, excel_column_letter, 
     df = df.loc[:, ['ts'] + marker_name + ['meas_type', 'observer_name']]
     df.loc[:, 'site_code'] = site_code.lower()
     df.to_csv('surficial_{}.csv'.format(site_code.lower()), index=False)
+    
+    return df
 
 
 def write_observation(surf_df, site_id):
@@ -90,5 +92,5 @@ if __name__ == '__main__':
     public_alert_column_letter = 'Q'
     IOMP = ['Y', 'Z']
     
-    get_surficial_data(site_code, sheet_name, marker_name, excel_column_letter, public_alert_column_letter, IOMP)
+    df = get_surficial_data(site_code, sheet_name, marker_name, excel_column_letter, public_alert_column_letter, IOMP)
     write_surficial(site_code)
