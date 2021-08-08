@@ -143,6 +143,8 @@ def ilan_alert(link = False):
     if link:
         if len(cur_alert)==0:
             magupdate = True
+        else:
+            magupdate = False
         
         #if am shift
         if dt.now().hour < 12:
@@ -196,7 +198,7 @@ def ilan_alert(link = False):
         if magupdate:
             query = "SELECT link from olivia_link where description = 'contacts updating'"
             contact_link = db.read(query, connection = "gsm_pi")[0][0]
-            message += "Magupdate ng contacts{}\n".format(contact_link)
+            message += "Magupdate ng contacts\n{}\n".format(contact_link)
             
     print(message)
 
