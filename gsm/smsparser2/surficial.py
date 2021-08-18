@@ -359,15 +359,6 @@ def get_marker_measurements(pattern_matches):
     for match in pattern_matches:
         marker_name = match[0]
         marker_len = float(re.search("\d{1,3}\.*\d{0,2}",match[1:]).group(0))
-
-        # check unit
-        unit_cm = re.search("\d *CM",match[1:])
-        if unit_cm:
-            multiplier = 1.00
-        else:
-            multiplier = 100.00
-
-        marker_len = marker_len * multiplier
         data_records[marker_name] = marker_len
 
     return data_records
