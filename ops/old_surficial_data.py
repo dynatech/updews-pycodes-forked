@@ -17,7 +17,11 @@ import analysis.surficial.markeralerts as ma
 
 def get_surficial_data(site_code, sheet_name, marker_name, excel_column_letter, public_alert_column_letter, IOMP):    
     excel_column_number = list(map(lambda x: ord(x.upper()) - 65, excel_column_letter))
-    public_alert_column_number = ord(public_alert_column_letter.upper()) - 65
+    if len(public_alert_column_letter) > 1:
+        public_alert_column_number = 26
+    else:
+        public_alert_column_number = 0
+    public_alert_column_number += ord(public_alert_column_letter.upper()) - 65
     IOMP_col_num = []
     for col in IOMP:
         col_num = ord(col[-1]) - 65
@@ -27,10 +31,11 @@ def get_surficial_data(site_code, sheet_name, marker_name, excel_column_letter, 
     usecols = [0,1] + excel_column_number + [public_alert_column_number] + IOMP_col_num
     names = ['date', 'time'] + marker_name + ['public_alert', 'MT', 'CT']
     df = pd.read_excel('(NEW) Site Monitoring Database.xlsx', sheet_name=sheet_name, skiprows=[0,1], na_values=['ND', '-'], usecols=usecols, names=names, parse_dates=[[0,1]])
+    print(df)
     df = df.dropna(subset=marker_name, how='all')
     df = df.rename(columns={'date_time': 'ts'})
     df.loc[:, 'public_alert'] = df['public_alert'].fillna('A0')
-    mon_type = {'A0': 'routine', 'A0-R': 'event', 'ND-R': 'event', 'A1': 'event', 'A2': 'event'}
+    mon_type = {'A0': 'routine', 'A0-R': 'event', 'ND-R': 'event', 'A1': 'event', 'A2': 'event', 'ND-L': 'event'}
     df.loc[:, 'meas_type'] = df.public_alert.map(mon_type)
     df.loc[:, 'MT'] = df['MT'].fillna('')
     df.loc[:, 'CT'] = df['CT'].fillna('')
