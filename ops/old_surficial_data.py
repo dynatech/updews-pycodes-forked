@@ -5,6 +5,7 @@ Created on Thu Jul  1 11:13:53 2021
 @author: Meryll
 """
 
+import numpy as np
 import os
 import pandas as pd
 import sys
@@ -15,10 +16,11 @@ import gsm.smsparser2.smsclass as smsclass
 import analysis.surficial.markeralerts as ma
 
 
-def get_surficial_data(site_code, sheet_name, marker_name, excel_column_letter, public_alert_column_letter, IOMP):    
-    excel_column_number = list(map(lambda x: ord(x.upper()) - 65, excel_column_letter))
+def get_surficial_data(site_code, sheet_name, marker_name, excel_column_letter, public_alert_column_letter, IOMP): 
+    excel_column_number = np.array(list(map(lambda x: 26*(len(x)-1), excel_column_letter)))
+    excel_column_number = list(excel_column_number + np.array(list(map(lambda x: ord(x[-1].upper()) - 65, excel_column_letter))))
     if len(public_alert_column_letter) > 1:
-        public_alert_column_letter = public_alert_column_letter[0]
+        public_alert_column_letter = public_alert_column_letter[-1]
         public_alert_column_number = 26
     else:
         public_alert_column_number = 0
@@ -54,7 +56,7 @@ def write_observation(surf_df, site_id):
     mo_df.loc[:, 'reliability'] = 1
     mo_df.loc[:, 'weather'] = 'maaraw'
     mo_id = dbio.df_write(data_table=smsclass.DataTable("marker_observations", mo_df), resource='sensor_data', last_insert=True)[0][0]
-    
+    print(mo_df)
     surf_df = surf_df.dropna(axis=1)
     md_df = surf_df.loc[:, surf_df.columns.astype(str).str.isnumeric()].transpose()
     md_df = md_df.reset_index()
@@ -62,7 +64,7 @@ def write_observation(surf_df, site_id):
     md_df.loc[:, 'mo_id'] = mo_id
     dbio.df_write(data_table = smsclass.DataTable("marker_data", 
             md_df), resource='sensor_data')
-    
+    print(md_df)
     ma.generate_surficial_alert(site_id, ts = mo_df.ts.values[0])
                              
 
@@ -91,12 +93,12 @@ def write_surficial(site_code):
 
 if __name__ == '__main__':
         
-    site_code= 'mar'
-    sheet_name = 'MAR'
-    marker_name = ['A', 'B', 'C', 'D']
-    excel_column_letter = ['K', 'L', 'N', 'M']
-    public_alert_column_letter = 'Q'
-    IOMP = ['Y', 'Z']
+    site_code= 'nag'
+    sheet_name = 'Copy of NAG'
+    marker_name = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J','K', 'L', 'M', 'N', '10', '11', '12']
+    excel_column_letter = ['K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'AA']
+    public_alert_column_letter = 'AI'
+    IOMP = ['AQ', 'AR']
     
     df = get_surficial_data(site_code, sheet_name, marker_name, excel_column_letter, public_alert_column_letter, IOMP)
     write_surficial(site_code)
