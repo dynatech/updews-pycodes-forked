@@ -18,6 +18,7 @@ import analysis.surficial.markeralerts as ma
 def get_surficial_data(site_code, sheet_name, marker_name, excel_column_letter, public_alert_column_letter, IOMP):    
     excel_column_number = list(map(lambda x: ord(x.upper()) - 65, excel_column_letter))
     if len(public_alert_column_letter) > 1:
+        public_alert_column_letter = public_alert_column_letter[0]
         public_alert_column_number = 26
     else:
         public_alert_column_number = 0
