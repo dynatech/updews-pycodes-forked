@@ -178,7 +178,7 @@ def ilan_alert(link = False):
                      "INNER JOIN monitoring_releases ON monitoring_event_alerts.event_alert_id = monitoring_releases.event_alert_id "
                      "INNER JOIN public_alert_symbols ON public_alert_symbols.pub_sym_id = monitoring_event_alerts.pub_sym_id "
                      "WHERE alert_level = 0 and status =2 and ts_start > now() - interval 3 day "
-                     "and date_format(ts_start,'%Y-%m-%d') + interval 1 day < now()")
+                     "and date_format(validity,'%Y-%m-%d') + interval 1 day < now()")
             ext_site = db.read(query, connection= "website")
             
             if len(ext_site)>0:
@@ -568,8 +568,17 @@ def on_event(conv_event):
                      "where gsm_id between 2 and 7")
             server_num = db.df_read(query, resource= "sms_data")
             
-            message = "Server number for USERS:\nGlobe: {}\nSmart: {}\n".format(server_num.gsm_sim_num[server_num.gsm_id ==2].values[0],server_num.gsm_sim_num[server_num.gsm_id ==3].values[0])
-            message += "\nServer number for LOGGERS:\nGlobe: \n{}\n{}\nSmart: \n{}\n{}".format(server_num.gsm_sim_num[server_num.gsm_id ==4].values[0],server_num.gsm_sim_num[server_num.gsm_id ==6].values[0],server_num.gsm_sim_num[server_num.gsm_id ==5].values[0],server_num.gsm_sim_num[server_num.gsm_id ==7].values[0])
+            message = "Server number for MIA:\nGlobe: {}\nSmart: {}\n".format(server_num.gsm_sim_num[server_num.gsm_id ==2].values[0],server_num.gsm_sim_num[server_num.gsm_id ==3].values[0])
+            message += "\nServer number for LOGGERS:\nGlobe: \n{}\n{}\nSmart: \n{}\n{}\n".format(server_num.gsm_sim_num[server_num.gsm_id ==4].values[0],server_num.gsm_sim_num[server_num.gsm_id ==6].values[0],server_num.gsm_sim_num[server_num.gsm_id ==5].values[0],server_num.gsm_sim_num[server_num.gsm_id ==7].values[0])
+            
+            query = ("SELECT sim_num, gsm_id FROM mobile_numbers "
+                     "inner join user_mobiles "
+                     "on user_mobiles.mobile_id = mobile_numbers.mobile_id "
+                     "inner join commons_db.users "
+                     "on users.user_id = user_mobiles.user_id "
+                     "where nickname like 'CT Phone' ")
+            ct_phone = db.df_read(query, resource= "sms_data")
+            message += "\nCT Phone:\nGlobe: {}\nSmart: {}".format(ct_phone.sim_num[ct_phone.gsm_id ==2].values[0],ct_phone.sim_num[ct_phone.gsm_id ==3].values[0])
             
             cmd = "{} {}/send_message.py --conversation-id {} --message-text '{}'".format(python_path,file_path,conversation_id,message)
             os.system(cmd)
