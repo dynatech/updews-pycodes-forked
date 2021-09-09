@@ -129,11 +129,11 @@ def get_date(text):
     DATE_FORMAT_DICT = {
         MON_RE1 + SEPARATOR_RE + DAY_RE1 + SEPARATOR_RE + YEAR_RE1 : "%b%d%Y",
         DAY_RE1 + SEPARATOR_RE + MON_RE1 + SEPARATOR_RE + YEAR_RE1 : "%d%b%Y",
-        MON_RE2 + SEPARATOR_RE + DAY_RE1 + SEPARATOR_RE + YEAR_RE1 : "%B%d%Y",
+        MON_RE2 + SEPARATOR_RE + DAY_RE1 + SEPARATOR_RE + YEAR_RE1 : "%b%d%Y",
         DAY_RE1 + SEPARATOR_RE + MON_RE2 + SEPARATOR_RE + YEAR_RE1 : "%d%B%Y",
         MON_RE1 + SEPARATOR_RE + DAY_RE1 + SEPARATOR_RE + cur_year : "%b%d%Y",
         DAY_RE1 + SEPARATOR_RE + MON_RE1 + SEPARATOR_RE + cur_year : "%d%b%Y",
-        MON_RE2 + SEPARATOR_RE + DAY_RE1 + SEPARATOR_RE + cur_year : "%B%d%Y",
+        MON_RE2 + SEPARATOR_RE + DAY_RE1 + SEPARATOR_RE + cur_year : "%b%d%Y",
         DAY_RE1 + SEPARATOR_RE + MON_RE2 + SEPARATOR_RE + cur_year : "%d%B%Y"
     }
 
@@ -147,6 +147,7 @@ def get_date(text):
         if match:
             match_date_str = match.group(0)
             date_str = re.sub("[^A-Z0-9]","", match_date_str).strip()
+            date_str = date_str[0:3] + re.sub("[A-Z]+","", date_str)
             try:
                 date_str = dt.strptime(date_str,
                     DATE_FORMAT_DICT[fmt]).strftime(DATE_FORMAT_STD)
