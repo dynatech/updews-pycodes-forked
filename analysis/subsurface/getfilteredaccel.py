@@ -8,7 +8,7 @@ def get_filtered_accel_data_json(site_column, start_date, end_date, node_id, ver
     return_data = pd.DataFrame()
 
     accel_id = [1]
-    if version in [2, 3]:
+    if version in [2, 3, 4, 5]:
         accel_id.append(2)
 
     for a_id in accel_id:
