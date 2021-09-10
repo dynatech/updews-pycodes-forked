@@ -7,6 +7,8 @@ import sys
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import smsclass
+import volatile.memory as mem
+import dynadb.db as db
 #------------------------------------------------------------------------------
 
 
@@ -330,6 +332,8 @@ def v2(sms):
                 ID = int(piece[0:2],16)
                 msgID = int(piece[2:4],16)
                 temp = int(piece[4:8],16)
+                if temp>=1022 and msgID in [23,24]:
+                    temp = 0
                 line = {"ts":timestamp, "node_id":ID, "type_num":msgID,
                         "temp_val":temp}
                 outl.append(line)
@@ -367,7 +371,107 @@ def v2(sms):
     df = pd.DataFrame(outl)
     data = smsclass.DataTable(name_df,df)
     return  data
-       
+
+
+
+def diagnostics(sms):
+    """
+    - The process of parsing diagnostics of loggers.
+      
+    :param sms: Dictionary of sms info.
+    :type sms: obj
+
+    Returns:
+       DataFrame: Dataframe output for success parsing and return
+       False if fails.
+    
+    Example Input:
+        LTESA*m* 0.70*14.12*136.80*14.04*137.70*14.05* 0.90*14.02*210308150000
+        
+    Example Output::
+        
+          batt_volt curr_draw  stat                   ts
+        0     14.12      0.70     0  2021-03-08 15:00:00
+        1     14.04    136.80     1  2021-03-08 15:00:00
+        2     14.05    137.70     2  2021-03-08 15:00:00
+        3     14.02      0.90    99  2021-03-08 15:00:00
+
+
+    """
+    
+    
+    msg = sms.msg
+    msg = msg.replace("DUE","")
+    msg = msg.replace("PZ","")
+    
+    split_msg = msg.split("*")
+    ts = split_msg[len(split_msg)-1]
+    pattern = '%y%m%d%H%M%S'
+    timestamp = dt.strptime(ts,pattern).strftime('%Y-%m-%d %H:%M:00')
+    
+    num_of_data = (len(split_msg)-3)/2
+    
+    outl = []
+    for i in range(0,int(num_of_data)):
+        try:
+
+            curr_draw = split_msg[2+(i)*2]
+            batt_volt = split_msg[2+(i)*2+1]    
+
+            if i == int(num_of_data)-1:
+                stat = 99
+                last_str_split = batt_volt.split(">")
+                batt_volt = last_str_split[0]
+                try:
+                    unsent_data = int(last_str_split[1])
+                except IndexError:
+                    unsent_data = np.nan
+            else:
+                stat = i
+                line = {"ts":timestamp, "stat":stat, "curr_draw":curr_draw, "batt_volt":batt_volt}
+            
+            print (i)
+            print (stat, curr_draw, batt_volt)
+            
+            line = {"ts":timestamp, "stat":stat, "curr_draw":curr_draw, "batt_volt":batt_volt}
+            outl.append(line)
+            
+        except:
+            print("kulang data")
+            
+    tsm_name = split_msg[0].lower()
+    name_df = "volt_{}".format(tsm_name)
+    
+    
+    df = pd.DataFrame(outl)
+    volt = smsclass.DataTable(name_df,df)
+    
+    #for unsent
+    out2 = []
+    tsm_sensors = mem.get("DF_TSM_SENSORS")
+    try:
+        tsm_id = tsm_sensors[tsm_sensors.tsm_name==tsm_name].tsm_id.values[0]
+    except:
+        tsm_id = np.nan
+    
+    sender = sms.sim_num[-10:]
+    
+    try:
+        query = ("select mobile_id from logger_mobile "
+                 "where sim_num like '%{}' order by date_activated desc limit 1".format(sender))
+        mobile_id = db.read(query,resource = "sms_data")[0][0]
+    except:
+        mobile_id = np.nan
+        
+    line2 = {"ts":timestamp, "mobile_id":mobile_id, "tsm_id":tsm_id, "unsent":unsent_data}
+    out2.append(line2)
+    df2 = pd.DataFrame(out2)
+    unsent = smsclass.DataTable("unsent",df2)
+    
+    data = [volt,unsent]
+    return data
+
+
 def log_errors(errortype, line, dt):
     """
     - The process of logging of errors in SOMS MSG ERROR text file..
@@ -613,6 +717,28 @@ def b64Parser(sms):
                     print ("Piece of data to be ignored")
                     return
         #elif dtype in [110,111,112,113,21,26,10,13]: # wala pang support for v2 bradcast soms
+        elif dtype in [51,52]:
+            name_df = 'tilt_'+tsm_name.lower()
+            n = 12 # 12 chars per node
+            sd = [datastr[i:i+n] for i in range(0,len(datastr),n)]
+            for piece in sd:
+                try:
+                    ID = b64_to_dec(piece[0])
+                    msgID = dtype
+                    xd = b64_twos_comp_v5(b64_to_dec(piece[1:4]))
+                    yd = b64_twos_comp_v5(b64_to_dec(piece[4:7]))
+                    zd = b64_twos_comp_v5(b64_to_dec(piece[7:10]))
+                    bd = (b64_twos_comp(b64_to_dec(piece[10:12])) + 200) /100.0
+
+                    
+                    line = {"ts":timestamp, "node_id":ID, "type_num":msgID,
+                    "xval":xd, "yval":yd, "zval":zd, "batt":bd}
+                    outl.append(line)
+                except ValueError:
+                    print (">> b64 Value Error detected.", piece,)
+                    print ("Piece of data to be ignored")
+                    return
+
         elif dtype in [110,113,10,13]: # wala pang support for v2 bradcast soms
             name_df = 'soms_'+tsm_name.lower() 
             n = 4
@@ -631,7 +757,7 @@ def b64Parser(sms):
                     return
 		        
         #for temp
-        elif dtype == 22: 
+        elif dtype in [22,23,24]: 
             name_df = 'temp_'+tsm_name.lower() 
             n = 3
             sd = [datastr[i:i+n] for i in range(0,len(datastr),n)]
@@ -640,6 +766,8 @@ def b64Parser(sms):
                     ID = b64_to_dec(piece[0])
                     msgID = dtype
                     temp = b64_to_dec(piece[1:3])
+                    if temp>=1022 and dtype in [23,24]:
+                        temp = 0
                     line = {"ts":timestamp, "node_id":ID, "type_num":msgID,
                     "temp_val":temp}
                     outl.append(line)
@@ -668,3 +796,10 @@ def b64_twos_comp(num):
         return num - sub
     else:
         return num
+    
+def b64_twos_comp_v5(num):
+    sub = 65536
+    if num > 32768:  
+        return num - sub
+    else:
+        return num	

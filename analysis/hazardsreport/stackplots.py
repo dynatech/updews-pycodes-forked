@@ -432,7 +432,7 @@ def main(site, start, end, rainfall_props, surficial_props, subsurface_props, cs
 if __name__ == '__main__':
     
     site = 'ina'
-    start = pd.to_datetime('2020-10-26')
+    start = pd.to_datetime('2020-10-01')
     end = pd.to_datetime('2020-11-08')
     subsurface_end = end
     

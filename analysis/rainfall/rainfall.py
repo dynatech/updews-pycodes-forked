@@ -202,4 +202,15 @@ def main(site_code='', end='', Print=True, write_to_db=True,
 ###############################################################################
 
 if __name__ == "__main__":
+    
+    
     main()
+    
+#    # test
+#    summary_json = main(site_code='mag', end='2021-04-19 17:00', Print=True, write_to_db=False,
+#         print_plot=True, save_plot=False, days=1538, is_command_line_run=False)
+#    df = pd.DataFrame(pd.read_json(summary_json)['plot'].values[0])
+#    for gauge_name in df.gauge_name:
+#        distance = str(df.loc[df.gauge_name == gauge_name, 'distance'].values[0])
+#        rain_data = pd.DataFrame(df.loc[df.gauge_name == gauge_name, 'data'].values[0])
+#        rain_data.to_csv(gauge_name + '(' + distance + 'km).csv')

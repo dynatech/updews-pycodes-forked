@@ -110,7 +110,7 @@ def rainfall_details(site_id, start_monitor, ts_last_retrigger):
 def subsurface_details(site_id, start_monitor, ts_last_retrigger):
     query = "SELECT node_id, tsm_name FROM "
     query += "  (SELECT * FROM node_alerts "
-    query += "  WHERE ts >= '%s' " % start_monitor
+    query += "  WHERE ts >= '%s' " % (ts_last_retrigger-td(hours=4))
     query += "  AND ts <= '%s' " % ts_last_retrigger
     query += "  ) AS alerts "
     query += "INNER JOIN "
@@ -265,7 +265,7 @@ def check_alerts():
              ") as sym "
              "USING (trigger_sym_id)) AS alert "
              "INNER JOIN "
-             "{}.sites "
+             "(SELECT * FROM {}.sites WHERE active = 1) s "
              "USING (site_id)").format(analysis,ts_now,analysis,analysis,analysis,common)
 
     alert_msgs = dbio.read(query=query, resource="sensor_analysis")
@@ -316,7 +316,7 @@ def process_ack_to_alert(sms):
     try:
         alert_status = re.search("(in)*valid(ating)*", remarks,
                                  re.IGNORECASE).group(0)
-        remarks = remarks.replace(alert_status, "").strip()
+        remarks = remarks.replace(alert_status, "", 1).strip()
     except AttributeError:
         errmsg = ("Please put in the alert status validity."
                   " i.e (VALID, INVALID, VALIDATING)")

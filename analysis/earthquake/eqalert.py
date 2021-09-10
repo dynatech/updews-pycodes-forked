@@ -37,7 +37,7 @@ def get_unprocessed():
     return df
 
 def get_sites():
-    query = ("SELECT site_id, site_code, latitude, longitude FROM "
+    query = ("SELECT site_id, site_code, latitude, longitude, province FROM "
         "loggers left join sites using (site_id) "
         "where logger_name not like '%%g'")
     print(query)

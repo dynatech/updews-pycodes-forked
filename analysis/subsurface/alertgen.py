@@ -67,8 +67,14 @@ def main(tsm_name='', end='', end_mon=False):
     qdb.print_out(tsm_alert)
     
     qdb.print_out('run time = ' + str(datetime.now()-run_start))
+    
+    return tilt
 
 ################################################################################
 
 if __name__ == "__main__":
+    
     main()
+    
+#    # test
+#    tilt = main('magta', '2016-10-12 12:00')

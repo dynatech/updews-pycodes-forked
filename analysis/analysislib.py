@@ -4,7 +4,9 @@ import pandas as pd
 import sys
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
-import querydb as qdb
+import dynadb.db as db
+
+#------------------------------------------------------------------------------
 
 def release_time(date_time):
     """Rounds time to 4/8/12 AM/PM.
@@ -75,11 +77,11 @@ def event_start(site_id, end):
     query += "INNER JOIN "
     query += "  (SELECT * FROM public_alert_symbols "
     query += "  WHERE alert_type = 'event') AS sym "
-    query += "ON pub.pub_sym_id = sym.pub_sym_id "
+    query += "USING (pub_sym_id) "
     query += "ORDER BY ts DESC LIMIT 3"
     
     # previous positive alert
-    prev_pub_alerts = qdb.get_db_dataframe(query)
+    prev_pub_alerts = db.df_read(query, connection='website')
 
     if len(prev_pub_alerts) == 1:
         start_monitor = pd.to_datetime(prev_pub_alerts['ts'].values[0])
@@ -134,9 +136,9 @@ def get_operational_trigger(site_id, start_monitor, end):
     query += "  ) AS op "
     query += "INNER JOIN "
     query += "  operational_trigger_symbols AS sym "
-    query += "ON op.trigger_sym_id = sym.trigger_sym_id "
+    query += "USING (trigger_sym_id) "
     query += "ORDER BY ts DESC"
 
-    op_trigger = qdb.get_db_dataframe(query)
+    op_trigger =  db.df_read(query, connection='analysis')
     
     return op_trigger

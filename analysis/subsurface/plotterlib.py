@@ -389,6 +389,8 @@ def plot_disp_vel(noise_df, df0off, cs_df, colname, window, sc, plotvel,
 
     if plotvel:
         vel_xz, vel_xy, L2_xz, L2_xy, L3_xz, L3_xy = velplot
+        vel_xz = vel_xz.loc[:, vel_xz.columns[::-1]]
+        vel_xy = vel_xy.loc[:, vel_xy.columns[::-1]]
 
     df0off = df0off.set_index('ts')
     

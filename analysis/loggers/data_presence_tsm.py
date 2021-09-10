@@ -25,10 +25,12 @@ def get_tsm_sensors():
 def get_data(lgrname):
     query= "SELECT max(ts) FROM "+ 'tilt_' + lgrname + "  where ts > '2010-01-01' and ts < '2022-01-01' order by ts desc limit 1 "
     localdf = db.df_read(query, connection='analysis')
+    if (localdf is None):
+        localdf = pd.DataFrame(columns = ["max(ts)"])
     if (localdf.empty == False): 
         return localdf
     else:
-        localdf = 0
+        localdf = pd.DataFrame(columns = ["max(ts)"])
     return localdf
 
 def dftosql(df):
@@ -58,6 +60,7 @@ def dftosql(df):
     return df
 
 def main():
+    print(datetime.now().strftime("%d-%b-%Y (%H:%M:%S)"))
     columns = ['tsm_id', 'presence', 'last_data', 'ts_updated', 'diff_days']
     df = pd.DataFrame(columns=columns)
     

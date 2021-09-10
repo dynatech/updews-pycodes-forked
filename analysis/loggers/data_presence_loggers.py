@@ -50,17 +50,28 @@ def get_loggers_v3():
 
 def get_data_rain(lgrname):
     query = "SELECT max(ts) FROM " + 'rain_' + lgrname + \
-        "  where ts >= '2010-01-01' order by ts desc limit 1 "
+        "  where ts >= '2010-01-01' and ts <= '2023-01-01' order by ts desc limit 1 "
     localdf = db.df_read(query, connection='analysis')
+    if (localdf is None):
+        localdf = pd.DataFrame(columns = ["max(ts)"])
+    if (localdf.empty == False): 
+        return localdf
+    else:
+        localdf = pd.DataFrame(columns = ["max(ts)"])
     return localdf
 
 
 def get_data_tsm(lgrname):
     query = "SELECT max(ts) FROM " + 'tilt_' + lgrname + \
-        "  where ts >= '2010-01-01' order by ts desc limit 1 "
+        "  where ts >= '2010-01-01' and ts <= '2023-01-01' order by ts desc limit 1 "
     localdf = db.df_read(query, connection='analysis')
+    if (localdf is None):
+        localdf = pd.DataFrame(columns = ["max(ts)"])
+    if (localdf.empty == False): 
+        return localdf
+    else:
+        localdf = pd.DataFrame(columns = ["max(ts)"])
     return localdf
-
 
 def dftosql(df):
     v2df = get_loggers_v2()
@@ -97,6 +108,7 @@ def dftosql(df):
 
 
 def main():
+    print(datetime.now().strftime("%d-%b-%Y (%H:%M:%S)"))
     columns = ['logger_id', 'presence', 'last_data', 'ts_updated', 'diff_days']
     df = pd.DataFrame(columns=columns)
 

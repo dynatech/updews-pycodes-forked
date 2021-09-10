@@ -128,7 +128,7 @@ def main():
         # asks for interval between column position plots
         while True:
             try:
-                input_text = 'interval between column position plots, in days: '
+                input_text = 'interval between column position plots, in hours: '
                 col_pos_interval = int(input(input_text))
                 break
             except:
@@ -136,9 +136,9 @@ def main():
                 continue
             
         # computes for interval and number of column position plots
-        sc['subsurface']['col_pos_interval'] = str(col_pos_interval) + 'D'
+        sc['subsurface']['col_pos_interval'] = str(col_pos_interval) + 'H'
         sc['subsurface']['num_col_pos'] = int((window.end - window.start).
-                                                    days/col_pos_interval + 1)
+                                                    total_seconds()/(3600*col_pos_interval) + 1)
                                                     
         # asks if to plot all legends
         while True:

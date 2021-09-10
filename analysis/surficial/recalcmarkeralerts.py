@@ -10,15 +10,12 @@ import markeralerts as ma
 
 
 def get_surf(connection='analysis'):
-    query  = "SELECT site_id, ts FROM "
-    query += "  (SELECT * FROM marker_alerts "
-    query += "  WHERE processed = 0 "
-    query += "  ) ma "
-    query += "INNER JOIN "
-    query += "  markers "
-    query += "USING (marker_id) "
-    query += "GROUP BY ts, site_id "
-    query += "ORDER BY ts"
+    query  = "SELECT site_id, ts FROM marker_observations "
+    query += "WHERE mo_id not in ( "
+    query += "  SELECT mo_id FROM marker_data "
+    query += "  INNER JOIN marker_alerts USING (data_id) "
+    query += "  WHERE processed = 1) "
+    query += "ORDER BY ts "
     df = db.df_read(query, connection=connection)
     return df
 

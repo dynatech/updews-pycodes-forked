@@ -566,9 +566,9 @@ def get_surficial_alert(marker_alerts, site_id):
     #### Get the corresponding trigger sym id
     trigger_sym_id = qdb.get_trigger_sym_id(site_alert, 'surficial')
     
-    return pd.DataFrame({'ts': marker_alerts.ts.iloc[0], 'site_id': site_id,
-                         'trigger_sym_id': trigger_sym_id,
-                         'ts_updated': marker_alerts.ts.iloc[0]}, index = [0])
+    return pd.DataFrame({'ts': [marker_alerts.ts.iloc[0]], 'site_id': [site_id],
+                         'trigger_sym_id': [trigger_sym_id],
+                         'ts_updated': [marker_alerts.ts.iloc[0]]}, index = [0])
 
 
 def generate_surficial_alert(site_id = None, ts = None, marker_id = None,

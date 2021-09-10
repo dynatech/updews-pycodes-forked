@@ -8,6 +8,8 @@ sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import dynadb.db as dynadb
 import smsclass
 import volatile.memory as mem
+import volatile.static as static
+
 #------------------------------------------------------------------------------
 
 def check_number_in_users(num):
@@ -122,9 +124,17 @@ def rain_arq(sms):
 #        msgname_contact = msgname
     else:
         raise ValueError("Number not registered {}".format(sender))
-
+    
+    df_raingauges = mem.get("DF_RAIN_GAUGES")
+    
+        
+    try:    
+        res = df_raingauges[df_raingauges.gauge_name == msgname].resolution.values[0]
+    except:
+        res = 0.5
+    
     try:
-        rain = int(linesplit[1])*0.5
+        rain = int(linesplit[1])*res
         batv1 = linesplit[3]
         batv2 = linesplit[4]
         csq = linesplit[9]
@@ -212,9 +222,10 @@ def v3(sms):
         txtdatetime = txtdatetime.strftime('%Y-%m-%d %H:%M:%S')
         
         # data = items.group(3)
+        temperature = line.split(",")[5]
         rain = line.split(",")[6]
         print (line)
-
+        battery1 = line.split(",")[7]
         csq = line.split(",")[8]
 
 
@@ -235,7 +246,7 @@ def v3(sms):
         #     "VALUES ('%s',%s,%s)") % (msgtable.lower(),txtdatetime,rain,csq)
         # print query   
         if csq != 'NULL':
-            df_data = [{'ts':txtdatetime,'rain':rain,'csq':csq}]
+            df_data = [{'ts':txtdatetime,'rain':rain,'temperature':temperature,'battery1':battery1,'csq':csq}]
         else:
            df_data = [{'ts':txtdatetime,'rain':rain}]
 
@@ -288,7 +299,7 @@ def v5(sms):
         #if logger_model in [23,24,25,26]:
         msgtable = logger_name
 #        else:
-#            msgtable = line.split(",")[0][:-1]+'G'
+#        msgtable = line.split(",")[0][:-1]+'G'
         # msgtable = check_name_of_number(sender)
         msgdatetime = line.split(',')[5]
 

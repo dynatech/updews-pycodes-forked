@@ -18,6 +18,7 @@ import smsparser2.lidar as lidarparser
 import smsparser2.rain as rain
 import smsparser2.smsclass as smsclass
 import smsparser2.subsurface as subsurface
+import smsparser2.surficialtilt as surficialtilt
 import smstables
 import volatile.memory as mem
 
@@ -97,6 +98,7 @@ def process_piezometer(sms):
     """     
     #msg = message
     line = sms.msg
+    line = line.replace("*p*","*")
     print ('Piezometer data: ' + line)
     line = re.sub("\*\*","*",line)
     try:
@@ -249,6 +251,7 @@ def process_surficial_observation(sms):
     resource = "sensor_data"
     
     obv = []
+    sms.msg = sms.msg.replace('"', '').replace("'", "")
     try:
         obv = parser.surficial.observation(sms.msg)
         
@@ -262,6 +265,12 @@ def process_surficial_observation(sms):
         sms_msg_for_operations = "{}\n\n{}".format(
             messages.iloc[err_val - 1].internal_msg, sms.msg)
         smstables.write_outbox(sms_msg_for_operations, ct_sim_num)
+
+        if SEND_REPLY_TO_COMMUNITY:
+            error_msg = messages.iloc[err_val - 1].external_msg
+            print('## msg to community:', error_msg, '##')
+#            if error_msg:
+#                smstables.write_outbox(error_msg, sms.sim_num)
 
         return False
 
@@ -507,8 +516,29 @@ def parse_all_messages(args,allmsgs=[]):
                 else:
                     print ('>> Value Error')
                     is_msg_proc_success = False
+            
+            #diagnostics (voltage/current)
+            elif re.search("^[A-Z]{4,7}\*[m]\*",sms.msg):
+                try:
+                    df_data =subsurface.diagnostics(sms)
+                    if df_data:
+                        print (df_data[0].data)
+                        print (df_data[1].data)
+                        try:
+                            dbio.df_write(df_data[0], resource=resource)
+                            dbio.df_write(df_data[1], resource=resource)
+                        except:
+                            print ('>>SQL Error')
+                            is_msg_proc_success = False
+                    else:
+                        print ('>>Value Error')
+                        is_msg_proc_success = False
+                except:
+                    print ("error parsing diagnostics")
+                    is_msg_proc_success = False
+                        
             #check if message is from rain gauge
-            elif re.search("^\w{4},[\d\/:,]+",sms.msg):
+            elif re.search("^\w{4,7},[\d\/:,]+",sms.msg):
                 # if v5 logger
                 if len(sms.msg.split(',')) == 6:
                     df_data = rain.v5(sms)
@@ -535,6 +565,21 @@ def parse_all_messages(args,allmsgs=[]):
             elif (sms.msg.split('*')[0] == 'COORDINATOR' or 
                 sms.msg.split('*')[0] == 'GATEWAY'):
                 is_msg_proc_success = process_gateway_msg(sms)
+            
+            #check if surficial tilt data
+            elif re.search("[A-Z]{5,6}\*[R,F]+\*",sms.msg):
+                try: 
+                    df_data = surficialtilt.stilt_parser(sms)
+                    if df_data:
+                        print (df_data.data)
+                        dbio.df_write(df_data, resource=resource)
+                    else:
+                        print ('>> Value Error')
+                        is_msg_proc_success = False
+                except:
+                    print ('>>Value Error')
+                    is_msg_proc_success = False
+                    
             elif common_logger_sms(sms) > 0:
                 print ('inbox_id: ', sms.inbox_id)
                 print ('match')
@@ -641,13 +686,17 @@ def process_gateway_msg(sms):
             # format is
             # <router name>,<rssi value>,...
             query = ("INSERT IGNORE INTO router_rssi "
-                "(ts, logger_id, rssi_val) VALUES ")
-            tuples = re.findall("[A-Z]+,\d+",rssi_string)
+                "(ts, logger_id, rssi_val, battery) VALUES ")
+            tuples = re.findall("[A-Z]+,\d+,\d*\.\d+|[A-Z]+,\d+,",rssi_string)
             count = 0
             for item in tuples:
                 try:
-                    query += "('%s',%d,%s)," % (timestamp,
-                        routers[item.split(',')[0].lower()], item.split(',')[1])
+                    if item.split(',')[2] != '':
+                        query += "('%s','%d','%s','%s')," % (timestamp,
+                            routers[item.split(',')[0].lower()], item.split(',')[1], item.split(',')[2])
+                    else:
+                        query += "('%s','%d','%s',NULL)," % (timestamp,
+                            routers[item.split(',')[0].lower()], item.split(',')[1])
                     count += 1
                 except KeyError:
                     print ('Key error for', item)

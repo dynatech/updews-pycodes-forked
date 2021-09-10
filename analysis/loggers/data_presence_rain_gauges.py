@@ -52,6 +52,7 @@ def dftosql(df):
     return df
 
 def main():
+    print(datetime.now().strftime("%d-%b-%Y (%H:%M:%S)"))
     columns = ['rain_id', 'presence', 'last_data', 'ts_updated', 'diff_days']
     df = pd.DataFrame(columns=columns)
     

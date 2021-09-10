@@ -1,6 +1,8 @@
 from datetime import datetime as dt
+from datetime import timedelta as td
 import os
 import re
+import string
 import sys
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
@@ -127,11 +129,11 @@ def get_date(text):
     DATE_FORMAT_DICT = {
         MON_RE1 + SEPARATOR_RE + DAY_RE1 + SEPARATOR_RE + YEAR_RE1 : "%b%d%Y",
         DAY_RE1 + SEPARATOR_RE + MON_RE1 + SEPARATOR_RE + YEAR_RE1 : "%d%b%Y",
-        MON_RE2 + SEPARATOR_RE + DAY_RE1 + SEPARATOR_RE + YEAR_RE1 : "%B%d%Y",
+        MON_RE2 + SEPARATOR_RE + DAY_RE1 + SEPARATOR_RE + YEAR_RE1 : "%b%d%Y",
         DAY_RE1 + SEPARATOR_RE + MON_RE2 + SEPARATOR_RE + YEAR_RE1 : "%d%B%Y",
         MON_RE1 + SEPARATOR_RE + DAY_RE1 + SEPARATOR_RE + cur_year : "%b%d%Y",
         DAY_RE1 + SEPARATOR_RE + MON_RE1 + SEPARATOR_RE + cur_year : "%d%b%Y",
-        MON_RE2 + SEPARATOR_RE + DAY_RE1 + SEPARATOR_RE + cur_year : "%B%d%Y",
+        MON_RE2 + SEPARATOR_RE + DAY_RE1 + SEPARATOR_RE + cur_year : "%b%d%Y",
         DAY_RE1 + SEPARATOR_RE + MON_RE2 + SEPARATOR_RE + cur_year : "%d%B%Y"
     }
 
@@ -145,6 +147,7 @@ def get_date(text):
         if match:
             match_date_str = match.group(0)
             date_str = re.sub("[^A-Z0-9]","", match_date_str).strip()
+            date_str = date_str[0:3] + re.sub("[A-Z]+","", date_str)
             try:
                 date_str = dt.strptime(date_str,
                     DATE_FORMAT_DICT[fmt]).strftime(DATE_FORMAT_STD)
@@ -157,7 +160,7 @@ def get_date(text):
     if match is None or date_str == None:
         err_val = SURFICIAL_PARSER_ERROR_VALUE["date_no_matches"]
 
-    elif dt.strptime(date_str, DATE_FORMAT_STD) > dt.now():
+    elif dt.strptime(date_str, DATE_FORMAT_STD) > dt.now() or dt.strptime(date_str, DATE_FORMAT_STD) < dt.now() - td(90):
         err_val = SURFICIAL_PARSER_ERROR_VALUE["date_value_advance"]
 
     return {"value": str(date_str), "match": str(match_date_str), 
@@ -212,7 +215,7 @@ def get_time(text):
     # sanity check
     if not err_val:
         time_val = dt.strptime(time_str, TIME_FORMAT_STD).time()
-        if (time_val > dt.strptime("18:00:00","%H:%M:%S").time() or time_val < 
+        if (time_val > dt.strptime("19:00:00","%H:%M:%S").time() or time_val < 
             dt.strptime("05:00:00","%H:%M:%S").time()):
             print ('Time out of bounds. Unrealizable time to measure' )
             err_val = SURFICIAL_PARSER_ERROR_VALUE["time_out_of_bounds"]
@@ -357,15 +360,6 @@ def get_marker_measurements(pattern_matches):
     for match in pattern_matches:
         marker_name = match[0]
         marker_len = float(re.search("\d{1,3}\.*\d{0,2}",match[1:]).group(0))
-
-        # check unit
-        unit_cm = re.search("\d *CM",match[1:])
-        if unit_cm:
-            multiplier = 1.00
-        else:
-            multiplier = 100.00
-
-        marker_len = marker_len * multiplier
         data_records[marker_name] = marker_len
 
     return data_records
@@ -389,12 +383,17 @@ def observation(text):
     text = re.sub(";", ":", text)
     text = re.sub("\n", " ", text)
     text = text.strip()
+    special_char = string.punctuation.translate(str.maketrans(dict.fromkeys('.,:!')))
+    text = text.translate(str.maketrans(dict.fromkeys(special_char, ' ')))
     print(text)
     # find values in patterns
     obv["meas_type"], text = find_match_in_text(get_obv_type, text)
     obv["site_id"], text = find_match_in_text(get_site_code, text)
     date_str, text = find_match_in_text(get_date, text)
     time_str, text = find_match_in_text(get_time, text)
+    if dt.strptime("{} {}".format(date_str, time_str), "%Y-%m-%d %H:%M:%S") > dt.now():
+        err_val = SURFICIAL_PARSER_ERROR_VALUE["date_value_advance"]
+        raise ValueError(err_val)
     measurement_matches, text = find_match_in_text(get_measurements, text)
     obv["weather"], text = find_match_in_text(get_weather_description, text)
     obv["observer_name"], text = find_match_in_text(get_observer_names, text)
