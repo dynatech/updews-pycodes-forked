@@ -126,7 +126,7 @@ def ilan_alert(link = False):
     cur_alert=db.df_read(query, connection= "website")
     # remove repeating site_code
     cur_alert = cur_alert.groupby("site_code").first().reset_index()
-    message = "{} alerts\n".format(len(cur_alert))
+    message = "**{}** alerts\n".format(len(cur_alert))
     
     if len(cur_alert) == 1: 
         message = message.replace("s","")
@@ -183,7 +183,7 @@ def ilan_alert(link = False):
             
             if len(ext_site)>0:
                 extended = True
-                message += "Extended Monitoring {} sites:\n".format(len(ext_site))
+                message += "Extended Monitoring **{}** sites:\n".format(len(ext_site))
                 if len(ext_site) == 1: 
                     message = message.replace("sites","site")
                     
