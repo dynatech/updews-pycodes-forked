@@ -295,11 +295,11 @@ def df_write(data_table, host='local', last_insert=False ,
     value_list = ', '.join(list(map(str, tuple_list))).replace('nan', 'NULL')
     
     column_name_str = ', '.join(df.columns)
-    duplicate_value_str = ", ".join(["%s = VALUES(%s)" % (name, name) 
+    duplicate_value_str = ", ".join(["%s = new.%s" % (name, name) 
         for name in df.columns]) 
     query = 'insert into %s (%s) values %s' % (data_table.name,
         column_name_str, value_list)
-    query += ' on DUPLICATE key update  %s ' % (duplicate_value_str)
+    query += ' as new on DUPLICATE key update  %s ' % (duplicate_value_str)
 
     try:
         last_insert_id = write(query=query, 
