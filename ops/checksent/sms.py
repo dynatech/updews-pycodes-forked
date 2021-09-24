@@ -32,7 +32,10 @@ def main(time_now=datetime.now()):
     ewi_sched = lib.get_monitored_sites(curr_release, start, end, mysql=mysql)
     
     if len(ewi_sched) != 0:
-        ewisms_sent = ewisms.ewi_sent(start=curr_release, end=end, mysql=mysql)    
+        ewisms_sent = ewisms.ewi_sent(start=curr_release, end=end, mysql=mysql)
+        site_names = iprlib.get_site_names()
+        ewisms_sent = pd.merge(ewisms_sent, site_names, on='site_code')
+        ewisms_sent = ewisms_sent.loc[ewisms_sent.apply(lambda row: row['name'] in row['sms_msg'], axis=1), :]
         ewisms_sent = pd.merge(ewi_sched, ewisms_sent.reset_index(), how='left', on='site_code')
     
         site_ewisms = ewisms_sent.groupby('site_code', as_index=False)
