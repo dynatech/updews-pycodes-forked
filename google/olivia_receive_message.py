@@ -592,9 +592,104 @@ def on_event(conv_event):
             cmd = "{} {}/upload_image.py --conversation-id {} --image '{}'".format(python_path,file_path,conversation_id,file)
             os.system(cmd)
           
+        elif re.search('olivia ano number',received_msg.lower()):
+            query_loggers = "select logger_name from loggers where date_deactivated is NULL"
+            loggers = db.df_read(query_loggers, resource= "common_data").logger_name.to_numpy()
             
+            query_users = ("SELECT nickname FROM users where nickname is not NULL "
+                           "and nickname !='' and status = 1 ")
+            users = db.df_read(query_users, resource= "common_data").nickname.str.lower().to_numpy()
             
-#            smstables.write_outbox(message=message, recipients="639176321023",
+            message = ""
+            
+            check_logger = re.findall(r" (?=("+'|'.join(loggers)+r"))", received_msg.lower())
+            check_user = re.findall(r" (?=("+'|'.join(users)+r"))", received_msg.lower())
+            
+            if check_logger:
+                for logger_name in check_logger:
+                    print(logger_name)
+                    query_num = ("SELECT sim_num FROM logger_mobile "
+                                 "inner join commons_db.loggers "
+                                 "on logger_mobile.logger_id = loggers.logger_id "
+                                 "where logger_name = '{}'".format(logger_name))
+                    logger_num = db.read(query_num, resource= "sms_data")[0][0]
+                    print(logger_num)
+                    message += "{} : {}\n".format(logger_name, logger_num)
+            
+            if check_user:
+                for nickname in check_user:
+                    print(nickname)
+                    query_num = ("SELECT sim_num FROM commons_db.users "
+                                 "inner join user_mobiles "
+                                 "on  users.user_id = user_mobiles.user_id "
+                                 "inner join mobile_numbers "
+                                 "on  user_mobiles.mobile_id = mobile_numbers.mobile_id "
+                                 "where nickname is not NULL "
+                                 "and nickname !='' "
+                                 "and users.status = 1 "
+                                 "and user_mobiles.status = 1 "
+                                 "and nickname like '{}%%'".format(nickname))
+                    user_num = db.read(query_num, resource= "sms_data")
+                    for num in user_num:    
+                        print(num[0])
+                        message += "{} : {}\n".format(nickname, num[0])
+            
+            if not check_user and not check_logger:
+                print ("error!!!")
+                message += "error!!!\n"
+                
+            message = message[:-1]
+            cmd = "{} {}/send_message.py --conversation-id {} --message-text '{}'".format(python_path,file_path,conversation_id,message)
+            os.system(cmd)
+            
+        elif re.search('olivia kanino',received_msg.lower()):
+            numbers = re.findall(r"\d+", received_msg)
+            numbers = list(map(int,numbers))
+            
+            for num in numbers:
+                print (num)
+                query_num = ("SELECT logger_name FROM logger_mobile "
+                             "inner join commons_db.loggers "
+                             "on logger_mobile.logger_id = loggers.logger_id "
+                             "where sim_num like '%%{}'".format(num))
+                try:
+                    logger_name = db.read(query_num, resource= "sms_data")[0][0]
+                    print(logger_name)
+                    message += "{} : {}\n".format(num, logger_name)
+                except IndexError:
+                    print ("no logger")
+                    message += "{} : no logger\n".format(num)
+            
+            message = message[:-1]
+            cmd = "{} {}/send_message.py --conversation-id {} --message-text '{}'".format(python_path,file_path,conversation_id,message)
+            os.system(cmd)
+            
+        elif re.search('olivia node',received_msg.lower()):
+            query_loggers = "select tsm_name from tsm_sensors where date_deactivated is NULL"
+            sensors = db.df_read(query_loggers, resource= "sensor_data").tsm_name.to_numpy()
+            
+            check_tsm = re.findall(r" (?=("+'|'.join(sensors)+r"))", received_msg.lower())
+            
+            message =""
+            for tsm_name in check_tsm:
+                try:
+                    query_node = ("SELECT n_id FROM deployed_node "
+                                  "inner join tsm_sensors "
+                                  "on tsm_sensors.tsm_id = deployed_node.tsm_id "
+                                  "where tsm_name = '{}' order by node_id".format(tsm_name))
+                    nodes = db.df_read(query_node, resource= "sensor_data").n_id
+                    message += "{} : ".format(tsm_name)
+                    for nid in nodes:
+                        message+="{},".format(nid)
+                    message = message[:-1]
+                    message +="\n"
+                except:
+                    message += "no data for {}\n".format(tsm_name)
+            message = message[:-1]
+            cmd = "{} {}/send_message.py --conversation-id {} --message-text '{}'".format(python_path,file_path,conversation_id,message)
+            os.system(cmd)
+            
+            #            smstables.write_outbox(message=message, recipients="639176321023",
 #                           gsm_id=2, table='users')
         
         ts = (conv_event.timestamp +td(hours=8)).strftime("%Y-%m-%d %H:%M:%S")
