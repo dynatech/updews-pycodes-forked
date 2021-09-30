@@ -100,10 +100,11 @@ def main(alert):
         
     return OutputFP
 
-def send_hangouts(OutputFP, alert):
+def send_hangouts(OutputFP, alert, conversation_id = ""):
     test_groupchat='UgwcSTTEx1yRS0DrYVN4AaABAQ'
     brain = 'UgwySAbzw-agrDF6QAB4AaABAagBp5i4CQ'
-    conversation_id = test_groupchat
+    if not conversation_id:
+        conversation_id = test_groupchat
     
     message=("SANDBOX:\n"
             "As of {}\n"

@@ -278,10 +278,11 @@ def main(alert):
             shutil.move("{}/{}".format(plot_path_trend,img), OutputFP)
     return OutputFP
 
-def send_hangouts(OutputFP, alert):
+def send_hangouts(OutputFP, alert, conversation_id = ""):
     test_groupchat='UgwcSTTEx1yRS0DrYVN4AaABAQ'
     brain = 'UgwySAbzw-agrDF6QAB4AaABAagBp5i4CQ'
-    conversation_id = test_groupchat
+    if not conversation_id:
+        conversation_id = test_groupchat
     
     message=("SANDBOX:\n"
             "As of {}\n"
@@ -344,7 +345,7 @@ def on_event(conv_event):
             os.system(cmd)        
         
         elif re.search('ack \d+ .+',received_msg.lower()):
-            message = "Thanks {} for acknowledgement".format(user_list.get_user(conv_event.user_id).full_name)
+            message = "Thanks {} for the acknowledgement".format(user_list.get_user(conv_event.user_id).full_name)
             
             email = ""
             for e in user_list.get_user(conv_event.user_id).emails:
@@ -422,7 +423,7 @@ def on_event(conv_event):
 #                if not OutputFP:
 #                    print ("nasend na!")
 #                else:
-                send_hangouts(OutputFP,smsalert.loc[0])
+                send_hangouts(OutputFP,smsalert.loc[0], conversation_id = conversation_id)
             except:
                 message = "error no alert {}".format(alert_id)
             
@@ -645,7 +646,7 @@ def on_event(conv_event):
         elif re.search('olivia kanino',received_msg.lower()):
             numbers = re.findall(r"\d+", received_msg)
             numbers = list(map(int,numbers))
-            
+            message = ""
             for num in numbers:
                 print (num)
                 query_num = ("SELECT logger_name FROM logger_mobile "
