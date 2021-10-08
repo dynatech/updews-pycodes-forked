@@ -21,24 +21,6 @@ def all_site_coord():
     df = df.drop_duplicates('site_id')
     df = df.sort_values('site_id')
     return df
-
-def to_mysql(df):
-    """Writes in rainfall_priorities the distance of 4 active nearby
-    rain gauges from the site.
-    
-    Args:
-        df (dataframe): Record of 4 nearby rain gauges with 
-        its distance from the site.
-
-    """
-    written_df = mem.get('df_rain_priorities')
-    combined = written_df.append(df, ignore_index=True, sort=False)
-    combined = combined.append(written_df, ignore_index=True, sort=False)
-    combined = combined.drop_duplicates(['site_id', 'rain_id'], keep=False)
-
-    if len(combined) > 0:
-        qdb.write_rain_priorities(combined)
-
     
 def get_distance(site_coord, rg_coord):
     """Computes for distance of nearby rain gauges from the site.
@@ -73,9 +55,10 @@ def get_distance(site_coord, rg_coord):
     rg_coord['c']= 2 * np.arctan2(np.sqrt(rg_coord.a),np.sqrt(1-rg_coord.a))
     rg_coord['distance']= 6371 * rg_coord.c
     rg_coord = rg_coord.sort_values('distance', ascending = True)
+    rg_coord ['site_id'] = site_id
+    rg_coord = rg_coord.drop_duplicates(['site_id', 'rain_id'])
     
     nearest_rg = rg_coord[0:4]
-    nearest_rg['site_id'] = site_id
     nearest_rg = nearest_rg[['site_id', 'rain_id', 'distance']]
     
     return nearest_rg
@@ -114,7 +97,7 @@ def main(site_code=''):
         #Create a NOAH table if it doesn't exist yet
         qdb.create_rainfall_priorities()
 
-    to_mysql(nearest_rg)
+    qdb.write_rain_priorities(nearest_rg)
     
     qdb.print_out('runtime = %s' %(datetime.now() - start))
     
