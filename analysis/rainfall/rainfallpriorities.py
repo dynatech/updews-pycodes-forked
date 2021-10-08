@@ -1,6 +1,7 @@
 from datetime import datetime
-import os
 import numpy as np
+import os
+import pandas as pd
 import sys
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
@@ -21,7 +22,23 @@ def all_site_coord():
     df = df.drop_duplicates('site_id')
     df = df.sort_values('site_id')
     return df
+
+def to_mysql(df):
+    """Writes in rainfall_priorities the distance of 4 active nearby
+    rain gauges from the site.
     
+    Args:
+        df (dataframe): Record of 4 nearby rain gauges with 
+        its distance from the site.
+    """
+    
+    written_df = mem.get('df_rain_priorities').loc[:, ['priority_id', 'site_id', 'rain_id']]
+    combined = pd.merge(df, written_df, on=['site_id', 'rain_id'], how='left')
+    
+    if len(combined) > 0:
+        qdb.write_rain_priorities(combined)
+        
+
 def get_distance(site_coord, rg_coord):
     """Computes for distance of nearby rain gauges from the site.
     
@@ -59,7 +76,7 @@ def get_distance(site_coord, rg_coord):
     rg_coord = rg_coord.drop_duplicates(['site_id', 'rain_id'])
     
     nearest_rg = rg_coord[0:4]
-    nearest_rg = nearest_rg[['site_id', 'rain_id', 'distance']]
+    nearest_rg = nearest_rg.loc[:, ['site_id', 'rain_id', 'distance']]
     
     return nearest_rg
 
@@ -96,8 +113,8 @@ def main(site_code=''):
     if qdb.does_table_exist('rainfall_priorities') == False:
         #Create a NOAH table if it doesn't exist yet
         qdb.create_rainfall_priorities()
-
-    qdb.write_rain_priorities(nearest_rg)
+        
+    to_mysql(nearest_rg)
     
     qdb.print_out('runtime = %s' %(datetime.now() - start))
     
