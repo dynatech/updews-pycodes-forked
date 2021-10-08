@@ -690,6 +690,14 @@ def on_event(conv_event):
             cmd = "{} {}/send_message.py --conversation-id {} --message-text '{}'".format(python_path,file_path,conversation_id,message)
             os.system(cmd)
             
+        elif re.search('olivia checklist',received_msg.lower()):
+            query = "SELECT link from olivia_link where description = 'checklist'"
+            message = db.read(query, connection = "gsm_pi")[0][0]
+#            message ="https://drive.google.com/file/d/1u5cTNCkfVF--AYMaXiShOCozXE5dg7NW/view"
+            
+#            conversation_id = conv_event.conversation_id    #test_groupchat
+            cmd = "{} {}/send_message.py --conversation-id {} --message-text '{}'".format(python_path,file_path,conversation_id,message)
+            os.system(cmd)
             #            smstables.write_outbox(message=message, recipients="639176321023",
 #                           gsm_id=2, table='users')
         

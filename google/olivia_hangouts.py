@@ -167,18 +167,21 @@ if __name__ == '__main__':
             else:
                 send_hangouts(OutputFP,smsalert.loc[i])
     
-    #check for inactivity for 3hrs
+    #check for inactivity for 1hr
         q_log = ("SELECT TIMESTAMPDIFF(MINUTE, ts, NOW()) "
                  "AS difference FROM olivia_logs "
                  "where log_id = (select max(log_id) from olivia_logs)")
         ts_diff = db.read(q_log, connection= "gsm_pi")[0][0]
         
-        if ts_diff>=120:
+        if ts_diff>=60:
             brain = 'UgwySAbzw-agrDF6QAB4AaABAagBp5i4CQ'
             
-            message = "as of {} no messages for 2hrs".format(dt.now().strftime("%Y-%m-%d %H:%M"))
+            message = "as of {} no messages for 1hr".format(dt.now().strftime("%Y-%m-%d %H:%M"))
             cmd = "{} {}/send_message.py --conversation-id {} --message-text '{}'".format(python_path,file_path,brain,message)
             os.system(cmd)
+            
+            cmd = "{} {}/olivia_watchdog.py".format(python_path, file_path)
+            os.system(cmd)    
     
     # (9:00am / 9:00pm) magsend ng link
     elif sys.argv[1] == "eval":
