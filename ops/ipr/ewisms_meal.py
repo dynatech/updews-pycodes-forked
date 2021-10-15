@@ -97,6 +97,7 @@ def get_events(start, end, mysql=False, drop=True):
         query += "or (validity >= '{start}' and validity <= '{end}') "
         query += "or (ts_start <= '{start}' and validity >= '{end}')) "
         query += "and pub_sym_id != 1 "
+        query += "and active = 1 "
         query += "order by event_id, data_ts"
         query = query.format(start=start, end=end, common=conn['common']['schema'], website=conn['website']['schema'])
         df = db.df_read(query, resource='ops')
@@ -158,7 +159,7 @@ def ewi_sent(start, end, mysql=False):
 
 
 def event_releases(event, ewi_sched, list_org_name):
-    
+
     validity = pd.to_datetime(max(event.validity))
     site_code = event['site_code'].values[0]
     moms = event['moms'].values[0]

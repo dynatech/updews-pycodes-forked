@@ -93,3 +93,32 @@ def remove_downtime(df, downtime):
     for start, end in downtime[['start_ts', 'end_ts']].values:
         df = df.loc[(df.ts_start < start+np.timedelta64(150, 'm')) | (df.ts_start > end+np.timedelta64(150, 'm')), :]
     return df
+
+
+def ewi_recipients():
+    conn = mem.get('DICT_DB_CONNECTIONS')
+    query = "SELECT mobile_id, sim_num, status, user_id, fullname, user_status, ewi_recipient, site_code, org_name, primary_contact, alert_level FROM "
+    query += "    {gsm_pi}.mobile_numbers "
+    query += "  LEFT JOIN "
+    query += "    {gsm_pi}.user_mobiles "
+    query += "  USING (mobile_id) "
+    query += "  LEFT JOIN "
+    query += "    (select user_id, CONCAT(first_name, ' ', last_name) AS fullname, status AS user_status, ewi_recipient from {common}.users) users "
+    query += "  USING (user_id) "
+    query += "LEFT JOIN "
+    query += "  (SELECT user_id, site_code, org_name, primary_contact FROM "
+    query += "    {common}.user_organizations "
+    query += "  INNER JOIN "
+    query += "    {common}.sites "
+    query += "  USING (site_id) "
+    query += "  ) AS site_org "
+    query += "USING (user_id) "
+    query += "LEFT JOIN {gsm_pi}.user_ewi_restrictions USING (user_id) "
+    query += "where user_id not in (SELECT user_fk_id user_id FROM {common}.user_accounts) "
+    query += "and site_code is not null "
+    query += "and ewi_recipient = 1 "
+    query += "and user_status = 1 and status = 1 "
+    query += "order by site_code, org_name, user_id, sim_num"
+    query = query.format(common=conn['common']['schema'], gsm_pi=conn['gsm_pi']['schema'])
+    df = db.df_read(query, resource='sms_analysis')
+    return df
