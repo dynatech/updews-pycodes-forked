@@ -8,6 +8,7 @@ import hangups
 import os
 import re
 from common import run_example
+from ops_olivia import ops_checker
 import shutil
 
 import analysis.querydb as qdb
@@ -658,8 +659,8 @@ def on_event(conv_event):
                     print(logger_name)
                     message += "{} : {}\n".format(num, logger_name)
                 except IndexError:
-                    print ("no logger")
-                    message += "{} : no logger\n".format(num)
+                    print ("not a logger")
+                    message += "{} : not a logger\n".format(num)
             
             message = message[:-1]
             cmd = "{} {}/send_message.py --conversation-id {} --message-text '{}'".format(python_path,file_path,conversation_id,message)
@@ -700,6 +701,9 @@ def on_event(conv_event):
             os.system(cmd)
             #            smstables.write_outbox(message=message, recipients="639176321023",
 #                           gsm_id=2, table='users')
+        
+        elif re.search('olivia ops checker',received_msg.lower()):
+            ops_checker()
         
         ts = (conv_event.timestamp +td(hours=8)).strftime("%Y-%m-%d %H:%M:%S")
         email = ""
