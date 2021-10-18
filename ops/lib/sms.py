@@ -55,7 +55,7 @@ def get_ewi_recipients(mysql=True, to_csv=False):
 def ewi_sent(start, end, mysql=True, to_csv=False):
     if mysql:
         conn = mem.get('DICT_DB_CONNECTIONS')
-        query =  "SELECT outbox_id, ts_written, ts_sent, site_id, user_id, mobile_id, send_status, sms_msg FROM "
+        query =  "SELECT outbox_id, ts_written, ts_sent, site_id, user_id, mobile_id, sms_msg FROM "
         query += "	(SELECT outbox_id, ts_written, ts_sent, mobile_id, sim_num, "
         query += "	CONCAT(first_name, ' ', last_name) AS fullname, sms_msg, "
         query += "	send_status, user_id FROM "
@@ -85,7 +85,6 @@ def ewi_sent(start, end, mysql=True, to_csv=False):
         query += "USING (user_id) "
         query += "WHERE sms_msg regexp 'ang alert level' "
         query += "AND ts_written between '{start}' and '{end}' "
-        query += "AND send_status = 5"
         query = query.format(start=start, end=end, common=conn['common']['schema'], gsm_pi=conn['gsm_pi']['schema'])
         df = db.df_read(query, resource='sms_analysis')
         df.loc[:, 'sms_msg'] = df.sms_msg.str.lower().str.replace('city', '').str.replace('.', '')
@@ -105,13 +104,13 @@ def check_sent(release, sent):
     sent_sched = sent_sched.drop_duplicates(['site_id', 'user_id', 'mobile_id', 'outbox_id'])
     return sent_sched
 
-def ewi_sms_sched(start, end, mysql=True, to_csv=False):
-    ewi_sms_sched = lib.release_sched(start, end, mysql=mysql, to_csv=to_csv)
+def ewi_sched(start, end, mysql=True, to_csv=False):
+    sms_sched = lib.release_sched(start, end, mysql=mysql, to_csv=to_csv)
     recipient = get_ewi_recipients(mysql=mysql, to_csv=to_csv)    
-    sched = pd.merge(ewi_sms_sched, recipient, how='left', on='site_id')
-    if len(sched) != 0:
+    sms_sched = pd.merge(sms_sched, recipient, how='left', on='site_id')
+    if len(sms_sched) != 0:
         sent = ewi_sent(start, end+timedelta(hours=4), mysql=mysql, to_csv=to_csv)
-        per_ts = sched.groupby(['data_ts'], as_index=False)
+        per_ts = sms_sched.groupby(['data_ts'], as_index=False)
         sent_sched = per_ts.apply(check_sent, sent=sent).reset_index(drop=True)
         #remove special cases and nonrecipient of extended/routine
         sent_sched = sent_sched.loc[(sent_sched.pub_sym_id - 1 >= sent_sched.alert_level), :]

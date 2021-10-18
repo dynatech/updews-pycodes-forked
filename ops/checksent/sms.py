@@ -16,7 +16,7 @@ def main(time_now = datetime.now(), mysql=True, to_csv=False):
     else:
         name = 'sent'
         col_name = 'ts_sent'
-    sent_sched = lib_sms.ewi_sms_sched(start, end, mysql=mysql, to_csv=to_csv)
+    sent_sched = lib_sms.ewi_sched(start, end, mysql=mysql, to_csv=to_csv)
     
     if len(sent_sched) != 0:
             unqueued_unsent = sent_sched.loc[sent_sched[col_name].isnull(), ['site_code', 'fullname']].drop_duplicates()
@@ -28,6 +28,6 @@ def main(time_now = datetime.now(), mysql=True, to_csv=False):
                 msg = 'No ' + msg
             msg = msg[0].upper() + msg[1:]
     else:
-        msg = ''
+        msg = 'No scheduled EWI SMS ({ts})'.format(ts=start)
         
     return msg
