@@ -122,6 +122,8 @@ def get_event_releases(start, end, mysql=True, to_csv=False):
     """
 
     if mysql:
+        start = start-timedelta(3)
+        end = end+timedelta(3)
         conn = mem.get('DICT_DB_CONNECTIONS')
         query =  "select site_id, site_code, event_id, validity, pub_sym_id, alert_symbol, data_ts, release_time "
         query += "from {common}.sites "

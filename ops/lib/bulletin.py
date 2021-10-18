@@ -78,19 +78,19 @@ def check_sent(release, sent, queued):
     release.loc[:, 'ts_sent'] = release.apply(lambda row: release_sent.loc[release_sent.narrative.str.contains(row.email), 'timestamp'], axis=1).min(axis=1)    
     return release
         
-def ewi_bulletin_sched(start, end, mysql=True, to_csv=False):
-    ewi_sched = lib.release_sched(start, end, mysql=mysql, to_csv=to_csv)
-    ewi_sched = ewi_sched.loc[ewi_sched.event == 1, :]
+def ewi_sched(start, end, mysql=True, to_csv=False):
+    sched = lib.release_sched(start, end, mysql=mysql, to_csv=to_csv)
+    sched = sched.loc[sched.event == 1, :]
     recipient = get_ewi_recipients(mysql=mysql, to_csv=to_csv)
-    sched = pd.merge(ewi_sched, recipient, how='inner', on='site_id')
-    sched = sched.append(ewi_sched.assign(fullname='Arturo S. Daag', email='asdaag48@gmail.com'), ignore_index=True, sort=False)
-    sched = sched.append(ewi_sched.assign(fullname='Renato U. Solidum, Jr.', email='RUS'), ignore_index=True, sort=False)
-    sched = sched.append(ewi_sched.loc[ewi_sched.EQ == 1, :].assign(fullname='Jeffrey Perez', email='jeffrey.perez@phivolcs.dost.gov.ph'), ignore_index=True, sort=False)
-    if len(sched) != 0:
+    bulletin_sched = pd.merge(sched, recipient, how='inner', on='site_id')
+    bulletin_sched = bulletin_sched.append(sched.assign(fullname='Arturo S. Daag', email='asdaag48@gmail.com'), ignore_index=True, sort=False)
+    bulletin_sched = bulletin_sched.append(sched.assign(fullname='Renato U. Solidum, Jr.', email='RUS'), ignore_index=True, sort=False)
+    bulletin_sched = bulletin_sched.append(sched.loc[bulletin_sched.EQ == 1, :].assign(fullname='Jeffrey Perez', email='jeffrey.perez@phivolcs.dost.gov.ph'), ignore_index=True, sort=False)
+    if len(bulletin_sched) != 0:
         sent_queued = ewi_sent(start, end+timedelta(hours=4), mysql=mysql, to_csv=to_csv)
         sent = sent_queued.loc[sent_queued.narrative.str.contains('M EWI BULLETIN to '), :]
         queued = sent_queued.loc[sent_queued.narrative.str.contains('Added EWI bulletin to the sending queue'), :]
-        per_release = sched.groupby(['site_id', 'data_ts'], as_index=False)
+        per_release = bulletin_sched.groupby(['site_id', 'data_ts'], as_index=False)
         sent_sched = per_release.apply(check_sent, sent=sent, queued=queued).reset_index(drop=True)
         sent_sched.loc[sent_sched.ts_queued.isnull(), 'ts_queued'] = sent_sched.loc[sent_sched.ts_queued.isnull(), 'ts_sent']
     else:

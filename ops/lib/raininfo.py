@@ -1,114 +1,119 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 import os
 import pandas as pd
 import sys
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
+import ops.lib.lib as lib
 import dynadb.db as db
-import gsm.smsparser2.smsclass as sms
-import ops.ewisms_meal as ewisms
+import volatile.memory as mem
 
 
-def get_monitored_sites(curr_release, start, end, mysql=True):
-    ewi_sched = pd.DataFrame()
-    event = ewisms.get_events(start, end, mysql=mysql)
-    after_ins_sites = sorted(event.loc[(event.ts_start >= curr_release-timedelta(hours=4)), 'site_code'])
-    ewi_sched = ewi_sched.append(pd.DataFrame({'site_code': after_ins_sites, 'mon_type': ['event']*len(after_ins_sites), 'ins': [1]*len(after_ins_sites)}))
-    event_sites = sorted(set(event.loc[event.validity >= curr_release, 'site_code']) - set(after_ins_sites))
-    ewi_sched = ewi_sched.append(pd.DataFrame({'site_code': event_sites, 'mon_type': ['event']*len(event_sites)}))
-    if curr_release.hour == 12:
-        extended_sites = sorted(event.loc[(event.validity <= curr_release-timedelta(hours=4)) & (event.validity < pd.to_datetime(curr_release.date())), 'site_code'])
-        routine = ewisms.routine_sched(mysql=mysql)
-        month = curr_release.strftime('%B').lower()
-        iso_week_day = curr_release.weekday()+1
-        routine_sites = sorted(set(routine.loc[(routine.iso_week_day == iso_week_day) & (routine.season_type == routine[month]), 'site_code']) - set(event_sites+after_ins_sites+extended_sites))
+output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+deduction = 0.1
+incremental = 3
+
+def get_ewi_recipients(mysql=True, to_csv=False):
+    if mysql:
+        conn = mem.get('DICT_DB_CONNECTIONS')
+        query = "SELECT mobile_id, sim_num, user_id, rain_site_id, rain_site_code, fullname, province, all_sites, mm_values, percentage FROM "
+        query += "{common}.rain_info_recipients "
+        query += "	LEFT JOIN "
+        query += "(SELECT user_id, CONCAT(first_name, ' ', last_name) AS fullname, status AS user_status, ewi_recipient "
+        query += "FROM {common}.users "
+        query += ") users  "
+        query += "	USING (user_id) "
+        query += "	LEFT JOIN "
+        query += "{gsm_pi}.user_mobiles  "
+        query += "	USING (user_id) "
+        query += "	LEFT JOIN "
+        query += "{gsm_pi}.mobile_numbers "
+        query += "	USING (mobile_id) "
+        query += "	LEFT JOIN "
+        query += "(SELECT user_id, site_id AS rain_site_id, site_code AS rain_site_code, province FROM  "
+        query += "	{common}.user_organizations "
+        query += "		INNER JOIN  "
+        query += "	{common}.sites  "
+        query += "		USING (site_id) "
+        query += ") AS site_org  "
+        query += "	USING (user_id) "
+        query += "	LEFT JOIN "
+        query += "{gsm_pi}.user_ewi_restrictions  "
+        query += "	USING (user_id) "
+        query += "WHERE user_id NOT IN ( "
+        query += "	SELECT user_fk_id user_id "
+        query += "    FROM {common}.user_accounts) "
+        query += "AND ewi_recipient = 1 "
+        query += "AND user_status = 1 "
+        query += "AND status = 1 "
+        query += "ORDER BY fullname, sim_num"
+        query = query.format(common=conn['common']['schema'], gsm_pi=conn['gsm_pi']['schema'])
+        df = db.df_read(query, resource='sms_analysis')
+        if to_csv:
+            df.to_csv(output_path+'/input_output/ewi_recipient.csv', index=False)
     else:
-        routine_sites = []
-        extended_sites = []
-    ewi_sched = ewi_sched.append(pd.DataFrame({'site_code': routine_sites, 'mon_type': ['routine']*len(routine_sites)}))
-    ewi_sched = ewi_sched.append(pd.DataFrame({'site_code': extended_sites, 'mon_type': ['extended']*len(extended_sites)}))
-    return ewi_sched
-
-
-def unsent_ewisms(df):
-    set_org_name = set(['lewc', 'blgu', 'mlgu', 'plgu'])
-    if df.mon_type.values[0] != 'event':
-        set_org_name -= set(['plgu'])
-    unsent = sorted(set_org_name-set(df.org_name))
-    unsent_df = pd.DataFrame()
-    if len(unsent) != 0:
-        unsent_df = pd.DataFrame({'site_code': [df.site_code.values[0]], 'ofc': [', '.join(unsent)]})
-    return unsent_df
-
-
-def get_recipient(curr_release, unsent=True):    
-    query = "SELECT * FROM monshiftsched "
-    query += "WHERE ts < '{}' ".format(curr_release)
-    query += "ORDER BY ts DESC LIMIT 1"
-    IOMP = db.df_read(query, connection='analysis')
-        
-    query =  "SELECT * FROM users "
-    query += "WHERE first_name = 'Community' "
-    if unsent:
-        query += "OR (user_id IN (select user_fk_id user_id from user_accounts)  "
-        query += "  AND nickname in {}) ".format(tuple(IOMP.loc[:, ['iompmt', 'iompct']].values[0]))
-    users = db.df_read(query, connection='common')
-    if len(users) == 1:
-        user_id_list = '('+str(users.user_id.values[0])+')'
-    else:
-        user_id_list = tuple(users.user_id)
-        
-    query =  "SELECT mobile_id, gsm_id, status FROM "
-    query += "  (SELECT * from user_mobiles "
-    query += "  WHERE user_id IN {}) um".format(user_id_list)
-    query += "INNER JOIN mobile_numbers USING (mobile_id)"
-    user_mobiles = db.df_read(query, connection='gsm_pi')
-    
-    return user_mobiles.loc[user_mobiles.status == 1, ['mobile_id', 'gsm_id']]
-
-
-def send_unsent_notif(df, curr_release):
-    ts = curr_release.strftime('%I%p %B %d, %Y')
-    if len(df) != 0:
-        unsent_ewi = '\n'.join(list(map(lambda x: ': '.join(x), df.values)))
-        sms_msg = 'Unsent EWI SMS (' + ts + '):\n\n' + unsent_ewi
-        smsoutbox_user_status = get_recipient(curr_release)
-    else:
-        sms_msg = 'Sent all EWI SMS (' + ts + ')'
-        smsoutbox_user_status = get_recipient(curr_release, unsent=False)
-    smsoutbox_users = pd.DataFrame({'sms_msg': [sms_msg], 'source': ['central']})
-    data_table = sms.DataTable('smsoutbox_users', smsoutbox_users)
-    outbox_id = db.df_write(data_table, connection='gsm_pi', last_insert=True)[0][0]
-
-    smsoutbox_user_status.loc[:, 'outbox_id'] = outbox_id
-    data_table = sms.DataTable('smsoutbox_user_status', smsoutbox_user_status)
-    db.df_write(data_table, connection='gsm_pi')
-
-
-def main():
-
-    time_now = datetime.now()
-    curr_release = ewisms.release_time(time_now) - timedelta(hours=4)
-    
-    start = curr_release - timedelta(3)
-    end = curr_release + timedelta(hours=4)
-    
-    mysql = True
-    
-    ewi_sched = get_monitored_sites(curr_release, start, end, mysql=mysql)
-    
-    if len(ewi_sched) != 0:
-        ewisms_sent = ewisms.ewi_sent(start=curr_release, end=end, mysql=mysql)    
-        ewisms_sent = pd.merge(ewi_sched, ewisms_sent.reset_index(), how='left', on='site_code')
-    
-        site_ewisms = ewisms_sent.groupby('site_code', as_index=False)
-        df = site_ewisms.apply(unsent_ewisms).reset_index(drop=True)
-        
-        send_unsent_notif(df, curr_release)
-    
+        df = pd.read_csv(output_path+'/input_output/ewi_recipient.csv')
     return df
 
+def ewi_sent(start, end, mysql=True, to_csv=False):
+    if mysql:
+        conn = mem.get('DICT_DB_CONNECTIONS')
+        query = "SELECT ts_written, ts_sent, mobile_id, sms_msg, tag_id FROM "
+        query += "  (SELECT outbox_id, ts_written, ts_sent, mobile_id, sms_msg FROM  "
+        query += "    {gsm_pi}.smsoutbox_users "
+        query += "  INNER JOIN  "
+        query += "    {gsm_pi}.smsoutbox_user_status  "
+        query += "  USING (outbox_id) "
+        query += "  ) AS msg "
+        query += "LEFT JOIN  "
+        query += "  (SELECT outbox_id, tag_id FROM {gsm_pi}.smsoutbox_user_tags  "
+        query += "  WHERE ts BETWEEN '{start}' AND '{end}' "
+        query += "  AND tag_id = 21 "
+        query += "  ORDER BY outbox_id DESC LIMIT 5000 "
+        query += "  ) user_tags  "
+        query += "USING (outbox_id) "
+        query += "WHERE sms_msg REGEXP 'Rainfall info for' "
+        query += "AND ts_written BETWEEN '{start}' AND '{end}'"
+        query = query.format(start=start, end=end, common=conn['common']['schema'], gsm_pi=conn['gsm_pi']['schema'])
+        df = db.df_read(query, resource='sms_analysis')
+        df.loc[:, 'sms_msg'] = df.sms_msg.str.lower().str.replace('city', '').str.replace('.', '')
+        if to_csv:
+            df.to_csv(output_path+'/input_output/sent.csv', index=False)
+    else:
+        df = pd.read_csv(output_path+'/input_output/sent.csv')
+    return df
 
+def check_sent(release, sent):
+    data_ts = pd.to_datetime(release['data_ts'].values[0])
+    release_sent = sent.loc[(sent.ts_written >= data_ts) & (sent.ts_written <= data_ts+timedelta(hours=4)), :]
+    release.loc[:, 'ts_written'] = release.apply(lambda row: release_sent.loc[(release_sent.sms_msg.str.contains(row['name'])) & (release_sent.mobile_id==row['mobile_id']), 'ts_written'], axis=1).min(axis=1)
+    release.loc[:, 'ts_sent'] = release.apply(lambda row: release_sent.loc[(release_sent.sms_msg.str.contains(row['name'])) & (release_sent.mobile_id==row['mobile_id']), 'ts_sent'], axis=1).min(axis=1)
+    release.loc[:, 'tagged'] = release.apply(lambda row: int(21 in release_sent.loc[(release_sent.sms_msg.str.contains(row['name'])) & (release_sent.mobile_id==row['mobile_id']), 'tag_id'].values), axis=1)
+    release.loc[:, 'written_mm'] = release.apply(lambda row: int((row['mm_values'] == 1) & (len(release_sent.loc[(release_sent.sms_msg.str.contains(row['name'])) & (release_sent.mobile_id==row['mobile_id']) & (release_sent.sms_msg.str.contains(r'(?=.*mm)(?=.*threshold)',regex=True)), :]) != 0)), axis=1)
+    release.loc[:, 'written_percent'] = release.apply(lambda row: int((row['mm_values'] == 1) & (len(release_sent.loc[(release_sent.sms_msg.str.contains(row['name'])) & (release_sent.mobile_id==row['mobile_id']) & (release_sent.sms_msg.str.contains('%')), :]) != 0)), axis=1)
+    release.loc[(release.mm_values == 1) & (release.written_mm == 0), 'unwritten_info'] = 'mm '
+    release.loc[(release.percentage == 1) & (release.written_percent == 0), 'unwritten_info'] += 'percentage'
+    release.loc[~release.unwritten_info.isnull(), 'unwritten_info'] = release.loc[~release.unwritten_info.isnull(), 'unwritten_info'].apply(lambda x: '(' + x.strip().replace(' ', ' and ') + ')')
+    return release
 
-if __name__ == '__main__':
-    df = main()
+def ewi_sched(start, end, mysql=True, to_csv=False):
+    rain_sched = lib.release_sched(start, end, mysql=mysql, to_csv=to_csv)
+    rain_sched = rain_sched.loc[rain_sched.event == 1, :]
+    site_names = lib.get_site_names().loc[:, ['site_id', 'province']]
+    rain_sched = pd.merge(rain_sched, site_names, on='site_id')
+    
+    recipient = get_ewi_recipients(mysql=mysql, to_csv=to_csv)    
+    rain_sched = pd.merge(rain_sched, recipient, on='province')
+    
+    if len(rain_sched) != 0:
+        rain_sched = rain_sched.loc[rain_sched.apply(lambda row: (row.all_sites==1) | (row.site_id==row.rain_site_id), axis=1), :]
+        rain_sched = rain_sched.drop_duplicates(['data_ts', 'rain_site_id', 'sim_num'])
+        site_names = lib.get_site_names().loc[:, ['site_id', 'name']]
+        rain_sched = pd.merge(rain_sched, site_names, left_on='rain_site_id', right_on='site_id')
+    
+        sent = ewi_sent(start, end+timedelta(hours=4), mysql=mysql, to_csv=to_csv)
+        per_ts = rain_sched.groupby(['data_ts'], as_index=False)
+        sent_sched = per_ts.apply(check_sent, sent=sent).reset_index(drop=True)
+    else:
+        sent_sched = pd.DataFrame()
+    return sent_sched

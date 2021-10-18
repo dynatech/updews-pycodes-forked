@@ -11,6 +11,7 @@ import dynadb.db as db
 
 import ops.checksent.sms as sms
 import ops.checksent.bulletin as bulletin
+import ops.checksent.raininfo as raininfo
 
 def ops_checker(conversation_id = "", ts = ""):
     message = ""
@@ -27,20 +28,26 @@ def ops_checker(conversation_id = "", ts = ""):
         try:
             sms_notif = sms.main(pd.to_datetime(ts))
             bulletin_notif = bulletin.main(pd.to_datetime(ts))
+            raininfo_notif = raininfo.main()
         except:
-            message += "**ERROR timestamp**\nMust be in format : YYYY/mm/dd HH:MM\n"
+            message += "**ERROR timestamp**\nMust be in format : YYYY-mm-dd HH:MM\n\n"
 
             sms_notif = sms.main()
             bulletin_notif = bulletin.main()
+            raininfo_notif = raininfo.main()
     
     else:
         sms_notif = sms.main()
         bulletin_notif = bulletin.main()
+        raininfo_notif = raininfo.main()
         
     message += sms_notif
     message +="\n"
     message += bulletin_notif
-
+    message +="\n"
+    message += raininfo_notif
+    print(message)
+    
     cmd = "{} {}/send_message.py --conversation-id {} --message-text '{}'".format(python_path,file_path,conversation_id,message)
     os.system(cmd)
     
