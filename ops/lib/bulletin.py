@@ -85,7 +85,7 @@ def ewi_sched(start, end, mysql=True, to_csv=False):
     bulletin_sched = pd.merge(sched, recipient, how='inner', on='site_id')
     bulletin_sched = bulletin_sched.append(sched.assign(fullname='Arturo S. Daag', email='asdaag48@gmail.com'), ignore_index=True, sort=False)
     bulletin_sched = bulletin_sched.append(sched.assign(fullname='Renato U. Solidum, Jr.', email='RUS'), ignore_index=True, sort=False)
-    bulletin_sched = bulletin_sched.append(sched.loc[bulletin_sched.EQ == 1, :].assign(fullname='Jeffrey Perez', email='jeffrey.perez@phivolcs.dost.gov.ph'), ignore_index=True, sort=False)
+    bulletin_sched = bulletin_sched.append(sched.loc[sched.EQ == 1, :].assign(fullname='Jeffrey Perez', email='jeffrey.perez@phivolcs.dost.gov.ph'), ignore_index=True, sort=False)
     if len(bulletin_sched) != 0:
         sent_queued = ewi_sent(start, end+timedelta(hours=4), mysql=mysql, to_csv=to_csv)
         sent = sent_queued.loc[sent_queued.narrative.str.contains('M EWI BULLETIN to '), :]
