@@ -209,7 +209,7 @@ if __name__ == '__main__':
 
     #10:00am magsend kung health dec form
     elif sys.argv[1] == "healthdec":
-        cmd = "{} {}/upload_image.py --conversation-id {} --image '{}/health dec.png'".format(python_path,file_path,test_groupchat,file_path)
+        cmd = "{} {}/upload_image.py --conversation-id {} --image '{}/health_dec.png'".format(python_path,file_path,test_groupchat,file_path)
         os.system(cmd)
         
         query = "SELECT link from olivia_link where description = 'health dec'"
