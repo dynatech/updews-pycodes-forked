@@ -345,10 +345,9 @@ def process_surficial_observation(sms):
     updated_measurements_str = "\n".join(["%s = %0.2f CM" % (name, meas) \
         for name, meas in markers_ok_for_report["measurement"].items()])
 
-    success_msg = "%s\n%s\n%s" % (reply_msgs.iloc[12]["external_msg"], 
+    success_msg = "%s %s.\n%s\n%s" % (reply_msgs.iloc[12]["external_msg"], obv['obv']['site_code'].upper(),
         dt.strptime(obv["obv"]["ts"], "%Y-%m-%d %H:%M:%S").strftime("%c"),
         updated_measurements_str)
-
     internal_msg += "Updated measurements:\n%s" % (updated_measurements_str)
 
     # for ct phone c/o iomp-ct

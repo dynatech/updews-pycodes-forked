@@ -81,7 +81,7 @@ def get_site_code(text):
         print ("No site_code record for %s" % (site_code))
         err_val = SURFICIAL_PARSER_ERROR_VALUE["site_code"]
 
-    return {"value": site_id, "match": str(site_code_match), "err_val": err_val}
+    return {"value": {'site_id': site_id, 'site_code': site_code} , "match": str(site_code_match), "err_val": err_val}
 
 def adjust_site_code(site_code):
     """
@@ -388,7 +388,9 @@ def observation(text):
     print(text)
     # find values in patterns
     obv["meas_type"], text = find_match_in_text(get_obv_type, text)
-    obv["site_id"], text = find_match_in_text(get_site_code, text)
+    site_details, text = find_match_in_text(get_site_code, text)
+    obv['site_id'] = site_details['site_id']
+    obv['site_code'] = site_details['site_code']
     date_str, text = find_match_in_text(get_date, text)
     time_str, text = find_match_in_text(get_time, text)
     if dt.strptime("{} {}".format(date_str, time_str), "%Y-%m-%d %H:%M:%S") > dt.now():
