@@ -306,9 +306,9 @@ def process_surficial_observation(sms):
     print (">> Updating observations")
 
     df_obv = pd.DataFrame(obv["obv"], index = [0])
-
+    print(df_obv)
     mo_id = dbio.df_write(data_table=smsclass.DataTable("marker_observations", 
-        df_obv), resource=resource, last_insert=True)
+        df_obv.drop('site_code', axis=1)), resource=resource, last_insert=True)
 
     try:
         mo_id = int(mo_id[0][0])
