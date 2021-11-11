@@ -73,7 +73,7 @@ def event_start(site_id, end):
     query += "  AND (ts_updated <= '%s' " %end
     query += "    OR (ts_updated >= '%s' " %end
     query += "      AND ts <= '%s')) " %end
-    query += "  ) AS pub " %site_id
+    query += "  ) AS pub "
     query += "INNER JOIN "
     query += "  (SELECT * FROM public_alert_symbols "
     query += "  WHERE alert_type = 'event') AS sym "
@@ -140,5 +140,11 @@ def get_operational_trigger(site_id, start_monitor, end):
     query += "ORDER BY ts DESC"
 
     op_trigger =  db.df_read(query, connection='analysis')
+    
+    query = "SELECT * FROM alert_status WHERE trigger_id >= {trigger_id} "
+    query += "AND alert_status = -1"
+    query = query.format(trigger_id = min(op_trigger.trigger_id))
+    trigger_id = db.df_read(query, connection='analysis')['trigger_id'].values
+    op_trigger = op_trigger.loc[~op_trigger.trigger_id.isin(trigger_id), :]
     
     return op_trigger
