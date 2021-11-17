@@ -6,25 +6,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import dynadb.db as db
 import gsm.smsparser2.smsclass as sms
-import ops.checksent.sms as ops_sms
-import ops.checksent.bulletin as bulletin
-import ops.checksent.raininfo as raininfo
-#import ops.checksent.gndmeas as gndmeas
-
-
-def get_notif(ts):
-    sms_notif = ops_sms.main(ts)
-    bulletin_notif = bulletin.main(ts)
-    raininfo_notif = raininfo.main(ts)
-#    gndmeas_notif = gndmeas.main(ts)
-    sms_msg = ''
-    for notif in [sms_notif, bulletin_notif, raininfo_notif]:#, gndmeas_notif]:
-        if 'No scheduled' not in notif or notif != '':
-            sms_msg += notif + '\n'
-    if sms_msg != '':
-        sms_msg = sms_msg[:-1]
-    return sms_msg
-
+import ops.checksent.olivianotif as olivia
 
 def get_recipient(curr_release, unsent=True):    
     query = "SELECT * FROM monshiftsched "
@@ -53,17 +35,17 @@ def get_recipient(curr_release, unsent=True):
 
 
 def send_notif(ts=datetime.now()):
-    sms_msg = get_notif(ts)
+    notif = olivia.main(ts)
+    sms_msg = '\n'.join(list(filter(lambda x: x.startswith('Un'), notif.split('\nNo '))))
     if sms_msg != '':
         smsoutbox_user_status = get_recipient(ts)
         smsoutbox_users = pd.DataFrame({'sms_msg': [sms_msg], 'source': ['central']})
-        print(sms_msg)
-#        data_table = sms.DataTable('smsoutbox_users', smsoutbox_users)
-#        outbox_id = db.df_write(data_table, connection='gsm_pi', last_insert=True)[0][0]
-#    
-#        smsoutbox_user_status.loc[:, 'outbox_id'] = outbox_id
-#        data_table = sms.DataTable('smsoutbox_user_status', smsoutbox_user_status)
-#        db.df_write(data_table, connection='gsm_pi')
+        data_table = sms.DataTable('smsoutbox_users', smsoutbox_users)
+        outbox_id = db.df_write(data_table, connection='gsm_pi', last_insert=True)[0][0]
+    
+        smsoutbox_user_status.loc[:, 'outbox_id'] = outbox_id
+        data_table = sms.DataTable('smsoutbox_user_status', smsoutbox_user_status)
+        db.df_write(data_table, connection='gsm_pi')
         
         
 if __name__ == '__main__':
