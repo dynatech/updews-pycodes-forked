@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 import pandas as pd
 import sys
@@ -6,7 +6,10 @@ import sys
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import dynadb.db as db
 import gsm.smsparser2.smsclass as sms
+import ops.checksent.gndmeas as gndmeas
 import ops.checksent.olivianotif as olivia
+import ops.lib.lib as lib
+
 
 def get_recipient(curr_release, unsent=True):    
     query = "SELECT * FROM monshiftsched "
@@ -35,8 +38,12 @@ def get_recipient(curr_release, unsent=True):
 
 
 def send_notif(ts=datetime.now()):
-    notif = olivia.main(ts)
-    sms_msg = '\n'.join(list(filter(lambda x: x.startswith('Un'), notif.split('\nNo '))))
+    start = lib.release_time(ts) - timedelta(hours=4)
+    if (ts - start).total_seconds()/3600 < 1.5:
+        notif = olivia.main(ts)
+        sms_msg = '\n'.join(list(filter(lambda x: x.startswith('Un'), notif.split('\nNo '))))
+    else:
+        sms_msg = gndmeas.main(ts)
     if sms_msg != '':
         smsoutbox_user_status = get_recipient(ts)
         smsoutbox_users = pd.DataFrame({'sms_msg': [sms_msg], 'source': ['central']})
@@ -46,7 +53,6 @@ def send_notif(ts=datetime.now()):
         smsoutbox_user_status.loc[:, 'outbox_id'] = outbox_id
         data_table = sms.DataTable('smsoutbox_user_status', smsoutbox_user_status)
         db.df_write(data_table, connection='gsm_pi')
-        
         
 if __name__ == '__main__':
     send_notif()
