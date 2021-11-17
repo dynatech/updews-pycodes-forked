@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 import os
+import pandas as pd
 import sys
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
@@ -10,7 +11,7 @@ import ops.lib.bulletin as bulletin
 import ops.lib.raininfo as raininfo
 
 
-def notif(time_now, start, sched, notif_type):
+def get_notif(time_now, start, sched, notif_type):
     if (time_now - start).total_seconds()/60 < 5:
         name = 'queued'
         col_name = 'ts_written'
@@ -45,17 +46,22 @@ def main(time_now=datetime.now(), mysql=True, to_csv=False):
         sms_recipients = qdb.get_sms_recipients(mysql=mysql, to_csv=to_csv)
         sms_sent = qdb.get_sms_sent(sent_start, sent_end, site_names, mysql=mysql, to_csv=to_csv)
         sms_sched = sms.ewi_sched(sched, sms_recipients, sms_sent, site_names)
-        sms_notif = notif(time_now, start, sms_sched, notif_type='EWI SMS')
-        print(sms_notif)
     
         bulletin_recipients = qdb.get_bulletin_recipients(mysql=mysql, to_csv=to_csv)
         bulletin_sent = qdb.get_bulletin_sent(sent_start, sent_end, mysql=mysql, to_csv=to_csv)
         bulletin_sched = bulletin.ewi_sched(sched, bulletin_recipients, bulletin_sent)
-        bulletin_notif = notif(time_now, start, bulletin_sched, notif_type='EWI bulletin')
-        print(bulletin_notif)
     
         rain_recipients = qdb.get_rain_recipients(mysql=mysql, to_csv=to_csv)
         rain_sent = qdb.get_rain_sent(sent_start, sent_end, mysql=mysql, to_csv=to_csv)
         rain_sched = raininfo.ewi_sched(sched, rain_recipients, rain_sent, site_names)
-        sms_notif = notif(time_now, start, rain_sched, notif_type='rain info')
-        print(sms_notif)
+    
+    else:
+        sms_sched = pd.DataFrame()
+        bulletin_sched = pd.DataFrame()
+        rain_sched = pd.DataFrame()
+        
+    sms_notif = get_notif(time_now, start, sms_sched, notif_type='EWI SMS')
+    bulletin_notif = get_notif(time_now, start, bulletin_sched, notif_type='EWI bulletin')
+    rain_notif = get_notif(time_now, start, rain_sched, notif_type='rain info')
+    notif = '\n'.join([sms_notif, bulletin_notif, rain_notif])
+    return notif
