@@ -19,6 +19,7 @@ import smsparser2.rain as rain
 import smsparser2.smsclass as smsclass
 import smsparser2.subsurface as subsurface
 import smsparser2.surficialtilt as surficialtilt
+import smsparser2.ublox as ublox
 import smstables
 import volatile.memory as mem
 
@@ -569,6 +570,33 @@ def parse_all_messages(args,allmsgs=[]):
             elif re.search("[A-Z]{5,6}\*[R,F]+\*",sms.msg):
                 try: 
                     df_data = surficialtilt.stilt_parser(sms)
+                    if df_data:
+                        print (df_data.data)
+                        dbio.df_write(df_data, resource=resource)
+                    else:
+                        print ('>> Value Error')
+                        is_msg_proc_success = False
+                except:
+                    print ('>>Value Error')
+                    is_msg_proc_success = False
+            #check if surficial tilt v2 data
+            elif re.search("[A-Z]{3}N[A-Z]{1}\*[0,1]:+",sms.msg):
+                try: 
+                    df_data = surficialtilt.stilt_v2_parser(sms)
+                    if df_data:
+                        print (df_data.data)
+                        dbio.df_write(df_data, resource=resource)
+                    else:
+                        print ('>> Value Error')
+                        is_msg_proc_success = False
+                except:
+                    print ('>>Value Error')
+                    is_msg_proc_success = False
+                    
+            #check if ublox data
+            elif re.search("^[A-Z]{3}U[A-Z]{1}:",sms.msg):
+                try: 
+                    df_data = ublox.ublox_parser(sms)
                     if df_data:
                         print (df_data.data)
                         dbio.df_write(df_data, resource=resource)
