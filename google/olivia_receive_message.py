@@ -703,9 +703,12 @@ def on_event(conv_event):
 #                           gsm_id=2, table='users')
         
         elif re.search('olivia ops checker',received_msg.lower()):
-            ts = received_msg.replace('olivia ops checker',"")
-            ts = ts.replace("'","")
-            ts = ts.replace('"',"")
+            ts = re.findall(r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}',received_msg)[0]
+#            received_msg.replace('olivia ops checker',"")
+#            ts = ts.replace("'","")
+#            ts = ts.replace('"',"")
+#            ts = ts.replace('”',"")
+#            ts = ts.replace('“',"")
             ops_checker(conversation_id, ts)
         
         ts = (conv_event.timestamp +td(hours=8)).strftime("%Y-%m-%d %H:%M:%S")
