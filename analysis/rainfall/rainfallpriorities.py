@@ -1,6 +1,7 @@
 from datetime import datetime
-import os
 import numpy as np
+import os
+import pandas as pd
 import sys
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
@@ -29,17 +30,15 @@ def to_mysql(df):
     Args:
         df (dataframe): Record of 4 nearby rain gauges with 
         its distance from the site.
-
     """
-    written_df = mem.get('df_rain_priorities')
-    combined = written_df.append(df, ignore_index=True, sort=False)
-    combined = combined.append(written_df, ignore_index=True, sort=False)
-    combined = combined.drop_duplicates(['site_id', 'rain_id'], keep=False)
-
+    
+    written_df = mem.get('df_rain_priorities').loc[:, ['priority_id', 'site_id', 'rain_id']]
+    combined = pd.merge(df, written_df, on=['site_id', 'rain_id'], how='left')
+    
     if len(combined) > 0:
         qdb.write_rain_priorities(combined)
+        
 
-    
 def get_distance(site_coord, rg_coord):
     """Computes for distance of nearby rain gauges from the site.
     
@@ -73,10 +72,11 @@ def get_distance(site_coord, rg_coord):
     rg_coord['c']= 2 * np.arctan2(np.sqrt(rg_coord.a),np.sqrt(1-rg_coord.a))
     rg_coord['distance']= 6371 * rg_coord.c
     rg_coord = rg_coord.sort_values('distance', ascending = True)
+    rg_coord ['site_id'] = site_id
+    rg_coord = rg_coord.drop_duplicates(['site_id', 'rain_id'])
     
     nearest_rg = rg_coord[0:4]
-    nearest_rg['site_id'] = site_id
-    nearest_rg = nearest_rg[['site_id', 'rain_id', 'distance']]
+    nearest_rg = nearest_rg.loc[:, ['site_id', 'rain_id', 'distance']]
     
     return nearest_rg
 
@@ -88,7 +88,7 @@ def main(site_code=''):
 
     start = datetime.now()
     qdb.print_out(start)
-
+    
     coord = all_site_coord()
     if site_code == '':
         try:
@@ -113,7 +113,7 @@ def main(site_code=''):
     if qdb.does_table_exist('rainfall_priorities') == False:
         #Create a NOAH table if it doesn't exist yet
         qdb.create_rainfall_priorities()
-
+        
     to_mysql(nearest_rg)
     
     qdb.print_out('runtime = %s' %(datetime.now() - start))

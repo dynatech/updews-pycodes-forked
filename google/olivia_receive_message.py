@@ -250,8 +250,18 @@ def main(alert):
             xyz.xyzplot(dfalert.tsm_id[i],dfalert.node_id[i],dfalert.ts[i],OutputFP)
             
     elif source_id == 3:
-        rain.main(site_code = site, end=ts, write_to_db = False, print_plot = True,output_path = OutputFP)
-    
+        rain.main(site_code = site, end=ts, write_to_db = False, print_plot = True)
+        
+        #### Open config files
+        sc = mem.get('server_config')
+        output_path = os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                           '../..'))
+        
+        plot_path_rain = output_path+sc['fileio']['rainfall_path']
+        
+        for img in os.listdir(plot_path_rain):    
+            shutil.move("{}/{}".format(plot_path_rain,img), OutputFP)
+            
     elif source_id ==2:
 #        print("marker")
 #        query_alert = ("SELECT marker_id FROM marker_alerts "

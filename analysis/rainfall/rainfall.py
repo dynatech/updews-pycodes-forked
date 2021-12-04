@@ -114,7 +114,7 @@ def web_plotter(site_code, end, days):
     
 
 def main(site_code='', end='', Print=True, write_to_db=True,
-         print_plot=False, save_plot=True, days='', is_command_line_run=True, output_path=''):
+         print_plot=False, save_plot=True, days='', is_command_line_run=True):
     """Computes alert and plots rainfall data.
     
     Args:
@@ -136,7 +136,7 @@ def main(site_code='', end='', Print=True, write_to_db=True,
 
     if is_command_line_run and len(sys.argv) > 1:
         site_code = sys.argv[1].lower()
-            
+        
     if end == '':
         try:
             end = pd.to_datetime(sys.argv[2])
@@ -144,19 +144,16 @@ def main(site_code='', end='', Print=True, write_to_db=True,
             end = datetime.now()
     else:
         end = pd.to_datetime(end)
+
+    output_path = os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                                                   '../../..'))
+    
     sc = mem.server_config()
-    
-    
-    if not output_path:
-        output_path = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                                                       '../../..'))
-        
-        
-    
-        #creates directory if it doesn't exist
-        if (sc['rainfall']['print_plot'] or sc['rainfall']['print_summary_alert']) and Print:
-            if not os.path.exists(output_path+sc['fileio']['rainfall_path']):
-                os.makedirs(output_path+sc['fileio']['rainfall_path'])
+
+    #creates directory if it doesn't exist
+    if (sc['rainfall']['print_plot'] or sc['rainfall']['print_summary_alert']) and Print:
+        if not os.path.exists(output_path+sc['fileio']['rainfall_path']):
+            os.makedirs(output_path+sc['fileio']['rainfall_path'])
 
     # setting monitoring window
     if days != '':
@@ -168,7 +165,7 @@ def main(site_code='', end='', Print=True, write_to_db=True,
     # 4 nearest rain gauges of each site with threshold and distance from site
     gauges = rainfall_gauges()
     if site_code != '':
-        site_code = site_code.replace(' ', '').split(',')												 
+        site_code = site_code.replace(' ', '').split(',')
         gauges = gauges[gauges.site_code.isin(site_code)]
     gauges['site_id'] = gauges['site_id'].apply(lambda x: float(x))
 
@@ -205,4 +202,15 @@ def main(site_code='', end='', Print=True, write_to_db=True,
 ###############################################################################
 
 if __name__ == "__main__":
+    
+    
     main()
+    
+#    # test
+#    summary_json = main(site_code='mag', end='2021-04-19 17:00', Print=True, write_to_db=False,
+#         print_plot=True, save_plot=False, days=1538, is_command_line_run=False)
+#    df = pd.DataFrame(pd.read_json(summary_json)['plot'].values[0])
+#    for gauge_name in df.gauge_name:
+#        distance = str(df.loc[df.gauge_name == gauge_name, 'distance'].values[0])
+#        rain_data = pd.DataFrame(df.loc[df.gauge_name == gauge_name, 'data'].values[0])
+#        rain_data.to_csv(gauge_name + '(' + distance + 'km).csv')

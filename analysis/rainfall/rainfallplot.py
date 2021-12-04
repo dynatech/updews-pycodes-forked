@@ -7,7 +7,7 @@ if curOS != "Windows":
 
 from datetime import timedelta
 import matplotlib.dates as md
-import matplotlib.pyplot as plt							 
+import matplotlib.pyplot as plt
 import numpy as np
 import os
 import pandas as pd
@@ -73,7 +73,7 @@ def rain_subplot(rain_gauge_props, offsetstart, start, end, threshold,
     """
 
     gauge_name = rain_gauge_props['gauge_name'].values[0]
-    rain_id = rain_gauge_props['rain_id'].values[0]											   
+    rain_id = rain_gauge_props['rain_id'].values[0]
     gauge_distance = rain_gauge_props['distance'].values[0]
     # resampled data
     data = ra.get_resampled_data(rain_id, gauge_name, offsetstart, start, end,
@@ -154,10 +154,10 @@ def rain_subplot(rain_gauge_props, offsetstart, start, end, threshold,
     
     rain_id = rain_gauge_props['rain_id'].values[0]
     data_source = rain_gauge_props['data_source'].values[0]
-    threshold_value = rain_gauge_props['threshold_value'].values[0]												   
+    threshold_value = rain_gauge_props['threshold_value'].values[0]
     return pd.DataFrame({'gauge_name': [gauge_name], 'data': [data],
                          'distance': [gauge_distance], 'data_source': [data_source],
-                         'threshold_value': [threshold_value], 'rain_id': [rain_id]})		 
+                         'threshold_value': [threshold_value], 'rain_id': [rain_id]})
     
 def rain_stack_plot(site_code, gauges, offsetstart, start, end, tsn, threshold,
                     sc, output_path, save_plot):
@@ -183,9 +183,9 @@ def rain_stack_plot(site_code, gauges, offsetstart, start, end, tsn, threshold,
     fig = plt.figure(figsize = (15,20))
     # assigning axis name for instantaneous rainfall of each rain gauge
     ins1 = fig.add_subplot(len(gauges),2,1)
-    ins2 = fig.add_subplot(len(gauges),2,3, sharex=ins1)
-    ins3 = fig.add_subplot(len(gauges),2,5, sharex=ins1)
-    ins4 = fig.add_subplot(len(gauges),2,7, sharex=ins1)
+    ins2 = fig.add_subplot(len(gauges),2,3, sharex=ins1, sharey=ins1)
+    ins3 = fig.add_subplot(len(gauges),2,5, sharex=ins1, sharey=ins1)
+    ins4 = fig.add_subplot(len(gauges),2,7, sharex=ins1, sharey=ins1)
     # assigning axis name for cumulative rainfall of each rain gauge
     cum1 = fig.add_subplot(len(gauges),2,2)
     cum2 = fig.add_subplot(len(gauges),2,4, sharex=cum1)
@@ -195,11 +195,11 @@ def rain_stack_plot(site_code, gauges, offsetstart, start, end, tsn, threshold,
     insax = [ins1, ins2, ins3, ins4]
     cumax = [cum1, cum2, cum3, cum4]
     # range of x and y axis
-    try:	
+    try:
         ins1.set_xlim([start - timedelta(hours=2), end + timedelta(hours=2)])
         cum1.set_xlim([start - timedelta(hours=2), end + timedelta(hours=2)])
     except:
-        pass		   
+        pass
 
     rain_gauge_props = gauges.groupby('rain_id')
     
@@ -223,7 +223,7 @@ def rain_stack_plot(site_code, gauges, offsetstart, start, end, tsn, threshold,
         for ax in fig.axes:
             plt.sca(ax)
             plt.xticks(rotation=90)
-
+    
         plt.savefig(output_path+sc['fileio']['rainfall_path'] + 'rainfall_' +
                     tsn + '_' + site_code, dpi=100, facecolor='w',
                     edgecolor='w',orientation='landscape',

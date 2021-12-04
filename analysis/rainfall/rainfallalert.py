@@ -6,7 +6,7 @@ import pandas as pd
 import sys
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
-import analysis.publicalerts as pub
+import analysis.analysislib as lib
 import analysis.querydb as qdb
 
 
@@ -33,7 +33,8 @@ def get_resampled_data(rain_id, gauge_name, offsetstart, start, end,
                                          from_time=offsetstart)
     else:
         rainfall = qdb.get_raw_rain_data(rain_id, gauge_name,
-                                         from_time=offsetstart, to_time=end)																
+                                         from_time=offsetstart, to_time=end)
+    rainfall = rainfall.loc[rainfall.rain != -1, :]
     
     try:
         latest_ts = pd.to_datetime(rainfall['ts'].values[-1])
@@ -153,7 +154,7 @@ def summary_writer(site_id, site_code, gauge_name, rain_id, twoyrmax, halfmax,
         ralert=0
 
     if write_alert or ralert == 1:
-		#Create a site_alerts table if it doesn't exist yet
+        #Create a site_alerts table if it doesn't exist yet
         qdb.create_rainfall_alerts()
 
         columns = ['rain_alert', 'cumulative', 'threshold']
@@ -228,11 +229,11 @@ def main(rain_props, end, sc, trigger_symbol, write_to_db=True):
 
         if qdb.get_alert_level(site_id, end)['alert_level'].values[0] > 0:
             
-            start_monitor = pub.event_start(site_id, end)
-            op_trig = pub.get_operational_trigger(site_id, start_monitor, end)
+            start_monitor = lib.event_start(site_id, end)
+            op_trig = lib.get_operational_trigger(site_id, start_monitor, end)
             op_trig = op_trig[op_trig.alert_level > 0]
             validity = max(op_trig['ts_updated'].values)
-            validity = pub.release_time(pd.to_datetime(validity)) \
+            validity = lib.release_time(pd.to_datetime(validity)) \
                                      + timedelta(1)
             if 3 in op_trig['alert_level'].values:
                 validity += timedelta(1)

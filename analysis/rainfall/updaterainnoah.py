@@ -28,9 +28,10 @@ def download_rainfall_noah(noah_id, fdate, tdate):
     
     sc = mem.server_config()
     url = (sc['rainfall']['noah_data'] + '/%s/from/%s/to/%s') %(noah_id, offset_date, tdate)
+    print(url)
     try:
         req = requests.get(url, auth=(sc['rainfall']['noah_user'],
-                                      sc['rainfall']['noah_password']))
+                                      sc['rainfall']['noah_password']), verify=False)
     except:
         qdb.print_out("Can't get request. Please check internet connection")
         return pd.DataFrame()
@@ -117,9 +118,9 @@ def update_single_table(noah_gauges):
     #Find the latest timestamp for noah_id (which is also the start date)
     latest_ts = qdb.get_latest_ts(gauge_name)   
 
-    if (latest_ts == '') or (latest_ts == None):
+    if (latest_ts == '') or (latest_ts == None):# or latest_ts < datetime.now() - timedelta(3):
         #assign a starting date if table is currently empty
-        latest_ts = datetime.now() - timedelta(3)
+        latest_ts = "2020-09-09 18:30:30"
     else:
         latest_ts = latest_ts.strftime("%Y-%m-%d %H:%M:%S")
     
@@ -144,6 +145,8 @@ def main():
     gauges = mem.get('df_rain_props')
         
     gauges = gauges[gauges.data_source == 'noah'].drop_duplicates('rain_id')
+#    gauges = gauges.loc[gauges.gauge_name == '1148', :]
+    
     noah_gauges = gauges.groupby('rain_id')    
     noah_gauges.apply(update_single_table)
     
