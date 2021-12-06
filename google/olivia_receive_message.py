@@ -216,6 +216,10 @@ def main(alert):
     OutputFP=  os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')) #os.path.dirname(os.path.realpath(__file__))+'/{} {}/'.format(site, ts.strftime("%Y-%m-%d %H%M"))
     OutputFP += '/node_alert_hangouts/' + '{} {} {}/'.format(alert_id, site, ts.strftime("%Y-%m-%d %H%M")) 
     OutputFP=OutputFP.replace("\\", "/")
+
+    #### Open config files
+    sc = mem.get('server_config')
+    output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
     
     if not os.path.exists(OutputFP):
         os.makedirs(OutputFP)
@@ -240,8 +244,12 @@ def main(alert):
         window, sc = rtw.get_window(ts)
         
         data = proc.proc_data(tsm_props, window, sc)
-        plotter.main(data, tsm_props, window, sc, plot_inc=False, output_path=OutputFP)
+        plotter.main(data, tsm_props, window, sc, plot_inc=False)
         
+        plot_path_sensor = output_path+sc['fileio']['realtime_path']
+        
+        for img in os.listdir(plot_path_sensor):    
+            shutil.move("{}/{}".format(plot_path_sensor,img), OutputFP)
         
 #        plot node data
         for i in dfalert.index:
@@ -252,10 +260,7 @@ def main(alert):
     elif source_id == 3:
         rain.main(site_code = site, end=ts, write_to_db = False, print_plot = True)
         
-        #### Open config files
-        sc = mem.get('server_config')
-        output_path = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                           '../..'))
+
         
         plot_path_rain = output_path+sc['fileio']['rainfall_path']
         
@@ -272,12 +277,6 @@ def main(alert):
 #        for m_id in dfalert.marker_id:
         marker.generate_surficial_alert(site_id=site_id, ts = ts)#, marker_id=m_id)
         
-
-
-        #### Open config files
-        sc = mem.get('server_config')
-        output_path = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                           '../..'))
         
         plot_path_meas = output_path+sc['fileio']['surficial_meas_path']
         plot_path_trend = output_path+sc['fileio']['surficial_trending_path']

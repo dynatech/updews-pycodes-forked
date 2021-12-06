@@ -23,6 +23,7 @@ import analysis.subsurface.proc as proc
 import analysis.subsurface.rtwindow as rtw
 import volatile.memory as mem
 import dynadb.db as db
+import re
 
 from olivia_receive_message import ilan_alert
 
@@ -35,6 +36,10 @@ def main(alert):
     OutputFP=  os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')) #os.path.dirname(os.path.realpath(__file__))+'/{} {}/'.format(site, ts.strftime("%Y-%m-%d %H%M"))
     OutputFP += '/node_alert_hangouts/' + '{} {}/'.format(site, ts.strftime("%Y-%m-%d %H%M")) 
     OutputFP=OutputFP.replace("\\", "/")
+    
+    #### Open config files
+    sc = mem.get('server_config')
+    output_path = os.path.abspath(os.path.join(os.path.dirname(__file__),'../..'))
     
     if not os.path.exists(OutputFP):
         os.makedirs(OutputFP)
@@ -60,8 +65,13 @@ def main(alert):
         window, sc = rtw.get_window(ts)
         
         data = proc.proc_data(tsm_props, window, sc)
-        plotter.main(data, tsm_props, window, sc, plot_inc=False, output_path=OutputFP)
+        plotter.main(data, tsm_props, window, sc, plot_inc=False)
         
+
+        plot_path_sensor = output_path+sc['fileio']['realtime_path']
+        
+        for img in os.listdir(plot_path_sensor):    
+            shutil.move("{}/{}".format(plot_path_sensor,img), OutputFP)
         
 #        plot node data
         for i in dfalert.index:
@@ -71,11 +81,6 @@ def main(alert):
             
     elif source_id == 3:
         rain.main(site_code = site, end=ts, write_to_db = False, print_plot = True)
-        
-        #### Open config files
-        sc = mem.get('server_config')
-        output_path = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                           '../..'))
         
         plot_path_rain = output_path+sc['fileio']['rainfall_path']
         
@@ -93,12 +98,6 @@ def main(alert):
         #for m_id in dfalert.marker_id:
         marker.generate_surficial_alert(site_id=site_id, ts = ts)#, marker_id=m_id)
         
-
-
-        #### Open config files
-        sc = mem.get('server_config')
-        output_path = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                           '../..'))
         
         plot_path_meas = output_path+sc['fileio']['surficial_meas_path']
         plot_path_trend = output_path+sc['fileio']['surficial_trending_path']
@@ -229,3 +228,50 @@ if __name__ == '__main__':
         message = "Health Check Declaration Form\n{}\n".format(link)
         cmd = "{} {}/send_message.py --conversation-id {} --message-text '{}'".format(python_path,file_path,test_groupchat,message)
         os.system(cmd)
+
+    #every 4hrs magsend kung naka event si MSU/MSL
+    elif sys.argv[1] == "plotcolpos":      
+        #### Open config files
+        sc = mem.get('server_config')
+        output_path = os.path.abspath(os.path.join(os.path.dirname(__file__),'../..'))
+        
+        query = ("SELECT site_code,alert_symbol, trigger_list "
+             ",if (timestampdiff(hour, data_ts,validity)<5,'for lowering','') as stat "
+             "FROM monitoring_events "
+             "inner join commons_db.sites on sites.site_id = monitoring_events.site_id "
+             "inner join monitoring_event_alerts "
+             "on monitoring_event_alerts.event_id = monitoring_events.event_id "
+             "inner join monitoring_releases "
+             "on monitoring_event_alerts.event_alert_id = monitoring_releases.event_alert_id "
+             "inner join public_alert_symbols "
+             "on public_alert_symbols.pub_sym_id = monitoring_event_alerts.pub_sym_id "
+             "where monitoring_event_alerts.pub_sym_id >= 2 and validity > Now() and data_ts >= NOW()-INTERVAL 4 hour "
+             "AND site_code in ('msu','msl') "
+             "order by alert_symbol desc")
+        cur_alert=db.df_read(query, connection= "website")
+        # remove repeating site_code
+        cur_alert = cur_alert.groupby("site_code").first().reset_index()
+        
+        if len(cur_alert)>0:
+        
+    #        plot colpos & disp vel
+            tsm_props = qdb.get_tsm_list("msuta")[0]
+            window, sc = rtw.get_window(pd.to_datetime(dt.now()))
+            
+            data = proc.proc_data(tsm_props, window, sc)
+            plotter.main(data, tsm_props, window, sc, plot_inc=False)#, output_path=OutputFP)
+
+            plot_path_sensor = output_path+sc['fileio']['realtime_path']
+            
+            try:
+                for img in os.listdir(plot_path_sensor):    
+                    if re.search("colpos",img):
+                        cmd = "{} {}/upload_image.py --conversation-id {} --image '{}/{}'".format(python_path,file_path,brain,plot_path_sensor,img)
+                        os.system(cmd)
+                        
+                        
+                    os.remove("{}/{}".format(plot_path_sensor,img))
+            except:
+                print("walang laman")    
+#            shutil.move("{}/{}".format(plot_path_sensor,img), OutputFP)
+        

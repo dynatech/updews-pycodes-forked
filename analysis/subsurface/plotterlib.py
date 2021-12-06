@@ -5,14 +5,14 @@ curOS = platform.system()
 import matplotlib as mpl
 if curOS != "Windows":
     mpl.use('Agg')
-							   
+
 from datetime import timedelta
 from scipy.stats import spearmanr
 import matplotlib.dates as md
 import matplotlib.pyplot as plt
 import numpy as np
 import os
-import pandas as pd						 
+import pandas as pd
 import sys
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
@@ -260,8 +260,8 @@ def disp0off(df, window, sc, xzd_plotoffset, num_nodes):
     df0off = nodal_df0.apply(df_add_offset_col, offset = xzd_plotoffset,
                              num_nodes = num_nodes)
 
-    if curOS == "Windows":						  
-		# compensates double offset of node 1 due to df.apply in windows
+    if curOS == "Windows":
+        # compensates double offset of node 1 due to df.apply in windows
         a = df0off.loc[df0off.node_id == 1].copy()
         a.loc[:, ['xz', 'xy']] = a[['xz', 'xy']] - (num_nodes - 1) * xzd_plotoffset
         df0off = df0off.loc[df0off.node_id != 1]
@@ -390,7 +390,7 @@ def plot_disp_vel(noise_df, df0off, cs_df, colname, window, sc, plotvel,
     if plotvel:
         vel_xz, vel_xy, L2_xz, L2_xy, L3_xz, L3_xy = velplot
         vel_xz = vel_xz.loc[:, vel_xz.columns[::-1]]
-        vel_xy = vel_xy.loc[:, vel_xy.columns[::-1]]													
+        vel_xy = vel_xy.loc[:, vel_xy.columns[::-1]]
 
     df0off = df0off.set_index('ts')
     
@@ -551,10 +551,9 @@ def df_add_offset_col(df, offset, num_nodes):
     
 def main(data, tsm_props, window, sc, plotvel=True, show_part_legend = False,
          realtime=True, plot_inc=True, three_day_window=True,
-         mirror_xz=False, mirror_xy=False, output_path = ''):
-	
-    if not output_path:
-        output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
+         mirror_xz=False, mirror_xy=False):
+
+    output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
 
     if realtime:
         plot_path = sc['fileio']['realtime_path']
