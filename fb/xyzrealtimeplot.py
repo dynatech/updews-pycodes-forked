@@ -4,13 +4,6 @@ Created on Fri Nov 18 13:58:05 2016
 
 @author: Brainerd D. Cruz
 """
-##### IMPORTANT matplotlib declarations must always be FIRST to make sure that
-##### matplotlib works with cron-based automation
-import platform
-curOS = platform.system()
-if curOS != "Windows":
-    import matplotlib as mpl
-    mpl.use('Agg')
 
 import pandas as pd
 #import numpy as np
@@ -22,6 +15,7 @@ import analysis.subsurface.filterdata as fsd
 import memcache
 import numpy as np
 
+import dynadb.db as db
     
 def xyzplot(tsm_id,nid,time, OutputFP=''):
     memc = memcache.Client(['127.0.0.1:11211'], debug=1)
@@ -57,10 +51,10 @@ def xyzplot(tsm_id,nid,time, OutputFP=''):
 
 #valid invalid
     query_na = ("SELECT COUNT(IF(na_status=1,1, NULL))/count(ts)*100.0 as "
-                "'percent_valid' FROM senslopedb.node_alerts "
+                "'percent_valid' FROM node_alerts "
                 "where tsm_id = {} and node_id = {} and na_status is not NULL "
                 "group by tsm_id, node_id".format(tsm_id,nid))
-    df_na = qdb.get_db_dataframe(query_na)
+    df_na = db.df_read(query_na, connection = "analysis")
     if df_na.empty:
         validity = np.nan
     else:
@@ -71,13 +65,13 @@ def xyzplot(tsm_id,nid,time, OutputFP=''):
     fig.suptitle("{}{} ({})".format(tsm_name,str(nid),time.strftime("%Y-%m-%d %H:%M")),fontsize=11)
     
 #accelerometer status
-    query='''SELECT status,remarks FROM senslopedb.accelerometer_status as astat
+    query='''SELECT status,remarks FROM accelerometer_status as astat
             inner join 
             (select * from accelerometers where tsm_id={} and node_id={} 
             and in_use=1) as a
             on a.accel_id=astat.accel_id
             order by stat_id desc limit 1'''.format(tsm_id,nid) 
-    dfs=qdb.get_db_dataframe(query)
+    dfs=db.df_read(query, connection = "analysis")
     if not dfs.empty:
         stat_id=dfs.status[0]
         if stat_id==1:
@@ -101,7 +95,27 @@ def xyzplot(tsm_id,nid,time, OutputFP=''):
 # end of accelerometer status
     
 #filter/raw
-    fig.text(0.900, 0.95, '%%filter/raw = %.2f%%\n%%validity = %.2f%%'%(percent,validity),
+    
+    if validity >50:
+        history = "mostly VALID"
+    elif validity ==0:
+        history = "ALL INVALID"
+    elif validity ==100:
+        history = "ALL VALID"
+    elif np.isnan(validity):
+        history = "NO history"
+    else:
+        history = "mostly INVALID"
+    
+    if percent <=50:
+        qdata = "filtered many erroneous data"
+    elif 50< percent <90:
+        qdata = "filtered few erroneous data"
+    else:
+        qdata = "good data"
+    
+    
+    fig.text(0.900, 0.95, 'Data: {}\nHistory: {}'.format(qdata,history),
          horizontalalignment='right',
          verticalalignment='top',
          fontsize=8,color='blue')    
@@ -116,7 +130,7 @@ def xyzplot(tsm_id,nid,time, OutputFP=''):
         plt.axvspan(time-td(days=3),time,facecolor='yellow', alpha=0.4)
         df0['x'].plot(color='green')
         ax1.tick_params(axis='both',direction='in', labelsize=7)
-        plt.ylabel(tsm_name+str(nid_up), color='green', fontsize=14)
+        plt.ylabel(tsm_name+str(nid_up), color='green')
         plt.title('x-axis', color='green',fontsize=8,verticalalignment='top')
         
         ax2 = plt.subplot(3,4,2, sharex = ax1)
@@ -133,12 +147,12 @@ def xyzplot(tsm_id,nid,time, OutputFP=''):
         
         try:
             axb1 = plt.subplot(3,4,4, sharex = ax1)
-            plt.axvspan(time-td(days=3),time,facecolor='yellow', alpha=0.4)
-            dfr0['batt'].plot(color='green')
+            df0['batt'].plot(color='green')
             axb1.tick_params(axis='both',direction='in', labelsize=7)
+            plt.axvspan(time-td(days=3),time,facecolor='yellow', alpha=0.4)
             axb1.axhline(accel.voltage_max[accel.node_id == nid_up].values[0],color='black', linestyle='--', linewidth=1)
             axb1.axhline(accel.voltage_min[accel.node_id == nid_up].values[0],color='black', linestyle='--', linewidth=1)
-            plt.title('batt', color='green',fontsize=8,verticalalignment='top')
+            plt.title('voltage', color='green',fontsize=8,verticalalignment='top')
         except:
             print ("v1")
         
@@ -158,7 +172,7 @@ def xyzplot(tsm_id,nid,time, OutputFP=''):
         plt.axvspan(time-td(days=3),time,facecolor='yellow', alpha=0.4)
         df['x'].plot(color='blue')
         ax4.tick_params(axis='both',direction='in', labelsize=7)
-        plt.ylabel(tsm_name+str(nid), color='blue', fontsize=14)        
+        plt.ylabel(tsm_name+str(nid)+"\n(triggered node)", color='blue')        
         plt.title('x-axis', color='blue',fontsize=8,verticalalignment='top')
         
         ax5 = plt.subplot(3,4,6, sharex = ax4)
@@ -175,12 +189,12 @@ def xyzplot(tsm_id,nid,time, OutputFP=''):
         
         try:
             axb2 = plt.subplot(3,4,8, sharex = ax4)
-            plt.axvspan(time-td(days=3),time,facecolor='yellow', alpha=0.4)
-            dfr['batt'].plot(color='blue')
+            df['batt'].plot(color='blue')
             axb2.tick_params(axis='both',direction='in', labelsize=7)
+            plt.axvspan(time-td(days=3),time,facecolor='yellow', alpha=0.4)
             axb2.axhline(accel.voltage_max[accel.node_id == nid].values[0],color='black', linestyle='--', linewidth=1)
             axb2.axhline(accel.voltage_min[accel.node_id == nid].values[0],color='black', linestyle='--', linewidth=1)
-            plt.title('batt', color='blue',fontsize=8,verticalalignment='top')
+            plt.title('voltage', color='blue',fontsize=8,verticalalignment='top')
         except:
             print ("v1")
         
@@ -201,7 +215,7 @@ def xyzplot(tsm_id,nid,time, OutputFP=''):
         df1['x'].plot(color='red')
         ax7.tick_params(axis='both',direction='in', labelsize=7)
         plt.axvspan(time-td(days=3),time,facecolor='yellow', alpha=0.4)
-        plt.ylabel(tsm_name+str(nid_down), color='red', fontsize=14)
+        plt.ylabel(tsm_name+str(nid_down), color='red')
         plt.title('x-axis', color='red',fontsize=8,verticalalignment='top')
         
         ax8 = plt.subplot(3,4,10, sharex = ax7)
@@ -218,12 +232,12 @@ def xyzplot(tsm_id,nid,time, OutputFP=''):
         
         try:
             axb3 = plt.subplot(3,4,12, sharex = ax7)
-            plt.axvspan(time-td(days=3),time,facecolor='yellow', alpha=0.4)
-            dfr1['batt'].plot(color='red')
+            df1['batt'].plot(color='red')
             axb3.tick_params(axis='both',direction='in', labelsize=7)
+            plt.axvspan(time-td(days=3),time,facecolor='yellow', alpha=0.4)
             axb3.axhline(accel.voltage_max[accel.node_id == nid_down].values[0],color='black', linestyle='--', linewidth=1)
             axb3.axhline(accel.voltage_min[accel.node_id == nid_down].values[0],color='black', linestyle='--', linewidth=1)
-            plt.title('batt', color='red',fontsize=8,verticalalignment='top')
+            plt.title('voltage', color='red',fontsize=8,verticalalignment='top')
         except:
             print ("v1")
         plt.xlim([from_time,to_time])

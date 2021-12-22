@@ -14,11 +14,6 @@ from common import run_example
 
 
 async def send_message(client, args):
-    mes = hangups.ChatMessageSegment.from_str(args.message_text)
-    segment_message = []
-    for i in mes:
-        segment_message.append(i.serialize())
-        
     request = hangups.hangouts_pb2.SendChatMessageRequest(
         request_header=client.get_request_header(),
         event_request_header=hangups.hangouts_pb2.EventRequestHeader(
@@ -28,7 +23,9 @@ async def send_message(client, args):
             client_generated_id=client.get_client_generated_id(),
         ),
         message_content=hangups.hangouts_pb2.MessageContent(
-            segment=segment_message,
+            segment=[
+                hangups.ChatMessageSegment(args.message_text, link_target = args.message_text).serialize()
+            ],
         ),
     )
     await client.send_chat_message(request)
