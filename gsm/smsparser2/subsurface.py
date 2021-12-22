@@ -7,6 +7,8 @@ import sys
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import smsclass
+import volatile.memory as mem
+import rain
 #------------------------------------------------------------------------------
 
 
@@ -72,6 +74,23 @@ def v1(sms):
    
     tsm_name = line[0:4]
     print ('SITE: ' + tsm_name)
+    
+#    check tsm in tsm list 
+    mc = mem.get_handle()
+    tsm_list = mc.get('DF_TSM_SENSORS').tsm_name.tolist()
+    if tsm_name.lower() not in tsm_list:
+        #kunin sa logger mobile yung tsm_name
+        sender = sms.sim_num[-10:]
+
+        msgname = rain.check_name_of_number(sender)
+        if msgname:
+            tsm_name = msgname.lower()
+            print (">> Number registered as", tsm_name)
+
+        else:
+            raise ValueError("Number not registered {}".format(sender))
+###############################################################################
+            
     ##msgdata = line[5:len(line)-11] #data is 6th char, last 10 char are date
     try:
         msgdata = (line.split('*'))[1]
@@ -253,22 +272,40 @@ def v2(sms):
     outl = []
     msgsplit = msg.split('*')
     tsm_name = msgsplit[0] # column id
-
-    if len(msgsplit) != 4:
-        print ('wrong data format')
-        # print msg
-        return
-
+    
     if len(tsm_name) != 5:
         print ('wrong master name')
         return
+#    check tsm in tsm list 
+
+#    mc = mem.get_handle()
+#    tsm_list = mc.get('DF_TSM_SENSORS').tsm_name.tolist()
+#    if tsm_name.lower() not in tsm_list:
+#        #kunin sa logger mobile yung tsm_name
+#        sender = sms.sim_num[-10:]
+#
+#        msgname = rain.check_name_of_number(sender)
+#        if msgname:
+#            tsm_name = msgname.lower()
+#            print (">> Number registered as", tsm_name)
+#
+#        else:
+#            raise ValueError("Number not registered {}".format(sender))
+
+###############################################################################
+    if len(msgsplit) != 4:
+        print ('wrong data format')
+		# print msg	   
+        return
+
+
 
     print (msg)
 
     dtype = msgsplit[1].upper()
    
     datastr = msgsplit[2]
-    
+ 
     if len(datastr) == 136:
         datastr = datastr[0:72] + datastr[73:]
     
@@ -362,7 +399,7 @@ def v2(sms):
             except ValueError:
                 print (">> Value Error detected.", piece,)
                 print ("Piece of data to be ignored")
-                return
+#                return
     
     df = pd.DataFrame(outl)
     data = smsclass.DataTable(name_df,df)
@@ -561,14 +598,30 @@ def soms_parser(msgline,mode,div,err, dt):
 
 def b64Parser(sms):
     msg = sms.msg
+
     print (msg)
     if len(msg.split("*")) == 4:
         msgsplit = msg.split('*')
 		
         tsm_name = msgsplit[0]
-        if len(tsm_name) != 5:
+        if len(tsm_name) !=5:
             raise ValueError("length of tsm_name != 5")
-
+            
+        #    check tsm in tsm list 
+#        mc = mem.get_handle()
+#        tsm_list = mc.get('DF_TSM_SENSORS').tsm_name.tolist()
+#        if  tsm_name.lower() not in tsm_list:
+#            #kunin sa logger mobile yung tsm_name
+#            sender = sms.sim_num[-10:]
+#    
+#            msgname = rain.check_name_of_number(sender)
+#            if msgname:
+#                tsm_name = msgname.lower()
+#                print (">> Number registered as", tsm_name)
+#    
+#            else:
+#                raise ValueError("Number not registered {}".format(sender))
+###############################################################################
         dtype = msgsplit[1]
         #print dtype
         if len(dtype) == 2:
@@ -611,7 +664,7 @@ def b64Parser(sms):
                 except ValueError:
                     print (">> b64 Value Error detected.", piece,)
                     print ("Piece of data to be ignored")
-                    return
+#                    return
         #elif dtype in [110,111,112,113,21,26,10,13]: # wala pang support for v2 bradcast soms
         elif dtype in [110,113,10,13]: # wala pang support for v2 bradcast soms
             name_df = 'soms_'+tsm_name.lower() 
@@ -628,7 +681,7 @@ def b64Parser(sms):
                 except ValueError:
                     print (">> b64 Value Error detected.", piece,)
                     print ("Piece of data to be ignored")
-                    return
+#                    return
 		        
         #for temp
         elif dtype == 22: 
@@ -646,7 +699,7 @@ def b64Parser(sms):
                 except ValueError:
                     print (">> b64 Value Error detected.", piece,)
                     print ("Piece of data to be ignored")
-                    return
+#                    return
         else:
             raise ValueError("dtype not recognized")
 

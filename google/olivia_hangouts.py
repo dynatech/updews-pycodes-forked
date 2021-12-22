@@ -137,6 +137,7 @@ def send_hangouts(OutputFP, alert, conversation_id = ""):
 if __name__ == '__main__':
     test_groupchat='UgwcSTTEx1yRS0DrYVN4AaABAQ'
     brain = 'UgwySAbzw-agrDF6QAB4AaABAagBp5i4CQ'
+    mesolong_plots = 'Ugwfh1axgaZvvN6RL2R4AaABAQ'
 
     query = "SELECT link from olivia_link where link_id = 3"
     python_path = db.read(query, connection = "gsm_pi")[0][0]
@@ -266,7 +267,7 @@ if __name__ == '__main__':
             try:
                 for img in os.listdir(plot_path_sensor):    
                     if re.search("colpos",img):
-                        cmd = "{} {}/upload_image.py --conversation-id {} --image '{}/{}'".format(python_path,file_path,brain,plot_path_sensor,img)
+                        cmd = "{} {}/upload_image.py --conversation-id {} --image '{}/{}'".format(python_path,file_path,mesolong_plots,plot_path_sensor,img)
                         os.system(cmd)
                         
                         

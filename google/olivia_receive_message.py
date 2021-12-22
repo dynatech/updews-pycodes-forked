@@ -712,7 +712,10 @@ def on_event(conv_event):
 #                           gsm_id=2, table='users')
         
         elif re.search('olivia ops checker',received_msg.lower()):
-            ts = re.findall(r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}',received_msg)[0]
+            try:
+                ts = re.findall(r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}',received_msg)[0]
+            except IndexError:
+                ts = ""
 #            received_msg.replace('olivia ops checker',"")
 #            ts = ts.replace("'","")
 #            ts = ts.replace('"',"")
