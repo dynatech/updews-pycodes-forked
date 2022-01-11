@@ -23,7 +23,7 @@ def get_tsm_sensors():
     return localdf
 
 def get_data(lgrname):
-    query= "SELECT max(ts) FROM "+ 'tilt_' + lgrname + "  where ts > '2010-01-01' and ts < '2022-01-01' order by ts desc limit 1 "
+    query= "SELECT max(ts) FROM "+ 'tilt_' + lgrname + "  where ts > '2010-01-01' and ts < '2023-01-01' order by ts desc limit 1 "
     localdf = db.df_read(query, connection='analysis')
     if (localdf is None):
         localdf = pd.DataFrame(columns = ["max(ts)"])
