@@ -10,12 +10,12 @@ import ops.ipr.ewisms_meal as ewisms
 
 
 def get_monitored_sites(curr_release, start, end, mysql=True):
-    ewi_sched = pd.DataFrame()
+    sched = pd.DataFrame()
     event = ewisms.get_events(start, end, mysql=mysql)
     after_ins_sites = sorted(event.loc[(event.ts_start >= curr_release-timedelta(hours=4)), 'site_code'])
-    ewi_sched = ewi_sched.append(pd.DataFrame({'site_code': after_ins_sites, 'mon_type': ['event']*len(after_ins_sites), 'ins': [1]*len(after_ins_sites)}))
+    sched = sched.append(pd.DataFrame({'site_code': after_ins_sites, 'mon_type': ['event']*len(after_ins_sites), 'ins': [1]*len(after_ins_sites)}))
     event_sites = sorted(set(event.loc[event.validity >= curr_release, 'site_code']) - set(after_ins_sites))
-    ewi_sched = ewi_sched.append(pd.DataFrame({'site_code': event_sites, 'mon_type': ['event']*len(event_sites)}))
+    sched = sched.append(pd.DataFrame({'site_code': event_sites, 'mon_type': ['event']*len(event_sites)}))
     if curr_release.hour == 12:
         extended_sites = sorted(event.loc[(event.validity <= curr_release-timedelta(hours=4)) & (event.validity < pd.to_datetime(curr_release.date())), 'site_code'])
         routine = ewisms.routine_sched(mysql=mysql)
@@ -25,9 +25,9 @@ def get_monitored_sites(curr_release, start, end, mysql=True):
     else:
         routine_sites = []
         extended_sites = []
-    ewi_sched = ewi_sched.append(pd.DataFrame({'site_code': routine_sites, 'mon_type': ['routine']*len(routine_sites)}))
-    ewi_sched = ewi_sched.append(pd.DataFrame({'site_code': extended_sites, 'mon_type': ['extended']*len(extended_sites)}))
-    return ewi_sched
+    sched = sched.append(pd.DataFrame({'site_code': routine_sites, 'mon_type': ['routine']*len(routine_sites)}))
+    sched = sched.append(pd.DataFrame({'site_code': extended_sites, 'mon_type': ['extended']*len(extended_sites)}))
+    return sched
 
 
 def get_recipient(curr_release, unsent=True):    

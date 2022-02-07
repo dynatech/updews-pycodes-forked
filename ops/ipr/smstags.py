@@ -5,12 +5,12 @@ Created on Wed Jun 24 11:08:27 2020
 @author: Meryll
 """
 
-from datetime import datetime, date, time
-import matplotlib.pyplot as plt
+import os
 import pandas as pd
 
-
 import dynadb.db as db
+
+output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..//input_output//'))
 
 
 def outbox_tag(start, end, mysql = False):
@@ -34,7 +34,7 @@ def outbox_tag(start, end, mysql = False):
         query += "    comms_db.user_mobiles "
         query += "  USING (mobile_id) "
         query += "  ) as msg "
-        query += "INNER JOIN "
+        query += "LEFT JOIN "
         query += "  (SELECT user_id, site_code, org_name FROM "
         query += "    commons_db.user_organizations AS org "
         query += "  INNER JOIN "
@@ -57,9 +57,9 @@ def outbox_tag(start, end, mysql = False):
         query = query.format(start=start, end=end)
         outbox_tag = db.df_read(query, resource='ops')
         outbox_tag.loc[:, 'ts_sms'] = pd.to_datetime(outbox_tag.ts_written)
-        outbox_tag.to_csv('input/outbox_tag.csv', index=False)
+        outbox_tag.to_csv(output_path + 'outbox_tag.csv', index=False)
     else:
-        outbox_tag = pd.read_csv('input/outbox_tag.csv', parse_dates=['ts_written'])
+        outbox_tag = pd.read_csv(output_path + 'outbox_tag.csv', parse_dates=['ts_written'])
     return outbox_tag
 
 def inbox_tag(start, end, mysql = False):
@@ -95,8 +95,8 @@ def inbox_tag(start, end, mysql = False):
         query = query.format(start=start, end=end)
         inbox_tag = db.df_read(query, resource='ops')
         inbox_tag.loc[:, 'ts_sms'] = pd.to_datetime(inbox_tag.ts_sms)
-        inbox_tag.to_csv('input/inbox_tag.csv', index=False)
+        inbox_tag.to_csv(output_path + 'inbox_tag.csv', index=False)
     else:
-        inbox_tag = pd.read_csv('input/inbox_tag.csv', parse_dates=['ts_sms'])
+        inbox_tag = pd.read_csv(output_path + 'inbox_tag.csv', parse_dates=['ts_sms'])
     return inbox_tag
 

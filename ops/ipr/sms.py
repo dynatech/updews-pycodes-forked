@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Jun 24 11:08:27 2020
-
-@author: Meryll
-"""
-
 from datetime import timedelta
 import numpy as np
 import os
@@ -16,33 +9,43 @@ import lib as ipr_lib
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import ops.lib.lib as lib
 import ops.lib.querydb as qdb
-import ops.lib.raininfo as raininfo
+import ops.lib.sms as sms
 
-
-add_start = 30 #number of minutes from data ts to start sending of rain info
-due = 15 #target number of minutes from start to send all rain info
+add_start = 30 #number of minutes from data ts to start sending of ewi sms
+due = 5 #target number of minutes from start to send all ewi sms
+add_5 = 1 #additional minute(s) [per site] from target for releases above 5 sites
+add_l = 15 #additional minute(s) [per site] from target for lowering releases
+due_r = 55 #target number of minutes from data ts to send raising ewi sms
 delay_deduction = 0.1 #deduction per delay_min in minutes
-delay_min = 10
+delay_min = 3
 
 output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..//input_output//'))
+
+def sending_sched(curr_release):
+    num_routine = int(len(curr_release.loc[(curr_release.event != 1) & (curr_release.extended != 1), :]) > 0)
+    num_sites = num_routine + len(curr_release.loc[(curr_release.event == 1) | (curr_release.extended == 1), :])
+    curr_release.loc[:, 'ts_due'] = curr_release.data_ts + timedelta(minutes=add_start+due+add_5*max(0, num_sites - 5))
+    curr_release.loc[curr_release.lowering == 1, 'ts_due'] = curr_release.ts_due + timedelta(minutes=add_l)
+    curr_release.loc[curr_release.raising == 1, 'ts_due'] = curr_release.data_ts + timedelta(minutes=due_r)
+    return curr_release
 
 
 def main(start, end, sched, site_names, eval_df, mysql=True, to_csv=False):
 
     sent_start = start - timedelta(hours=0.25)
     sent_end = end + timedelta(hours=4)
-    sched.loc[:, 'ts_due'] = sched.data_ts + timedelta(minutes=add_start+due)
+    per_release = sched.groupby('data_ts', as_index=False)
+    sched = per_release.apply(sending_sched)
     
-    rain_recipients = qdb.get_rain_recipients(mysql=mysql, to_csv=to_csv)
-    rain_sent = qdb.get_rain_sent(sent_start, sent_end, mysql=mysql, to_csv=to_csv)
-    rain_sent = rain_sent.loc[~rain_sent.ts_sent.isnull(), :]
-    rain_sched = raininfo.ewi_sched(sched, rain_recipients, rain_sent, site_names)
-    
+    recipients = qdb.get_sms_recipients(mysql=mysql, to_csv=to_csv)
+    sent = qdb.get_sms_sent(sent_start, sent_end, site_names, mysql=mysql, to_csv=to_csv)
+    sent = sent.loc[~sent.ts_sent.isnull(), :]
+    sched = sms.ewi_sched(sched, recipients, sent, site_names)
     
     monitoring_ipr = pd.read_excel(output_path + 'monitoring_ipr.xlsx', sheet_name=None)
     
     downtime = ipr_lib.system_downtime(mysql=mysql)
-    rain_sched = ipr_lib.remove_downtime(rain_sched, downtime)
+    sched = ipr_lib.remove_downtime(sched, downtime)
     
     
     for name in monitoring_ipr.keys():
@@ -50,8 +53,8 @@ def main(start, end, sched, site_names, eval_df, mysql=True, to_csv=False):
         indiv_ipr.columns = indiv_ipr.columns.astype(str)
         for ts in indiv_ipr.columns[5:]:
             ts = pd.to_datetime(ts)
-            sending_status = rain_sched.loc[(rain_sched.data_ts >= ts) & (rain_sched.data_ts < ts+timedelta(0.5)), :]
-            # ewi bulletin timeliness
+            sending_status = sched.loc[(sched.data_ts >= ts) & (sched.data_ts < ts+timedelta(0.5)), :]
+            # ewi sms timeliness
             if len(sending_status) == 0:
                 # no scheduled
                 grade_t = np.nan
@@ -60,16 +63,15 @@ def main(start, end, sched, site_names, eval_df, mysql=True, to_csv=False):
                 grade_t = 1
             else:
                 grade_t = np.round(np.average(1 - sending_status.apply(lambda row: np.where(row.ts_written is pd.NaT, 1, delay_deduction * max(0, (row.ts_written - row.ts_due).total_seconds())/(60*delay_min)), axis=1)), 2)
-            indiv_ipr.loc[indiv_ipr.Output2 == 'Rainfall info', str(ts)] = grade_t
+            indiv_ipr.loc[indiv_ipr.Output2.str.contains('EWI SMS', na=False), str(ts)] = grade_t
+            # ewi sms quality
             if ts >= pd.to_datetime('2021-04-01') and len(sending_status) != 0:
                 shift_eval = eval_df.loc[(eval_df.shift_ts >= ts) & (eval_df.shift_ts <= ts+timedelta(1)) & ((eval_df['evaluated_MT'] == name) | (eval_df['evaluated_CT'] == name) | (eval_df['evaluated_backup'] == name)), :].drop_duplicates('shift_ts', keep='last')[0:1]
                 shift_eval = shift_eval.drop_duplicates('shift_ts', keep='last')[0:1]
-                deduction = np.nansum(0.5*shift_eval['rain_det'] + 0.05*shift_eval['rain_typo'])
-                if len(sending_status) != 0 and all(sending_status.ts_written.isnull()):
-                    deduction = 1
-                indiv_ipr.loc[indiv_ipr.Output1 == 'Rainfall info', str(ts)] = np.round((len(sending_status) - deduction)/len(sending_status), 2)
+                deduction = np.nansum(shift_eval[['routine_sms_alert', 'sms_alert']].values) + np.nansum(shift_eval[['routine_sms_ts', 'sms_ts']].values)/3 + np.nansum(shift_eval[['routine_sms_typo', 'sms_typo']].values)/30
+                indiv_ipr.loc[indiv_ipr.Output1 == 'EWI SMS', str(ts)] = np.round((len(sending_status) - deduction)/len(sending_status), 2)
         monitoring_ipr[name] = indiv_ipr
-        
+    
     writer = pd.ExcelWriter(output_path + 'monitoring_ipr.xlsx')
     for sheet_name, xlsxdf in monitoring_ipr.items():
         xlsxdf.to_excel(writer, sheet_name, index=False)

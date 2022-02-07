@@ -7,16 +7,18 @@ Created on Wed Jun 24 11:08:27 2020
 
 from datetime import timedelta
 import numpy as np
+import os
 import pandas as pd
 
-import lib
+import lib as ipr_lib
+
+output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..//input_output//'))
 
 
-def main(start, end, eval_df, mysql=False):
-    downtime = lib.system_downtime(mysql=mysql)
-    ewi_sched = pd.read_csv('output/sending_status.csv', parse_dates=['ts_start', 'ts_end'])
+def main(start, end, sched, eval_df, mysql=False):
+    monitoring_ipr = pd.read_excel(output_path + 'monitoring_ipr.xlsx', sheet_name=None)
 
-    monitoring_ipr = pd.read_excel('output/monitoring_ipr.xlsx', sheet_name=None)
+    downtime = ipr_lib.system_downtime(mysql=mysql)
     
     for name in monitoring_ipr.keys():
         indiv_ipr = monitoring_ipr[name]
@@ -24,9 +26,10 @@ def main(start, end, eval_df, mysql=False):
         for ts in indiv_ipr.columns[5:]:
             ts = pd.to_datetime(ts)
             ts_end = ts + timedelta(0.5)
-            shift_release = ewi_sched.loc[(ewi_sched.ts_start > ts) & (ewi_sched.ts_start <= ts_end), :]
+            shift_release = sched.loc[(sched.data_ts > ts) & (sched.data_ts <= ts_end), :]
             if ts >= pd.to_datetime('2021-04-01'):
                 shift_eval = eval_df.loc[(eval_df.shift_ts >= ts) & (eval_df.shift_ts <= ts+timedelta(1)) & ((eval_df['evaluated_MT'] == name) | (eval_df['evaluated_CT'] == name) | (eval_df['evaluated_backup'] == name)), :].drop_duplicates('shift_ts', keep='last')
+                shift_eval = shift_eval.drop_duplicates('shift_ts', keep='last')[0:1]
                 # bug reports | ensure system is working
                 shift_downtime = downtime.loc[(((downtime.start_ts<=ts_end)&(downtime.end_ts>=ts_end)) | ((downtime.start_ts<=ts)&(downtime.end_ts>=ts_end)) | ((downtime.start_ts<=ts)&(downtime.end_ts>=ts)) | ((downtime.start_ts>=ts)&(downtime.end_ts<=ts_end))) & (downtime.reported == 0), :]
                 if len(shift_downtime) == 0:
@@ -62,15 +65,13 @@ def main(start, end, eval_df, mysql=False):
                     grade_SC = 1
                 else:
                     grade_SC = 0
-                if not np.isnan(grade_SC):
-                    print(name, ts, grade_SC)
                 if len(shift_release) != 0:
                     indiv_ipr.loc[indiv_ipr.Output1.str.contains('stakeholders concerns', na=False), str(ts)] = grade_SC
                 else:
                     indiv_ipr.loc[indiv_ipr.Output2 == 'stakeholders concerns', str(ts)] = grade_SC
         monitoring_ipr[name] = indiv_ipr
         
-    writer = pd.ExcelWriter('output/monitoring_ipr.xlsx')
+    writer = pd.ExcelWriter(output_path + 'monitoring_ipr.xlsx')
     for sheet_name, xlsxdf in monitoring_ipr.items():
         xlsxdf.to_excel(writer, sheet_name, index=False)
     writer.save()

@@ -6,7 +6,7 @@ def check_sent(release, sent):
     data_ts = pd.to_datetime(release['data_ts'].values[0])
     release_sent = sent.loc[(sent.ts_written >= data_ts) & (sent.ts_written <= data_ts+timedelta(hours=4)), :]
     sent_sched = pd.merge(release, release_sent, how='left', on=['site_id', 'user_id', 'mobile_id'])
-    sent_sched = sent_sched.drop_duplicates(['site_id', 'user_id', 'mobile_id', 'outbox_id'])
+    sent_sched = sent_sched.drop_duplicates(['site_id', 'data_ts', 'user_id', 'mobile_id'])
     return sent_sched
 
 def ewi_sched(sched, recipients, sent, site_names):

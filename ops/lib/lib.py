@@ -204,9 +204,6 @@ def get_event_sched(event, ewi_sched, site_no_markers):
     
     #4H release
     event_4H_start = min(event.data_ts)
-    #no routine if onset before 12NN
-    if event_4H_start.time() < time(12,0) and len(ewi_sched) != 0:
-        ewi_sched = ewi_sched.loc[~((ewi_sched.data_ts.dt.date == event_4H_start.date()) & (ewi_sched.site_id == site_id)), :]
     event_4H_start = release_time(event_4H_start)
     data_ts = pd.date_range(start=event_4H_start, end=validity-timedelta(hours=4), freq='4H')
     #no 4H release if onset 1H before supposed release
@@ -241,10 +238,8 @@ def get_event_sched(event, ewi_sched, site_no_markers):
     extended_sched.loc[:, 'site_id'] = site_id
     extended_sched.loc[:, col_name] = 1
     extended_sched.loc[:, 'extended'] = 1
+    extended_sched.loc[:, 'pub_sym_id'] = 1
     event_sched = event_sched.append(extended_sched, ignore_index=True, sort=False)
-    #no routine if end of validity is same day before 12NN
-    if validity.time() < time(12,0) and len(ewi_sched) != 0:
-        ewi_sched = ewi_sched.loc[~((ewi_sched.data_ts.dt.date == validity.date()) & (ewi_sched.site_id == site_id)), :]
     return event_sched
 
 def release_sched(start, end, mysql=True, to_csv=False):
@@ -268,7 +263,7 @@ def release_sched(start, end, mysql=True, to_csv=False):
             ewi_sched = ewi_sched.assign(raising='', permission='', lowering='', pub_sym_id=1)
         else:
             ewi_sched = pd.DataFrame(columns=['data_ts', 'site_id', 'site_code', 'gndmeas', 'raising', 'permission', 'lowering', 'event', 'pub_sym_id', 'moms', 'extended', 'EQ'])
-        
+
         #event ewi  sched
         event_releases = get_event_releases(start, end, mysql=mysql, to_csv=to_csv)
         event_releases = event_releases.drop_duplicates(['event_id', 'pub_sym_id'])
@@ -277,7 +272,14 @@ def release_sched(start, end, mysql=True, to_csv=False):
         
         #all ewi sched
         ewi_sched = event_sched.append(ewi_sched, ignore_index=True, sort=False)
-        ewi_sched = ewi_sched.drop_duplicates(['site_id', 'data_ts'])
+        ewi_sched = ewi_sched.sort_values(['site_code', 'data_ts', 'pub_sym_id', 'extended'], ascending=[True, True, False, True]).drop_duplicates(['site_id', 'data_ts'], keep='first')
+        #remove routine and extended of previous shifts for sites lowered before 12NN
+        lowering_sched = event_sched.loc[(event_sched.lowering == 1) & (event_sched.data_ts.dt.hour < 8), ['site_id', 'data_ts']]
+        lowering_sched.loc[:, 'data_ts'] = lowering_sched['data_ts'].apply(lambda x: pd.to_datetime(x.date()) + timedelta(hours=11.5))
+        lowering_sched = pd.merge(lowering_sched, ewi_sched, on=['data_ts', 'site_id'])        
+        ewi_sched = ewi_sched.append(lowering_sched, ignore_index=True, sort=False)
+        ewi_sched = ewi_sched.drop_duplicates(['site_id', 'data_ts'], keep=False)
+        
         if 'extended' not in ewi_sched.columns:
             ewi_sched.loc[:, 'extended'] = np.nan
         if 'EQ' not in ewi_sched.columns:
