@@ -249,7 +249,9 @@ def main(alert):
         
         plot_path_sensor = output_path+sc['fileio']['realtime_path']
         
-        for img in os.listdir(plot_path_sensor):    
+        for img in os.listdir(plot_path_sensor):
+            if os.path.exists('{}/{}'.format(OutputFP, img)):
+                os.remove('{}/{}'.format(OutputFP, img))
             shutil.move("{}/{}".format(plot_path_sensor,img), OutputFP)
         
 #        plot node data
