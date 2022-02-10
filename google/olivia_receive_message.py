@@ -178,8 +178,9 @@ def ilan_alert(link = False):
                      "INNER JOIN monitoring_event_alerts ON monitoring_event_alerts.event_id = monitoring_events.event_id "
                      "INNER JOIN monitoring_releases ON monitoring_event_alerts.event_alert_id = monitoring_releases.event_alert_id "
                      "INNER JOIN public_alert_symbols ON public_alert_symbols.pub_sym_id = monitoring_event_alerts.pub_sym_id "
-                     "WHERE alert_level = 0 and status =2 and ts_start > now() - interval 3 day "
-                     "and date_format(validity,'%Y-%m-%d') + interval 1 day < now()")
+                     "WHERE alert_level = 0 and status = 2 "
+                     "AND DATE_FORMAT(ts_start, '%Y-%m-%d') > NOW() - INTERVAL 4 DAY "
+                     "AND DATE_FORMAT(validity,'%Y-%m-%d') + INTERVAL 1 DAY < NOW()")
             ext_site = db.read(query, connection= "website")
             
             if len(ext_site)>0:
@@ -424,12 +425,13 @@ def on_event(conv_event):
                     "INNER JOIN "
                     "commons_db.sites as s "
                     "ON s.site_id = alert.site_id".format(alert_id))
-                    
+            print(query)
             smsalert=db.df_read(query, connection= "analysis")
-            
+            print(smsalert)
 #            for i in smsalert.index:
             try:
                 OutputFP=main(smsalert.loc[0])
+                print(OutputFP)
 #                if not OutputFP:
 #                    print ("nasend na!")
 #                else:
