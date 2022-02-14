@@ -120,7 +120,7 @@ def update_single_table(noah_gauges):
 
     if (latest_ts == '') or (latest_ts == None):# or latest_ts < datetime.now() - timedelta(3):
         #assign a starting date if table is currently empty
-        latest_ts = "2020-09-09 18:30:30"
+        latest_ts = (datetime.now() - timedelta(3)).strftime("%Y-%m-%d %H:%M:%S")
     else:
         latest_ts = latest_ts.strftime("%Y-%m-%d %H:%M:%S")
     
