@@ -218,10 +218,10 @@ def main(alert):
     sc = mem.get('server_config')
     output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
 
-    OutputFP=  os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')) #os.path.dirname(os.path.realpath(__file__))+'/{} {}/'.format(site, ts.strftime("%Y-%m-%d %H%M"))
-    OutputFP += '{}/olivia_plots/' + '{} {} {}/'.format(output_path+sc['fileio']['output_path'], alert_id, site, ts.strftime("%Y-%m-%d %H%M")) 
+#    OutputFP=  os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')) #os.path.dirname(os.path.realpath(__file__))+'/{} {}/'.format(site, ts.strftime("%Y-%m-%d %H%M"))
+    OutputFP = ('{}/olivia_plots/' + '{} {} {}/').format(output_path+sc['fileio']['output_path'], alert_id, site, ts.strftime("%Y-%m-%d %H%M")) 
     OutputFP=OutputFP.replace("\\", "/")
-    
+    print('main fp', OutputFP)
     if not os.path.exists(OutputFP):
         os.makedirs(OutputFP)
 
@@ -250,9 +250,10 @@ def main(alert):
         plot_path_sensor = output_path+sc['fileio']['realtime_path']
         
         for img in os.listdir(plot_path_sensor):
-            if os.path.exists('{}/{}'.format(OutputFP, img)):
-                os.remove('{}/{}'.format(OutputFP, img))
-            shutil.move("{}/{}".format(plot_path_sensor,img), OutputFP)
+            if site in img:
+                if os.path.exists('{}/{}'.format(OutputFP, img)):
+                    os.remove('{}/{}'.format(OutputFP, img))
+                shutil.move("{}/{}".format(plot_path_sensor,img), OutputFP)
         
 #        plot node data
         for i in dfalert.index:
@@ -268,7 +269,8 @@ def main(alert):
         plot_path_rain = output_path+sc['fileio']['rainfall_path']
         
         for img in os.listdir(plot_path_rain):    
-            shutil.move("{}/{}".format(plot_path_rain,img), OutputFP)
+            if site in img:
+                shutil.move("{}/{}".format(plot_path_rain,img), OutputFP)
             
     elif source_id ==2:
 #        print("marker")
@@ -285,10 +287,18 @@ def main(alert):
         plot_path_trend = output_path+sc['fileio']['surficial_trending_path']
         
         for img in os.listdir(plot_path_meas):    
-            shutil.move("{}/{}".format(plot_path_meas,img), OutputFP)
+            print(img)
+            if site in img:
+                if os.path.exists('{}/{}'.format(OutputFP, img)):
+                    os.remove('{}/{}'.format(OutputFP, img))
+                shutil.move("{}/{}".format(plot_path_meas,img), OutputFP)
         
         for img in os.listdir(plot_path_trend):    
-            shutil.move("{}/{}".format(plot_path_trend,img), OutputFP)
+            print(img)
+            if site in img:
+                if os.path.exists('{}/{}'.format(OutputFP, img)):
+                    os.remove('{}/{}'.format(OutputFP, img))
+                shutil.move("{}/{}".format(plot_path_trend,img), OutputFP)
     return OutputFP
 
 def send_hangouts(OutputFP, alert, conversation_id = ""):
