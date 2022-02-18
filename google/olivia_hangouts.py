@@ -32,14 +32,15 @@ def main(alert):
     site = alert.site_code
     ts = alert.ts_last_retrigger
     source_id = alert.source_id
-    
-    OutputFP=  os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')) #os.path.dirname(os.path.realpath(__file__))+'/{} {}/'.format(site, ts.strftime("%Y-%m-%d %H%M"))
-    OutputFP += '/node_alert_hangouts/' + '{} {}/'.format(site, ts.strftime("%Y-%m-%d %H%M")) 
-    OutputFP=OutputFP.replace("\\", "/")
+    alert_id = alert.stat_id
     
     #### Open config files
     sc = mem.get('server_config')
-    output_path = os.path.abspath(os.path.join(os.path.dirname(__file__),'../..'))
+    output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
+
+    OutputFP=  os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')) #os.path.dirname(os.path.realpath(__file__))+'/{} {}/'.format(site, ts.strftime("%Y-%m-%d %H%M"))
+    OutputFP += '{}/olivia_plots/' + '{} {} {}/'.format(output_path+sc['fileio']['output_path'], alert_id, site, ts.strftime("%Y-%m-%d %H%M")) 
+    OutputFP=OutputFP.replace("\\", "/")
     
     if not os.path.exists(OutputFP):
         os.makedirs(OutputFP)

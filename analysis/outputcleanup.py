@@ -17,12 +17,5 @@ for dirpath, dirnames, filenames in os.walk(output_path):
     for filename in filenames:
         curpath = os.path.join(dirpath, filename)
         file_modified = datetime.fromtimestamp(os.path.getmtime(curpath))
-        if datetime.now() - file_modified > timedelta(days = 10):
-            os.remove(curpath)
-
-for dirpath, dirnames, filenames in os.walk(rainfall_path):
-    for filename in filenames:
-        curpath = os.path.join(dirpath, filename)
-        file_modified = datetime.fromtimestamp(os.path.getmtime(curpath))
         if datetime.now() - file_modified > timedelta(days = 1):
             os.remove(curpath)
