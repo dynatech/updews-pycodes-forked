@@ -38,8 +38,8 @@ def main(alert):
     sc = mem.get('server_config')
     output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
 
-    OutputFP=  os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')) #os.path.dirname(os.path.realpath(__file__))+'/{} {}/'.format(site, ts.strftime("%Y-%m-%d %H%M"))
-    OutputFP += '{}/olivia_plots/' + '{} {} {}/'.format(output_path+sc['fileio']['output_path'], alert_id, site, ts.strftime("%Y-%m-%d %H%M")) 
+#    OutputFP=  os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')) #os.path.dirname(os.path.realpath(__file__))+'/{} {}/'.format(site, ts.strftime("%Y-%m-%d %H%M"))
+    OutputFP = '{}/olivia_plots/' + '{} {} {}/'.format(output_path+sc['fileio']['output_path'], alert_id, site, ts.strftime("%Y-%m-%d %H%M")) 
     OutputFP=OutputFP.replace("\\", "/")
     
     if not os.path.exists(OutputFP):
@@ -154,7 +154,7 @@ if __name__ == '__main__':
                 "alert_symbol,sym.source_id FROM "
                 "(SELECT stat_id, ts_last_retrigger, site_id, trigger_sym_id FROM "
                 "(SELECT * FROM alert_status WHERE "
-                "ts_set >= NOW()-interval 5 minute "
+                "ts_set >= NOW()-interval 1440 minute "
                 "and ts_ack is NULL"
     #            "stat_id=4071 "
                 ") AS stat "
