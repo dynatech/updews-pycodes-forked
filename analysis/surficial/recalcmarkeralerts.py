@@ -15,6 +15,7 @@ def get_surf(connection='analysis'):
     query += "  SELECT mo_id FROM marker_data "
     query += "  INNER JOIN marker_alerts USING (data_id) "
     query += "  WHERE processed != 1) "
+    query += "AND ts >= '2021-01-01'"
     query += "ORDER BY ts "
     df = db.df_read(query, connection=connection)
     print(df)
