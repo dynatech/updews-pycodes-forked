@@ -12,12 +12,13 @@ import erroranalysis as err
 #------------------------------------------------------------------------------
 
 class ProcData:
-    def __init__ (self, invalid_nodes, tilt, lgd, max_min_df, max_min_cml):
+    def __init__ (self, invalid_nodes, tilt, lgd, max_min_df, max_min_cml, accel_data):
         self.inv = invalid_nodes
         self.tilt = tilt
         self.lgd = lgd
         self.max_min_df = max_min_df
         self.max_min_cml = max_min_cml
+        self.accel_data = accel_data
         
 def resample_node(df, window):
     blank_df = pd.DataFrame({'ts': [window.end, window.offsetstart],
@@ -139,6 +140,11 @@ def proc_data(tsm_props, window, sc, realtime=False, comp_vel=True,
                 from_time=window.offsetstart, to_time=window.end,
                 analysis=analysis)
     monitoring = monitoring.loc[monitoring.node_id <= tsm_props.nos]
+    if not analysis:
+        if all(monitoring.in_use == 0):
+            monitoring = monitoring.loc[monitoring.accel_number == max(monitoring.accel_number), :]
+        else:
+            monitoring = monitoring.loc[monitoring.in_use == 1, :]
 
     monitoring = filt.apply_filters(monitoring)
 
@@ -162,7 +168,7 @@ def proc_data(tsm_props, window, sc, realtime=False, comp_vel=True,
     #assigns timestamps from LGD to be timestamp of offsetstart
     monitoring.loc[(monitoring.ts<window.offsetstart)|(pd.isnull(monitoring.ts)),
                    ['ts']] = window.offsetstart
-    
+    accel_data = monitoring.loc[(monitoring.ts >= window.start) & (monitoring.ts <= window.end), : ].set_index('ts').sort_index()
     monitoring = accel_to_lin_xz_xy(monitoring, tsm_props.seglen)
     
     monitoring = monitoring.drop_duplicates(['ts', 'node_id'])
@@ -210,4 +216,4 @@ def proc_data(tsm_props, window, sc, realtime=False, comp_vel=True,
         tilt = tilt.sort_values('node_id', ascending=True)
         tilt = tilt.reset_index(level='ts').set_index('ts')
     
-    return ProcData(invalid_nodes,tilt.sort_index(),lgd,max_min_df,max_min_cml)
+    return ProcData(invalid_nodes,tilt.sort_index(),lgd,max_min_df,max_min_cml, accel_data)

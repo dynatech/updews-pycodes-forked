@@ -217,10 +217,13 @@ def main():
             break
 
 
-    data = proc.proc_data(tsm_props, window, sc, realtime=True, comp_vel=plotvel)
+    data = proc.proc_data(tsm_props, window, sc, realtime=True, comp_vel=plotvel, analysis=False)
     
     if print_disp_vel == 'y':
-        data.tilt.to_csv('{}_{}-{}.csv'.format(tsm_props.tsm_name, window.start.strftime('%Y%m%d%H%M'), window.end.strftime('%Y%m%d%H%M')))
+        tilt = data.tilt.reset_index()
+        accel = data.accel_data.reset_index()
+        df = pd.merge(tilt, accel, on=['ts', 'node_id', 'tsm_name']).sort_values(['ts', 'node_id'])
+        df.to_csv('{}_{}-{}.csv'.format(tsm_props.tsm_name, window.start.strftime('%Y%m%d%H%M'), window.end.strftime('%Y%m%d%H%M')), index=False)
     
     plotter.main(data, tsm_props, window, sc, plotvel=plotvel,
                  show_part_legend = show_part_legend, realtime=True,

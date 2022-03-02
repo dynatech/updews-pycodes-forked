@@ -79,6 +79,7 @@ def get_rain_df(rain_gauge, start, end):
     rain_id = df.rain_id[0]
     rain_df = ra.get_resampled_data(rain_id, rain_gauge, offsetstart, start, end, check_nd=False)
     rain_df = rain_df[rain_df.rain >= 0]
+    rain_df = rain_df.resample("30min").asfreq()
     
     rain_df['one'] = rain_df.rain.rolling(window=48, min_periods=1, center=False).sum()
     rain_df['one'] = np.round(rain_df.one, 2)
@@ -147,8 +148,8 @@ def get_tsm_data(tsm_name, start, end, plot_type, node_lst):
 
 # subsurface cumulative displacement plot
 def plot_cml(ax, df, axis, tsm_name):
-    ax.plot(df.index, df[axis].values)
-    ax.set_ylabel('Cumulative\nDisplacement\n(m)', fontsize='small')
+    ax.plot(df.index, df[axis].values*100)
+    ax.set_ylabel('Cumulative\nDisplacement\n(cm)', fontsize='small')
     ax.set_title('%s Subsurface Cumulative %s Displacement' %(tsm_name.upper(), axis.upper()), fontsize='medium')
     ax.grid()
     
@@ -278,6 +279,7 @@ def main(site, start, end, rainfall_props, surficial_props, subsurface_props, cs
         for rain_gauge in rainfall_props['rain_gauge_lst']:
             ax = fig.add_subplot(subplot)
             rain = get_rain_df(rain_gauge, start, end)
+            rain.to_csv('rain_lung_stack.csv')
             if rain_gauge != rainfall_props['rain_gauge_lst'][0]:
                 ax = fig.add_subplot(subplot-1, sharex=ax)
                 subplot -= 1                    
@@ -431,27 +433,27 @@ def main(site, start, end, rainfall_props, surficial_props, subsurface_props, cs
 
 if __name__ == '__main__':
     
-    site = 'ina'
-    start = pd.to_datetime('2020-10-01')
-    end = pd.to_datetime('2020-11-08')
+    site = 'lun'
+    start = pd.to_datetime('2021-12-28')
+    end = pd.to_datetime('2022-01-07')
     subsurface_end = end
     
     # annotate events
-    event_lst = ['2020-10-27 06:00', '2020-10-27 15:00', '2020-11-06 08:00']
-    event_color = ['orange', 'red', 'orange']#['gold', 'red', 'red'] # [] kapag red lang everything
+    event_lst = ['2021-12-29 04:00', '2022-01-01 14:00', '2022-01-02 20:49']
+    event_color = ['yellow', 'orange', 'red']#['gold', 'red', 'red'] # [] kapag red lang everything
     
-    span_starts = ['2020-10-26', '2020-10-27 06:00', '2020-10-27 15:00', '2020-10-30 11:00', '2020-11-06 08:00', '2020-11-07 13:04']
-    span_ends = ['2020-10-27 06:00', '2020-10-27 15:00', '2020-10-30 11:00', '2020-11-06 08:00', '2020-11-07 13:04', '2020-11-08',]
+    span_starts = ['2021-12-28 00:00', '2021-12-29 04:00', '2022-01-01 14:00', '2022-01-02 20:49','2022-01-06 16:00']
+    span_ends = ['2021-12-29 03:59', '2022-01-01 13:59', '2022-01-02 20:48', '2022-01-06 15:59','2022-01-06 23:59']
     alert = []
-    span_colors = ['green', 'orange', 'red', 'green', 'orange', 'green']
+    span_colors = ['green', 'yellow', 'orange', 'red', 'green']
     span_list = [span_starts, span_ends, span_colors]
     
     
     # rainfall plot                                                 
-    rainfall = True                             ### True if to plot rainfall
-    plot_inst = True                           ### True if to plot instantaneous rainfall
+    rainfall = False                             ### True if to plot rainfall
+    plot_inst = False                           ### True if to plot instantaneous rainfall
     alpha = 0.5                                ### opacity of instantaneous rainfall
-    rain_gauge_lst = ['rain_inag']                ### specifiy rain gauge (e.g rain_noah_1234, rain_tuetb)
+    rain_gauge_lst = ['rain_lung']                ### specifiy rain gauge (e.g rain_noah_1234, rain_tuetb)
     rainfall_props = {'to_plot': rainfall, 'rain_gauge_lst': rain_gauge_lst, 'plot_inst': plot_inst, 'alpha': alpha}
 
     # surficial plot
@@ -461,10 +463,10 @@ if __name__ == '__main__':
     
     
     # from csv
-    from_csv = False               ### True if to plot surficial
-    fname = 'INA_surficialdata.csv'
-    hist = 'INA_markerhistory.csv'
-    markers = ['A']               ### specifiy markers; 'all' if all markers
+    from_csv = False              ### True if to plot surficial
+    fname = 'LUN_surficialdata.csv'
+    hist = 'LUN_markerhistory.csv'
+    markers = 'all'               ### specifiy markers; 'all' if all markers
     hide_mute = False              ### Hide muted points
     zero_repo = False              ### Set displacement to zero for repositioned points
     csv_props = {'to_plot': from_csv, 'markers': markers, 'fname':fname,
@@ -476,15 +478,15 @@ if __name__ == '__main__':
     mirror_xy = False ### True or False
     
     # subsurface displacement
-    disp = True                 ### True if to plot subsurface displacement
+    disp = False                 ### True if to plot subsurface displacement
     ### specifiy tsm name and axis; 'all' if all nodes
-    disp_tsm_axis = {'inata': {'xz': [6,7,14,16]}} #'inata': {'xz': [6,14]}} #{'xz': [7,8,9], 'xy': [7,8,9]},
+    disp_tsm_axis = {'luntd': {'xz': [9,18,19], 'xy': [9,18,19]}} #'inata': {'xz': [6,14]}} #{'xz': [7,8,9], 'xy': [7,8,9]},
             #'blcsb': {'xy': range(1,11), 'xz': range(1,11)}}
     
     # subsurface cumulative displacement
-    cml = True     ### True if to plot subsurface cumulative displacement
+    cml = False     ### True if to plot subsurface cumulative displacement
     ### specifiy tsm name and axis; 'all' if all nodes
-    cml_tsm_axis = {'inata': {'xz': [6,7,14,16]}}# 'inata': {'xz': [6,14]}} 
+    cml_tsm_axis = {'luntd': {'xz': [9,10,19,28,29], 'xy': [9,10,19,20,23,24,28,29]}}# 'inata': {'xz': [6,14]}} 
     #'sagtb': {'xz':range(3,20)}} #'magtb': {'xy': range(11,16), 'xz': range(11,16)}}
     
     subsurface_props = {'disp': {'to_plot': disp, 'disp_tsm_axis': disp_tsm_axis},
