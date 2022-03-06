@@ -36,7 +36,7 @@ def get_notif(time_now, start, sched, notif_type):
 def main(time_now=datetime.now(), mysql=True, to_csv=False):
     sent_end = lib.release_time(time_now)
     start = sent_end - timedelta(hours=4)
-    sent_start = start - timedelta(hours=0.25)
+    sent_start = start - timedelta(hours=0.5)
     end = start
     
     site_names = lib.get_site_names()
