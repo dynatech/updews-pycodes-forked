@@ -44,7 +44,7 @@ def download_rainfall_noah(noah_id, fdate, tdate):
 
     try:
         #rename dateTimeRead into ts and rain_value into rain
-        df = df.rename(columns = {'rain_value': 'rain', 'dateTimeRead': 'ts'})
+        df = df.rename(columns = {'rainfall_amount': 'rain', 'datetime_read': 'ts'})
         
         df = df.drop_duplicates('ts')
         df['ts'] = df['ts'].apply(lambda x: pd.to_datetime(str(x)[0:19]))
@@ -154,5 +154,5 @@ def main():
     
 ######################################
 
-if __name__ == "__main__": 
-    main()
+#if __name__ == "__main__": 
+#    main()

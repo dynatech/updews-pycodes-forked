@@ -23,9 +23,9 @@ def noah_gauges():
                      auth=(sc['rainfall']['noah_user'],
                            sc['rainfall']['noah_password']))    
     noah = pd.DataFrame(r.json())
-    noah = noah.loc[noah['sensor_name'].str.contains('rain', case = False)]
+    noah = noah.loc[noah['type_name'].str.contains('rain', case = False)]
     noah = noah.dropna()
-    noah.loc[:, 'dev_id'] = noah.loc[:, 'dev_id'].apply(lambda x: int(x))
+    noah.loc[:, 'dev_id'] = noah.loc[:, 'station_id'].apply(lambda x: int(x))
     noah.loc[:, 'longitude'] = noah.loc[:, 'longitude'].apply(lambda x: np.round(float(x),6))
     noah.loc[:, 'latitude'] = noah.loc[:, 'latitude'].apply(lambda x: np.round(float(x),6))
     noah = noah.loc[(noah.longitude != 0) & (noah.latitude != 0) & \
@@ -33,7 +33,7 @@ def noah_gauges():
     noah = noah.rename(columns = {'dev_id': 'gauge_name',
                                   'date_installed': 'date_activated'})
     noah.loc[:, 'data_source'] = 'noah'
-    noah.loc[:, 'date_deactivated'] = np.nan
+    noah.loc[:, 'date_deactivated'] = noah.status_description.map({'NON-OPERATIONAL': datetime.now().strftime('%Y-%m-%d')})
     noah = noah.loc[:, ['gauge_name', 'data_source', 'longitude', 'latitude',
                  'date_activated', 'date_deactivated']]
     return noah
