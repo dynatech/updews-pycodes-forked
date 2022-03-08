@@ -75,7 +75,7 @@ def get_site_names():
     special = ['hin', 'mca', 'msl', 'msu']
     sites.loc[~sites.site_code.isin(special), 'name'] = sites.loc[~sites.site_code.isin(special), ['barangay', 'municipality']].apply(lambda row: ', '.join(row.values).lower().replace('city', '').replace('.', '').strip(), axis=1)
     sites.loc[sites.site_code.isin(special[0:2]), 'name'] = sites.loc[sites.site_code.isin(special[0:2]), 'municipality'].apply(lambda x: x.lower())
-    sites.loc[sites.site_code.isin(special[2:4]), 'name'] = sites.loc[sites.site_code.isin(special[2:4]), 'sitio'].apply(lambda x: x.lower())
+    sites.loc[sites.site_code.isin(special[2:4]), 'name'] = sites.loc[sites.site_code.isin(special[2:4]), 'sitio'].apply(lambda x: x.lower().replace(' ', ' | '))
     return sites
 
 def get_sites_no_markers(mysql=True, to_csv=False):
