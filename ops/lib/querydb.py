@@ -1,6 +1,7 @@
 from datetime import timedelta
 import os
 import pandas as pd
+import re
 import sys
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
@@ -92,7 +93,7 @@ def get_sms_sent(start, end, site_names, mysql=True, to_csv=False):
         df = pd.merge(df, site_names.loc[:, ['site_id', 'name']], on='site_id', how='left')
         df = df.loc[~df.name.isnull(), :]
         if len(df) != 0:
-            df = df.loc[df.apply(lambda row: row['name'] in row.sms_msg, axis=1), :]
+            df = df.loc[df.apply(lambda row: len(re.findall(row['name'], row.sms_msg))!=0, axis=1), :]
         if to_csv:
             df.to_csv(output_path+'/input_output/sent.csv', index=False)
     else:
