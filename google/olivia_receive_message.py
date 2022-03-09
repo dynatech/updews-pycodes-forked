@@ -354,8 +354,8 @@ def on_event(conv_event):
             cmd = "{} {}/send_message.py --conversation-id {} --message-text '{}'".format(python_path,file_path,conversation_id,message)
             os.system(cmd)
             
-            query = "SELECT quotations,author FROM senslopedb.olivia_quotes order by rand() limit 1"
-            quote = get_db_data(query)
+            query = "SELECT quotations,author FROM olivia_quotes order by rand() limit 1"
+            quote = db.read(query, connection="gsm_pi")
             message = '"{}" -{}'.format(quote[0],quote[1])
             
 #            conversation_id = conv_event.conversation_id    #test_groupchat
@@ -400,8 +400,8 @@ def on_event(conv_event):
             cmd = "{} {}/send_message.py --conversation-id {} --message-text '{}'".format(python_path,file_path,conversation_id,message)
             os.system(cmd)
             
-            query = "SELECT quotations,author FROM senslopedb.olivia_quotes order by rand() limit 1"
-            quote = get_db_data(query)
+            query = "SELECT quotations,author FROM olivia_quotes order by rand() limit 1"
+            quote = db.read(query, connection="gsm_pi")
             message = '"{}" -{}'.format(quote[0],quote[1])
             
 #            conversation_id = conv_event.conversation_id    #test_groupchat
@@ -486,8 +486,8 @@ def on_event(conv_event):
             author = author.replace(" -","")
             author = author.replace("-","")
             
-            query = "INSERT INTO `senslopedb`.`olivia_quotes` (`quotations`, `author`) VALUES ('{}', '{}');".format(quotation,author)
-            insert_db_data(query)
+            query = "INSERT INTO `olivia_quotes` (`quotations`, `author`) VALUES ('{}', '{}');".format(quotation,author)
+            db.write(query, connection="gsm_pi")
             
             
             message = '"{}" -{} --added successfully'.format(quotation, author)
