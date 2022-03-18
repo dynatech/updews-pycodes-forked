@@ -198,9 +198,12 @@ def ilan_alert(link = False):
                 magupdate = False
                 
         if magupdate:
-            query = "SELECT link from olivia_link where description = 'contacts updating'"
-            contact_link = db.read(query, connection = "gsm_pi")[0][0]
-            message += "Magupdate ng contacts\n{}\n".format(contact_link)
+            if dt.now().hour < 12:
+                query = "SELECT link from olivia_link where description = 'contacts updating'"
+                contact_link = db.read(query, connection = "gsm_pi")[0][0]
+                message += "Magupdate ng contacts\n{}\n".format(contact_link)
+            else:
+                message += "Matulog nang huwag masyadong mahimbing\n"
             
     print(message)
 
