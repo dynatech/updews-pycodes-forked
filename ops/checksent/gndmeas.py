@@ -27,6 +27,8 @@ def main(time_now=datetime.now()):
     if len(tags) != 0:
         msg = 'Validate measurements with displacement of 1cm and more:\n'
         msg += '\n'.join(list(map(lambda x: ': '.join(x), tags.values)))
+        msg += '\n\n Edit data tag info for confirmed movement or unreliable measurement.'
+        msg += '\n\n For repositioned markers, add event to marker history: reposition event with ts of marker observation above. Adding reposition event will also delete the validating data tag'
     else:
         msg = ''
 
