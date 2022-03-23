@@ -358,7 +358,7 @@ def on_event(conv_event):
             os.system(cmd)
             
             query = "SELECT quotations,author FROM olivia_quotes order by rand() limit 1"
-            quote = db.read(query, connection="gsm_pi")
+            quote = db.read(query, connection="gsm_pi")[0]
             message = '"{}" -{}'.format(quote[0],quote[1])
             
 #            conversation_id = conv_event.conversation_id    #test_groupchat
@@ -404,7 +404,7 @@ def on_event(conv_event):
             os.system(cmd)
             
             query = "SELECT quotations,author FROM olivia_quotes order by rand() limit 1"
-            quote = db.read(query, connection="gsm_pi")
+            quote = db.read(query, connection="gsm_pi")[0]
             message = '"{}" -{}'.format(quote[0],quote[1])
             
 #            conversation_id = conv_event.conversation_id    #test_groupchat
