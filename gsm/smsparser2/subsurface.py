@@ -718,43 +718,50 @@ def b64Parser(sms):
                     return
         #elif dtype in [110,111,112,113,21,26,10,13]: # wala pang support for v2 bradcast soms
         elif dtype in [51,52]:
-            name_df = 'tilt_'+tsm_name.lower()
-            n = 12 # 12 chars per node
-            sd = [datastr[i:i+n] for i in range(0,len(datastr),n)]
-            for piece in sd:
-                try:
+            if tsm_name == 'KNRTB':     
+                name_df = 'tilt_'+tsm_name.lower()
+                n = 12 # 12 chars per node
+                sd = [datastr[i:i+n] for i in range(0,len(datastr),n)]
+                print(sd)
+                
+                for piece in sd:
                     ID = b64_to_dec(piece[0])
+                    if ID in [6,7,8,9,10,11]:
+                        ID = ID + 1
+                    elif ID == 0:
+                        ID = ID + 6
                     msgID = dtype
                     xd = b64_twos_comp_v5(b64_to_dec(piece[1:4]))
                     yd = b64_twos_comp_v5(b64_to_dec(piece[4:7]))
                     zd = b64_twos_comp_v5(b64_to_dec(piece[7:10]))
                     bd = (b64_twos_comp(b64_to_dec(piece[10:12])) + 200) /100.0
-
+                    line = {"ts":timestamp, "node_id":ID, "type_num":msgID,
+                                    "xval":xd, "yval":yd, "zval":zd, "batt":bd}
+                    outl.append(line)
+                    print ('knrtb')
+#                sd....(outl)
+            else:
+                name_df = 'tilt_'+tsm_name.lower()
+                n = 12 # 12 chars per node
+                sd = [datastr[i:i+n] for i in range(0,len(datastr),n)]
+                for piece in sd:
+                    try:
+                        ID = b64_to_dec(piece[0])
+                        msgID = dtype
+                        xd = b64_twos_comp_v5(b64_to_dec(piece[1:4]))
+                        yd = b64_twos_comp_v5(b64_to_dec(piece[4:7]))
+                        zd = b64_twos_comp_v5(b64_to_dec(piece[7:10]))
+                        bd = (b64_twos_comp(b64_to_dec(piece[10:12])) + 200) /100.0
+                        
                     
-                    line = {"ts":timestamp, "node_id":ID, "type_num":msgID,
+                        line = {"ts":timestamp, "node_id":ID, "type_num":msgID,
                     "xval":xd, "yval":yd, "zval":zd, "batt":bd}
-                    outl.append(line)
-                except ValueError:
-                    print (">> b64 Value Error detected.", piece,)
-                    print ("Piece of data to be ignored")
-                    return
+                        outl.append(line)
+                    except ValueError:
+                        print (">> b64 Value Error detected.", piece,)
+                        print ("Piece of data to be ignored")
+                        return
 
-        elif dtype in [110,113,10,13]: # wala pang support for v2 bradcast soms
-            name_df = 'soms_'+tsm_name.lower() 
-            n = 4
-            sd = [datastr[i:i+n] for i in range(0,len(datastr),n)]
-            for piece in sd:
-                try:
-                    ID = b64_to_dec(piece[0])
-                    msgID = dtype
-                    soms = b64_to_dec(piece[1:4])
-                    line = {"ts":timestamp, "node_id":ID, "type_num":msgID,
-                    "mval1":soms, "mval2":0}
-                    outl.append(line)
-                except ValueError:
-                    print (">> b64 Value Error detected.", piece,)
-                    print ("Piece of data to be ignored")
-                    return
 		        
         #for temp
         elif dtype in [22,23,24]: 
