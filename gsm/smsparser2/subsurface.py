@@ -765,28 +765,51 @@ def b64Parser(sms):
 		        
         #for temp
         elif dtype in [22,23,24]: 
-            name_df = 'temp_'+tsm_name.lower() 
-            n = 3
-            sd = [datastr[i:i+n] for i in range(0,len(datastr),n)]
-            for piece in sd:
-                try:
+            if tsm_name == 'KNRTB':    
+                name_df = 'temp_'+tsm_name.lower() 
+                n = 3
+                sd = [datastr[i:i+n] for i in range(0,len(datastr),n)]
+                
+                for piece in sd:
                     ID = b64_to_dec(piece[0])
+                    if ID in [6,7,8,9,10,11]:
+                        ID = ID + 1
+                    elif ID == 0:
+                        ID = ID + 6
                     msgID = dtype
                     temp = b64_to_dec(piece[1:3])
                     if temp>=1022 and dtype in [23,24]:
                         temp = 0
-                    line = {"ts":timestamp, "node_id":ID, "type_num":msgID,
-                    "temp_val":temp}
-                    outl.append(line)
-                except ValueError:
-                    print (">> b64 Value Error detected.", piece,)
-                    print ("Piece of data to be ignored")
-                    return
+                        line = {"ts":timestamp, "node_id":ID, "type_num":msgID, 
+                            "temp_val":temp}
+                        outl.append(line)
+                        print ('knrtb')
+            
+            else:
+                name_df = 'temp_'+tsm_name.lower() 
+                n = 3
+                sd = [datastr[i:i+n] for i in range(0,len(datastr),n)]
+                for piece in sd:
+                    try:
+                        ID = b64_to_dec(piece[0])
+                        msgID = dtype
+                        temp = b64_to_dec(piece[1:3])
+                        if temp>=1022 and dtype in [23,24]:
+                            temp = 0
+                            line = {"ts":timestamp, "node_id":ID, "type_num":msgID,
+                                    "temp_val":temp}
+                            outl.append(line)
+                            print ("here")
+                    except ValueError:
+                        print (">> b64 Value Error detected.", piece,)
+                        print ("Piece of data to be ignored")
+                        return
         else:
             raise ValueError("dtype not recognized")
 
     else:
         raise ValueError("msg was not split into 3")
+
     df = pd.DataFrame(outl)
     data = smsclass.DataTable(name_df,df)
     return data
