@@ -802,4 +802,4 @@ def b64_twos_comp_v5(num):
     if num > 32768:  
         return num - sub
     else:
-        return num	
+        return num 	
