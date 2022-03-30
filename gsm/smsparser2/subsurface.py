@@ -738,8 +738,7 @@ def b64Parser(sms):
                     line = {"ts":timestamp, "node_id":ID, "type_num":msgID,
                                     "xval":xd, "yval":yd, "zval":zd, "batt":bd}
                     outl.append(line)
-                    print ('knrtb')
-#                sd....(outl)
+
             else:
                 name_df = 'tilt_'+tsm_name.lower()
                 n = 12 # 12 chars per node
@@ -783,7 +782,7 @@ def b64Parser(sms):
                         line = {"ts":timestamp, "node_id":ID, "type_num":msgID, 
                             "temp_val":temp}
                         outl.append(line)
-                        print ('knrtb')
+                        
             
             else:
                 name_df = 'temp_'+tsm_name.lower() 
